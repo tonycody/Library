@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Security", "Library
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.Nest", "Library.Net.Nest\Library.Net.Nest.csproj", "{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Update", "Library.Update\Library.Update.csproj", "{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -179,6 +181,16 @@ Global
 		{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}.Release|x86.ActiveCfg = Release|Any CPU
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Debug|x86.ActiveCfg = Debug|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Debug|x86.Build.0 = Debug|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Release|Any CPU.ActiveCfg = Release|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Release|Mixed Platforms.Build.0 = Release|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Release|x86.ActiveCfg = Release|x86
+		{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
