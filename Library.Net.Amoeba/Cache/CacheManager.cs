@@ -1118,15 +1118,8 @@ namespace Library.Net.Amoeba
                             return;
                     }
 
-                    int priority = 0;
-
-                    if (_settings.ClustersDictionary.ContainsKey(key))
-                    {
-                        priority = this.GetPriority(key);
-                        this.Remove(key);
-                    }
-
-                    if (_settings.ShareIndex.Any(n => n.KeyAndCluster.ContainsKey(key)))
+                    if (_settings.ClustersDictionary.ContainsKey(key)
+                        || _settings.ShareIndex.Any(n => n.KeyAndCluster.ContainsKey(key)))
                     {
                         return;
                     }
@@ -1177,7 +1170,7 @@ namespace Library.Net.Amoeba
                     clusters.Indexs = clusterList.ToArray();
                     clusters.Length = value.Count;
                     clusters.UpdateTime = DateTime.UtcNow;
-                    clusters.Priority = priority;
+                    clusters.Priority = 0;
                     _settings.ClustersDictionary[key] = clusters;
 
                 }
