@@ -96,12 +96,15 @@ namespace Library.UnitTest
         [Test]
         public void Test_AmoebaConverter_DigitalSigunature()
         {
-            DigitalSignature sigunature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsa521_Sha512);
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.ECDsa521_Sha512 })
+            {
+                DigitalSignature sigunature = new DigitalSignature(a);
 
-            var streamSigunature = AmoebaConverter.ToSignatureStream(sigunature);
-            var sigunature2 = AmoebaConverter.FromSignatureStream(streamSigunature);
+                var streamSigunature = AmoebaConverter.ToSignatureStream(sigunature);
+                var sigunature2 = AmoebaConverter.FromSignatureStream(streamSigunature);
 
-            Assert.AreEqual(sigunature, sigunature2, "AmoebaConverter #4");
+                Assert.AreEqual(sigunature, sigunature2, "AmoebaConverter #4");
+            }
         }
 
         [Test]
@@ -172,43 +175,46 @@ namespace Library.UnitTest
         [Test]
         public void Test_Seed()
         {
-            var seed = new Seed();
-            seed.Name = "aaaa.zip";
-            seed.Keywords.AddRange(new KeywordCollection 
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.ECDsa521_Sha512 })
+            {
+                var seed = new Seed();
+                seed.Name = "aaaa.zip";
+                seed.Keywords.AddRange(new KeywordCollection 
             {
                 new Keyword() { Value = "bbbb", HashAlgorithm = HashAlgorithm.Sha512 },
                 new Keyword() { Value = "cccc", HashAlgorithm = HashAlgorithm.Sha512 },
                 new Keyword() { Value = "dddd", HashAlgorithm = HashAlgorithm.Sha512 },
             });
-            seed.CreationTime = DateTime.Now;
-            seed.Length = 10000;
-            seed.Comment = "eeee";
-            seed.Rank = 1;
-            seed.Key = new Key() { Hash = new byte[64], HashAlgorithm = HashAlgorithm.Sha512 };
-            seed.CompressionAlgorithm = CompressionAlgorithm.XZ;
-            seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
-            seed.CryptoKey = new byte[32 + 32];
+                seed.CreationTime = DateTime.Now;
+                seed.Length = 10000;
+                seed.Comment = "eeee";
+                seed.Rank = 1;
+                seed.Key = new Key() { Hash = new byte[64], HashAlgorithm = HashAlgorithm.Sha512 };
+                seed.CompressionAlgorithm = CompressionAlgorithm.XZ;
+                seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                seed.CryptoKey = new byte[32 + 32];
 
-            DigitalSignature digitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsa521_Sha512);
-            seed.CreateCertificate(digitalSignature);
+                DigitalSignature digitalSignature = new DigitalSignature(a);
+                seed.CreateCertificate(digitalSignature);
 
-            var seed2 = seed.DeepClone();
+                var seed2 = seed.DeepClone();
 
-            Assert.AreEqual(seed, seed2, "Seed #1");
+                Assert.AreEqual(seed, seed2, "Seed #1");
 
-            Seed seed3;
+                Seed seed3;
 
-            using (var seedStream = seed.Export(_bufferManager))
-            {
-                var buffer = new byte[seedStream.Length];
-                seedStream.Read(buffer, 0, buffer.Length);
+                using (var seedStream = seed.Export(_bufferManager))
+                {
+                    var buffer = new byte[seedStream.Length];
+                    seedStream.Read(buffer, 0, buffer.Length);
 
-                seedStream.Position = 0;
-                seed3 = Seed.Import(seedStream, _bufferManager);
+                    seedStream.Position = 0;
+                    seed3 = Seed.Import(seedStream, _bufferManager);
+                }
+
+                Assert.AreEqual(seed, seed3, "Seed #2");
+                Assert.IsTrue(seed3.VerifyCertificate(), "Seed #3");
             }
-
-            Assert.AreEqual(seed, seed3, "Seed #2");
-            Assert.IsTrue(seed3.VerifyCertificate(), "Seed #3");
         }
 
         [Test]

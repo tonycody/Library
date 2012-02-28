@@ -28,8 +28,8 @@ namespace Library.Security
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxPublickeyLength = 1024;
-        public const int MaxPrivatekeyLength = 1024;
+        public const int MaxPublickeyLength = 1024 * 4;
+        public const int MaxPrivatekeyLength = 1024 * 4;
 
         public DigitalSignature(DigitalSignatureAlgorithm digitalSignatureAlgorithm)
         {
