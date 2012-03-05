@@ -28,13 +28,13 @@ namespace Library.Security
                 // Windows 7の環境では"Pkcs8PrivateBlob"でExportするとKeyの種類が正しく認識されない
                 // Windows 7用の.netの問題？
                 privateKey = ecdsa.Key.Export(CngKeyBlobFormat.EccPrivateBlob);
-                ////privateKey = ecdsa.Key.Export(CngKeyBlobFormat.Pkcs8PrivateBlob);
+                //privateKey = ecdsa.Key.Export(CngKeyBlobFormat.Pkcs8PrivateBlob);
             }
         }
 
         public static byte[] Sign(byte[] privateKey, Stream stream)
         {
-            ////using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
+            //using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
             using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.EccPrivateBlob))
             using (ECDsaCng ecdsa = new ECDsaCng(ck))
             {
