@@ -212,6 +212,7 @@ namespace Library.Net
             }
         }
 
+        // Addより優先的に
         public void Live(T item)
         {
             if (item == null) throw new ArgumentNullException("item");
@@ -269,14 +270,8 @@ namespace Library.Net
 
                 if (_nodesList[i - 1] != null)
                 {
-                    // 追加するnodeがNodeListに入っている場合
-                    if (_nodesList[i - 1].Contains(item))
-                    {
-                        // そのノードをNodeListの末尾に移す
-                        _nodesList[i - 1].Remove(item);
-                        _nodesList[i - 1].Add(item);
-                    }
-                    else
+                    // 追加するnodeがNodeListに入っていない場合
+                    if (!_nodesList[i - 1].Contains(item))
                     {
                         // 列に空きがある場合
                         if (_nodesList[i - 1].Count < _column)

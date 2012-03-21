@@ -624,7 +624,7 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Stop) return;
                 Thread.Sleep(1000);
 
-                if (_connectionManagers.Count < this.ConnectionCountLimit && _routeTable.Count > 0)
+                if (_connectionManagers.Count < (this.ConnectionCountLimit / 3) && _routeTable.Count > 0)
                 {
                     Node node = null;
 
@@ -1709,6 +1709,8 @@ namespace Library.Net.Amoeba
             {
                 Log.Error(ex);
             }
+
+            if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
         }
 
         private void connectionManager_PullCancelEvent(object sender, EventArgs e)
@@ -1974,9 +1976,9 @@ namespace Library.Net.Amoeba
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
-                    new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 50 },
+                    new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 32 },
                     new Library.Configuration.SettingsContext<int>() { Name = "UploadingConnectionCountLowerLimit", Value = 12 },
-                    new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 6 },
+                    new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<KeywordCollection>() { Name = "SearchKeywords", Value = new KeywordCollection() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
