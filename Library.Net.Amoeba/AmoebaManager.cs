@@ -232,7 +232,7 @@ namespace Library.Net.Amoeba
 
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return _connectionsManager.SearchingConnectionCountLowerLimit;
+                    return _connectionsManager.DownloadingConnectionCountLowerLimit;
                 }
             }
             set
@@ -241,7 +241,7 @@ namespace Library.Net.Amoeba
 
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    _connectionsManager.SearchingConnectionCountLowerLimit = value;
+                    _connectionsManager.DownloadingConnectionCountLowerLimit = value;
                 }
             }
         }

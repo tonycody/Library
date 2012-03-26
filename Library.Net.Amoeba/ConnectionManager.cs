@@ -86,7 +86,7 @@ namespace Library.Net.Amoeba
         private ProtocolVersion _protocolVersion;
         private ProtocolVersion _myProtocolVersion;
         private ProtocolVersion _otherProtocolVersion;
-        private Node _myNode;
+        private Node _baseNode;
         private Node _otherNode;
         private BufferManager _bufferManager;
 
@@ -113,11 +113,11 @@ namespace Library.Net.Amoeba
         public event PullCancelEventHandler PullCancelEvent;
         public event CloseEventHandler CloseEvent;
 
-        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node myNode, BufferManager bufferManager)
+        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, BufferManager bufferManager)
         {
             _connection = connection;
             _myProtocolVersion = ProtocolVersion.Version1;
-            _myNode = myNode;
+            _baseNode = baseNode;
             _mySessionId = mySessionId;
             _bufferManager = bufferManager;
         }
@@ -266,7 +266,7 @@ namespace Library.Net.Amoeba
                             stream.Read(_otherSessionId, 0, _otherSessionId.Length);
                         }
 
-                        using (Stream stream = _myNode.Export(_bufferManager))
+                        using (Stream stream = _baseNode.Export(_bufferManager))
                         {
                             _connection.Send(stream, timeout - stopwatch.Elapsed);
                         }

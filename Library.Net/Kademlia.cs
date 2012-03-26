@@ -139,15 +139,15 @@ namespace Library.Net
 
         #endregion
 
-        public static IEnumerable<T> Sort(T myNode, byte[] id, IEnumerable<T> nodeList)
+        public static IEnumerable<T> Sort(T baseNode, byte[] id, IEnumerable<T> nodeList)
         {
-            if (myNode == null) throw new ArgumentNullException("myNode");
-            else if (myNode.Id == null) throw new ArgumentNullException("myNode.Id");
+            if (baseNode == null) throw new ArgumentNullException("baseNode");
+            else if (baseNode.Id == null) throw new ArgumentNullException("baseNode.Id");
             else if (id == null) throw new ArgumentNullException("key");
             else if (nodeList == null) throw new ArgumentNullException("nodeList");
 
             var dic = new Dictionary<byte[], List<T>>(new BytesEqualityComparer());
-            byte[] myXor = Kademlia<T>.Xor(id, myNode.Id);
+            byte[] myXor = Kademlia<T>.Xor(id, baseNode.Id);
 
             foreach (var node in nodeList)
             {

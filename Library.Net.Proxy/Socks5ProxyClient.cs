@@ -312,9 +312,9 @@ namespace Library.Net.Proxy
 
                     // attempt to open the connection
                     _tcpClient.Connect(_proxyHost, _proxyPort);
+                    _tcpClient.Client.SendTimeout = (int)Socks5ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
+                    _tcpClient.Client.ReceiveTimeout = (int)Socks5ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
                 }
-
-                Socks5ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout);
 
                 // determine which authentication method the client would like to use
                 DetermineClientAuthMethod();
@@ -323,7 +323,7 @@ namespace Library.Net.Proxy
                 NegotiateServerAuthMethod();
 
                 Socks5ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout);
-                
+
                 // send a connect command to the proxy server for destination host and port
                 SendCommand(SOCKS5_CMD_CONNECT, _destinationHost, _destinationPort);
 

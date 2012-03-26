@@ -236,7 +236,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public int SearchingConnectionCountLowerLimit
+        public int DownloadingConnectionCountLowerLimit
         {
             get
             {
@@ -624,7 +624,17 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Stop) return;
                 Thread.Sleep(1000);
 
-                if (_connectionManagers.Count < (this.ConnectionCountLimit / 3) && _routeTable.Count > 0)
+                if (_serverManager.ListenUris.Count > 0
+                    && _connectionManagers.Count > (this.ConnectionCountLimit / 3))
+                {
+                    continue;
+                }
+                else if (_connectionManagers.Count > this.ConnectionCountLimit)
+                {
+                    continue;
+                }
+
+                if (_routeTable.Count > 0)
                 {
                     Node node = null;
 
@@ -799,7 +809,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                if (_connectionManagers.Count >= this.SearchingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
+                if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushStopwatch.Restart();
 
@@ -1188,7 +1198,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (_connectionManagers.Count >= this.SearchingConnectionCountLowerLimit && updateTime.Elapsed.TotalSeconds > 60)
+                    if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit && updateTime.Elapsed.TotalSeconds > 60)
                     {
                         updateTime.Restart();
 

@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
+using System.Threading;
 using Library.Net.Connection;
 using Library.Net.Proxy;
-using System.Threading;
-using System.Text.RegularExpressions;
 
 namespace Library.Net.Amoeba
 {
@@ -69,8 +69,8 @@ namespace Library.Net.Amoeba
             try
             {
                 socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                socket.ReceiveTimeout = 1000 * 10;
-                socket.SendTimeout = 1000 * 10;
+                socket.ReceiveTimeout = (int)timeout.TotalMilliseconds;
+                socket.SendTimeout = (int)timeout.TotalMilliseconds;
 
                 var asyncResult = socket.BeginConnect(remoteEndPoint, null, null);
 
@@ -185,7 +185,7 @@ namespace Library.Net.Amoeba
                     socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
                     var proxy = new Socks4ProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 10)), ClientManager.MaxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
                 }
                 else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
                 {
@@ -196,7 +196,7 @@ namespace Library.Net.Amoeba
                     socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
                     var proxy = new Socks4aProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 10)), ClientManager.MaxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
                 }
                 else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
                 {
@@ -207,7 +207,7 @@ namespace Library.Net.Amoeba
                     socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
                     var proxy = new Socks5ProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 10)), ClientManager.MaxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
                 }
                 else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
                 {
@@ -218,11 +218,11 @@ namespace Library.Net.Amoeba
                     socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
                     var proxy = new HttpProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 10)), ClientManager.MaxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
                 }
 
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);
-                secureConnection.Connect(new TimeSpan(0, 0, 20));
+                secureConnection.Connect(new TimeSpan(0, 0, 30));
 
                 return new CompressConnection(secureConnection, ClientManager.MaxReceiveCount, _bufferManager);
             }

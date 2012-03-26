@@ -172,6 +172,31 @@ namespace Library.Net.Upnp
             return flag;
         }
 
+        public string GetPortEntry(int index, TimeSpan timeout)
+        {
+            if (_services == null) throw new UpnpClientException();
+
+            string value = null;
+
+            Thread startThread = new Thread(new ThreadStart(delegate()
+            {
+                try
+                {
+                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, index)))
+                        return;
+                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, index)))
+                        return;
+                }
+                catch (Exception)
+                {
+                }
+            }));
+            startThread.Start();
+            startThread.Join(timeout);
+
+            return value;
+        }
+        
         protected override void Dispose(bool disposing)
         {
             if (!_disposed)
@@ -220,12 +245,12 @@ namespace Library.Net.Upnp
                 using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
                 {
                     client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, (int)TimeoutCheck(stopwatch.Elapsed, timeout).TotalMilliseconds);
-                    ////client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
+                    client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
 
                     byte[] q = Encoding.ASCII.GetBytes(query);
 
-                    ////IPEndPoint endPoint = new IPEndPoint(IPAddress.Broadcast, 1900);
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
+                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Broadcast, 1900);
+                    //IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
                     client.SendTo(q, q.Length, SocketFlags.None, endPoint);
 
                     IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
@@ -238,6 +263,7 @@ namespace Library.Net.Upnp
             }
             catch (Exception)
             {
+
             }
 
             if (queryResponse == null || queryResponse == "") return null;
@@ -324,6 +350,7 @@ namespace Library.Net.Upnp
             }
             catch (Exception)
             {
+
             }
 
             return null;
@@ -389,6 +416,7 @@ namespace Library.Net.Upnp
             }
             catch (Exception)
             {
+
             }
 
             return false;
@@ -449,9 +477,65 @@ namespace Library.Net.Upnp
             }
             catch (Exception)
             {
+
             }
 
             return false;
+        }
+
+        private static string GetPortEntryFromService(string services, string serviceType, string gatewayIp, int gatewayPort, int index)
+        {
+            if (services == null || services == "" || !services.Contains(serviceType)) return null;
+
+            services = services.Substring(services.IndexOf(serviceType));
+
+            string controlUrl = Regex.Match(services, "<controlURL>(.*)</controlURL>").Groups[1].Value;
+            string soapBody =
+                "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+                "<s:Body>" +
+                "<u:GetGenericPortMappingEntry xmlns:u=\"" + serviceType + "\">" +
+                "<NewPortMappingIndex>" + index + "</NewPortMappingIndex>" +
+                "</u:GetGenericPortMappingEntry>" +
+                "</s:Body>" +
+                "</s:Envelope>";
+            byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
+            string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
+
+            try
+            {
+                System.Net.WebRequest wr = System.Net.WebRequest.Create(url);
+
+                wr.Method = "POST";
+                wr.Headers.Add("SOAPAction", "\"" + serviceType + "#GetGenericPortMappingEntry\"");
+                wr.ContentType = "text/xml;charset=\"utf-8\"";
+                wr.ContentLength = body.Length;
+
+                using (System.IO.Stream stream = wr.GetRequestStream())
+                {
+                    stream.Write(body, 0, body.Length);
+                }
+
+                string text = null;
+
+                using (WebResponse wres = wr.GetResponse())
+                {
+                    if (((HttpWebResponse)wres).StatusCode == HttpStatusCode.OK)
+                    {
+                        using (StreamReader sr = new StreamReader(wres.GetResponseStream()))
+                        {
+                            text = sr.ReadToEnd();
+                        }
+                    }
+                }
+
+                return text;
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return null;
         }
     }
 

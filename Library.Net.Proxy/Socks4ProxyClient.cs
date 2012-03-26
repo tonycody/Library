@@ -285,9 +285,9 @@ namespace Library.Net.Proxy
 
                     // attempt to open the connection
                     _tcpClient.Connect(_proxyHost, _proxyPort);
+                    _tcpClient.Client.SendTimeout = (int)Socks4ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
+                    _tcpClient.Client.ReceiveTimeout = (int)Socks4ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
                 }
-
-                Socks4ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout);
 
                 // send connection command to proxy host for the specified destination host and port
                 SendCommand(_tcpClient.GetStream(), SOCKS4_CMD_CONNECT, _destinationHost, _destinationPort, _proxyUserId);
