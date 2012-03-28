@@ -222,7 +222,7 @@ namespace Library.Net.Amoeba
                 }
 
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);
-                secureConnection.Connect(new TimeSpan(0, 0, 30));
+                secureConnection.Connect(new TimeSpan(0, 1, 0));
 
                 return new CompressConnection(secureConnection, ClientManager.MaxReceiveCount, _bufferManager);
             }

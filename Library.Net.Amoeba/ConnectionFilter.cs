@@ -268,8 +268,10 @@ namespace Library.Net.Amoeba
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    var regex = new Regex(value);
+
+                    _regex = regex;
                     _value = value;
-                    _regex = new Regex(value);
                 }
             }
         }

@@ -175,14 +175,14 @@ namespace Library.Net.Connection
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     return bufferStream;
                 }
-                catch (ConnectionException ex)
+                catch (ConnectionException e)
                 {
-                    Log.Information(ex);
-                    throw ex;
+                    //Log.Warning(e);
+                    throw e;
                 }
                 catch (Exception e)
                 {
-                    Log.Information(e);
+                    //Log.Warning(e);
                     throw new ConnectionException(e.Message, e);
                 }
             }
@@ -221,14 +221,14 @@ namespace Library.Net.Connection
                         _sentByteCount += i;
                     }
                 }
-                catch (ConnectionException ex)
+                catch (ConnectionException e)
                 {
-                    Log.Information(ex);
-                    throw ex;
+                    //Log.Warning(e);
+                    throw e;
                 }
                 catch (Exception e)
                 {
-                    Log.Information(e);
+                    //Log.Warning(e);
                     throw new ConnectionException(e.Message, e);
                 }
                 //finally
