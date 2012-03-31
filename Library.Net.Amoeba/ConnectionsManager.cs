@@ -1414,9 +1414,11 @@ namespace Library.Net.Amoeba
                                 Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
                                 _pushBlockCount++;
                             }
-                            catch (ConnectionManagerException)
+                            catch (ConnectionManagerException e)
                             {
                                 _settings.DiffusionBlocksRequest.Add(key);
+
+                                throw e;
                             }
                             catch (BlockNotFoundException)
                             {
