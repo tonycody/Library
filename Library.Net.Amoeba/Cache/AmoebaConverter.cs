@@ -38,13 +38,15 @@ namespace Library.Net.Amoeba
                 stream = item.Export(_bufferManager);
                 lzmaBufferStream = new BufferStream(_bufferManager);
 
+                var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+                
                 if (System.Environment.Is64BitProcess)
                 {
-                    SevenZip.SevenZipCompressor.SetLibraryPath("7z64.dll");
+                    SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
                 }
                 else
                 {
-                    SevenZip.SevenZipCompressor.SetLibraryPath("7z86.dll");
+                    SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
                 }
 
                 var compressor = new SevenZip.SevenZipCompressor();
@@ -120,13 +122,15 @@ namespace Library.Net.Amoeba
                     {
                         using (BufferStream lzmaBufferStream = new BufferStream(_bufferManager))
                         {
+                            var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+
                             if (System.Environment.Is64BitProcess)
                             {
-                                SevenZip.SevenZipCompressor.SetLibraryPath("7z64.dll");
+                                SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
                             }
                             else
                             {
-                                SevenZip.SevenZipCompressor.SetLibraryPath("7z86.dll");
+                                SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
                             }
 
                             var decompressor = new SevenZip.SevenZipExtractor(dataStream);

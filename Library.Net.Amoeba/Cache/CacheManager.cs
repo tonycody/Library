@@ -8,6 +8,7 @@ using Library.Collections;
 using Library.Correction;
 using System.Diagnostics;
 using Library.Io;
+using System.Reflection;
 
 namespace Library.Net.Amoeba
 {
@@ -653,13 +654,15 @@ namespace Library.Net.Amoeba
                 using (CryptoStream cs = new CryptoStream(outStream,
                     rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
                 {
+                    var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+
                     if (System.Environment.Is64BitProcess)
                     {
-                        SevenZip.SevenZipCompressor.SetLibraryPath("7z64.dll");
+                        SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
                     }
                     else
                     {
-                        SevenZip.SevenZipCompressor.SetLibraryPath("7z86.dll");
+                        SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
                     }
 
                     var compressor = new SevenZip.SevenZipCompressor();
@@ -758,13 +761,15 @@ namespace Library.Net.Amoeba
 
                         tempStream.Seek(0, SeekOrigin.Begin);
 
+                        var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+
                         if (System.Environment.Is64BitProcess)
                         {
-                            SevenZip.SevenZipCompressor.SetLibraryPath("7z64.dll");
+                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
                         }
                         else
                         {
-                            SevenZip.SevenZipCompressor.SetLibraryPath("7z86.dll");
+                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
                         }
 
                         var decompressor = new SevenZip.SevenZipExtractor(tempStream);
