@@ -73,7 +73,9 @@
     <Content Include="Properties\Library.Security.License">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Properties\Library.Security.readme" />
+    <Content Include="Properties\Library.Security.readme">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

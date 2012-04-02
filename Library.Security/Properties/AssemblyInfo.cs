@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Library.Security")]
-[assembly: AssemblyCopyright("Copyright © Albert Lindsay 2011")]
+[assembly: AssemblyCopyright("Copyright © Albert Lindsay 2011-2012")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

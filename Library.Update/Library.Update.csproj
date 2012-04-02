@@ -50,6 +50,12 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
+    <Content Include="Properties\Library.Update.readme">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Properties\Library.Update.License">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

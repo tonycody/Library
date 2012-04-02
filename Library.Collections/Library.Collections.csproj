@@ -67,9 +67,9 @@
     <Content Include="Properties\Library.Collections.License">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Properties\Library.Collections.Readme">
+    <Content Include="Properties\Library.Collections.Readme">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library\Library.csproj">
