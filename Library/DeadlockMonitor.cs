@@ -104,7 +104,7 @@ namespace Library
                 // Take the global lock before manipulating shared state.  Note that by our lock order, 
                 // we can take _globalLock while holding an individual monitor, but we *can't* take a 
                 // monitor while holding _globalLock; otherwise, we'd risk deadlock.
-                lock (_globalLock)
+                lock(_globalLock)
                 {
                     // Get the internal data for this monitor.  If not data exists, create it.
                     if (!_monitorStates.TryGetValue(monitor, out ms))
@@ -129,7 +129,7 @@ namespace Library
             }
             finally
             {
-                lock (_globalLock)
+                lock(_globalLock)
                 {
                     if (ms != null) // This would only be null if an exception occurred at a really weird place
                     {
@@ -159,7 +159,7 @@ namespace Library
             if (monitor == null) throw new ArgumentNullException("monitor");
 
             // Take the global lock to manipulate shared state
-            lock (_globalLock)
+            lock(_globalLock)
             {
                 // Grab the MonitorState for this monitor.  
                 MonitorState ms;

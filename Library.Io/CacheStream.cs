@@ -84,8 +84,7 @@ namespace Library.Io
         {
             get
             {
-                if (_disposed)
-                    throw new ObjectDisposedException(this.GetType().FullName);
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return _position;
             }
@@ -121,8 +120,7 @@ namespace Library.Io
 
                         if (_readerBufferPosition < 0)
                         {
-                            if (!_stream.CanSeek)
-                                throw new NotSupportedException();
+                            if (!_stream.CanSeek) throw new NotSupportedException();
 
                             _readerBufferPosition = 0;
                             _readerBufferLength = 0;
@@ -182,12 +180,9 @@ namespace Library.Io
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
-            if (offset < 0 || buffer.Length < offset)
-                throw new ArgumentOutOfRangeException("offset");
-            if (count < 0 || (buffer.Length - offset) < count)
-                throw new ArgumentOutOfRangeException("count");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
+            if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
 
             //count = Math.Min(count, (int)this.Length - (int)this.Position);
 
@@ -264,12 +259,9 @@ namespace Library.Io
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
-            if (offset < 0 || buffer.Length < offset)
-                throw new ArgumentOutOfRangeException("offset");
-            if (count < 0 || (buffer.Length - offset) < count)
-                throw new ArgumentOutOfRangeException("count");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
+            if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
 
             if (_writerBlockBuffer == null)
             {
@@ -333,8 +325,7 @@ namespace Library.Io
 
         public override void Flush()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             if (_writerBlockBuffer != null && _writerBufferPosition != 0)
             {
@@ -347,72 +338,71 @@ namespace Library.Io
 
         public override void Close()
         {
-            if (!_disposed)
-                this.Flush();
+            if (_disposed) return;
 
-            base.Close();
+            this.Flush();
+            this.Dispose(true);
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            try
             {
-                try
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    if (disposing)
+                    if (_stream != null && !_leaveInnerStreamOpen)
                     {
-                        if (_stream != null && !_leaveInnerStreamOpen)
+                        try
                         {
-                            try
-                            {
-                                _stream.Dispose();
-                            }
-                            catch (Exception)
-                            {
+                            _stream.Dispose();
+                        }
+                        catch (Exception)
+                        {
 
-                            }
-
-                            _stream = null;
                         }
 
-                        if (_readerBuffer != null)
-                        {
-                            try
-                            {
-                                _bufferManager.ReturnBuffer(_readerBuffer);
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            _readerBuffer = null;
-                        }
-
-                        if (_writerBlockBuffer != null)
-                        {
-                            try
-                            {
-                                _bufferManager.ReturnBuffer(_writerBlockBuffer);
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            _writerBlockBuffer = null;
-                        }
+                        _stream = null;
                     }
 
-                    if (_readerBufferGcHandle.IsAllocated) _readerBufferGcHandle.Free();
-                    if (_writerBufferGcHandle.IsAllocated) _writerBufferGcHandle.Free();
+                    if (_readerBuffer != null)
+                    {
+                        try
+                        {
+                            _bufferManager.ReturnBuffer(_readerBuffer);
+                        }
+                        catch (Exception)
+                        {
 
-                    _disposed = true;
+                        }
+
+                        _readerBuffer = null;
+                    }
+
+                    if (_writerBlockBuffer != null)
+                    {
+                        try
+                        {
+                            _bufferManager.ReturnBuffer(_writerBlockBuffer);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
+                        _writerBlockBuffer = null;
+                    }
                 }
-                finally
-                {
-                    base.Dispose(disposing);
-                }
+
+                if (_readerBufferGcHandle.IsAllocated) _readerBufferGcHandle.Free();
+                if (_writerBufferGcHandle.IsAllocated) _writerBufferGcHandle.Free();
+
+                _disposed = true;
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
     }

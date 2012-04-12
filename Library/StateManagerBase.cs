@@ -16,6 +16,12 @@ namespace Library
         public abstract void Start();
         public abstract void Stop();
 
+        public void Restart()
+        {
+            this.Stop();
+            this.Start();
+        }
+
         public abstract ManagerState State { get; }
     }
 

@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using Library.Collections;
 using Library.Correction;
-using System.Diagnostics;
 using Library.Io;
-using System.Reflection;
+using System.Threading;
 
 namespace Library.Net.Amoeba
 {
@@ -16,6 +17,7 @@ namespace Library.Net.Amoeba
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
     delegate void SetKeyEventHandler(object sender, Key key);
     delegate void RemoveKeyEventHandler(object sender, Key key);
+    delegate bool WatchEventHandler(object sender);
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
     {
@@ -31,19 +33,18 @@ namespace Library.Net.Amoeba
 
         internal SetKeyEventHandler SetKeyEvent;
         internal RemoveKeyEventHandler RemoveKeyEvent;
+        public GetUsingKeysEventHandler GetUsingKeysEvent;
 
         private bool _disposed = false;
         private object _thisLock = new object();
-        public const int ClusterSize = 1024 * 32;
+        public const int ClusterSize = 1024 * 256;
 
-        public GetUsingKeysEventHandler GetUsingKeysEvent;
-
-        public CacheManager(string cachePath, string workDirectory, BufferManager bufferManager)
+        public CacheManager(string cachePath, string WorkDirectory, BufferManager bufferManager)
         {
             _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            _workDirectory = WorkDirectory;
 
             _settings = new Settings();
-            _workDirectory = workDirectory;
             _bufferManager = bufferManager;
             _spaceClusters = new HashSet<long>();
         }
@@ -54,7 +55,22 @@ namespace Library.Net.Amoeba
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return _settings.Seeds.Keys;
+                    return _settings.Seeds.Keys.ToArray();
+                }
+            }
+        }
+
+        public Information Information
+        {
+            get
+            {
+                using (DeadlockMonitor.Lock(this.ThisLock))
+                {
+                    List<InformationContext> contexts = new List<InformationContext>();
+
+                    contexts.Add(new InformationContext("CacheSeedCount", _settings.Seeds.Keys.Count));
+
+                    return new Information(contexts);
                 }
             }
         }
@@ -246,7 +262,15 @@ namespace Library.Net.Amoeba
 
                     if (!_streams.Any(n => n.Key == item.FilePath))
                     {
-                        _streams.Add(item.FilePath, new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read));
+                        try
+                        {
+                            var stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                            _streams.Add(item.FilePath, stream);
+                        }
+                        catch (Exception)
+                        {
+                            continue;
+                        }
                     }
                 }
             }
@@ -257,7 +281,7 @@ namespace Library.Net.Amoeba
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 HashSet<long> spaceList = new HashSet<long>();
-                int i = 0;
+                long i = 0;
 
                 foreach (var clusters in _settings.ClustersDictionary.Values)
                 {
@@ -460,6 +484,9 @@ namespace Library.Net.Amoeba
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                long cc = 256 * 1024 * 1024;
+                size = ((size + (cc - 1)) / cc) * cc;
+
                 foreach (var header in _settings.ClustersDictionary.Keys.ToArray()
                     .Where(n => _settings.ClustersDictionary[n].Indexs.Any(o => size < ((o + 1) * CacheManager.ClusterSize)))
                     .ToArray())
@@ -467,8 +494,9 @@ namespace Library.Net.Amoeba
                     this.Remove(header);
                 }
 
-                int count = (int)((size + (long)CacheManager.ClusterSize - 1) / (long)CacheManager.ClusterSize);
-                _settings.Size = (long)(count + 1) * CacheManager.ClusterSize;
+                long count = (size + (long)CacheManager.ClusterSize - 1) / (long)CacheManager.ClusterSize;
+                _settings.Size = count * CacheManager.ClusterSize;
+                _fileStream.SetLength(Math.Min(_settings.Size, _fileStream.Length));
             }
         }
 
@@ -548,14 +576,13 @@ namespace Library.Net.Amoeba
 
         public KeyCollection Share(Stream inStream, string path, HashAlgorithm hashAlgorithm, int blockLength)
         {
-            if (inStream == null)
-                throw new ArgumentNullException("inStream");
+            if (inStream == null) throw new ArgumentNullException("inStream");
 
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 if (_settings.ShareIndex.Any(n => n.FilePath == path))
                 {
-                    var list = _settings.ShareIndex.Where(n => n.FilePath != path);
+                    var list = _settings.ShareIndex.Where(n => n.FilePath != path).ToArray();
                     _settings.ShareIndex.Clear();
                     _settings.ShareIndex.AddRange(list);
 
@@ -632,57 +659,60 @@ namespace Library.Net.Amoeba
         public KeyCollection Encoding(Stream inStream,
             CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, HashAlgorithm hashAlgorithm, int blockLength)
         {
-            if (inStream == null)
-                throw new ArgumentNullException("inStream");
-            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm))
-                throw new ArgumentException("CompressAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm))
-                throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(HashAlgorithm), hashAlgorithm))
-                throw new ArgumentException("HashAlgorithm に存在しない列挙");
+            if (inStream == null) throw new ArgumentNullException("inStream");
+            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
+            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
+            if (!Enum.IsDefined(typeof(HashAlgorithm), hashAlgorithm)) throw new ArgumentException("HashAlgorithm に存在しない列挙");
 
             if (compressionAlgorithm == CompressionAlgorithm.XZ && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
-                using (var outStream = new CacheManagerStreamWriter(blockLength, hashAlgorithm, this, _bufferManager))
-                using (var rijndael = new RijndaelManaged()
+                IList<Key> keys = new List<Key>();
+
+                using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
                 {
-                    KeySize = 256,
-                    BlockSize = 256,
-                    Mode = CipherMode.CBC,
-                    Padding = PaddingMode.PKCS7
-                })
-                using (CryptoStream cs = new CryptoStream(outStream,
-                    rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
-                {
-                    var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-
-                    if (System.Environment.Is64BitProcess)
+                    using (var rijndael = new RijndaelManaged()
                     {
-                        SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
-                    }
-                    else
+                        KeySize = 256,
+                        BlockSize = 256,
+                        Mode = CipherMode.CBC,
+                        Padding = PaddingMode.PKCS7
+                    })
+                    using (CryptoStream cs = new CryptoStream(outStream,
+                        rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
                     {
-                        SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
+#if !DEBUG
+                        var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+#else
+                        var currentDirectory = Directory.GetCurrentDirectory();
+#endif
+
+                        if (System.Environment.Is64BitProcess)
+                        {
+                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
+                        }
+                        else
+                        {
+                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
+                        }
+
+                        var compressor = new SevenZip.SevenZipCompressor();
+
+                        compressor.ArchiveFormat = SevenZip.OutArchiveFormat.XZ;
+                        compressor.CompressionMethod = SevenZip.CompressionMethod.Lzma2;
+                        compressor.CompressionLevel = SevenZip.CompressionLevel.Low;
+                        //compressor.CustomParameters.Add("mt", "off");
+
+                        compressor.CompressStream(inStream, cs);
                     }
-
-                    var compressor = new SevenZip.SevenZipCompressor();
-
-                    compressor.ArchiveFormat = SevenZip.OutArchiveFormat.XZ;
-                    compressor.CompressionMethod = SevenZip.CompressionMethod.Lzma2;
-                    compressor.CompressionLevel = SevenZip.CompressionLevel.Low;
-                    //compressor.CustomParameters.Add("mt", "off");
-
-                    compressor.CompressStream(inStream, cs);
-
-                    cs.Close();
-                    outStream.Close();
-
-                    return new KeyCollection(outStream.GetKeys());
                 }
+
+                return new KeyCollection(keys);
             }
             else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
             {
-                using (var outStream = new CacheManagerStreamWriter(blockLength, hashAlgorithm, this, _bufferManager))
+                IList<Key> keys = new List<Key>();
+
+                using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
                 {
                     byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024);
 
@@ -699,11 +729,9 @@ namespace Library.Net.Amoeba
                     {
                         _bufferManager.ReturnBuffer(buffer);
                     }
-
-                    outStream.Close();
-
-                    return new KeyCollection(outStream.GetKeys());
                 }
+
+                return new KeyCollection(keys);
             }
             else
             {
@@ -714,12 +742,9 @@ namespace Library.Net.Amoeba
         public void Decoding(Stream outStream,
             CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, KeyCollection keys)
         {
-            if (outStream == null)
-                throw new ArgumentNullException("outStream");
-            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm))
-                throw new ArgumentException("CompressAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm))
-                throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
+            if (outStream == null) throw new ArgumentNullException("outStream");
+            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
+            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
 
             if (compressionAlgorithm == CompressionAlgorithm.XZ && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
@@ -761,7 +786,11 @@ namespace Library.Net.Amoeba
 
                         tempStream.Seek(0, SeekOrigin.Begin);
 
+#if !DEBUG
                         var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+#else
+                        var currentDirectory = Directory.GetCurrentDirectory();
+#endif
 
                         if (System.Environment.Is64BitProcess)
                         {
@@ -811,7 +840,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public Group ParityEncoding(KeyCollection keys, HashAlgorithm hashAlgorithm, int blockLength, CorrectionAlgorithm correctionAlgorithm)
+        public Group ParityEncoding(KeyCollection keys, HashAlgorithm hashAlgorithm, int blockLength, CorrectionAlgorithm correctionAlgorithm, WatchEventHandler watchEvent)
         {
             if (correctionAlgorithm == CorrectionAlgorithm.None)
             {
@@ -874,7 +903,24 @@ namespace Library.Net.Amoeba
                         intList.Add(keys.Count + i);
                     }
 
-                    reedSolomon.Encode(bufferList.ToArray(), parityBufferList.ToArray(), intList.ToArray());
+                    Thread thread = new Thread(new ThreadStart(() =>
+                    {
+                        reedSolomon.Encode(bufferList.ToArray(), parityBufferList.ToArray(), intList.ToArray());
+                    }));
+                    thread.Start();
+
+                    while (thread.IsAlive)
+                    {
+                        Thread.Sleep(1000);
+
+                        if (watchEvent(this))
+                        {
+                            thread.Abort();
+                            thread.Join();
+
+                            throw new StopException();
+                        }
+                    }
 
                     for (int i = 0; i < parityBufferList.Count; i++)
                     {
@@ -923,7 +969,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public KeyCollection ParityDecoding(Group group)
+        public KeyCollection ParityDecoding(Group group, WatchEventHandler watchEvent)
         {
             if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
             {
@@ -971,7 +1017,24 @@ namespace Library.Net.Amoeba
                     if (bufferList.Count < group.InformationLength)
                         throw new BlockNotFoundException();
 
-                    reedSolomon.Decode(bufferList.ToArray(), intList.ToArray());
+                    Thread thread = new Thread(new ThreadStart(() =>
+                    {
+                        reedSolomon.Decode(bufferList.ToArray(), intList.ToArray());
+                    }));
+                    thread.Start();
+
+                    while (thread.IsAlive)
+                    {
+                        Thread.Sleep(1000);
+
+                        if (watchEvent(this))
+                        {
+                            thread.Abort();
+                            thread.Join();
+
+                            throw new StopException();
+                        }
+                    }
 
                     long length = group.Length;
 
@@ -1194,7 +1257,12 @@ namespace Library.Net.Amoeba
                 _settings.Load(directoryPath);
 
                 long size = _settings.Size;
-                this.Resize(_fileStream.Length);
+
+                if (_fileStream.Length < size)
+                {
+                    this.Resize(_fileStream.Length);
+                }
+
                 _settings.Size = size;
 
                 this.CheckSpace();
@@ -1275,8 +1343,10 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) return;
+
                 if (disposing)
                 {
                     if (_fileStream != null)
@@ -1595,51 +1665,32 @@ namespace Library.Net.Amoeba
     [Serializable]
     class CacheManagerException : ManagerException
     {
-        public CacheManagerException()
-            : base()
-        {
-        }
-        public CacheManagerException(string message)
-            : base(message)
-        {
-        }
-        public CacheManagerException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
+        public CacheManagerException() : base() { }
+        public CacheManagerException(string message) : base(message) { }
+        public CacheManagerException(string message, Exception innerException) : base(message, innerException) { }
     }
 
     [Serializable]
     class SpaceNotFoundException : CacheManagerException
     {
-        public SpaceNotFoundException()
-            : base()
-        {
-        }
-        public SpaceNotFoundException(string message)
-            : base(message)
-        {
-        }
-        public SpaceNotFoundException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
+        public SpaceNotFoundException() : base() { }
+        public SpaceNotFoundException(string message) : base(message) { }
+        public SpaceNotFoundException(string message, Exception innerException) : base(message, innerException) { }
     }
 
     [Serializable]
     class BlockNotFoundException : CacheManagerException
     {
-        public BlockNotFoundException()
-            : base()
-        {
-        }
-        public BlockNotFoundException(string message)
-            : base(message)
-        {
-        }
-        public BlockNotFoundException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
+        public BlockNotFoundException() : base() { }
+        public BlockNotFoundException(string message) : base(message) { }
+        public BlockNotFoundException(string message, Exception innerException) : base(message, innerException) { }
+    }
+
+    [Serializable]
+    class StopException : CacheManagerException
+    {
+        public StopException() : base() { }
+        public StopException(string message) : base(message) { }
+        public StopException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

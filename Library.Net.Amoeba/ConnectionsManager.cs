@@ -25,7 +25,7 @@ namespace Library.Net.Amoeba
         private BufferManager _bufferManager;
 
         private Settings _settings;
-        
+
         private Kademlia<Node> _routeTable;
         private Random _random = new Random();
 
@@ -52,7 +52,9 @@ namespace Library.Net.Amoeba
         private volatile Thread _createClientConnection1Thread = null;
         private volatile Thread _createClientConnection2Thread = null;
         private volatile Thread _createClientConnection3Thread = null;
-        private volatile Thread _createServerConnectionThread = null;
+        private volatile Thread _createServerConnection1Thread = null;
+        private volatile Thread _createServerConnection2Thread = null;
+        private volatile Thread _createServerConnection3Thread = null;
 
         private ManagerState _state = ManagerState.Stop;
 
@@ -85,8 +87,8 @@ namespace Library.Net.Amoeba
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        public GetFilterSeedEventHandler GetFilterSeedEvent;
         internal UploadedEventHandler UploadedEvent;
+        public GetFilterSeedEventHandler GetFilterSeedEvent;
 
         private bool _disposed = false;
         private object _thisLock = new object();
@@ -127,19 +129,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _settings.BaseNode;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _settings.BaseNode = value;
                     _routeTable.BaseNode = value;
 
@@ -152,10 +154,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _routeTable.ToArray();
                 }
             }
@@ -165,10 +167,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     List<Seed> list = new List<Seed>();
                     list.AddRange(_cacheManager.Seeds);
                     list.AddRange(_seeds);
@@ -183,10 +185,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _settings.SearchKeywords;
                 }
             }
@@ -196,19 +198,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _settings.ConnectionCountLimit;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _settings.ConnectionCountLimit = value;
                 }
             }
@@ -218,19 +220,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _settings.UploadingConnectionCountLowerLimit;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _settings.UploadingConnectionCountLowerLimit = value;
                 }
             }
@@ -240,19 +242,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _settings.DownloadingConnectionCountLowerLimit;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _settings.DownloadingConnectionCountLowerLimit = value;
                 }
             }
@@ -262,10 +264,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     List<Information> list = new List<Information>();
 
                     foreach (var item in _connectionManagers.ToArray())
@@ -291,10 +293,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     List<InformationContext> contexts = new List<InformationContext>();
 
                     contexts.Add(new InformationContext("PullNodesRequestCount", _pullNodesRequestCount));
@@ -321,6 +323,9 @@ namespace Library.Net.Amoeba
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
 
+                    contexts.Add(new InformationContext("OtherNodeCount", _routeTable.Count));
+                    contexts.Add(new InformationContext("SeedCount", _seeds.Count + _uploadSeeds.Count));
+
                     return new Information(contexts);
                 }
             }
@@ -330,10 +335,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _receivedByteCount + _connectionManagers.Sum(n => n.ReceivedByteCount);
                 }
             }
@@ -343,10 +348,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _sentByteCount + _connectionManagers.Sum(n => n.SentByteCount);
                 }
             }
@@ -409,7 +414,7 @@ namespace Library.Net.Amoeba
         }
 
         // 汚いけど、こっちのほうがCPU使用率の一時的な跳ね上がりを防げる
-        
+
         private Stopwatch _searchNodeStopwatch = new Stopwatch();
         private LockedHashSet<Node> _searchNodes = new LockedHashSet<Node>();
         private LockedHashSet<Node> _connectionsNodes = new LockedHashSet<Node>();
@@ -438,8 +443,6 @@ namespace Library.Net.Amoeba
                             _searchNodes.UnionWith(messageManager.SurroundingNodes);
                             _searchNodes.Add(node);
                         }
-
-                        _searchNodeStopwatch.Restart();
                     }
 
                     using (DeadlockMonitor.Lock(_responseTimeDic.ThisLock))
@@ -451,6 +454,8 @@ namespace Library.Net.Amoeba
                             _responseTimeDic.Add(connectionManager.Node, connectionManager.ResponseTime);
                         }
                     }
+
+                    _searchNodeStopwatch.Restart();
                 }
             }
 
@@ -550,9 +555,30 @@ namespace Library.Net.Amoeba
                     return;
                 }
 
+                //if (Collection.Equals(connectionManager.Node.Id, this.BaseNode.Id))
+                //{
+                //    connectionManager.Dispose();
+                //    return;
+                //}
+
+                //var oldConnectionManager = _connectionManagers.FirstOrDefault(n => Collection.Equals(n.Node.Id, connectionManager.Node.Id));
+
+                //if (oldConnectionManager != null)
+                //{
+                //    this.RemoveConnectionManager(oldConnectionManager);
+                //}
+
                 if (_connectionManagers.Count >= this.ConnectionCountLimit)
                 {
-                    connectionManager.PushCancel();
+                    try
+                    {
+                        connectionManager.PushCancel();
+                    }
+                    catch (ConnectionManagerException)
+                    {
+
+                    }
+
                     connectionManager.Dispose();
 
                     Debug.WriteLine("ConnectionManager: Push Cancel");
@@ -598,7 +624,7 @@ namespace Library.Net.Amoeba
                         if (_connectionManagers.Contains(connectionManager))
                         {
                             Debug.WriteLine("ConnectionManager: Close");
-                            
+
                             _sentByteCount += connectionManager.SentByteCount;
                             _receivedByteCount += connectionManager.ReceivedByteCount;
 
@@ -973,7 +999,7 @@ namespace Library.Net.Amoeba
                             {
                                 if (!_messagesManager[requestNodes[i]].PullSeedsLink.Contains(item))
                                 {
-                                    lock (pushSeedsLinkDictionary.ThisLock)
+                                    using (DeadlockMonitor.Lock(pushSeedsLinkDictionary.ThisLock))
                                     {
                                         if (!pushSeedsLinkDictionary.ContainsKey(requestNodes[i]))
                                             pushSeedsLinkDictionary[requestNodes[i]] = new LockedHashSet<Keyword>();
@@ -1017,7 +1043,7 @@ namespace Library.Net.Amoeba
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
-                                lock (pushSeedsRequestDictionary.ThisLock)
+                                using (DeadlockMonitor.Lock(pushSeedsRequestDictionary.ThisLock))
                                 {
                                     if (!pushSeedsRequestDictionary.ContainsKey(requestNodes[i]))
                                         pushSeedsRequestDictionary[requestNodes[i]] = new LockedHashSet<Keyword>();
@@ -1049,7 +1075,7 @@ namespace Library.Net.Amoeba
                             {
                                 if (!_messagesManager[requestNodes[i]].PullBlocksLink.Contains(item))
                                 {
-                                    lock (pushBlocksLinkDictionary.ThisLock)
+                                    using (DeadlockMonitor.Lock(pushBlocksLinkDictionary.ThisLock))
                                     {
                                         if (!pushBlocksLinkDictionary.ContainsKey(requestNodes[i]))
                                             pushBlocksLinkDictionary[requestNodes[i]] = new LockedHashSet<Key>();
@@ -1095,7 +1121,7 @@ namespace Library.Net.Amoeba
                             {
                                 if (!_messagesManager[requestNodes[i]].PullBlocksRequest.Contains(item))
                                 {
-                                    lock (pushBlocksRequestDictionary.ThisLock)
+                                    using (DeadlockMonitor.Lock(pushBlocksRequestDictionary.ThisLock))
                                     {
                                         if (!pushBlocksRequestDictionary.ContainsKey(requestNodes[i]))
                                             pushBlocksRequestDictionary[requestNodes[i]] = new LockedHashSet<Key>();
@@ -1135,19 +1161,8 @@ namespace Library.Net.Amoeba
             {
                 var messageManager = _messagesManager[connectionManager.Node];
 
-                // PushNodesRequest
-                {
-                    messageManager.PushNodesRequest = true;
-                    connectionManager.PushNodesRequest();
-
-                    Debug.WriteLine("ConnectionManager: Push NodesRequest");
-                    _pushNodesRequestCount++;
-                }
-
                 Stopwatch nodeUpdateTime = new Stopwatch();
-                nodeUpdateTime.Start();
                 Stopwatch updateTime = new Stopwatch();
-                updateTime.Start();
 
                 for (; ; )
                 {
@@ -1155,11 +1170,11 @@ namespace Library.Net.Amoeba
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
 
-                    if (nodeUpdateTime.Elapsed.TotalSeconds > 180)
+                    // PushNodesRequest
+                    if (!nodeUpdateTime.IsRunning || nodeUpdateTime.Elapsed.TotalSeconds > 180)
                     {
                         nodeUpdateTime.Restart();
 
-                        // PushNodesRequest
                         if (!messageManager.PushNodesRequest)
                         {
                             messageManager.PushNodesRequest = true;
@@ -1170,11 +1185,28 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit && updateTime.Elapsed.TotalSeconds > 60)
+                    // PushNodes
+                    if (messageManager.PullNodesRequest)
+                    {
+                        var nodes = _connectionManagers.Select(n => n.Node).ToList();
+                        nodes.Remove(connectionManager.Node);
+
+                        if (nodes.Count > 0)
+                        {
+                            connectionManager.PushNodes(nodes);
+                            messageManager.PullNodesRequest = false;
+
+                            Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
+                            _pushNodesCount += nodes.Count;
+                        }
+                    }
+
+                    if (!updateTime.IsRunning || updateTime.Elapsed.TotalSeconds > 60)
                     {
                         updateTime.Restart();
 
                         // PushSeedsLink
+                        if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
                         {
                             KeywordCollection tempList = null;
                             int count = (int)(1024 * this.ResponseTimePriority(connectionManager.Node));
@@ -1216,6 +1248,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushSeedsRequest
+                        if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit)
                         {
                             KeywordCollection tempList = null;
                             int count = (int)(1024 * this.ResponseTimePriority(connectionManager.Node));
@@ -1257,6 +1290,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlocksLink
+                        if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
                         {
                             KeyCollection tempList = null;
                             int count = (int)((4096 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
@@ -1298,6 +1332,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlocksRequest
+                        if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit)
                         {
                             KeyCollection tempList = null;
                             int count = (int)((4096 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
@@ -1344,166 +1379,151 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    // PushNodes
-                    if (messageManager.PullNodesRequest)
-                    {
-                        var nodes = _connectionManagers.Select(n => n.Node).ToList();
-                        nodes.Remove(connectionManager.Node);
-
-                        if (nodes.Count > 0)
-                        {
-                            connectionManager.PushNodes(nodes);
-                            messageManager.PullNodesRequest = false;
-
-                            Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
-                            _pushNodesCount += nodes.Count;
-                        }
-                    }
-
-                    // PushBlock (Upload)
                     if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
                     {
-                        List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node.DeepClone()));
-                        KeyCollection uploadKeys = new KeyCollection();
-                        KeyCollection removeKeys = new KeyCollection();
-
+                        // PushSeeds
                         {
-                            KeyCollection tempKeys = new KeyCollection();
+                            List<Keyword> keywords = new List<Keyword>();
+                            keywords.AddRange(messageManager.PullSeedsRequest);
+                            keywords = keywords.OrderBy(n => _random.Next()).ToList();
 
-                            tempKeys.AddRange(_settings.UploadBlocksRequest);
-                            tempKeys.AddRange(_settings.DiffusionBlocksRequest);
-
-                            foreach (var key in tempKeys.OrderBy(n => _random.Next()))
+                            for (int i = 0; i < keywords.Count && i < 1; i++)
                             {
-                                var searchNodes = this.GetSearchNode(key.Hash, 1);
+                                HashSet<Seed> seeds = new HashSet<Seed>();
+                                seeds.UnionWith(_seeds.Where(n => n.Keywords.Contains(keywords[i]) && !messageManager.PushSeeds.Contains(n)));
+                                seeds.UnionWith(_uploadSeeds.Where(n => n.Keywords.Contains(keywords[i]) && !messageManager.PushSeeds.Contains(n)));
+                                seeds.UnionWith(_cacheManager.Seeds.Where(n => n.Keywords.Contains(keywords[i]) && !messageManager.PushSeeds.Contains(n)));
 
-                                if (searchNodes.Count() == 0)
+                                if (seeds.Count > 0)
                                 {
-                                    _settings.UploadBlocksRequest.Remove(key);
-                                    _settings.DiffusionBlocksRequest.Remove(key);
+                                    int count = (int)(1024 * this.BlockPriority(connectionManager.Node));
+                                    var tempKeyList = seeds.OrderBy(n => _random.Next()).Take(count).ToList();
 
-                                    removeKeys.Add(key);
-                                }
-                                else if (searchNodes.First() == connectionManager.Node && _cacheManager.Contains(key))
-                                {
-                                    _settings.UploadBlocksRequest.Remove(key);
-                                    _settings.DiffusionBlocksRequest.Remove(key);
+                                    connectionManager.PushSeeds(keywords[i], new SeedCollection(tempKeyList));
+                                    messageManager.PullSeedsRequest.Remove(keywords[i]);
+                                    messageManager.PushSeeds.AddRange(tempKeyList);
 
-                                    uploadKeys.Add(key);
-
-                                    break;
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Seeds {0} ({1})", keywords[i].Value, tempKeyList.Count));
+                                    _pushSeedsCount += tempKeyList.Count;
                                 }
                             }
                         }
 
-                        foreach (var key in removeKeys)
+                        // PushBlock (Upload)
                         {
-                            this.OnUploadedEvent(key);
-                        }
+                            List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node.DeepClone()));
+                            KeyCollection uploadKeys = new KeyCollection();
+                            KeyCollection removeKeys = new KeyCollection();
 
-                        foreach (var key in uploadKeys)
-                        {
-                            ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                            try
                             {
-                                buffer = _cacheManager[key];
+                                KeyCollection tempKeys = new KeyCollection();
 
-                                connectionManager.PushBlock(key, buffer);
+                                tempKeys.AddRange(_settings.UploadBlocksRequest);
+                                tempKeys.AddRange(_settings.DiffusionBlocksRequest);
 
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
-                                _pushBlockCount++;
-                            }
-                            catch (ConnectionManagerException e)
-                            {
-                                _settings.DiffusionBlocksRequest.Add(key);
-
-                                throw e;
-                            }
-                            catch (BlockNotFoundException)
-                            {
-
-                            }
-                            finally
-                            {
-                                if (buffer.Array != null)
+                                foreach (var key in tempKeys.OrderBy(n => _random.Next()))
                                 {
-                                    _bufferManager.ReturnBuffer(buffer.Array);
-                                }
-                            }
+                                    var searchNodes = this.GetSearchNode(key.Hash, 1);
 
-                            this.OnUploadedEvent(key);
-                        }
-                    }
-
-                    // PushSeeds
-                    {
-                        List<Keyword> keywords = new List<Keyword>();
-                        keywords.AddRange(messageManager.PullSeedsRequest);
-                        keywords = keywords.OrderBy(n => _random.Next()).ToList();
-
-                        for (int i = 0; i < keywords.Count && i < 1; i++)
-                        {
-                            HashSet<Seed> seeds = new HashSet<Seed>();
-                            seeds.UnionWith(_seeds.Where(n => n.Keywords.Contains(keywords[i]) && !messageManager.PushSeeds.Contains(n)));
-                            seeds.UnionWith(_uploadSeeds.Where(n => n.Keywords.Contains(keywords[i]) && !messageManager.PushSeeds.Contains(n)));
-                            seeds.UnionWith(_cacheManager.Seeds.Where(n => n.Keywords.Contains(keywords[i]) && !messageManager.PushSeeds.Contains(n)));
-
-                            if (seeds.Count > 0)
-                            {
-                                //int count = (int)(1024 * this.BlockPriority(requestConnectionManager.OtherNode));
-
-                                var tempKeyList = seeds.OrderBy(n => _random.Next()).Take(1024).ToList();
-
-                                connectionManager.PushSeeds(keywords[i], new SeedCollection(tempKeyList));
-                                messageManager.PullSeedsRequest.Remove(keywords[i]);
-                                messageManager.PushSeeds.AddRange(tempKeyList);
-
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Seeds {0} ({1})", keywords[i].Value), tempKeyList.Count);
-                                _pushSeedsCount += tempKeyList.Count;
-                            }
-                        }
-                    }
-
-                    // PushBlock
-                    if ((_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
-                    {
-                        foreach (var key in messageManager.PullBlocksRequest.OrderBy(n => _random.Next()).ToArray())
-                        {
-                            if (!_cacheManager.Contains(key)) continue;
-
-                            ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                            try
-                            {
-                                buffer = _cacheManager[key];
-
-                                connectionManager.PushBlock(key, buffer);
-                                messageManager.PullBlocksRequest.Remove(key);
-                                messageManager.Priority--;
-
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
-                                _pushBlockCount++;
-
-                                // Infomation
-                                {
-                                    if (_relayBlocks.Contains(key))
+                                    if (searchNodes.Count() == 0)
                                     {
-                                        _relayBlockCount++;
+                                        _settings.UploadBlocksRequest.Remove(key);
+                                        _settings.DiffusionBlocksRequest.Remove(key);
+
+                                        removeKeys.Add(key);
+                                    }
+                                    else if (searchNodes.First() == connectionManager.Node && _cacheManager.Contains(key))
+                                    {
+                                        _settings.UploadBlocksRequest.Remove(key);
+                                        _settings.DiffusionBlocksRequest.Remove(key);
+
+                                        uploadKeys.Add(key);
+
+                                        break;
+                                    }
+                                }
+                            }
+
+                            foreach (var key in removeKeys)
+                            {
+                                this.OnUploadedEvent(key);
+                            }
+
+                            foreach (var key in uploadKeys)
+                            {
+                                ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                                try
+                                {
+                                    buffer = _cacheManager[key];
+
+                                    connectionManager.PushBlock(key, buffer);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
+                                    _pushBlockCount++;
+                                }
+                                catch (ConnectionManagerException e)
+                                {
+                                    _settings.DiffusionBlocksRequest.Add(key);
+
+                                    throw e;
+                                }
+                                catch (BlockNotFoundException)
+                                {
+
+                                }
+                                finally
+                                {
+                                    if (buffer.Array != null)
+                                    {
+                                        _bufferManager.ReturnBuffer(buffer.Array);
                                     }
                                 }
 
-                                break;
+                                this.OnUploadedEvent(key);
                             }
-                            catch (BlockNotFoundException)
-                            {
+                        }
 
-                            }
-                            finally
+                        // PushBlock
+                        if ((_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
+                        {
+                            foreach (var key in messageManager.PullBlocksRequest.OrderBy(n => _random.Next()).ToArray())
                             {
-                                if (buffer.Array != null)
+                                if (!_cacheManager.Contains(key)) continue;
+
+                                ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                                try
                                 {
-                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                    buffer = _cacheManager[key];
+
+                                    connectionManager.PushBlock(key, buffer);
+                                    messageManager.PullBlocksRequest.Remove(key);
+                                    messageManager.Priority--;
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
+                                    _pushBlockCount++;
+
+                                    // Infomation
+                                    {
+                                        if (_relayBlocks.Contains(key))
+                                        {
+                                            _relayBlockCount++;
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                catch (BlockNotFoundException)
+                                {
+
+                                }
+                                finally
+                                {
+                                    if (buffer.Array != null)
+                                    {
+                                        _bufferManager.ReturnBuffer(buffer.Array);
+                                    }
                                 }
                             }
                         }
@@ -1665,33 +1685,43 @@ namespace Library.Net.Amoeba
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
-            if (e.Key == null || e.Key.Hash == null || e.Key.HashAlgorithm != HashAlgorithm.Sha512 || e.Value.Array == null) return;
-
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Block ({0})", NetworkConverter.ToBase64String(e.Key.Hash)));
-            _pullBlockCount++;
-
-            if (_messagesManager[connectionManager.Node].PushBlocksRequest.Contains(e.Key))
-            {
-                _messagesManager[connectionManager.Node].PushBlocksRequest.Remove(e.Key);
-                _messagesManager[connectionManager.Node].Priority++;
-
-                // Infomathon
-                {
-                    _relayBlocks.Add(e.Key);
-                }
-            }
-            else
-            {
-                _settings.DiffusionBlocksRequest.Add(e.Key);
-            }
-
             try
             {
-                _cacheManager[e.Key] = e.Value;
+                if (e.Key == null || e.Key.Hash == null || e.Key.HashAlgorithm != HashAlgorithm.Sha512 || e.Value.Array == null) return;
+
+                Debug.WriteLine(string.Format("ConnectionManager: Pull Block ({0})", NetworkConverter.ToBase64String(e.Key.Hash)));
+                _pullBlockCount++;
+
+                if (_messagesManager[connectionManager.Node].PushBlocksRequest.Contains(e.Key))
+                {
+                    _messagesManager[connectionManager.Node].PushBlocksRequest.Remove(e.Key);
+                    _messagesManager[connectionManager.Node].Priority++;
+
+                    // Infomathon
+                    {
+                        _relayBlocks.Add(e.Key);
+                    }
+                }
+                else
+                {
+                    _settings.DiffusionBlocksRequest.Add(e.Key);
+                }
+
+                try
+                {
+                    _cacheManager[e.Key] = e.Value;
+                }
+                catch (SpaceNotFoundException ex)
+                {
+                    Log.Error(ex);
+                }
             }
-            catch (SpaceNotFoundException ex)
+            finally
             {
-                Log.Error(ex);
+                if (e.Value.Array != null)
+                {
+                    _bufferManager.ReturnBuffer(e.Value.Array);
+                }
             }
 
             if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
@@ -1704,11 +1734,20 @@ namespace Library.Net.Amoeba
 
             Debug.WriteLine("ConnectionManager: Pull Cancel");
 
-            _cuttingNodes.Remove(connectionManager.Node);
-
-            if (_routeTable.Count > 50)
+            try
             {
-                _routeTable.Remove(connectionManager.Node);
+                _cuttingNodes.Remove(connectionManager.Node);
+
+                if (_routeTable.Count > 50)
+                {
+                    _routeTable.Remove(connectionManager.Node);
+                }
+
+                this.RemoveConnectionManager(connectionManager);
+            }
+            catch (Exception)
+            {
+
             }
         }
 
@@ -1754,10 +1793,10 @@ namespace Library.Net.Amoeba
 
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 foreach (var node in nodes)
                 {
                     if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
@@ -1769,10 +1808,10 @@ namespace Library.Net.Amoeba
 
         public bool DownloadWaiting(Key key)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 if (_downloadBlocks.Contains(key))
                     return true;
 
@@ -1790,20 +1829,20 @@ namespace Library.Net.Amoeba
 
         public void Download(Key key)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 _downloadBlocks.Add(key);
             }
         }
 
         public bool UploadWaiting(Key key)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 if (_settings.UploadBlocksRequest.Contains(key))
                     return true;
 
@@ -1813,20 +1852,20 @@ namespace Library.Net.Amoeba
 
         public void Upload(Key key)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 _settings.UploadBlocksRequest.Add(key);
             }
         }
 
         public void Upload(Seed seed)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 _uploadSeeds.Add(seed);
             }
         }
@@ -1835,10 +1874,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _state;
                 }
             }
@@ -1851,7 +1890,9 @@ namespace Library.Net.Amoeba
             while (_createClientConnection1Thread != null) Thread.Sleep(1000);
             while (_createClientConnection2Thread != null) Thread.Sleep(1000);
             while (_createClientConnection3Thread != null) Thread.Sleep(1000);
-            while (_createServerConnectionThread != null) Thread.Sleep(1000);
+            while (_createServerConnection1Thread != null) Thread.Sleep(1000);
+            while (_createServerConnection2Thread != null) Thread.Sleep(1000);
+            while (_createServerConnection3Thread != null) Thread.Sleep(1000);
             while (_connectionsManagerThread != null) Thread.Sleep(1000);
 
             using (DeadlockMonitor.Lock(this.ThisLock))
@@ -1859,24 +1900,27 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
 
+                _serverManager.Start();
+
                 _createClientConnection1Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection1Thread.IsBackground = true;
                 _createClientConnection1Thread.Name = "CreateClientConnection1Thread";
                 _createClientConnection1Thread.Start();
                 _createClientConnection2Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection2Thread.IsBackground = true;
                 _createClientConnection2Thread.Name = "CreateClientConnection2Thread";
                 _createClientConnection2Thread.Start();
                 _createClientConnection3Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection3Thread.IsBackground = true;
                 _createClientConnection3Thread.Name = "CreateClientConnection3Thread";
                 _createClientConnection3Thread.Start();
-                _createServerConnectionThread = new Thread(this.CreateServerConnectionThread);
-                _createServerConnectionThread.IsBackground = true;
-                _createServerConnectionThread.Name = "CreateServerConnectionThread";
-                _createServerConnectionThread.Start();
+                _createServerConnection1Thread = new Thread(this.CreateServerConnectionThread);
+                _createServerConnection1Thread.Name = "CreateServerConnection1Thread";
+                _createServerConnection1Thread.Start();
+                _createServerConnection2Thread = new Thread(this.CreateServerConnectionThread);
+                _createServerConnection2Thread.Name = "CreateServerConnection2Thread";
+                _createServerConnection2Thread.Start();
+                _createServerConnection3Thread = new Thread(this.CreateServerConnectionThread);
+                _createServerConnection3Thread.Name = "CreateServerConnection3Thread";
+                _createServerConnection3Thread.Start();
                 _connectionsManagerThread = new Thread(this.ConnectionsManagerThread);
-                _connectionsManagerThread.IsBackground = true;
                 _connectionsManagerThread.Priority = ThreadPriority.Lowest;
                 _connectionsManagerThread.Name = "ConnectionsManagerThread";
                 _connectionsManagerThread.Start();
@@ -1891,6 +1935,8 @@ namespace Library.Net.Amoeba
             {
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
+
+                _serverManager.Stop();
             }
 
             _createClientConnection1Thread.Join();
@@ -1899,14 +1945,18 @@ namespace Library.Net.Amoeba
             _createClientConnection2Thread = null;
             _createClientConnection3Thread.Join();
             _createClientConnection3Thread = null;
-            _createServerConnectionThread.Join();
-            _createServerConnectionThread = null;
+            _createServerConnection1Thread.Join();
+            _createServerConnection1Thread = null;
+            _createServerConnection2Thread.Join();
+            _createServerConnection2Thread = null;
+            _createServerConnection3Thread.Join();
+            _createServerConnection3Thread = null;
             _connectionsManagerThread.Join();
             _connectionsManagerThread = null;
 
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
-                foreach (var item in _connectionManagers)
+                foreach (var item in _connectionManagers.ToArray())
                 {
                     this.RemoveConnectionManager(item);
                 }
@@ -1960,9 +2010,9 @@ namespace Library.Net.Amoeba
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
-                    new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 32 },
-                    new Library.Configuration.SettingsContext<int>() { Name = "UploadingConnectionCountLowerLimit", Value = 12 },
-                    new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 12 },
+                    new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
+                    new Library.Configuration.SettingsContext<int>() { Name = "UploadingConnectionCountLowerLimit", Value = 3 },
+                    new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 3 },
                     new Library.Configuration.SettingsContext<KeywordCollection>() { Name = "SearchKeywords", Value = new KeywordCollection() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
@@ -2118,96 +2168,13 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) return;
+
                 if (disposing)
                 {
-                    if (_createClientConnection1Thread != null)
-                    {
-                        try
-                        {
-                            _createClientConnection1Thread.Abort();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _createClientConnection1Thread = null;
-                    }
-
-                    if (_createClientConnection2Thread != null)
-                    {
-                        try
-                        {
-                            _createClientConnection2Thread.Abort();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _createClientConnection2Thread = null;
-                    }
-
-                    if (_createClientConnection3Thread != null)
-                    {
-                        try
-                        {
-                            _createClientConnection3Thread.Abort();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _createClientConnection3Thread = null;
-                    }
-
-                    if (_createServerConnectionThread != null)
-                    {
-                        try
-                        {
-                            _createServerConnectionThread.Abort();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _createServerConnectionThread = null;
-                    }
-
-                    if (_connectionsManagerThread != null)
-                    {
-                        try
-                        {
-                            _connectionsManagerThread.Abort();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _connectionsManagerThread = null;
-                    }
-
-                    if (_connectionManagers != null)
-                    {
-                        foreach (var item in _connectionManagers)
-                        {
-                            try
-                            {
-                                item.Dispose();
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-                        }
-
-                        _connectionManagers = null;
-                    }
+                    this.Stop();
                 }
 
                 _disposed = true;

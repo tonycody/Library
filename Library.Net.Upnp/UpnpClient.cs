@@ -25,18 +25,6 @@ namespace Library.Net.Upnp
         private object _thisLock = new object();
         private bool _disposed = false;
 
-        #region IThisLock メンバ
-
-        public object ThisLock
-        {
-            get
-            {
-                return _thisLock;
-            }
-        }
-
-        #endregion
-
         public void Connect(TimeSpan timeout)
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
@@ -46,169 +34,6 @@ namespace Library.Net.Upnp
                 if (_services == null) throw new UpnpClientException();
             }
         }
-
-        public string GetExternalIpAddress(TimeSpan timeout)
-        {
-            if (_services == null) throw new UpnpClientException();
-
-            string value = null;
-
-            Thread startThread = new Thread(new ThreadStart(delegate()
-            {
-                try
-                {
-                    if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port)))
-                        return;
-                    if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port)))
-                        return;
-                }
-                catch (Exception)
-                {
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-
-            return value;
-        }
-
-        public string OpenPort(UpnpProtocolType protocol, int externalPort, int internalPort, string description, TimeSpan timeout)
-        {
-            if (_services == null) throw new UpnpClientException();
-
-            foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
-            {
-                foreach (var machineIp in nic.GetIPProperties().UnicastAddresses
-                    .Select(n => n.Address)
-                    .Where(n => n.AddressFamily == AddressFamily.InterNetwork))
-                {
-                    foreach (var gatewayIp in nic.GetIPProperties().GatewayAddresses
-                        .Select(n => n.Address)
-                        .Where(n => n.AddressFamily == AddressFamily.InterNetwork))
-                    {
-                        if (gatewayIp.ToString() == _location.Host && OpenPort(protocol, machineIp.ToString(), externalPort, internalPort, description, timeout))
-                        {
-                            return machineIp.ToString();
-                        }
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        public bool OpenPort(UpnpProtocolType protocol, string machineIp, int externalPort, int internalPort, string description, TimeSpan timeout)
-        {
-            if (_services == null) throw new UpnpClientException();
-
-            bool flag = false;
-
-            Thread startThread = new Thread(new ThreadStart(delegate()
-            {
-                try
-                {
-                    if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
-                        return;
-                    if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
-                        return;
-                }
-                catch (Exception)
-                {
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-
-            return flag;
-        }
-
-        public string ClosePort(UpnpProtocolType protocol, int externalPort, TimeSpan timeout)
-        {
-            if (_services == null) throw new UpnpClientException();
-
-            foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
-            {
-                foreach (var machineIp in nic.GetIPProperties().UnicastAddresses
-                    .Select(n => n.Address)
-                    .Where(n => n.AddressFamily == AddressFamily.InterNetwork))
-                {
-                    foreach (var gatewayIp in nic.GetIPProperties().GatewayAddresses
-                         .Select(n => n.Address)
-                         .Where(n => n.AddressFamily == AddressFamily.InterNetwork))
-                    {
-                        if (gatewayIp.ToString() == _location.Host && ClosePort(protocol, machineIp.ToString(), externalPort, timeout))
-                        {
-                            return machineIp.ToString();
-                        }
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        public bool ClosePort(UpnpProtocolType protocol, string machineIp, int externalPort, TimeSpan timeout)
-        {
-            if (_services == null) throw new UpnpClientException();
-
-            bool flag = false;
-
-            Thread startThread = new Thread(new ThreadStart(delegate()
-            {
-                try
-                {
-                    if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, externalPort))
-                        return;
-                    if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, externalPort))
-                        return;
-                }
-                catch (Exception)
-                {
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-
-            return flag;
-        }
-
-        public string GetPortEntry(int index, TimeSpan timeout)
-        {
-            if (_services == null) throw new UpnpClientException();
-
-            string value = null;
-
-            Thread startThread = new Thread(new ThreadStart(delegate()
-            {
-                try
-                {
-                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, index)))
-                        return;
-                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, index)))
-                        return;
-                }
-                catch (Exception)
-                {
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-
-            return value;
-        }
-        
-        protected override void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                }
-
-                _disposed = true;
-            }
-        }
-
         private static TimeSpan TimeoutCheck(TimeSpan elapsedTime, TimeSpan timeout)
         {
             var value = timeout - elapsedTime;
@@ -244,13 +69,11 @@ namespace Library.Net.Upnp
 
                 using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
                 {
-                    client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, (int)TimeoutCheck(stopwatch.Elapsed, timeout).TotalMilliseconds);
-                    client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
+                    client.ReceiveTimeout = (int)TimeoutCheck(stopwatch.Elapsed, timeout).TotalMilliseconds;
 
                     byte[] q = Encoding.ASCII.GetBytes(query);
 
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Broadcast, 1900);
-                    //IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
+                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
                     client.SendTo(q, q.Length, SocketFlags.None, endPoint);
 
                     IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
@@ -537,24 +360,166 @@ namespace Library.Net.Upnp
 
             return null;
         }
+
+
+        public string GetExternalIpAddress(TimeSpan timeout)
+        {
+            if (_services == null) throw new UpnpClientException();
+
+            string value = null;
+
+            Thread startThread = new Thread(new ThreadStart(delegate()
+            {
+                try
+                {
+                    if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port)))
+                        return;
+                    if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port)))
+                        return;
+                }
+                catch (Exception)
+                {
+                }
+            }));
+            startThread.Start();
+            startThread.Join(timeout);
+
+            return value;
+        }
+
+        public bool OpenPort(UpnpProtocolType protocol, int externalPort, int internalPort, string description, TimeSpan timeout)
+        {
+            if (_services == null) throw new UpnpClientException();
+
+            foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up))
+            {
+                var machineIp = nic.GetIPProperties().UnicastAddresses
+                    .Select(n => n.Address)
+                    .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
+                    .FirstOrDefault();
+                if (machineIp == null) continue;
+
+                var gatewayIp = nic.GetIPProperties().GatewayAddresses
+                    .Select(n => n.Address)
+                    .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
+                    .FirstOrDefault();
+                if (gatewayIp == null) continue;
+
+                if (gatewayIp.ToString() == _location.Host && OpenPort(protocol, machineIp.ToString(), externalPort, internalPort, description, timeout))
+                {
+                    return true;
+                }
+            }
+
+            return true;
+        }
+
+        public bool OpenPort(UpnpProtocolType protocol, string machineIp, int externalPort, int internalPort, string description, TimeSpan timeout)
+        {
+            if (_services == null) throw new UpnpClientException();
+
+            bool flag = false;
+
+            Thread startThread = new Thread(new ThreadStart(delegate()
+            {
+                try
+                {
+                    if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
+                        return;
+                    if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
+                        return;
+                }
+                catch (Exception)
+                {
+                }
+            }));
+            startThread.Start();
+            startThread.Join(timeout);
+
+            return flag;
+        }
+
+        public bool ClosePort(UpnpProtocolType protocol, int externalPort, TimeSpan timeout)
+        {
+            if (_services == null) throw new UpnpClientException();
+
+            bool flag = false;
+
+            Thread startThread = new Thread(new ThreadStart(delegate()
+            {
+                try
+                {
+                    if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, externalPort))
+                        return;
+                    if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, externalPort))
+                        return;
+                }
+                catch (Exception)
+                {
+                }
+            }));
+            startThread.Start();
+            startThread.Join(timeout);
+
+            return flag;
+        }
+
+        public string GetPortEntry(int index, TimeSpan timeout)
+        {
+            if (_services == null) throw new UpnpClientException();
+
+            string value = null;
+
+            Thread startThread = new Thread(new ThreadStart(delegate()
+            {
+                try
+                {
+                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, index)))
+                        return;
+                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, index)))
+                        return;
+                }
+                catch (Exception)
+                {
+                }
+            }));
+            startThread.Start();
+            startThread.Join(timeout);
+
+            return value;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                }
+
+                _disposed = true;
+            }
+        }
+
+        #region IThisLock メンバ
+
+        public object ThisLock
+        {
+            get
+            {
+                return _thisLock;
+            }
+        }
+
+        #endregion
     }
 
     [Serializable]
     public class UpnpClientException : ManagerException
     {
-        public UpnpClientException()
-            : base()
-        {
-        }
-
-        public UpnpClientException(string message)
-            : base(message)
-        {
-        }
-
-        public UpnpClientException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
+        public UpnpClientException() : base() { }
+        public UpnpClientException(string message) : base(message) { }
+        public UpnpClientException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

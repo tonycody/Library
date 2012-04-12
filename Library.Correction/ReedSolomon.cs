@@ -12,6 +12,7 @@ namespace Library.Correction
         private int _k;
         private int _n;
         private int _threadCount;
+
         private byte[] _encMatrix;
         private ReedSolomon.Math _fecMath;
         private object _thisLock = new object();
@@ -265,7 +266,7 @@ namespace Library.Correction
             "110000100010001",        // 14             1+x+x^6+x^10+x^14
             "1100000000000001",       // 15             1+x+x^15
             "11010000000010001"       // 16             1+x+x^3+x^12+x^16
-        };
+            };
 
             /**
              * To speed up computations, we have tables for logarithm, exponent

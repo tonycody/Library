@@ -13,7 +13,7 @@ namespace Library.Net.Connection
         private BufferManager _bufferManager;
 
         private bool _disposed = false;
-        
+
         private object _sendLock = new object();
         private object _receiveLock = new object();
         private object _thisLock = new object();
@@ -163,27 +163,26 @@ namespace Library.Net.Connection
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (_disposed) return;
+
+            if (disposing)
             {
-                if (disposing)
+                if (_connection != null)
                 {
-                    if (_connection != null)
+                    try
                     {
-                        try
-                        {
-                            _connection.Dispose();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _connection = null;
+                        _connection.Dispose();
                     }
-                }
+                    catch (Exception)
+                    {
 
-                _disposed = true;
+                    }
+
+                    _connection = null;
+                }
             }
+
+            _disposed = true;
         }
 
         #region IThisLock メンバ

@@ -123,11 +123,6 @@ namespace Library.Net.Amoeba
             _pullSeedsRequest = new CirculationCollection<Keyword>(new TimeSpan(0, 30, 0));
         }
 
-        //public void Rollback()
-        //{
-
-        //}
-
         public int Id
         {
             get

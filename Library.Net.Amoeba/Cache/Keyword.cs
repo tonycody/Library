@@ -230,10 +230,14 @@ namespace Library.Net.Amoeba
 
                             List<byte> blist = new List<byte>();
 
-                            // [A-Z]を小文字に変換,[a-z0-9]だけ許可
+                            // [A-Z]を小文字に変換,[a-z0-9_]だけ許可
                             foreach (var b in Encoding.ASCII.GetBytes(temp))
                             {
-                                if (b >= 0x61 && b <= 0x7A)
+                                if (b == 0x5f)
+                                {
+                                    blist.Add(b);
+                                }
+                                else if (b >= 0x61 && b <= 0x7A)
                                 {
                                     blist.Add(b);
                                 }

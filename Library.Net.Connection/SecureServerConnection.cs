@@ -105,7 +105,7 @@ namespace Library.Net.Connection
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                
+
                 return _connectionSignature.Certificate.PublicKey;
             }
         }
@@ -593,44 +593,57 @@ namespace Library.Net.Connection
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (_disposed) return;
+
+            if (disposing)
             {
-                if (disposing)
+                if (_connection != null)
                 {
-                    if (_receiveBuffer != null)
+                    try
                     {
-                        try
-                        {
-                            _bufferManager.ReturnBuffer(_receiveBuffer);
-                        }
-                        catch (Exception)
-                        {
+                        _connection.Dispose();
+                    }
+                    catch (Exception)
+                    {
 
-                        }
-
-                        _receiveBuffer = null;
                     }
 
-                    if (_sendBuffer != null)
+                    _connection = null;
+                }
+                
+                if (_receiveBuffer != null)
+                {
+                    try
                     {
-                        try
-                        {
-                            _bufferManager.ReturnBuffer(_sendBuffer);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _sendBuffer = null;
+                        _bufferManager.ReturnBuffer(_receiveBuffer);
                     }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _receiveBuffer = null;
                 }
 
-                if (_receiveBufferGCHandle.IsAllocated) _receiveBufferGCHandle.Free();
-                if (_sendBufferGCHandle.IsAllocated) _sendBufferGCHandle.Free();
+                if (_sendBuffer != null)
+                {
+                    try
+                    {
+                        _bufferManager.ReturnBuffer(_sendBuffer);
+                    }
+                    catch (Exception)
+                    {
 
-                _disposed = true;
+                    }
+
+                    _sendBuffer = null;
+                }
             }
+
+            if (_receiveBufferGCHandle.IsAllocated) _receiveBufferGCHandle.Free();
+            if (_sendBufferGCHandle.IsAllocated) _sendBufferGCHandle.Free();
+
+            _disposed = true;
         }
 
         #region IThisLock メンバ

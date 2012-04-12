@@ -203,40 +203,46 @@ namespace Library.Io
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
         }
 
+        public override void Close()
+        {
+            if (_disposed) return;
+
+            this.Dispose(true);
+        }
+
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            try
             {
-                try
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    if (disposing)
+                    if (_buffers != null)
                     {
-                        if (_buffers != null)
+                        try
                         {
-                            try
+                            for (int i = 0; i < _buffers.Count; i++)
                             {
-                                for (int i = 0; i < _buffers.Count; i++)
-                                {
-                                    _bufferManager.ReturnBuffer(_buffers[i]);
-                                }
+                                _bufferManager.ReturnBuffer(_buffers[i]);
                             }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            _buffers = null;
                         }
+                        catch (Exception)
+                        {
+
+                        }
+
+                        _buffers = null;
                     }
-
-                    if (_buffersGcHandle.IsAllocated) _buffersGcHandle.Free();
-
-                    _disposed = true;
                 }
-                finally
-                {
-                    base.Dispose(disposing);
-                }
+
+                if (_buffersGcHandle.IsAllocated) _buffersGcHandle.Free();
+
+                _disposed = true;
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
 

@@ -162,35 +162,42 @@ namespace Library.Io
             _stream.Flush();
         }
 
+        public override void Close()
+        {
+            if (_disposed) return;
+
+            this.Flush();
+            this.Dispose(true);
+        }
+
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            try
             {
-                try
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    if (disposing)
+                    if (_stream != null && !_leaveInnerStreamOpen)
                     {
-                        if (_stream != null && !_leaveInnerStreamOpen)
+                        try
                         {
-                            try
-                            {
-                                _stream.Dispose();
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            _stream = null;
+                            _stream.Dispose();
                         }
-                    }
+                        catch (Exception)
+                        {
 
-                    _disposed = true;
+                        }
+
+                        _stream = null;
+                    }
                 }
-                finally
-                {
-                    base.Dispose(disposing);
-                }
+
+                _disposed = true;
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
     }

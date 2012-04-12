@@ -102,12 +102,12 @@ namespace Library
             string f = (b < 0) ? "-" : "";
             b = Math.Abs(b);
 
-            List<string> u = new List<string> { "Byte", "KB", "MB", "GB", "TB", "PB", "EB" };
+            List<string> u = new List<string> { "Byte", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
             int i = 0;
 
             while (b >= 1024 && (b / 1024) >= 1)
             {
-                b /= 1024;
+                b /= (decimal)1024;
                 i++;
             }
 
@@ -123,7 +123,7 @@ namespace Library
 
         public static decimal FromSizeString(string value)
         {
-            int f = value.StartsWith("-") ? -1 : 1;
+            decimal f = value.StartsWith("-") ? -1 : 1;
             value = value.TrimStart('-');
 
             StringBuilder builder = new StringBuilder("0");
@@ -136,33 +136,49 @@ namespace Library
                 }
             }
 
-            if (value.Contains("EB"))
+            try
             {
-                return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
+                if (value.ToLower().Contains("y"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
+                }
+                else if (value.ToLower().Contains("z"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
+                }
+                else if (value.ToLower().Contains("e"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
+                }
+                else if (value.ToLower().Contains("p"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024;
+                }
+                else if (value.ToLower().Contains("t"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024;
+                }
+                else if (value.ToLower().Contains("g"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024;
+                }
+                else if (value.ToLower().Contains("m"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024 * 1024;
+                }
+                else if (value.ToLower().Contains("k"))
+                {
+                    return f * decimal.Parse(builder.ToString()) * 1024;
+                }
+                else
+                {
+                    return f * decimal.Parse(builder.ToString());
+                }
             }
-            else if (value.Contains("PB"))
+            catch (Exception)
             {
-                return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024;
-            }
-            else if (value.Contains("TB"))
-            {
-                return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024;
-            }
-            else if (value.Contains("GB"))
-            {
-                return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024;
-            }
-            else if (value.Contains("MB"))
-            {
-                return f * decimal.Parse(builder.ToString()) * 1024 * 1024;
-            }
-            else if (value.Contains("KB"))
-            {
-                return f * decimal.Parse(builder.ToString()) * 1024;
-            }
-            else
-            {
-                return f * decimal.Parse(builder.ToString());
+                if (f == -1) return decimal.MinValue;
+                else return decimal.MaxValue;
             }
         }
 

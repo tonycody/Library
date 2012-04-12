@@ -31,6 +31,7 @@ namespace Library.Net.Amoeba
         private string _comment = null;
         private SeedCollection _seeds = null;
         private BoxCollection _boxes = null;
+        private int _hashCode = 0;
 
         private object _thisLock;
         private static object _thisStaticLock = new object();
@@ -204,7 +205,7 @@ namespace Library.Net.Amoeba
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
-                return this.CreationTime.GetHashCode();
+                return _hashCode;
             }
         }
 
@@ -310,6 +311,7 @@ namespace Library.Net.Amoeba
                     else
                     {
                         _name = value;
+                        _hashCode = _name.GetHashCode();
                     }
                 }
             }

@@ -183,38 +183,44 @@ namespace Library.Io
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
         }
 
+        public override void Close()
+        {
+            if (_disposed) return;
+
+            this.Dispose(true);
+        }
+
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            try
             {
-                try
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    if (disposing)
+                    if (_streams != null)
                     {
-                        if (_streams != null)
+                        foreach (var item in _streams)
                         {
-                            foreach (var item in _streams)
+                            try
                             {
-                                try
-                                {
-                                    item.Dispose();
-                                }
-                                catch (Exception)
-                                {
-
-                                }
+                                item.Dispose();
                             }
+                            catch (Exception)
+                            {
 
-                            _streams = null;
+                            }
                         }
-                    }
 
-                    _disposed = true;
+                        _streams = null;
+                    }
                 }
-                finally
-                {
-                    base.Dispose(disposing);
-                }
+
+                _disposed = true;
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
     }

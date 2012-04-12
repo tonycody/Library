@@ -41,8 +41,10 @@ namespace Library
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) return;
+
                 if (disposing)
                 {
 

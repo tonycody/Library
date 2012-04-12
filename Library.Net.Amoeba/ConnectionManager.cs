@@ -96,8 +96,9 @@ namespace Library.Net.Amoeba
         private TimeSpan _responseTime = TimeSpan.MaxValue;
         private bool _onClose = false;
 
-        private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 3, 0);
-        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 6, 0);
+        private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 12, 0);
+        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 12, 0);
+        private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 6, 0);
 
         private object _thisLock = new object();
         private bool _disposed = false;
@@ -280,7 +281,6 @@ namespace Library.Net.Amoeba
 
                         ThreadPool.QueueUserWorkItem(new WaitCallback(this.Pull));
                         ThreadPool.QueueUserWorkItem(new WaitCallback(this.AliveTimer));
-                        //ThreadPool.QueueUserWorkItem(new WaitCallback(this.PingTimer));
 
                         _pingTime = DateTime.UtcNow;
                         _pingHash = new byte[64];
@@ -303,18 +303,15 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            try
             {
-                try
-                {
-                    _connection.Close(new TimeSpan(0, 0, 30));
+                _connection.Close(new TimeSpan(0, 0, 30));
 
-                    this.OnClose(new EventArgs());
-                }
-                catch (Exception ex)
-                {
-                    throw new ConnectionManagerException(ex.Message, ex);
-                }
+                this.OnClose(new EventArgs());
+            }
+            catch (Exception ex)
+            {
+                throw new ConnectionManagerException(ex.Message, ex);
             }
         }
 
@@ -328,7 +325,7 @@ namespace Library.Net.Amoeba
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                    while ((DateTime.UtcNow - _sendUpdateTime) < _sendTimeSpan)
+                    while ((DateTime.UtcNow - _sendUpdateTime) < _aliveTimeSpan)
                     {
                         Thread.Sleep(new TimeSpan(0, 0, 1));
                     }
@@ -362,7 +359,12 @@ namespace Library.Net.Amoeba
                 }
                 catch (ConnectionException)
                 {
-                    this.OnClose(new EventArgs());
+                    if (!_disposed)
+                    {
+                        this.OnClose(new EventArgs());
+                    }
+
+                    throw;
                 }
             }
             else
@@ -394,6 +396,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
             }
             else
@@ -425,6 +429,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
             }
             else
@@ -531,8 +537,6 @@ namespace Library.Net.Amoeba
             }
             catch (Exception)
             {
-                //Log.Warning(ex);
-
                 if (!_disposed)
                 {
                     this.OnClose(new EventArgs());
@@ -644,6 +648,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
             }
             else
@@ -676,6 +682,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
                 finally
                 {
@@ -712,6 +720,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
                 finally
                 {
@@ -748,6 +758,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
                 finally
                 {
@@ -785,6 +797,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
                 finally
                 {
@@ -821,6 +835,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
                 finally
                 {
@@ -857,6 +873,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
                 finally
                 {
@@ -894,6 +912,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
                 finally
                 {
@@ -927,6 +947,8 @@ namespace Library.Net.Amoeba
                 catch (ConnectionException)
                 {
                     this.OnClose(new EventArgs());
+
+                    throw;
                 }
             }
             else
@@ -1028,7 +1050,7 @@ namespace Library.Net.Amoeba
                 {
                     using (DeadlockMonitor.Lock(_thisStaticLock))
                     {
-                        if (_thisLock == null) 
+                        if (_thisLock == null)
                             _thisLock = new object();
 
                         return _thisLock;
@@ -1132,7 +1154,7 @@ namespace Library.Net.Amoeba
                 {
                     using (DeadlockMonitor.Lock(_thisStaticLock))
                     {
-                        if (_thisLock == null) 
+                        if (_thisLock == null)
                             _thisLock = new object();
 
                         return _thisLock;
@@ -1377,7 +1399,7 @@ namespace Library.Net.Amoeba
                 {
                     using (DeadlockMonitor.Lock(_thisStaticLock))
                     {
-                        if (_thisLock == null) 
+                        if (_thisLock == null)
                             _thisLock = new object();
 
                         return _thisLock;
@@ -1482,7 +1504,7 @@ namespace Library.Net.Amoeba
                 {
                     using (DeadlockMonitor.Lock(_thisStaticLock))
                     {
-                        if (_thisLock == null) 
+                        if (_thisLock == null)
                             _thisLock = new object();
 
                         return _thisLock;
@@ -1587,7 +1609,7 @@ namespace Library.Net.Amoeba
                 {
                     using (DeadlockMonitor.Lock(_thisStaticLock))
                     {
-                        if (_thisLock == null) 
+                        if (_thisLock == null)
                             _thisLock = new object();
 
                         return _thisLock;
@@ -1633,8 +1655,8 @@ namespace Library.Net.Amoeba
                             }
                             else if (id == (byte)SerializeId.Value)
                             {
-                                byte[] buff = new byte[(int)rangeStream.Length];
-                                rangeStream.Read(buff, 0, buff.Length);
+                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
+                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
 
                                 this.Value = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
                             }
@@ -1748,25 +1770,27 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
+            if (_connection != null)
+            {
+                try
+                {
+                    _connection.Dispose();
+                }
+                catch (Exception)
+                {
+
+                }
+
+                _connection = null;
+            }
+
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 if (!_disposed)
                 {
                     if (disposing)
                     {
-                        if (_connection != null)
-                        {
-                            try
-                            {
-                                _connection.Dispose();
-                            }
-                            catch (Exception)
-                            {
 
-                            }
-
-                            _connection = null;
-                        }
                     }
 
                     _disposed = true;

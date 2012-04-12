@@ -47,8 +47,7 @@ namespace Library.Update
             }
             catch (Exception e)
             {
-                MessageBox.Show(string.Join("\r\n", args), "Library.Update");
-                MessageBox.Show(e.Message, "Library.Update");
+                MessageBox.Show(e.Message, "Library.Update Error");
             }
         }
     }

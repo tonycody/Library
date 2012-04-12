@@ -115,7 +115,7 @@ namespace Library.Collections
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return this._dic.Keys;
+                    return this._dic.Keys.ToArray();
                 }
             }
         }
@@ -126,7 +126,7 @@ namespace Library.Collections
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return this._dic.Values;
+                    return this._dic.Values.ToList();
                 }
             }
         }
@@ -305,7 +305,7 @@ namespace Library.Collections
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return this.Keys;
+                    return this.Keys.ToArray();
                 }
             }
         }
@@ -316,7 +316,7 @@ namespace Library.Collections
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return this.Values;
+                    return this.Values.ToArray();
                 }
             }
         }

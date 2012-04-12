@@ -38,7 +38,11 @@ namespace Library.Net.Amoeba
                 stream = item.Export(_bufferManager);
                 lzmaBufferStream = new BufferStream(_bufferManager);
 
+#if !DEBUG
                 var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+#else
+                var currentDirectory = Directory.GetCurrentDirectory();
+#endif
                 
                 if (System.Environment.Is64BitProcess)
                 {
@@ -122,7 +126,11 @@ namespace Library.Net.Amoeba
                     {
                         using (BufferStream lzmaBufferStream = new BufferStream(_bufferManager))
                         {
+#if !DEBUG
                             var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+#else
+                            var currentDirectory = Directory.GetCurrentDirectory();
+#endif
 
                             if (System.Environment.Is64BitProcess)
                             {
@@ -163,7 +171,7 @@ namespace Library.Net.Amoeba
                 stream.Seek(0, SeekOrigin.Begin);
                 stream.Read(buffer, 0, (int)stream.Length);
 
-                return NetworkConverter.ToBase64String(buffer, 0, (int)stream.Length);
+                return NetworkConverter.ToBase64String(buffer, 0, (int)stream.Length).Replace('+', '-').Replace('/', '_');
             }
             finally
             {
@@ -176,7 +184,7 @@ namespace Library.Net.Amoeba
 
         private static Stream FromBase64String(string value)
         {
-            return new MemoryStream(NetworkConverter.FromBase64String(value));
+            return new MemoryStream(NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/')));
         }
 
         public static string ToNodeString(Node item)

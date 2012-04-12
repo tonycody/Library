@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
 using Library.Security;
+using System.IO;
+using System.Xml;
 
 namespace Library.Net.Amoeba
 {
@@ -40,7 +42,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Amoeba")]
-    class UploadItem : IThisLock
+    class UploadItem : IDeepCloneable<UploadItem>, IThisLock
     {
         private string _filePath;
         private UploadState _state;
@@ -422,6 +424,26 @@ namespace Library.Net.Amoeba
                         _indexs = new IndexCollection();
 
                     return _indexs;
+                }
+            }
+        }
+
+        public UploadItem DeepClone()
+        {
+            var ds = new DataContractSerializer(typeof(UploadItem));
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
+                {
+                    ds.WriteObject(textDictionaryWriter, this);
+                }
+
+                ms.Position = 0;
+
+                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                {
+                    return (UploadItem)ds.ReadObject(textDictionaryReader);
                 }
             }
         }

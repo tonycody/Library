@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Library;
+using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
@@ -15,17 +16,31 @@ namespace Library.Net.Amoeba
         private HashAlgorithm _hashAlgorithm;
         private BufferManager _bufferManager;
 
-        private List<Key> _keyList = new List<Key>();
+        private LockedList<Key> _keyList = new LockedList<Key>();
         private long _length;
+
+        private GetUsingKeysEventHandler GetUsingKeysEvent;
+
         private bool _disposed = false;
 
-        public CacheManagerStreamWriter(int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
+        public CacheManagerStreamWriter(out IList<Key> keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
         {
+            keys = _keyList;
             _hashAlgorithm = hashAlgorithm;
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
             _blockBuffer = bufferManager.TakeBuffer(blockLength);
             _blockBufferLength = blockLength;
+
+            this.GetUsingKeysEvent = new GetUsingKeysEventHandler((object sender, ref IList<Key> headers) =>
+            {
+                foreach (var item in _keyList)
+                {
+                    headers.Add(item);
+                }
+            });
+
+            _cacheManager.GetUsingKeysEvent += this.GetUsingKeysEvent;
         }
 
         public override bool CanRead
@@ -137,7 +152,7 @@ namespace Library.Net.Amoeba
                     }
 
                     _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
-                    _keyList.Add(key);
+                    _keyList.Add(key.DeepClone());
 
                     _blockBufferPosition = 0;
                 }
@@ -153,7 +168,7 @@ namespace Library.Net.Amoeba
 
         public override void Close()
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) return;
 
             if (_blockBufferPosition != 0)
             {
@@ -170,43 +185,38 @@ namespace Library.Net.Amoeba
                 }
 
                 _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
-                _keyList.Add(key);
+                _keyList.Add(key.DeepClone());
 
                 _blockBufferPosition = 0;
             }
-        }
 
-        public IEnumerable<Key> GetKeys()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            foreach (var item in _keyList.Select(n => n.DeepClone()))
-            {
-                yield return item;
-            }
+            this.Dispose(true);
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            try
             {
-                try
-                {
-                    if (disposing)
-                    {
-                        if (_blockBuffer != null)
-                        {
-                            _bufferManager.ReturnBuffer(_blockBuffer);
-                            _blockBuffer = null;
-                        }
+                if (_disposed) return;
 
-                        _disposed = true;
-                    }
-                }
-                finally
+                if (disposing)
                 {
-                    base.Dispose(disposing);
+                    if (_blockBuffer != null)
+                    {
+                        _bufferManager.ReturnBuffer(_blockBuffer);
+                        _blockBuffer = null;
+
+                        _cacheManager.GetUsingKeysEvent -= this.GetUsingKeysEvent;
+                    }
+
+                    _disposed = true;
                 }
+
+                _disposed = true;
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
     }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
+using System.IO;
+using System.Xml;
 
 namespace Library.Net.Amoeba
 {
@@ -23,7 +25,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "DownloadItem", Namespace = "http://Library/Net/Amoeba")]
-    class DownloadItem : IThisLock
+    class DownloadItem : IDeepCloneable<DownloadItem>, IThisLock
     {
         private int _priority = 3;
         private DownloadState _state;
@@ -162,6 +164,26 @@ namespace Library.Net.Amoeba
                         _indexs = new IndexCollection();
 
                     return _indexs;
+                }
+            }
+        }
+
+        public DownloadItem DeepClone()
+        {
+            var ds = new DataContractSerializer(typeof(DownloadItem));
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
+                {
+                    ds.WriteObject(textDictionaryWriter, this);
+                }
+
+                ms.Position = 0;
+
+                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                {
+                    return (DownloadItem)ds.ReadObject(textDictionaryReader);
                 }
             }
         }

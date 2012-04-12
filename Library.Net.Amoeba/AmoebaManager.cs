@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Library.Security;
+using System.IO;
 
 namespace Library.Net.Amoeba
 {
@@ -11,7 +12,6 @@ namespace Library.Net.Amoeba
     public class AmoebaManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private string _cachePath;
-        private string _WorkDirectory;
         private BufferManager _bufferManager;
 
         private ClientManager _clientManager;
@@ -29,13 +29,12 @@ namespace Library.Net.Amoeba
 
         public AmoebaManager(string cachePath, string WorkDirectory, BufferManager bufferManager)
         {
-            _WorkDirectory = WorkDirectory;
             _cachePath = cachePath;
 
             _bufferManager = bufferManager;
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
-            _cacheManager = new CacheManager(_cachePath, _WorkDirectory, _bufferManager);
+            _cacheManager = new CacheManager(_cachePath, WorkDirectory, _bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
             _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
@@ -145,19 +144,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.BaseNode;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _connectionsManager.BaseNode = value;
                 }
             }
@@ -167,10 +166,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.OtherNodes;
                 }
             }
@@ -180,10 +179,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.Seeds;
                 }
             }
@@ -193,10 +192,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.SearchKeywords;
                 }
             }
@@ -206,19 +205,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.ConnectionCountLimit;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _connectionsManager.ConnectionCountLimit = value;
                 }
             }
@@ -228,19 +227,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.DownloadingConnectionCountLowerLimit;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _connectionsManager.DownloadingConnectionCountLowerLimit = value;
                 }
             }
@@ -250,19 +249,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.UploadingConnectionCountLowerLimit;
                 }
             }
             set
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     _connectionsManager.UploadingConnectionCountLowerLimit = value;
                 }
             }
@@ -272,10 +271,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.ConnectionInformation;
                 }
             }
@@ -285,11 +284,17 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return _connectionsManager.Information;
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    List<InformationContext> contexts = new List<InformationContext>();
+                    contexts.AddRange(_connectionsManager.Information);
+                    contexts.AddRange(_cacheManager.Information);
+                    contexts.AddRange(_uploadManager.Information);
+                    contexts.AddRange(_downloadManager.Information);
+                
+                    return new Information(contexts);
                 }
             }
         }
@@ -298,10 +303,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.ReceivedByteCount;
                 }
             }
@@ -311,10 +316,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                     return _connectionsManager.SentByteCount;
                 }
             }
@@ -345,18 +350,21 @@ namespace Library.Net.Amoeba
             string name,
             KeywordCollection keywords,
             string comment,
-            DigitalSignature digitalSignature)
+            DigitalSignature digitalSignature,
+            int priority)
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 _uploadManager.Share(filePath,
                     name,
                     keywords,
-                    comment, CompressionAlgorithm.XZ,
+                    comment, 
+                    CompressionAlgorithm.XZ,
                     CryptoAlgorithm.Rijndael256,
                     CorrectionAlgorithm.ReedSolomon8,
                     HashAlgorithm.Sha512,
-                    digitalSignature);
+                    digitalSignature,
+                    priority);
             }
         }
 
@@ -364,18 +372,21 @@ namespace Library.Net.Amoeba
             string name,
             KeywordCollection keywords,
             string comment,
-            DigitalSignature digitalSignature)
+            DigitalSignature digitalSignature,
+            int priority)
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 _uploadManager.Upload(filePath,
                     name,
                     keywords,
-                    comment, CompressionAlgorithm.XZ,
+                    comment,
+                    CompressionAlgorithm.XZ,
                     CryptoAlgorithm.Rijndael256,
                     CorrectionAlgorithm.ReedSolomon8,
                     HashAlgorithm.Sha512,
-                    digitalSignature);
+                    digitalSignature,
+                    priority);
             }
         }
 
@@ -395,6 +406,14 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public void UploadRestart(int id)
+        {
+            using (DeadlockMonitor.Lock(this.ThisLock))
+            {
+                _uploadManager.Restart(id);
+            }
+        }
+
         public void SetUploadPriority(int id, int priority)
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
@@ -403,19 +422,19 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void Download(Seed seed)
+        public void Download(Seed seed, int priority)
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
-                _downloadManager.Download(seed);
+                _downloadManager.Download(seed, priority);
             }
         }
 
-        public void Download(Seed seed, string path)
+        public void Download(Seed seed, string path, int priority)
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
-                _downloadManager.Download(seed, path);
+                _downloadManager.Download(seed, path, priority);
             }
         }
 
@@ -424,6 +443,14 @@ namespace Library.Net.Amoeba
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 _downloadManager.Remove(id);
+            }
+        }
+
+        public void DownloadRestart(int id)
+        {
+            using (DeadlockMonitor.Lock(this.ThisLock))
+            {
+                _downloadManager.Restart(id);
             }
         }
 
@@ -437,20 +464,20 @@ namespace Library.Net.Amoeba
 
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 _connectionsManager.SetOtherNodes(nodes);
             }
         }
 
         public void Upload(Seed seed)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 _connectionsManager.Upload(seed);
             }
         }
@@ -459,7 +486,13 @@ namespace Library.Net.Amoeba
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                _uploadManager.Stop();
+                _downloadManager.Stop();
+                
                 _cacheManager.Resize(size);
+
+                _uploadManager.Start();
+                _downloadManager.Start();
             }
         }
 
@@ -486,7 +519,6 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
 
-                _serverManager.Start();
                 _connectionsManager.Start();
                 _downloadManager.Start();
                 _uploadManager.Start();
@@ -503,7 +535,6 @@ namespace Library.Net.Amoeba
                 _uploadManager.Stop();
                 _downloadManager.Stop();
                 _connectionsManager.Stop();
-                _serverManager.Stop();
             }
         }
 
@@ -511,10 +542,10 @@ namespace Library.Net.Amoeba
 
         public void Load(string directoryPath)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
@@ -526,10 +557,10 @@ namespace Library.Net.Amoeba
 
         public void Save(string directoryPath)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
@@ -543,11 +574,13 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) return;
+
                 if (disposing)
                 {
-
+                    this.Stop();
                 }
 
                 _disposed = true;

@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Library;
 using System.Runtime.InteropServices;
+using Library;
 
 namespace Library.Net.Amoeba
 {
@@ -19,6 +20,9 @@ namespace Library.Net.Amoeba
 
         private long _position = 0;
         private long _length = 0;
+
+        private GetUsingKeysEventHandler GetUsingKeysEvent;
+
         private bool _disposed = false;
 
         public CacheManagerStreamReader(KeyCollection keys, CacheManager cacheManager, BufferManager bufferManager)
@@ -31,6 +35,16 @@ namespace Library.Net.Amoeba
             _keysIndex++;
 
             _length = keys.Sum(n => (long)cacheManager.GetLength(n));
+
+            this.GetUsingKeysEvent = new GetUsingKeysEventHandler((object sender, ref IList<Key> headers) =>
+            {
+                foreach (var item in _keys)
+                {
+                    headers.Add(item);
+                }
+            });
+
+            _cacheManager.GetUsingKeysEvent += this.GetUsingKeysEvent;
         }
 
         public override bool CanRead
@@ -148,27 +162,35 @@ namespace Library.Net.Amoeba
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
         }
 
+        public override void Close()
+        {
+            if (_disposed) return;
+
+            this.Dispose(true);
+        }
+
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            try
             {
-                try
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    if (disposing)
+                    if (_blockBuffer.Array != null)
                     {
-                        if (_blockBuffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(_blockBuffer.Array);
-                            _blockBuffer = new ArraySegment<byte>();
-                        }
+                        _bufferManager.ReturnBuffer(_blockBuffer.Array);
+                        _blockBuffer = new ArraySegment<byte>();
                     }
 
-                    _disposed = true;
+                    _cacheManager.GetUsingKeysEvent -= this.GetUsingKeysEvent;
                 }
-                finally
-                {
-                    base.Dispose(disposing);
-                }
+
+                _disposed = true;
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
     }

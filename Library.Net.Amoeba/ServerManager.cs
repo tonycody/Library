@@ -1,32 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using Library.Net.Connection;
 using System.Text.RegularExpressions;
+using Library.Net.Connection;
+using System.Threading;
 
 namespace Library.Net.Amoeba
 {
     class ServerManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private BufferManager _bufferManager;
-
         private Settings _settings;
 
-        private List<TcpListener> _listeners;
+        private List<TcpListener> _listeners = new List<TcpListener>();
+        private List<string> _urisHistory = new List<string>();
+        private volatile Thread _watchThread = null;
+
         private ManagerState _state = ManagerState.Stop;
+
         private bool _disposed = false;
         private object _thisLock = new object();
 
-        private const int MaxReceiveCount = 1 * 1024 * 1024;
+        private const int MaxReceiveCount = 1024 * 1024 * 16;
 
         public ServerManager(BufferManager bufferManager)
         {
             _bufferManager = bufferManager;
 
             _settings = new Settings();
-            
-            _listeners = new List<TcpListener>();
         }
 
         public UriCollection ListenUris
@@ -54,6 +57,8 @@ namespace Library.Net.Amoeba
 
                     for (int i = 0; i < _listeners.Count; i++)
                     {
+                        if (_listeners[i] == null) continue;
+
                         if (_listeners[i].Pending())
                         {
                             var socket = _listeners[i].AcceptTcpClient().Client;
@@ -91,6 +96,59 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private void WatchThread()
+        {
+            for (; ; )
+            {
+                Thread.Sleep(1000);
+                if (this.State == ManagerState.Stop) return;
+
+                using (DeadlockMonitor.Lock(this.ThisLock))
+                {
+                    if (!Collection.Equals(_urisHistory, this.ListenUris))
+                    {
+                        // Stop
+                        {
+                            for (int i = 0; i < _listeners.Count; i++)
+                            {
+                                _listeners[i].Stop();
+                            }
+
+                            _listeners.Clear();
+                        }
+
+                        // Start
+                        {
+                            Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+
+                            foreach (var uri in this.ListenUris)
+                            {
+                                var match = regex.Match(uri);
+                                if (!match.Success) continue;
+
+                                if (match.Groups[1].Value == "tcp")
+                                {
+                                    try
+                                    {
+                                        var listener = new TcpListener(IPAddress.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
+                                        listener.Start(3);
+                                        _listeners.Add(listener);
+                                    }
+                                    catch (Exception)
+                                    {
+
+                                    }
+                                }
+                            }
+                        }
+
+                        _urisHistory.Clear();
+                        _urisHistory.AddRange(this.ListenUris);
+                    }
+                }
+            }
+        }
+
         public override ManagerState State
         {
             get
@@ -104,49 +162,34 @@ namespace Library.Net.Amoeba
 
         public override void Start()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            while (_watchThread != null) Thread.Sleep(1000);
+
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
 
-                Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-
-                foreach (var uri in this.ListenUris)
-                {
-                    var match = regex.Match(uri);
-                    if (!match.Success) continue;
-
-                    if (match.Groups[1].Value == "tcp")
-                    {
-                        try
-                        {
-                            var listener = new TcpListener(IPAddress.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
-                            listener.Start(3);
-                            _listeners.Add(listener);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                    }
-                }
+                _watchThread = new Thread(this.WatchThread);
+                _watchThread.Priority = ThreadPriority.Lowest;
+                _watchThread.Name = "WatchThread";
+                _watchThread.Start();
             }
         }
 
         public override void Stop()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
-
-                for (int i = 0; i < _listeners.Count; i++)
-                {
-                    _listeners[i].Stop();
-                }
-
-                _listeners.Clear();
             }
+
+            _watchThread.Join();
+            _watchThread = null;
         }
 
         #region ISettings メンバ
@@ -223,26 +266,13 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) return;
+
                 if (disposing)
                 {
-                    if (_listeners != null)
-                    {
-                        for (int i = 0; i < _listeners.Count; i++)
-                        {
-                            try
-                            {
-                                _listeners[i].Stop();
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-                        }
-
-                        _listeners = null;
-                    }
+                    this.Stop();
                 }
 
                 _disposed = true;

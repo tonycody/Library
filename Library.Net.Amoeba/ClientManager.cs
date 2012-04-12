@@ -18,7 +18,7 @@ namespace Library.Net.Amoeba
         private bool _disposed = false;
         private object _thisLock = new object();
 
-        private const int MaxReceiveCount = 1 * 1024 * 1024;
+        private const int MaxReceiveCount = 1024 * 1024 * 16;
         
         public ClientManager(BufferManager bufferManager)
         {
@@ -38,17 +38,14 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private static IPEndPoint GetIpEndPoint(string uri)
+        private static IPAddress GetIpAddress(string host)
         {
-            Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-            var match = regex.Match(uri);
-            if (!match.Success) return null;
-
             IPAddress remoteIP = null;
 
-            if (!IPAddress.TryParse(match.Groups[2].Value, out remoteIP))
+            if (!IPAddress.TryParse(host, out remoteIP))
             {
-                IPHostEntry hostEntry = Dns.GetHostEntry(match.Groups[2].Value);
+                IPHostEntry hostEntry = Dns.GetHostEntry(host);
+
                 if (hostEntry.AddressList.Length > 0)
                 {
                     remoteIP = hostEntry.AddressList[0];
@@ -59,7 +56,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            return new IPEndPoint(remoteIP, int.Parse(match.Groups[3].Value));
+            return remoteIP;
         }
 
         private static Socket Connect(IPEndPoint remoteEndPoint, TimeSpan timeout)
@@ -117,13 +114,40 @@ namespace Library.Net.Amoeba
 
                 if (connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None) return null;
 
+                string scheme = null;
+                string host = null;
+                int port = 4050;
+
+                {
+                    Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                    var match = regex.Match(uri);
+
+                    if (match.Success)
+                    {
+                        scheme = match.Groups[1].Value;
+                        host = match.Groups[2].Value;
+                        port = int.Parse(match.Groups[3].Value);
+                    }
+                    else
+                    {
+                        Regex regex2 = new Regex(@"(.*?):(.*)");
+                        var match2 = regex2.Match(uri);
+
+                        if (match2.Success)
+                        {
+                            scheme = match2.Groups[1].Value;
+                            host = match2.Groups[2].Value;
+                        }
+                    }
+                }
+
+                if (host == null) return null;
+
                 if (connectionFilter.ConnectionType == ConnectionType.Tcp)
                 {
 #if !DEBUG
                     {
-                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                        var match = regex.Match(uri);
-                        Uri url = new Uri(string.Format("{0}://{1}:{2}", match.Groups[1], match.Groups[2], match.Groups[3]));
+                        Uri url = new Uri(string.Format("{0}://{1}:{2}", scheme, host, port));
 
                         if (url.HostNameType == UriHostNameType.IPv4)
                         {
@@ -173,50 +197,71 @@ namespace Library.Net.Amoeba
                         }
                     }
 #endif
-
-                    connection = new TcpConnection(ClientManager.Connect(ClientManager.GetIpEndPoint(uri), new TimeSpan(0, 0, 10)), ClientManager.MaxReceiveCount, _bufferManager);
+                    socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
+                    connection = new TcpConnection(socket, ClientManager.MaxReceiveCount, _bufferManager);
                 }
-                else if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
+                else
                 {
-                    Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                    var match = regex.Match(uri);
-                    if (!match.Success) return null;
+                    string proxyScheme = null;
+                    string proxyHost = null;
+                    int proxyPort = 0;
 
-                    socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
-                    var proxy = new Socks4ProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
+                    {
+                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                        var match = regex.Match(connectionFilter.ProxyUri);
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
-                }
-                else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
-                {
-                    Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                    var match = regex.Match(uri);
-                    if (!match.Success) return null;
+                        if (match.Success)
+                        {
+                            proxyScheme = match.Groups[1].Value;
+                            proxyHost = match.Groups[2].Value;
+                            proxyPort = int.Parse(match.Groups[3].Value);
+                        }
+                        else
+                        {
+                            Regex regex2 = new Regex(@"(.*?):(.*)");
+                            var match2 = regex2.Match(connectionFilter.ProxyUri);
 
-                    socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
-                    var proxy = new Socks4aProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
+                            if (match2.Success)
+                            {
+                                proxyScheme = match2.Groups[1].Value;
+                                proxyHost = match2.Groups[2].Value;
+                            }
+                        }
+                    }
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
-                }
-                else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
-                {
-                    Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                    var match = regex.Match(uri);
-                    if (!match.Success) return null;
+                    if (proxyPort == 0)
+                    {
+                        if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
+                            || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
+                            || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                        {
+                            proxyPort = 1080;
+                        }
+                        else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                        {
+                            proxyPort = 80;
+                        }
+                    }
 
-                    socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
-                    var proxy = new Socks5ProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
+                    socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
+                    ProxyClientBase proxy = null;
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
-                }
-                else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
-                {
-                    Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                    var match = regex.Match(uri);
-                    if (!match.Success) return null;
-
-                    socket = ClientManager.Connect(ClientManager.GetIpEndPoint(connectionFilter.ProxyUri), new TimeSpan(0, 0, 10));
-                    var proxy = new HttpProxyClient(socket, match.Groups[2].Value, int.Parse(match.Groups[3].Value));
+                    if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
+                    {
+                        proxy = new Socks4ProxyClient(socket, host, port);
+                    }
+                    else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
+                    {
+                        proxy = new Socks4aProxyClient(socket, host, port);
+                    }
+                    else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                    {
+                        proxy = new Socks5ProxyClient(socket, host, port);
+                    }
+                    else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                    {
+                        proxy = new HttpProxyClient(socket, host, port);
+                    }
 
                     connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
                 }
@@ -303,8 +348,10 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            using (DeadlockMonitor.Lock(this.ThisLock))
             {
+                if (_disposed) return;
+
                 if (disposing)
                 {
 

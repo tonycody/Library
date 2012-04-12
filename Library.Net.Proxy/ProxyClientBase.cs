@@ -53,37 +53,16 @@ namespace Library.Net.Proxy
     [Serializable]
     public class ProxyClientException : Exception
     {
-        public ProxyClientException()
-        {
-        }
-
-        public ProxyClientException(string message)
-            : base(message)
-        {
-        }
-
-        public ProxyClientException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
+        public ProxyClientException() { }
+        public ProxyClientException(string message) : base(message) { }
+        public ProxyClientException(string message, Exception innerException) : base(message, innerException) { }
     }
 
     [Serializable]
     public class TimeoutException : ProxyClientException
     {
-        public TimeoutException()
-            : base()
-        {
-        }
-
-        public TimeoutException(string message)
-            : base(message)
-        {
-        }
-
-        public TimeoutException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
+        public TimeoutException() : base() { }
+        public TimeoutException(string message) : base(message) { }
+        public TimeoutException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

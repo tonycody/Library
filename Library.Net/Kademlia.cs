@@ -107,7 +107,10 @@ namespace Library.Net
         {
             get
             {
-                return false;
+                using (DeadlockMonitor.Lock(this.ThisLock))
+                {
+                    return false;
+                }
             }
         }
 
@@ -115,7 +118,10 @@ namespace Library.Net
         {
             get
             {
-                return true;
+                using (DeadlockMonitor.Lock(this.ThisLock))
+                {
+                    return true;
+                }
             }
         }
 
