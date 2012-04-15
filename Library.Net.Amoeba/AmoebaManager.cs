@@ -21,7 +21,7 @@ namespace Library.Net.Amoeba
         private DownloadManager _downloadManager;
         private UploadManager _uploadManager;
 
-        public GetFilterSeedEventHandler GetFilterSeedEvent;
+        public GetFilterSeedsEventHandler GetFilterSeedsEvent;
 
         private ManagerState _state = ManagerState.Stop;
         private bool _disposed = false;
@@ -39,7 +39,7 @@ namespace Library.Net.Amoeba
             _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
 
-            _connectionsManager.GetFilterSeedEvent = (object sender, Seed key) =>
+            _connectionsManager.GetFilterSeedsEvent = (object sender, IEnumerable<Seed> key) =>
             {
                 return this.OnGetFilterSeedEvent(key);
             };
@@ -49,7 +49,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _clientManager.Filters;
                 }
@@ -60,7 +60,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _serverManager.ListenUris;
                 }
@@ -71,14 +71,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _downloadManager.BaseDirectory;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _downloadManager.BaseDirectory = value;
                 }
@@ -89,7 +89,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _downloadManager.DownloadingInformation;
                 }
@@ -100,7 +100,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _downloadManager.DownloadedSeeds;
                 }
@@ -111,7 +111,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _cacheManager.ShareInformation;
                 }
@@ -122,7 +122,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _uploadManager.UploadingInformation;
                 }
@@ -133,7 +133,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _uploadManager.UploadedSeeds;
                 }
@@ -144,7 +144,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -153,7 +153,7 @@ namespace Library.Net.Amoeba
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -166,7 +166,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -179,7 +179,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -192,7 +192,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -205,7 +205,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -214,7 +214,7 @@ namespace Library.Net.Amoeba
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -227,7 +227,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -236,7 +236,7 @@ namespace Library.Net.Amoeba
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -249,7 +249,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -258,7 +258,7 @@ namespace Library.Net.Amoeba
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -271,7 +271,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -284,7 +284,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -303,7 +303,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -316,7 +316,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -329,21 +329,21 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _cacheManager.Size;
                 }
             }
         }
 
-        protected virtual bool OnGetFilterSeedEvent(Seed seed)
+        protected virtual IEnumerable<Seed> OnGetFilterSeedEvent(IEnumerable<Seed> seeds)
         {
-            if (GetFilterSeedEvent != null)
+            if (GetFilterSeedsEvent != null)
             {
-                return GetFilterSeedEvent(this, seed);
+                return GetFilterSeedsEvent(this, seeds);
             }
 
-            return true;
+            return new Seed[0];
         }
 
         public void Share(string filePath,
@@ -353,7 +353,7 @@ namespace Library.Net.Amoeba
             DigitalSignature digitalSignature,
             int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _uploadManager.Share(filePath,
                     name,
@@ -375,7 +375,7 @@ namespace Library.Net.Amoeba
             DigitalSignature digitalSignature,
             int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _uploadManager.Upload(filePath,
                     name,
@@ -392,7 +392,7 @@ namespace Library.Net.Amoeba
 
         public void ShareRemove(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _cacheManager.ShareRemove(id);
             }
@@ -400,7 +400,7 @@ namespace Library.Net.Amoeba
 
         public void UploadRemove(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _uploadManager.Remove(id);
             }
@@ -408,7 +408,7 @@ namespace Library.Net.Amoeba
 
         public void UploadRestart(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _uploadManager.Restart(id);
             }
@@ -416,7 +416,7 @@ namespace Library.Net.Amoeba
 
         public void SetUploadPriority(int id, int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _uploadManager.SetPriority(id, priority);
             }
@@ -424,7 +424,7 @@ namespace Library.Net.Amoeba
 
         public void Download(Seed seed, int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _downloadManager.Download(seed, priority);
             }
@@ -432,7 +432,7 @@ namespace Library.Net.Amoeba
 
         public void Download(Seed seed, string path, int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _downloadManager.Download(seed, path, priority);
             }
@@ -440,7 +440,7 @@ namespace Library.Net.Amoeba
 
         public void DownloadRemove(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _downloadManager.Remove(id);
             }
@@ -448,7 +448,7 @@ namespace Library.Net.Amoeba
 
         public void DownloadRestart(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _downloadManager.Restart(id);
             }
@@ -456,7 +456,7 @@ namespace Library.Net.Amoeba
 
         public void SetDownloadPriority(int id, int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _downloadManager.SetPriority(id, priority);
             }
@@ -464,7 +464,7 @@ namespace Library.Net.Amoeba
 
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -474,7 +474,7 @@ namespace Library.Net.Amoeba
 
         public void Upload(Seed seed)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -484,7 +484,7 @@ namespace Library.Net.Amoeba
 
         public void Resize(long size)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _uploadManager.Stop();
                 _downloadManager.Stop();
@@ -505,7 +505,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _state;
                 }
@@ -514,7 +514,7 @@ namespace Library.Net.Amoeba
 
         public override void Start()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
@@ -527,7 +527,7 @@ namespace Library.Net.Amoeba
 
         public override void Stop()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
@@ -542,7 +542,7 @@ namespace Library.Net.Amoeba
 
         public void Load(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -557,16 +557,16 @@ namespace Library.Net.Amoeba
 
         public void Save(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
-                _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
-                _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
-                _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
-                _downloadManager.Save(System.IO.Path.Combine(directoryPath, "DownloadManager"));
                 _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
+                _downloadManager.Save(System.IO.Path.Combine(directoryPath, "DownloadManager"));
+                _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
+                _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
+                _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
+                _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
             }
         }
 
@@ -574,7 +574,7 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) return;
 

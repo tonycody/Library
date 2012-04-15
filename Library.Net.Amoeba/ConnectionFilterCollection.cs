@@ -16,7 +16,7 @@ namespace Library.Net.Amoeba
 
         IEnumerator<ConnectionFilter> IEnumerable<ConnectionFilter>.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(base.ThisLock))
+            lock (base.ThisLock)
             {
                 return base.GetEnumerator();
             }
@@ -28,7 +28,7 @@ namespace Library.Net.Amoeba
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(base.ThisLock))
+            lock (base.ThisLock)
             {
                 return this.GetEnumerator();
             }

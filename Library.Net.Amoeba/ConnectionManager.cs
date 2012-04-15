@@ -129,7 +129,7 @@ namespace Library.Net.Amoeba
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _otherSessionId;
                 }
@@ -142,7 +142,7 @@ namespace Library.Net.Amoeba
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _otherNode;
                 }
@@ -153,7 +153,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -196,7 +196,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 try
                 {
@@ -973,7 +973,7 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     Encoding encoding = new UTF8Encoding(false);
                     byte[] lengthBuffer = new byte[4];
@@ -1017,7 +1017,7 @@ namespace Library.Net.Amoeba
 
             public override NodesMessage DeepClone()
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     using (var bufferManager = new BufferManager())
                     using (var stream = this.Export(bufferManager))
@@ -1032,7 +1032,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         if (_nodes == null)
                             _nodes = new NodeCollection();
@@ -1048,7 +1048,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1075,7 +1075,7 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     Encoding encoding = new UTF8Encoding(false);
                     byte[] lengthBuffer = new byte[4];
@@ -1099,7 +1099,7 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Stream> streams = new List<Stream>();
 
@@ -1121,7 +1121,7 @@ namespace Library.Net.Amoeba
 
             public override SeedLinkMessage DeepClone()
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     using (var bufferManager = new BufferManager())
                     using (var stream = this.Export(bufferManager))
@@ -1136,7 +1136,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         if (_keywords == null)
                             _keywords = new KeywordCollection();
@@ -1152,7 +1152,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1179,7 +1179,7 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     Encoding encoding = new UTF8Encoding(false);
                     byte[] lengthBuffer = new byte[4];
@@ -1203,7 +1203,7 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Stream> streams = new List<Stream>();
 
@@ -1225,7 +1225,7 @@ namespace Library.Net.Amoeba
 
             public override SeedRequestMessage DeepClone()
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     using (var bufferManager = new BufferManager())
                     using (var stream = this.Export(bufferManager))
@@ -1240,7 +1240,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         if (_keywords == null)
                             _keywords = new KeywordCollection();
@@ -1256,7 +1256,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1285,7 +1285,7 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     Encoding encoding = new UTF8Encoding(false);
                     byte[] lengthBuffer = new byte[4];
@@ -1313,7 +1313,7 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Stream> streams = new List<Stream>();
                     Encoding encoding = new UTF8Encoding(false);
@@ -1347,7 +1347,7 @@ namespace Library.Net.Amoeba
 
             public override SeedMessage DeepClone()
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     using (var bufferManager = new BufferManager())
                     using (var stream = this.Export(bufferManager))
@@ -1362,14 +1362,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _keyword;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _keyword = value;
                     }
@@ -1381,7 +1381,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         if (_seeds == null)
                             _seeds = new SeedCollection();
@@ -1397,7 +1397,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1424,7 +1424,7 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     Encoding encoding = new UTF8Encoding(false);
                     byte[] lengthBuffer = new byte[4];
@@ -1448,7 +1448,7 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Stream> streams = new List<Stream>();
                     Encoding encoding = new UTF8Encoding(false);
@@ -1471,7 +1471,7 @@ namespace Library.Net.Amoeba
 
             public override BlocksLinkMessage DeepClone()
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     using (var bufferManager = new BufferManager())
                     using (var stream = this.Export(bufferManager))
@@ -1486,7 +1486,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         if (_keys == null)
                             _keys = new KeyCollection();
@@ -1502,7 +1502,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1529,7 +1529,7 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     Encoding encoding = new UTF8Encoding(false);
                     byte[] lengthBuffer = new byte[4];
@@ -1553,7 +1553,7 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Stream> streams = new List<Stream>();
                     Encoding encoding = new UTF8Encoding(false);
@@ -1576,7 +1576,7 @@ namespace Library.Net.Amoeba
 
             public override BlocksRequestMessage DeepClone()
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     using (var bufferManager = new BufferManager())
                     using (var stream = this.Export(bufferManager))
@@ -1591,7 +1591,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         if (_keys == null)
                             _keys = new KeyCollection();
@@ -1607,7 +1607,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1636,7 +1636,7 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     Encoding encoding = new UTF8Encoding(false);
                     byte[] lengthBuffer = new byte[4];
@@ -1667,7 +1667,7 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Stream> streams = new List<Stream>();
 
@@ -1699,7 +1699,7 @@ namespace Library.Net.Amoeba
 
             public override BlockMessage DeepClone()
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     using (var bufferManager = new BufferManager())
                     using (var stream = this.Export(bufferManager))
@@ -1714,14 +1714,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _key;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _key = value;
                     }
@@ -1733,14 +1733,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _value;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _value = value;
                     }
@@ -1753,7 +1753,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1784,7 +1784,7 @@ namespace Library.Net.Amoeba
                 _connection = null;
             }
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (!_disposed)
                 {

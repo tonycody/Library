@@ -49,14 +49,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _capacity.Value;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _capacity = value;
                 }
@@ -67,7 +67,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._list.Count;
                 }
@@ -78,14 +78,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._list[index];
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     this._list[index] = value;
                 }
@@ -94,7 +94,7 @@ namespace Library.Collections
 
         public void Add(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_capacity != null && _list.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
 
@@ -104,7 +104,7 @@ namespace Library.Collections
 
         public void AddRange(IEnumerable<T> collection)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 foreach (var item in collection)
                 {
@@ -115,7 +115,7 @@ namespace Library.Collections
 
         public void Clear()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._list.Clear();
             }
@@ -123,7 +123,7 @@ namespace Library.Collections
 
         public bool Contains(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._list.Contains(item);
             }
@@ -131,7 +131,7 @@ namespace Library.Collections
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._list.CopyTo(array, arrayIndex);
             }
@@ -139,7 +139,7 @@ namespace Library.Collections
 
         public IEnumerator<T> GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 foreach (var item in _list)
                 {
@@ -150,7 +150,7 @@ namespace Library.Collections
 
         public LockedList<T> GetRange(int index, int count)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return new LockedList<T>(this._list.GetRange(index, count));
             }
@@ -158,7 +158,7 @@ namespace Library.Collections
 
         public void Sort(IComparer<T> comparer)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _list.Sort(comparer);
             }
@@ -166,7 +166,7 @@ namespace Library.Collections
 
         public void Sort(int index, int count, IComparer<T> comparer)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _list.Sort(index, count, comparer);
             }
@@ -174,7 +174,7 @@ namespace Library.Collections
 
         public void Sort(Comparison<T> comparerison)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _list.Sort(comparerison);
             }
@@ -182,7 +182,7 @@ namespace Library.Collections
 
         public void Sort()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _list.Sort();
             }
@@ -190,7 +190,7 @@ namespace Library.Collections
 
         public void Reverse()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _list.Reverse();
             }
@@ -198,7 +198,7 @@ namespace Library.Collections
 
         public void Reverse(int index, int count)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _list.Reverse(index, count);
             }
@@ -206,7 +206,7 @@ namespace Library.Collections
 
         public int IndexOf(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._list.IndexOf(item);
             }
@@ -214,7 +214,7 @@ namespace Library.Collections
 
         public void Insert(int index, T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._list.Insert(index, item);
             }
@@ -222,7 +222,7 @@ namespace Library.Collections
 
         public bool Remove(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._list.Remove(item);
             }
@@ -230,7 +230,7 @@ namespace Library.Collections
 
         public void RemoveAt(int index)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._list.RemoveAt(index);
             }
@@ -238,7 +238,7 @@ namespace Library.Collections
 
         public void TrimExcess()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._list.TrimExcess();
             }
@@ -246,7 +246,7 @@ namespace Library.Collections
 
         void ICollection.CopyTo(Array array, int arrayIndex)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
             }
@@ -254,7 +254,7 @@ namespace Library.Collections
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.GetEnumerator();
             }
@@ -262,7 +262,7 @@ namespace Library.Collections
 
         int IList.Add(object item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Add((T)item);
                 return this._list.Count - 1;
@@ -271,7 +271,7 @@ namespace Library.Collections
 
         bool IList.Contains(object item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.Contains((T)item);
             }
@@ -279,7 +279,7 @@ namespace Library.Collections
 
         int IList.IndexOf(object item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.IndexOf((T)item);
             }
@@ -287,7 +287,7 @@ namespace Library.Collections
 
         void IList.Insert(int index, object item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Insert(index, (T)item);
             }
@@ -295,7 +295,7 @@ namespace Library.Collections
 
         void IList.Remove(object item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Remove((T)item);
             }
@@ -305,7 +305,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -316,7 +316,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return true;
                 }
@@ -327,7 +327,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -338,7 +338,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -349,14 +349,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this[index];
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     this[index] = (T)value;
                 }

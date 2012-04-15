@@ -13,6 +13,9 @@ namespace Library
         //^{( )*}lock.*\({.*}\){(.*)}{(\n+)}{(.*)}\{
         //\1using (DeadlockMonitor.Lock(\2))\3\4\5{
 
+        //using \(DeadlockMonitor.Lock\({.*}\)\)
+        //lock (\1)
+
         /// <summary>Lock used to protected private static state in DdMonitor.</summary>
         private static object _globalLock = new object();
         /// <summary>Maps actual monitor being waited on to internal data about that monitor.</summary>

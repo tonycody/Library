@@ -146,7 +146,7 @@ namespace Library.Net.Proxy
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _proxyHost;
                 }
@@ -160,7 +160,7 @@ namespace Library.Net.Proxy
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _proxyPort;
                 }
@@ -175,7 +175,7 @@ namespace Library.Net.Proxy
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _tcpClient.Client;
                 }

@@ -71,26 +71,20 @@ namespace Library.UnitTest
         [Test]
         public void Test_AmoebaConverter_Box()
         {
-            try
-            {
-                var box = new Box();
-                box.Name = "Box";
-                box.Comment = "Comment";
-                box.CreationTime = DateTime.Now;
-                box.Boxes.Add(new Box() { Name = "Box" });
-                box.Seeds.Add(new Seed() { Name = "Seed" });
+            var box = new Box();
+            box.Name = "Box";
+            box.Comment = "Comment";
+            box.CreationTime = DateTime.Now;
+            box.Boxes.Add(new Box() { Name = "Box" });
+            box.Seeds.Add(new Seed() { Name = "Seed" });
 
-                DigitalSignature digitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsa521_Sha512);
-                box.CreateCertificate(digitalSignature);
+            DigitalSignature digitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsa521_Sha512);
+            box.CreateCertificate(digitalSignature);
 
-                var streamBox = AmoebaConverter.ToBoxStream(box);
-                var box2 = AmoebaConverter.FromSignatureStream(streamBox);
+            var streamBox = AmoebaConverter.ToBoxStream(box);
+            var box2 = AmoebaConverter.FromBoxStream(streamBox);
 
-                Assert.AreEqual(box, box2, "AmoebaConverter #3");
-            }
-            catch (Exception)
-            {
-            }
+            Assert.AreEqual(box, box2, "AmoebaConverter #3");
         }
 
         [Test]

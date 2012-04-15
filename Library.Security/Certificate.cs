@@ -55,7 +55,7 @@ namespace Library.Security
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -96,7 +96,7 @@ namespace Library.Security
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -146,7 +146,7 @@ namespace Library.Security
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashCode;
             }
@@ -173,18 +173,16 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (!Collection.Equals(this.PublicKey, other.PublicKey))
-                {
-                    return false;
-                }
+                if (this.PublicKey.Length != other.PublicKey.Length) return false;
+
+                for (int i = 0; i < this.PublicKey.Length; i++) if (this.PublicKey[i] != other.PublicKey[i]) return false;
             }
 
             if (this.Signature != null && other.Signature != null)
             {
-                if (!Collection.Equals(this.Signature, other.Signature))
-                {
-                    return false;
-                }
+                if (this.Signature.Length != other.Signature.Length) return false;
+
+                for (int i = 0; i < this.Signature.Length; i++) if (this.Signature[i] != other.Signature[i]) return false;
             }
 
             return true;
@@ -192,7 +190,7 @@ namespace Library.Security
 
         public override Certificate DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
@@ -223,14 +221,14 @@ namespace Library.Security
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _digitalSignatureAlgorithm;
                 }
             }
             private set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!Enum.IsDefined(typeof(DigitalSignatureAlgorithm), value))
                     {
@@ -249,14 +247,14 @@ namespace Library.Security
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _publicKey;
                 }
             }
             private set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && (value.Length > Certificate.MaxPublickeyLength))
                     {
@@ -293,7 +291,7 @@ namespace Library.Security
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _signature;
                 }
@@ -301,7 +299,7 @@ namespace Library.Security
 
             private set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && (value.Length > Certificate.MaxSignatureLength))
                     {
@@ -321,7 +319,7 @@ namespace Library.Security
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null) _thisLock = new object();
 

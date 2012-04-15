@@ -21,7 +21,7 @@ namespace Library.Net.Amoeba
 
         public void SetGroup(Group group)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (!_keyTrueList.ContainsKey(group))
                 {
@@ -37,7 +37,7 @@ namespace Library.Net.Amoeba
 
         public void SetKey(Key key, bool flag)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (flag)
                 {
@@ -72,7 +72,7 @@ namespace Library.Net.Amoeba
 
         public IEnumerable<Key> GetKeys(Group group, bool flag)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (flag)
                 {
@@ -107,7 +107,7 @@ namespace Library.Net.Amoeba
 
         public int GetCount(Group group)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_getCount.ContainsKey(group))
                 {

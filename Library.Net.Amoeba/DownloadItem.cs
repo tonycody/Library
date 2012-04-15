@@ -44,14 +44,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _priority;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _priority = value;
                 }
@@ -63,14 +63,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _state;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _state = value;
                 }
@@ -82,14 +82,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _path;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _path = value;
                 }
@@ -101,14 +101,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _rank;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _rank = value;
                 }
@@ -120,14 +120,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _seed;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _seed = value;
                 }
@@ -139,14 +139,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _index;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _index = value;
                 }
@@ -158,7 +158,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_indexs == null)
                         _indexs = new IndexCollection();
@@ -194,7 +194,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null) _thisLock = new object();
                     return _thisLock;

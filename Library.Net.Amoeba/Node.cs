@@ -37,7 +37,7 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -72,7 +72,7 @@ namespace Library.Net.Amoeba
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -114,7 +114,7 @@ namespace Library.Net.Amoeba
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashCode;
             }
@@ -133,8 +133,7 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (((this.Id == null) != (other.Id == null))
-                || ((this.Uris == null) != (other.Uris == null)))
+            if ((this.Id == null) != (other.Id == null))
             {
                 return false;
             }
@@ -144,22 +143,14 @@ namespace Library.Net.Amoeba
                 if (!Collection.Equals(this.Id, other.Id)) return false;
             }
 
-            if (this.Uris != null && other.Uris != null)
-            {
-                if (this.Uris.Count != other.Uris.Count) return false;
-
-                for (int i = 0; i < this.Uris.Count; i++)
-                {
-                    if (this.Uris[i] != other.Uris[i]) return false;
-                }
-            }
+            if (!Collection.Equals(this.Uris, other.Uris)) return false;
 
             return true;
         }
 
         public override string ToString()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return String.Join(", ", this.Uris);
             }
@@ -167,7 +158,7 @@ namespace Library.Net.Amoeba
 
         public override Node DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
@@ -187,14 +178,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _id;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && (value.Length > Node.MaxIdLength))
                     {
@@ -233,7 +224,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_uris == null)
                         _uris = new UriCollection();
@@ -249,7 +240,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null) 
                         _thisLock = new object();

@@ -50,14 +50,14 @@ namespace Library.Net
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _baseNode;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value.Equals(default(T)))
                     {
@@ -95,7 +95,7 @@ namespace Library.Net
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _nodesList.Where(n => n != null)
                         .Sum(m => m.Count);
@@ -107,7 +107,7 @@ namespace Library.Net
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -118,7 +118,7 @@ namespace Library.Net
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return true;
                 }
@@ -191,7 +191,7 @@ namespace Library.Net
         {
             if (id == null) throw new ArgumentNullException("key");
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return Kademlia<T>.Sort(_baseNode, id, this.ToArray());
             }
@@ -199,7 +199,7 @@ namespace Library.Net
 
         public T Verify()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<INode> tempNodeList = new List<INode>();
 
@@ -224,7 +224,7 @@ namespace Library.Net
             if (item == null) throw new ArgumentNullException("item");
             else if (item.Id == null) throw new ArgumentNullException("item.Id");
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
                 if (i == 0)
@@ -266,7 +266,7 @@ namespace Library.Net
             if (item == null) throw new ArgumentNullException("item");
             else if (item.Id == null) throw new ArgumentNullException("item.Id");
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
                 if (i == 0)
@@ -297,7 +297,7 @@ namespace Library.Net
 
         public void Clear()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 for (int i = 0; i < _nodesList.Length; i++)
                 {
@@ -308,7 +308,7 @@ namespace Library.Net
 
         public bool Contains(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<T> tempList = new List<T>();
 
@@ -326,7 +326,7 @@ namespace Library.Net
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<T> tempList = new List<T>();
 
@@ -347,7 +347,7 @@ namespace Library.Net
             if (item == null) throw new ArgumentNullException("item");
             else if (item.Id == null) throw new ArgumentNullException("item.Id");
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
                 if (i == 0)
@@ -366,7 +366,7 @@ namespace Library.Net
 
         public IEnumerator<T> GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 for (int i = 0; i < _nodesList.Length; i++)
                 {
@@ -383,7 +383,7 @@ namespace Library.Net
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.GetEnumerator();
             }
@@ -391,7 +391,7 @@ namespace Library.Net
 
         void ICollection.CopyTo(Array array, int index)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.CopyTo(array.OfType<T>().ToArray(), index);
             }

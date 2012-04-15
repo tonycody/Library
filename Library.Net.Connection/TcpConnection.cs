@@ -93,7 +93,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 try
                 {
@@ -151,7 +151,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(_sendLock))
+            lock (_sendLock)
             {
                 byte[] buffer = new byte[4];
 
@@ -165,7 +165,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_socket != null)
                 {
@@ -187,7 +187,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(_receiveLock))
+            lock (_receiveLock)
             {
                 Stopwatch stopwatch = null;
 
@@ -246,7 +246,7 @@ namespace Library.Net.Connection
             if (stream == null) throw new ArgumentNullException("stream");
             if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
 
-            using (DeadlockMonitor.Lock(_sendLock))
+            lock (_sendLock)
             {
                 Stopwatch stopwatch = null;
 

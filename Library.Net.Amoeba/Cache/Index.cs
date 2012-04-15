@@ -41,7 +41,7 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -88,7 +88,7 @@ namespace Library.Net.Amoeba
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -161,7 +161,7 @@ namespace Library.Net.Amoeba
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.Groups == null) return 0;
                 else if (this.Groups.Count == 0) return 0;
@@ -184,24 +184,21 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (((this.Groups == null) != (other.Groups == null))
+            if (this.CompressionAlgorithm != other.CompressionAlgorithm
 
-                || (this.CompressionAlgorithm != other.CompressionAlgorithm)
-
-                || (this.CryptoAlgorithm != other.CryptoAlgorithm)
-                || ((this.CryptoKey == null) != (other.CryptoKey == null)))
+                || this.CryptoAlgorithm != other.CryptoAlgorithm
+                || (this.CryptoKey == null) != (other.CryptoKey == null))
             {
                 return false;
             }
 
-            if (this.Groups != null && other.Groups != null)
-            {
-                if (!Collection.Equals(this.Groups, other.Groups)) return false;
-            }
+            if (!Collection.Equals(this.Groups, other.Groups)) return false;
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {
-                if (!Collection.Equals(this.CryptoKey, other.CryptoKey)) return false;
+                if (this.CryptoKey.Length != other.CryptoKey.Length) return false;
+
+                for (int i = 0; i < this.CryptoKey.Length; i++) if (this.CryptoKey[i] != other.CryptoKey[i]) return false;
             }
 
             return true;
@@ -209,7 +206,7 @@ namespace Library.Net.Amoeba
 
         public override Index DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
@@ -225,7 +222,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this.Groups;
                 }
@@ -237,7 +234,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_groups == null)
                         _groups = new GroupCollection();
@@ -256,14 +253,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _compressionAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!Enum.IsDefined(typeof(CompressionAlgorithm), value))
                     {
@@ -286,14 +283,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _cryptoAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!Enum.IsDefined(typeof(CryptoAlgorithm), value))
                     {
@@ -312,14 +309,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _cryptoKey;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && value.Length > Index.MaxCryptoKeyLength)
                     {
@@ -341,7 +338,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null) 
                         _thisLock = new object();

@@ -34,7 +34,7 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -68,7 +68,7 @@ namespace Library.Net.Amoeba
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -119,7 +119,7 @@ namespace Library.Net.Amoeba
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashCode;
             }
@@ -138,8 +138,8 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Value != other.Value)
-                || (this.HashAlgorithm != other.HashAlgorithm))
+            if (this.Value != other.Value
+                || this.HashAlgorithm != other.HashAlgorithm)
             {
                 return false;
             }
@@ -149,7 +149,7 @@ namespace Library.Net.Amoeba
 
         public override string ToString()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.Value;
             }
@@ -157,7 +157,7 @@ namespace Library.Net.Amoeba
 
         public override Keyword DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
@@ -169,7 +169,7 @@ namespace Library.Net.Amoeba
 
         private void SetHash()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_valueBytes != null && _hashAlgorithm == HashAlgorithm.Sha512)
                 {
@@ -207,14 +207,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _value;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && value.Length > Keyword.MaxValueLength)
                     {
@@ -278,7 +278,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _hash;
                 }
@@ -294,14 +294,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _hashAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!Enum.IsDefined(typeof(HashAlgorithm), value))
                     {
@@ -325,7 +325,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null)
                         _thisLock = new object();

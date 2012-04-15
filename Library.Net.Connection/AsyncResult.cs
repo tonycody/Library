@@ -29,7 +29,7 @@ namespace Library.Net.Connection
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _state;
                 }
@@ -40,7 +40,7 @@ namespace Library.Net.Connection
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _manualResetEvent;
                 }
@@ -51,7 +51,7 @@ namespace Library.Net.Connection
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _completedSynchronously;
                 }
@@ -62,7 +62,7 @@ namespace Library.Net.Connection
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _isCompleted;
                 }
@@ -71,7 +71,7 @@ namespace Library.Net.Connection
 
         public void Complete(bool completedSynchronously)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_isCompleted) throw new InvalidOperationException("Complete済みです");
 
@@ -94,7 +94,7 @@ namespace Library.Net.Connection
             var asyncResult = result as AsyncResult;
             if (asyncResult == null) throw new ArgumentException(string.Format("{0} にキャストできませんでした", typeof(AsyncResult).AssemblyQualifiedName), "result");
 
-            using (DeadlockMonitor.Lock(asyncResult.ThisLock))
+            lock (asyncResult.ThisLock)
             {
                 if (asyncResult._endCalled) throw new InvalidOperationException("resultは既に終了しました");
                 asyncResult._endCalled = true;

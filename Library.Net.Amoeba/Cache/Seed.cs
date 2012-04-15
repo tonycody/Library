@@ -16,8 +16,8 @@ namespace Library.Net.Amoeba
         private enum SerializeId : byte
         {
             Name = 0,
-            CreationTime = 1,
-            Length = 2,
+            Length = 1,
+            CreationTime = 2,
             Comment = 3,
             Rank = 4,
             Key = 5,
@@ -40,8 +40,8 @@ namespace Library.Net.Amoeba
         private byte[] _cryptoKey = null;
 
         private string _name = null;
-        private DateTime _creationTime = DateTime.MinValue;
         private long _length = 0;
+        private DateTime _creationTime = DateTime.MinValue;
         private string _comment = null;
         private int _rank = 0;
         private Key _key = null;
@@ -64,7 +64,7 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -84,13 +84,6 @@ namespace Library.Net.Amoeba
                                 this.Name = reader.ReadToEnd();
                             }
                         }
-                        else if (id == (byte)SerializeId.CreationTime)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                            }
-                        }
                         else if (id == (byte)SerializeId.Length)
                         {
                             byte[] buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
@@ -99,6 +92,13 @@ namespace Library.Net.Amoeba
                             this.Length = NetworkConverter.ToInt64(buffer);
 
                             bufferManager.ReturnBuffer(buffer);
+                        }
+                        else if (id == (byte)SerializeId.CreationTime)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                            }
                         }
                         else if (id == (byte)SerializeId.Comment)
                         {
@@ -160,7 +160,7 @@ namespace Library.Net.Amoeba
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -184,6 +184,16 @@ namespace Library.Net.Amoeba
 
                     streams.Add(bufferStream);
                 }
+                // Length
+                if (this.Length != 0)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)8), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Length);
+                    bufferStream.Write(NetworkConverter.GetBytes(this.Length), 0, 8);
+
+                    streams.Add(bufferStream);
+                }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
@@ -200,16 +210,6 @@ namespace Library.Net.Amoeba
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.CreationTime);
-
-                    streams.Add(bufferStream);
-                }
-                // Length
-                if (this.Length != 0)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)8), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Length);
-                    bufferStream.Write(NetworkConverter.GetBytes(this.Length), 0, 8);
 
                     streams.Add(bufferStream);
                 }
@@ -334,7 +334,7 @@ namespace Library.Net.Amoeba
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashCode;
             }
@@ -355,13 +355,11 @@ namespace Library.Net.Amoeba
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Name != other.Name
-                || this.CreationTime != other.CreationTime
                 || this.Length != other.Length
+                || this.CreationTime != other.CreationTime
                 || this.Comment != other.Comment
                 || this.Rank != other.Rank
                 || this.Key != other.Key
-
-                || ((this.Keywords == null) != (other.Keywords == null))
 
                 || this.CompressionAlgorithm != other.CompressionAlgorithm
 
@@ -373,14 +371,13 @@ namespace Library.Net.Amoeba
                 return false;
             }
 
-            if (this.Keywords != null && other.Keywords != null)
-            {
-                if (!Collection.Equals(this.Keywords, other.Keywords)) return false;
-            }
+            if (!Collection.Equals(this.Keywords, other.Keywords)) return false;
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {
-                if (!Collection.Equals(this.CryptoKey, other.CryptoKey)) return false;
+                if (this.CryptoKey.Length != other.CryptoKey.Length) return false;
+
+                for (int i = 0; i < this.CryptoKey.Length; i++) if (this.CryptoKey[i] != other.CryptoKey[i]) return false;
             }
 
             return true;
@@ -388,7 +385,7 @@ namespace Library.Net.Amoeba
 
         public override string ToString()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.Name;
             }
@@ -396,7 +393,7 @@ namespace Library.Net.Amoeba
 
         public override Seed DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
@@ -408,7 +405,7 @@ namespace Library.Net.Amoeba
 
         protected override Stream GetCertificateStream()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 var temp = this.Certificate;
                 this.Certificate = null;
@@ -434,14 +431,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _name;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && value.Length > Seed.MaxNameLength)
                     {
@@ -450,28 +447,7 @@ namespace Library.Net.Amoeba
                     else
                     {
                         _name = value;
-                        _hashCode = _name.GetHashCode();
                     }
-                }
-            }
-        }
-
-        [DataMember(Name = "CreationTime")]
-        public DateTime CreationTime
-        {
-            get
-            {
-                using (DeadlockMonitor.Lock(this.ThisLock))
-                {
-                    return _creationTime;
-                }
-            }
-            set
-            {
-                using (DeadlockMonitor.Lock(this.ThisLock))
-                {
-                    var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                    _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                 }
             }
         }
@@ -481,16 +457,36 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _length;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _length = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "CreationTime")]
+        public DateTime CreationTime
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _creationTime;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                 }
             }
         }
@@ -500,14 +496,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _comment;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && value.Length > Seed.MaxCommentLength)
                     {
@@ -526,14 +522,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _rank;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _rank = value;
                 }
@@ -545,16 +541,25 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _key;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _key = value;
+
+                    if (_key == null)
+                    {
+                        _hashCode = 0;
+                    }
+                    else
+                    {
+                        _hashCode = _key.GetHashCode();
+                    }
                 }
             }
         }
@@ -567,7 +572,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this.Keywords;
                 }
@@ -579,7 +584,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_keywords == null)
                         _keywords = new KeywordCollection(Seed.MaxKeywordsLength);
@@ -598,14 +603,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _compressionAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!Enum.IsDefined(typeof(CompressionAlgorithm), value))
                     {
@@ -628,14 +633,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _cryptoAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!Enum.IsDefined(typeof(CryptoAlgorithm), value))
                     {
@@ -654,14 +659,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _cryptoKey;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && value.Length > Seed.MaxCryptoKeyLength)
                     {
@@ -683,7 +688,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null)
                         _thisLock = new object();

@@ -26,9 +26,7 @@ namespace Library.Net.Amoeba
         private string _workDirectory = Path.GetTempPath();
         private BufferManager _bufferManager;
         private HashSet<long> _spaceClusters;
-        private Dictionary<string, Stream> _streams = new Dictionary<string, Stream>();
-        private CountCache _countCache = new CountCache();
-        private Dictionary<int, ShareIndex> _ids = new Dictionary<int, ShareIndex>();
+        private Dictionary<int, string> _ids = new Dictionary<int, string>();
         private int _id = 0;
 
         internal SetKeyEventHandler SetKeyEvent;
@@ -53,7 +51,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _settings.Seeds.Keys.ToArray();
                 }
@@ -64,7 +62,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
 
@@ -79,7 +77,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Information> list = new List<Information>();
 
@@ -87,9 +85,9 @@ namespace Library.Net.Amoeba
                     {
                         List<InformationContext> contexts = new List<InformationContext>();
 
-                        contexts.Add(new InformationContext("Id", _ids.First(n => n.Value == item).Key));
-                        contexts.Add(new InformationContext("Path", item.FilePath));
-                        contexts.Add(new InformationContext("BlockCount", item.KeyAndCluster.Count));
+                        contexts.Add(new InformationContext("Id", _ids.First(n => n.Value == item.Key).Key));
+                        contexts.Add(new InformationContext("Path", item.Key));
+                        contexts.Add(new InformationContext("BlockCount", item.Value.KeyAndCluster.Count));
 
                         list.Add(new Information(contexts));
                     }
@@ -103,7 +101,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _settings.Size;
                 }
@@ -114,9 +112,9 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
-                    return _settings.ClustersDictionary.Count + _settings.ShareIndex.Sum(n => n.KeyAndCluster.Count);
+                    return _settings.ClustersIndex.Count + _settings.ShareIndex.Sum(n => n.Value.KeyAndCluster.Count);
                 }
             }
         }
@@ -168,122 +166,14 @@ namespace Library.Net.Amoeba
             }
         }
 
-        internal void ChecksSeed()
-        {
-            using (DeadlockMonitor.Lock(this.ThisLock))
-            {
-                Random random = new Random();
-
-                foreach (var item in _settings.Seeds.ToArray())
-                {
-                    bool flag = true;
-
-                    foreach (var index in item.Value)
-                    {
-                        foreach (var group in index.Groups)
-                        {
-                            if (_countCache.GetCount(group) >= group.InformationLength)
-                                continue;
-
-                            flag = false;
-
-                            goto End;
-                        }
-                    }
-
-                End:
-                    ;
-
-                    if (flag)
-                    {
-                        flag = this.Contains(item.Key.Key);
-                    }
-
-                    if (flag)
-                    {
-                        if (this.GetPriority(item.Key.Key) == 0)
-                        {
-                            this.SetPriority(item.Key.Key, 1);
-
-                            foreach (var index in item.Value)
-                            {
-                                foreach (var group in index.Groups)
-                                {
-                                    foreach (var key in group.Keys.OrderBy(n => random.Next(0, group.Keys.Count)).Take(group.InformationLength))
-                                    {
-                                        this.SetPriority(key, 1);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        _settings.Seeds.Remove(item.Key);
-
-                        this.SetPriority(item.Key.Key, 0);
-
-                        foreach (var index in item.Value)
-                        {
-                            foreach (var group in index.Groups)
-                            {
-                                foreach (var key in group.Keys)
-                                {
-                                    this.SetPriority(key, 0);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private void SetStreams()
-        {
-            using (DeadlockMonitor.Lock(this.ThisLock))
-            {
-                foreach (var item in _streams.ToArray())
-                {
-                    if (!_settings.ShareIndex.Any(n => n.FilePath == item.Key))
-                    {
-                        item.Value.Close();
-                        _streams.Remove(item.Key);
-                    }
-                }
-
-                foreach (var item in _settings.ShareIndex.ToArray())
-                {
-                    if (!File.Exists(item.FilePath))
-                    {
-                        _settings.ShareIndex.Remove(item);
-
-                        continue;
-                    }
-
-                    if (!_streams.Any(n => n.Key == item.FilePath))
-                    {
-                        try
-                        {
-                            var stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                            _streams.Add(item.FilePath, stream);
-                        }
-                        catch (Exception)
-                        {
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-
         private void CheckSpace()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 HashSet<long> spaceList = new HashSet<long>();
                 long i = 0;
 
-                foreach (var clusters in _settings.ClustersDictionary.Values)
+                foreach (var clusters in _settings.ClustersIndex.Values)
                 {
                     foreach (var cluster in clusters.Indexs)
                     {
@@ -315,29 +205,119 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private void CheckSeeds()
+        {
+            lock (this.ThisLock)
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                Random random = new Random();
+
+                foreach (var item in _settings.Seeds.ToArray())
+                {
+                    var seed = item.Key;
+                    var info = item.Value;
+
+                    bool flag = true;
+
+                    foreach (var index in info.Indexs)
+                    {
+                        foreach (var group in index.Groups)
+                        {
+                            int count = 0;
+
+                            foreach (var key in group.Keys)
+                            {
+                                if (this.Contains(key))
+                                {
+                                    count++;
+                                    if (count >= group.InformationLength) goto End;
+                                }
+                            }
+
+                            flag = false;
+                            goto Break;
+
+                        End: ;
+                        }
+                    }
+
+                    if (!(flag = this.Contains(seed.Key))) goto Break;
+                    if (!(flag = File.Exists(info.Path))) goto Break;
+
+                Break: ;
+
+                    if (flag)
+                    {
+                        if (this.GetPriority(seed.Key) == 0)
+                        {
+                            this.SetPriority(seed.Key, 1);
+
+                            foreach (var index in info.Indexs)
+                            {
+                                foreach (var group in index.Groups)
+                                {
+                                    foreach (var key in group.Keys
+                                        .Reverse<Key>()
+                                        .Where(n => this.Contains(n))
+                                        .Take(group.InformationLength))
+                                    {
+                                        this.SetPriority(key, 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _settings.Seeds.Remove(seed);
+
+                        this.SetPriority(seed.Key, 0);
+
+                        foreach (var index in info.Indexs)
+                        {
+                            foreach (var group in index.Groups)
+                            {
+                                foreach (var key in group.Keys)
+                                {
+                                    this.SetPriority(key, 0);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                sw.Stop();
+                Debug.WriteLine("CheckSeeds {0}", sw.ElapsedMilliseconds);
+            }
+        }
+
         private void CreatingSpace(long clusterCount)
         {
             IList<Key> tempHeaders = new List<Key>();
             this.OnGetUsingHeaders(ref tempHeaders);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.CheckSpace();
                 if (clusterCount <= _spaceClusters.Count)
                     return;
 
                 var usingHeaders = new HashSet<Key>(tempHeaders);
-                //usingHeaders.UnionWith(_settings.Keys.Select(n => n.Header));
 
-                var removeHeaders = _settings.ClustersDictionary.Keys.Where(n => !usingHeaders.Contains(n)).ToList();
+                var removeHeaders = _settings.ClustersIndex.Keys.Where(n => !usingHeaders.Contains(n)).ToList();
                 removeHeaders.Sort(new Comparison<Key>((x, y) =>
                 {
-                    if (_settings.ClustersDictionary[x].Priority != _settings.ClustersDictionary[y].Priority)
+                    var xc = _settings.ClustersIndex[x];
+                    var yc = _settings.ClustersIndex[y];
+
+                    if (xc.Priority != yc.Priority)
                     {
-                        _settings.ClustersDictionary[x].Priority.CompareTo(_settings.ClustersDictionary[y].Priority);
+                        xc.Priority.CompareTo(yc.Priority);
                     }
 
-                    return _settings.ClustersDictionary[x].UpdateTime.CompareTo(_settings.ClustersDictionary[y].UpdateTime);
+                    return xc.UpdateTime.CompareTo(yc.UpdateTime);
                 }));
 
                 foreach (var header in removeHeaders)
@@ -352,11 +332,11 @@ namespace Library.Net.Amoeba
 
         private long GetEndCluster()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 long endCluster = -1;
 
-                foreach (var clusters in _settings.ClustersDictionary.Values)
+                foreach (var clusters in _settings.ClustersIndex.Values)
                 {
                     foreach (var cluster in clusters.Indexs)
                     {
@@ -397,25 +377,30 @@ namespace Library.Net.Amoeba
 
         public int GetLength(Key key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                if (_settings.ClustersDictionary.ContainsKey(key))
+                if (_settings.ClustersIndex.ContainsKey(key))
                 {
-                    return _settings.ClustersDictionary[key].Length;
+                    return _settings.ClustersIndex[key].Length;
                 }
 
                 foreach (var item in _settings.ShareIndex)
                 {
-                    if (item.KeyAndCluster.ContainsKey(key))
+                    if (item.Value.KeyAndCluster.ContainsKey(key))
                     {
-                        var fileLength = _streams[item.FilePath].Length;
-                        int i = item.KeyAndCluster[key];
+                        int i = item.Value.KeyAndCluster[key];
 
-                        return (int)Math.Min(fileLength - ((long)item.BlockLength * i), item.BlockLength);
+                        if (i < item.Value.KeyAndCluster.Count - 1)
+                        {
+                            return item.Value.BlockLength;
+                        }
+                        else
+                        {
+                            var fileLength = new FileInfo(item.Key).Length;
+                            return (int)Math.Min(fileLength - ((long)item.Value.BlockLength * i), item.Value.BlockLength);
+                        }
                     }
                 }
-
-                var b = this.Contains(key);
 
                 throw new KeyNotFoundException();
             }
@@ -423,11 +408,11 @@ namespace Library.Net.Amoeba
 
         private int GetPriority(Key key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                if (_settings.ClustersDictionary.ContainsKey(key))
+                if (_settings.ClustersIndex.ContainsKey(key))
                 {
-                    return _settings.ClustersDictionary[key].Priority;
+                    return _settings.ClustersIndex[key].Priority;
                 }
 
                 return 0;
@@ -436,27 +421,27 @@ namespace Library.Net.Amoeba
 
         private void SetPriority(Key key, int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                if (_settings.ClustersDictionary.ContainsKey(key))
+                if (_settings.ClustersIndex.ContainsKey(key))
                 {
-                    _settings.ClustersDictionary[key].Priority = priority;
+                    _settings.ClustersIndex[key].Priority = priority;
                 }
             }
         }
 
         public bool Contains(Key key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                if (_settings.ClustersDictionary.ContainsKey(key))
+                if (_settings.ClustersIndex.ContainsKey(key))
                 {
                     return true;
                 }
 
                 foreach (var item in _settings.ShareIndex)
                 {
-                    if (item.KeyAndCluster.ContainsKey(key))
+                    if (item.Value.KeyAndCluster.ContainsKey(key))
                         return true;
                 }
 
@@ -466,29 +451,28 @@ namespace Library.Net.Amoeba
 
         public void Remove(Key key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                if (!_settings.ClustersDictionary.ContainsKey(key))
+                if (!_settings.ClustersIndex.ContainsKey(key))
                     return;
 
-                var clus = _settings.ClustersDictionary[key];
-                _settings.ClustersDictionary.Remove(key);
+                var clus = _settings.ClustersIndex[key];
+                _settings.ClustersIndex.Remove(key);
                 _spaceClusters.UnionWith(clus.Indexs);
 
-                _countCache.SetKey(key, false);
                 this.OnRemoveKeyEvent(key);
             }
         }
 
         public void Resize(long size)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 long cc = 256 * 1024 * 1024;
                 size = ((size + (cc - 1)) / cc) * cc;
 
-                foreach (var header in _settings.ClustersDictionary.Keys.ToArray()
-                    .Where(n => _settings.ClustersDictionary[n].Indexs.Any(o => size < ((o + 1) * CacheManager.ClusterSize)))
+                foreach (var header in _settings.ClustersIndex.Keys.ToArray()
+                    .Where(n => _settings.ClustersIndex[n].Indexs.Any(o => size < ((o + 1) * CacheManager.ClusterSize)))
                     .ToArray())
                 {
                     this.Remove(header);
@@ -502,31 +486,30 @@ namespace Library.Net.Amoeba
 
         public void SetSeed(Seed seed, IEnumerable<Index> indexs)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
+            {
+                this.SetSeed(seed, null, indexs);
+            }
+        }
+
+        public void SetSeed(Seed seed, string path, IEnumerable<Index> indexs)
+        {
+            lock (this.ThisLock)
             {
                 if (_settings.Seeds.ContainsKey(seed))
                     return;
 
-                _settings.Seeds.Add(seed, new IndexCollection(indexs));
+                var info = new SeedInformation();
+                info.Path = path;
+                info.Indexs.AddRange(indexs);
 
-                foreach (var index in indexs)
-                {
-                    foreach (var group in index.Groups)
-                    {
-                        _countCache.SetGroup(group);
-
-                        foreach (var key in group.Keys)
-                        {
-                            _countCache.SetKey(key, this.Contains(key));
-                        }
-                    }
-                }
+                _settings.Seeds.Add(seed, info);
             }
         }
 
         public void RemoveSeed(Seed seed)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Seeds.Remove(seed);
             }
@@ -578,15 +561,11 @@ namespace Library.Net.Amoeba
         {
             if (inStream == null) throw new ArgumentNullException("inStream");
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                if (_settings.ShareIndex.Any(n => n.FilePath == path))
+                if (_settings.ShareIndex.ContainsKey(path))
                 {
-                    var list = _settings.ShareIndex.Where(n => n.FilePath != path).ToArray();
-                    _settings.ShareIndex.Clear();
-                    _settings.ShareIndex.AddRange(list);
-
-                    this.SetStreams();
+                    throw new Exception();
                 }
             }
 
@@ -595,7 +574,6 @@ namespace Library.Net.Amoeba
             KeyCollection keys = new KeyCollection();
             ShareIndex shareIndex = new ShareIndex();
             shareIndex.BlockLength = blockLength;
-            shareIndex.FilePath = path;
 
             while (inStream.Position < inStream.Length)
             {
@@ -615,26 +593,15 @@ namespace Library.Net.Amoeba
                 keys.Add(key);
             }
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                foreach (var item in _settings.ShareIndex.ToArray())
-                {
-                    if (!File.Exists(item.FilePath))
-                    {
-                        _settings.ShareIndex.Remove(item);
-                    }
-                }
-
-                _settings.ShareIndex.Add(shareIndex);
-                _ids.Add(_id++, shareIndex);
-
-                this.SetStreams();
+                _settings.ShareIndex.Add(path, shareIndex);
+                _ids.Add(_id++, path);
             }
 
             foreach (var key in keys)
             {
                 this.OnSetKeyEvent(key);
-                _countCache.SetKey(key, true);
             }
 
             return keys;
@@ -642,17 +609,15 @@ namespace Library.Net.Amoeba
 
         public void ShareRemove(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                foreach (var key in _ids[id].KeyAndCluster.Keys)
+                foreach (var key in _settings.ShareIndex[_ids[id]].KeyAndCluster.Keys)
                 {
-                    _countCache.SetKey(key, false);
                     this.OnRemoveKeyEvent(key);
                 }
 
                 _settings.ShareIndex.Remove(_ids[id]);
-
-                this.SetStreams();
+                _ids.Remove(id);
             }
         }
 
@@ -971,6 +936,10 @@ namespace Library.Net.Amoeba
 
         public KeyCollection ParityDecoding(Group group, WatchEventHandler watchEvent)
         {
+            if (group.InformationLength > group.Keys.Count) throw new ArgumentOutOfRangeException();
+            if (group.BlockLength > 1024 * 1024 * 4) throw new ArgumentOutOfRangeException();
+            if (group.BlockLength * group.Keys.Count > group.Length) throw new ArgumentOutOfRangeException();
+
             if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
             {
                 return new KeyCollection(group.Keys.Select(n => n.DeepClone()));
@@ -1070,11 +1039,11 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
-                    if (_settings.ClustersDictionary.ContainsKey(key))
+                    if (_settings.ClustersIndex.ContainsKey(key))
                     {
-                        var clusters = _settings.ClustersDictionary[key];
+                        var clusters = _settings.ClustersIndex[key];
 
                         if ((clusters.Indexs[0] * CacheManager.ClusterSize) > _fileStream.Length)
                         {
@@ -1137,37 +1106,48 @@ namespace Library.Net.Amoeba
                             throw;
                         }
                     }
-                    else if (_settings.ShareIndex.Any(n => n.KeyAndCluster.ContainsKey(key)))
+                    else if (_settings.ShareIndex.Any(n => n.Value.KeyAndCluster.ContainsKey(key)))
                     {
-                        var shareIndex = _settings.ShareIndex.First(n => n.KeyAndCluster.ContainsKey(key));
-                        byte[] buffer = _bufferManager.TakeBuffer(shareIndex.BlockLength);
+                        KeyValuePair<string, ShareIndex> target = new KeyValuePair<string, ShareIndex>();
+
+                        foreach (var item in _settings.ShareIndex)
+                        {
+                            if (item.Value.KeyAndCluster.ContainsKey(key))
+                            {
+                                target = item;
+                            }
+                        }
+
+                        byte[] buffer = _bufferManager.TakeBuffer(target.Value.BlockLength);
 
                         try
                         {
-                            Stream stream = _streams[shareIndex.FilePath];
-                            int i = shareIndex.KeyAndCluster[key];
-
-                            stream.Seek((long)shareIndex.BlockLength * i, SeekOrigin.Begin);
-
-                            int length = (int)Math.Min(stream.Length - stream.Position, shareIndex.BlockLength);
-                            stream.Read(buffer, 0, length);
-
-                            if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                            using (Stream stream = new FileStream(target.Key, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
-                                {
-                                    _settings.ShareIndex.Remove(shareIndex);
-                                    throw new BlockNotFoundException();
-                                }
-                            }
+                                int i = target.Value.KeyAndCluster[key];
 
-                            return new ArraySegment<byte>(buffer, 0, length);
+                                stream.Seek((long)target.Value.BlockLength * i, SeekOrigin.Begin);
+
+                                int length = (int)Math.Min(stream.Length - stream.Position, target.Value.BlockLength);
+                                stream.Read(buffer, 0, length);
+
+                                if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                                {
+                                    if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
+                                    {
+                                        _settings.ShareIndex.Remove(target.Key);
+                                        throw new BlockNotFoundException();
+                                    }
+                                }
+
+                                return new ArraySegment<byte>(buffer, 0, length);
+                            }
                         }
                         catch (Exception)
                         {
                             _bufferManager.ReturnBuffer(buffer);
 
-                            throw;
+                            throw new BlockNotFoundException();
                         }
                     }
                     else
@@ -1178,7 +1158,7 @@ namespace Library.Net.Amoeba
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
@@ -1186,8 +1166,8 @@ namespace Library.Net.Amoeba
                             return;
                     }
 
-                    if (_settings.ClustersDictionary.ContainsKey(key)
-                        || _settings.ShareIndex.Any(n => n.KeyAndCluster.ContainsKey(key)))
+                    if (_settings.ClustersIndex.ContainsKey(key)
+                        || _settings.ShareIndex.Any(n => n.Value.KeyAndCluster.ContainsKey(key)))
                     {
                         return;
                     }
@@ -1239,12 +1219,11 @@ namespace Library.Net.Amoeba
                     clusters.Length = value.Count;
                     clusters.UpdateTime = DateTime.UtcNow;
                     clusters.Priority = 0;
-                    _settings.ClustersDictionary[key] = clusters;
+                    _settings.ClustersIndex[key] = clusters;
 
                 }
 
                 this.OnSetKeyEvent(key);
-                _countCache.SetKey(key, true);
             }
         }
 
@@ -1252,53 +1231,27 @@ namespace Library.Net.Amoeba
 
         public void Load(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
 
-                long size = _settings.Size;
-
-                if (_fileStream.Length < size)
-                {
-                    this.Resize(_fileStream.Length);
-                }
-
-                _settings.Size = size;
-
                 this.CheckSpace();
-                this.SetStreams();
 
                 _ids.Clear();
                 _id = 0;
 
                 foreach (var item in _settings.ShareIndex)
                 {
-                    _ids.Add(_id++, item);
+                    _ids.Add(_id++, item.Key);
                 }
 
-                foreach (var indexs in _settings.Seeds.Values)
-                {
-                    foreach (var index in indexs)
-                    {
-                        foreach (var group in index.Groups)
-                        {
-                            _countCache.SetGroup(group);
-
-                            foreach (var key in group.Keys)
-                            {
-                                _countCache.SetKey(key, this.Contains(key));
-                            }
-                        }
-                    }
-                }
-
-                this.ChecksSeed();
+                this.CheckSeeds();
             }
         }
 
         public void Save(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Save(directoryPath);
             }
@@ -1310,16 +1263,16 @@ namespace Library.Net.Amoeba
 
         public IEnumerator<Key> GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
-                foreach (var item in _settings.ClustersDictionary.Keys)
+                foreach (var item in _settings.ClustersIndex.Keys)
                 {
                     yield return item;
                 }
 
                 foreach (var item in _settings.ShareIndex)
                 {
-                    foreach (var item2 in item.KeyAndCluster.Keys)
+                    foreach (var item2 in item.Value.KeyAndCluster.Keys)
                     {
                         yield return item2;
                     }
@@ -1333,7 +1286,7 @@ namespace Library.Net.Amoeba
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.GetEnumerator();
             }
@@ -1343,7 +1296,7 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) return;
 
@@ -1374,10 +1327,10 @@ namespace Library.Net.Amoeba
 
             public Settings()
                 : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedList<ShareIndex>>() { Name = "ShareIndex", Value = new LockedList<ShareIndex>() },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Key, Clusters>>() { Name = "ClustersDictionary", Value = new LockedDictionary<Key, Clusters>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<string, ShareIndex>>() { Name = "ShareIndex", Value = new LockedDictionary<string,ShareIndex>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
                     new Library.Configuration.SettingsContext<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Seed, IndexCollection>>() { Name = "Seeds", Value = new LockedDictionary<Seed, IndexCollection>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Seed, SeedInformation>>() { Name = "Seeds", Value = new LockedDictionary<Seed,SeedInformation>() },
                 })
             {
 
@@ -1385,7 +1338,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -1393,30 +1346,30 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     base.Save(directoryPath);
                 }
             }
 
-            public LockedList<ShareIndex> ShareIndex
+            public LockedDictionary<string, ShareIndex> ShareIndex
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
-                        return (LockedList<ShareIndex>)this["ShareIndex"];
+                        return (LockedDictionary<string, ShareIndex>)this["ShareIndex"];
                     }
                 }
             }
 
-            public LockedDictionary<Key, Clusters> ClustersDictionary
+            public LockedDictionary<Key, Clusters> ClustersIndex
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Key, Clusters>)this["ClustersDictionary"];
+                        return (LockedDictionary<Key, Clusters>)this["ClustersIndex"];
                     }
                 }
             }
@@ -1425,27 +1378,27 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return (long)this["Size"];
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         this["Size"] = value;
                     }
                 }
             }
 
-            public LockedDictionary<Seed, IndexCollection> Seeds
+            public LockedDictionary<Seed, SeedInformation> Seeds
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Seed, IndexCollection>)this["Seeds"];
+                        return (LockedDictionary<Seed, SeedInformation>)this["Seeds"];
                     }
                 }
             }
@@ -1457,6 +1410,68 @@ namespace Library.Net.Amoeba
                 get
                 {
                     return _thisLock;
+                }
+            }
+
+            #endregion
+        }
+
+        [DataContract(Name = "SeedInformation", Namespace = "http://Library/Net/Amoeba/CacheManager")]
+        private class SeedInformation : IThisLock
+        {
+            private string _path;
+            private IndexCollection _indexs;
+
+            private object _thisLock;
+            private static object _thisStaticLock = new object();
+
+            [DataMember(Name = "Path")]
+            public string Path
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return _path;
+                    }
+                }
+                set
+                {
+                    lock (this.ThisLock)
+                    {
+                        _path = value;
+                    }
+                }
+            }
+
+            [DataMember(Name = "Indexs")]
+            public IndexCollection Indexs
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_indexs == null)
+                            _indexs = new IndexCollection();
+
+                        return _indexs;
+                    }
+                }
+            }
+
+            #region IThisLock メンバ
+
+            public object ThisLock
+            {
+                get
+                {
+                    lock (_thisStaticLock)
+                    {
+                        if (_thisLock == null)
+                            _thisLock = new object();
+
+                        return _thisLock;
+                    }
                 }
             }
 
@@ -1478,14 +1493,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _indexs;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _indexs = value;
                     }
@@ -1497,14 +1512,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _length;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _length = value;
                     }
@@ -1516,14 +1531,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _updateTime;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _updateTime = value;
                     }
@@ -1535,14 +1550,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _priority;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _priority = value;
                     }
@@ -1555,7 +1570,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();
@@ -1571,37 +1586,17 @@ namespace Library.Net.Amoeba
         [DataContract(Name = "ShareIndex", Namespace = "http://Library/Net/Amoeba/CacheManager")]
         private class ShareIndex : IThisLock
         {
-            private string _filePath;
             private LockedDictionary<Key, int> _keyAndCluster;
             private int _blockLength;
             private object _thisLock;
             private static object _thisStaticLock = new object();
-
-            [DataMember(Name = "FilePath")]
-            public string FilePath
-            {
-                get
-                {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
-                    {
-                        return _filePath;
-                    }
-                }
-                set
-                {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
-                    {
-                        _filePath = value;
-                    }
-                }
-            }
 
             [DataMember(Name = "KeyAndCluster")]
             public LockedDictionary<Key, int> KeyAndCluster
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         if (_keyAndCluster == null)
                             _keyAndCluster = new LockedDictionary<Key, int>();
@@ -1616,14 +1611,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return _blockLength;
                     }
                 }
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         _blockLength = value;
                     }
@@ -1636,7 +1631,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(_thisStaticLock))
+                    lock (_thisStaticLock)
                     {
                         if (_thisLock == null)
                             _thisLock = new object();

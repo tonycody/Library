@@ -36,7 +36,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _settings.ListenUris;
                 }
@@ -47,7 +47,7 @@ namespace Library.Net.Amoeba
         {
             uri = null;
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Stop) return null;
 
@@ -103,7 +103,7 @@ namespace Library.Net.Amoeba
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!Collection.Equals(_urisHistory, this.ListenUris))
                     {
@@ -153,7 +153,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _state;
                 }
@@ -166,7 +166,7 @@ namespace Library.Net.Amoeba
 
             while (_watchThread != null) Thread.Sleep(1000);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
@@ -182,7 +182,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
@@ -196,7 +196,7 @@ namespace Library.Net.Amoeba
 
         public void Load(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
             }
@@ -204,7 +204,7 @@ namespace Library.Net.Amoeba
 
         public void Save(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Save(directoryPath);
             }
@@ -226,7 +226,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -234,7 +234,7 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     base.Save(directoryPath);
                 }
@@ -244,7 +244,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return (UriCollection)this["ListenUris"];
                     }
@@ -266,7 +266,7 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) return;
 

@@ -46,7 +46,7 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -100,7 +100,7 @@ namespace Library.Net.Amoeba
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -203,7 +203,7 @@ namespace Library.Net.Amoeba
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashCode;
             }
@@ -225,31 +225,22 @@ namespace Library.Net.Amoeba
             if (this.Name != other.Name
                 || this.CreationTime != other.CreationTime
                 || this.Comment != other.Comment
-                || ((this.Seeds == null) != (other.Seeds == null))
-                || ((this.Boxes == null) != (other.Boxes == null))
 
                 || this.Certificate != other.Certificate)
             {
                 return false;
             }
 
-            if (this.Seeds != null && other.Seeds != null)
-            {
-                if (!Collection.Equals(this.Seeds, other.Seeds)) return false;
-            }
+            if (!Collection.Equals(this.Seeds, other.Seeds)) return false;
 
-            if (this.Boxes != null && other.Boxes != null)
-            {
-                if (!Collection.Equals(this.Boxes, other.Boxes)) return false;
-
-            }
+            if (!Collection.Equals(this.Boxes, other.Boxes)) return false;
 
             return true;
         }
 
         public override string ToString()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.Name;
             }
@@ -257,7 +248,7 @@ namespace Library.Net.Amoeba
 
         public override Box DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
@@ -269,7 +260,7 @@ namespace Library.Net.Amoeba
 
         protected override Stream GetCertificateStream()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 var temp = this.Certificate;
                 this.Certificate = null;
@@ -295,14 +286,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _name;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && value.Length > Box.MaxNameLength)
                     {
@@ -322,14 +313,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _creationTime;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                     _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
@@ -342,14 +333,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _comment;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (value != null && value.Length > Box.MaxCommentLength)
                     {
@@ -368,7 +359,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_seeds == null)
                         _seeds = new SeedCollection();
@@ -383,7 +374,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (_boxes == null)
                         _boxes = new BoxCollection();
@@ -401,7 +392,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null) _thisLock = new object();
 

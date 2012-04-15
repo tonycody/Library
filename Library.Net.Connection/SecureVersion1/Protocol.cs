@@ -28,7 +28,7 @@ namespace Library.Net.Connection.SecureVersion1
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -69,7 +69,7 @@ namespace Library.Net.Connection.SecureVersion1
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -137,7 +137,7 @@ namespace Library.Net.Connection.SecureVersion1
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return (int)this.KeyExchangeAlgorithm;
             }
@@ -168,7 +168,7 @@ namespace Library.Net.Connection.SecureVersion1
 
         public override Protocol DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
@@ -222,14 +222,14 @@ namespace Library.Net.Connection.SecureVersion1
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _cryptoAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _cryptoAlgorithm = value;
                 }
@@ -241,14 +241,14 @@ namespace Library.Net.Connection.SecureVersion1
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _keyExchangeAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _keyExchangeAlgorithm = value;
                 }
@@ -260,14 +260,14 @@ namespace Library.Net.Connection.SecureVersion1
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _hashAlgorithm;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _hashAlgorithm = value;
                 }
@@ -280,7 +280,7 @@ namespace Library.Net.Connection.SecureVersion1
         {
             get
             {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                lock (_thisStaticLock)
                 {
                     if (_thisLock == null) 
                         _thisLock = new object();

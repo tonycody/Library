@@ -29,14 +29,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _capacity.Value;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _capacity = value;
                 }
@@ -45,7 +45,7 @@ namespace Library.Collections
 
         public bool Add(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_capacity != null && _hashSet.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
 
@@ -55,7 +55,7 @@ namespace Library.Collections
 
         public void ExceptWith(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _hashSet.ExceptWith(other);
             }
@@ -63,7 +63,7 @@ namespace Library.Collections
 
         public void IntersectWith(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _hashSet.IntersectWith(other);
             }
@@ -71,7 +71,7 @@ namespace Library.Collections
 
         public bool IsProperSubsetOf(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.IsProperSubsetOf(other);
             }
@@ -79,7 +79,7 @@ namespace Library.Collections
 
         public bool IsProperSupersetOf(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.IsProperSupersetOf(other);
             }
@@ -87,7 +87,7 @@ namespace Library.Collections
 
         public bool IsSubsetOf(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.IsSubsetOf(other);
             }
@@ -95,7 +95,7 @@ namespace Library.Collections
 
         public bool IsSupersetOf(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.IsSupersetOf(other);
             }
@@ -103,7 +103,7 @@ namespace Library.Collections
 
         public bool Overlaps(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.Overlaps(other);
             }
@@ -111,7 +111,7 @@ namespace Library.Collections
 
         public bool SetEquals(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.SetEquals(other);
             }
@@ -119,7 +119,7 @@ namespace Library.Collections
 
         public void SymmetricExceptWith(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _hashSet.SymmetricExceptWith(other);
             }
@@ -127,7 +127,7 @@ namespace Library.Collections
 
         public void UnionWith(IEnumerable<T> other)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 foreach (var item in other)
                 {
@@ -138,7 +138,7 @@ namespace Library.Collections
 
         void ICollection<T>.Add(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Add(item);
             }
@@ -146,7 +146,7 @@ namespace Library.Collections
 
         public void Clear()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _hashSet.Clear();
             }
@@ -154,7 +154,7 @@ namespace Library.Collections
 
         public bool Contains(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.Contains(item);
             }
@@ -162,7 +162,7 @@ namespace Library.Collections
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _hashSet.CopyTo(array, arrayIndex);
             }
@@ -172,7 +172,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _hashSet.Count;
                 }
@@ -183,7 +183,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -192,7 +192,7 @@ namespace Library.Collections
 
         public bool Remove(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _hashSet.Remove(item);
             }
@@ -200,7 +200,7 @@ namespace Library.Collections
 
         public IEnumerator<T> GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 foreach (var item in _hashSet)
                 {
@@ -211,7 +211,7 @@ namespace Library.Collections
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.GetEnumerator();
             }

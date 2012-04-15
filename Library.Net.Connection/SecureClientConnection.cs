@@ -114,7 +114,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 try
                 {
@@ -407,7 +407,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 try
                 {
@@ -428,7 +428,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(_receiveLock))
+            lock (_receiveLock)
             {
                 try
                 {
@@ -515,7 +515,7 @@ namespace Library.Net.Connection
             if (stream == null) throw new ArgumentNullException("stream");
             if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
 
-            using (DeadlockMonitor.Lock(_sendLock))
+            lock (_sendLock)
             {
                 try
                 {

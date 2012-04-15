@@ -15,7 +15,7 @@ namespace Library.Net.Amoeba
 
         private void Circular()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 var now = DateTime.UtcNow;
 
@@ -43,7 +43,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (!_messageManagerDictionary.ContainsKey(node))
                     {
@@ -60,7 +60,7 @@ namespace Library.Net.Amoeba
 
         public void Remove(Node node)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _messageManagerDictionary.Remove(node);
             }
@@ -90,6 +90,7 @@ namespace Library.Net.Amoeba
 
         private LockedHashSet<Node> _surroundingNodes;
         private CirculationCollection<Seed> _pushSeeds;
+        private CirculationCollection<Key> _pushBlocks;
         
         private bool _pushNodesRequest = false;
         private CirculationCollection<Key> _pushBlocksLink;
@@ -111,11 +112,12 @@ namespace Library.Net.Amoeba
 
             _surroundingNodes = new LockedHashSet<Node>();
             _pushSeeds = new CirculationCollection<Seed>(new TimeSpan(1, 0, 0, 0));
+            _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 360));
             _pushSeedsLink = new CirculationCollection<Keyword>(new TimeSpan(0, 30, 0));
-            _pushSeedsRequest = new CirculationCollection<Keyword>(new TimeSpan(0, 30, 0));
+            _pushSeedsRequest = new CirculationCollection<Keyword>(new TimeSpan(0, 30, 360));
 
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
@@ -127,7 +129,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _id;
                 }
@@ -138,14 +140,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _sessionId;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _sessionId = value;
                 }
@@ -156,14 +158,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _priority;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _priority = value;
                 }
@@ -174,14 +176,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _receivedByteCount;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _receivedByteCount = value;
                 }
@@ -192,14 +194,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _sentByteCount;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _sentByteCount = value;
                 }
@@ -210,7 +212,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _surroundingNodes;
                 }
@@ -221,9 +223,20 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pushSeeds;
+                }
+            }
+        }
+
+        public CirculationCollection<Key> PushBlocks
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushBlocks;
                 }
             }
         }
@@ -232,14 +245,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pushNodesRequest;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _pushNodesRequest = value;
                 }
@@ -250,7 +263,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pushBlocksLink;
                 }
@@ -261,7 +274,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pushBlocksRequest;
                 }
@@ -272,7 +285,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pushSeedsLink;
                 }
@@ -283,7 +296,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pushSeedsRequest;
                 }
@@ -294,14 +307,14 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pullNodesRequest;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _pullNodesRequest = value;
                 }
@@ -312,7 +325,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pullBlocksLink;
                 }
@@ -323,7 +336,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pullBlocksRequest;
                 }
@@ -334,7 +347,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pullSeedsLink;
                 }
@@ -345,7 +358,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _pullSeedsRequest;
                 }

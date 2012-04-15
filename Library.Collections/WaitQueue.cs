@@ -45,14 +45,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _capacity.Value;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _capacity = value;
                 }
@@ -63,7 +63,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._queue.Count;
                 }
@@ -72,7 +72,7 @@ namespace Library.Collections
 
         public void Clear()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._queue.Clear();
             }
@@ -80,7 +80,7 @@ namespace Library.Collections
 
         public bool Contains(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._queue.Contains(item);
             }
@@ -88,7 +88,7 @@ namespace Library.Collections
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._queue.CopyTo(array, arrayIndex);
             }
@@ -98,7 +98,7 @@ namespace Library.Collections
         {
             for (; ; )
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (this._queue.Count > 0)
                     {
@@ -119,7 +119,7 @@ namespace Library.Collections
         {
             for (; ; )
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (this._queue.Count > 0)
                     {
@@ -140,7 +140,7 @@ namespace Library.Collections
         {
             if (_capacity != null && _queue.Count > _capacity.Value) _upperResetEvent.WaitOne();
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._queue.Enqueue(item);
 
@@ -156,7 +156,7 @@ namespace Library.Collections
                 if (!_upperResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
             }
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException("WaitQueue<T>");
 
@@ -171,7 +171,7 @@ namespace Library.Collections
         {
             for (; ; )
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (this._queue.Count > 0)
                     {
@@ -191,7 +191,7 @@ namespace Library.Collections
         {
             for (; ; )
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     if (this._queue.Count > 0)
                     {
@@ -209,7 +209,7 @@ namespace Library.Collections
 
         public T[] ToArray()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._queue.ToArray();
             }
@@ -217,7 +217,7 @@ namespace Library.Collections
 
         public void TrimExcess()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._queue.TrimExcess();
             }
@@ -235,7 +235,7 @@ namespace Library.Collections
 
         public IEnumerator<T> GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 foreach (var item in _queue)
                 {
@@ -246,7 +246,7 @@ namespace Library.Collections
 
         public void Close()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Dispose();
             }
@@ -254,7 +254,7 @@ namespace Library.Collections
 
         void ICollection.CopyTo(Array array, int index)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 ((ICollection)this._queue).CopyTo(array.OfType<T>().ToArray(), index);
             }
@@ -262,7 +262,7 @@ namespace Library.Collections
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.GetEnumerator();
             }
@@ -272,7 +272,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return true;
                 }
@@ -283,7 +283,7 @@ namespace Library.Collections
 
         void ICollection<T>.Add(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Enqueue(item);
             }
@@ -293,7 +293,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -302,7 +302,7 @@ namespace Library.Collections
 
         bool ICollection<T>.Remove(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 int count = _queue.Count;
                 _queue = new Queue<T>(_queue.Where(n => !n.Equals(item)));
@@ -323,7 +323,7 @@ namespace Library.Collections
 
         protected void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (!_disposed)
                 {
@@ -350,7 +350,7 @@ namespace Library.Collections
 
         public void Dispose()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 Dispose(true);
                 GC.SuppressFinalize(this);

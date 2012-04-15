@@ -11,8 +11,8 @@ namespace Library.Net.Amoeba
         where TKeyword : IKeyword
     {
         string Name { get; }
-        DateTime CreationTime { get; }
         long Length { get; }
+        DateTime CreationTime { get; }
         string Comment { get; }
         int Rank { get; }
         TKey Key { get; }

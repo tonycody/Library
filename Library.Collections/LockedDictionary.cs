@@ -55,14 +55,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _capacity.Value;
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     _capacity = value;
                 }
@@ -73,7 +73,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._dic.Comparer;
                 }
@@ -84,7 +84,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._dic.Count;
                 }
@@ -95,14 +95,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._dic[key];
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     this._dic[key] = value;
                 }
@@ -113,7 +113,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._dic.Keys.ToArray();
                 }
@@ -124,7 +124,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this._dic.Values.ToList();
                 }
@@ -133,7 +133,7 @@ namespace Library.Collections
 
         void IDictionary<TKey, TValue>.Add(TKey key, TValue value)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Add(key, value);
             }
@@ -141,7 +141,7 @@ namespace Library.Collections
 
         public bool Add(TKey key, TValue value)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_capacity != null && _dic.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
 
@@ -159,7 +159,7 @@ namespace Library.Collections
 
         public void Clear()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this._dic.Clear();
             }
@@ -167,7 +167,7 @@ namespace Library.Collections
 
         public bool ContainsKey(TKey key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._dic.ContainsKey(key);
             }
@@ -175,7 +175,7 @@ namespace Library.Collections
 
         public bool ContainsValue(TValue value)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._dic.ContainsValue(value);
             }
@@ -183,7 +183,7 @@ namespace Library.Collections
 
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 foreach (var item in _dic)
                 {
@@ -194,7 +194,7 @@ namespace Library.Collections
 
         public bool Remove(TKey key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._dic.Remove(key);
             }
@@ -202,7 +202,7 @@ namespace Library.Collections
 
         public bool TryGetValue(TKey key, out TValue value)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._dic.TryGetValue(key, out value);
             }
@@ -210,7 +210,7 @@ namespace Library.Collections
 
         void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Add(item.Key, item.Value);
             }
@@ -218,7 +218,7 @@ namespace Library.Collections
 
         bool ICollection<KeyValuePair<TKey, TValue>>.Contains(KeyValuePair<TKey, TValue> item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this._dic.Contains(item);
             }
@@ -226,7 +226,7 @@ namespace Library.Collections
 
         void ICollection<KeyValuePair<TKey, TValue>>.CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 ((IDictionary<TKey, TValue>)this._dic).CopyTo(array, arrayIndex);
             }
@@ -234,7 +234,7 @@ namespace Library.Collections
 
         bool ICollection<KeyValuePair<TKey, TValue>>.Remove(KeyValuePair<TKey, TValue> keyValuePair)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return ((IDictionary<TKey, TValue>)this._dic).Remove(keyValuePair);
             }
@@ -242,7 +242,7 @@ namespace Library.Collections
 
         void ICollection.CopyTo(Array array, int index)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 ((ICollection)this._dic).CopyTo(array, index);
             }
@@ -250,7 +250,7 @@ namespace Library.Collections
 
         void IDictionary.Add(object key, object value)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Add((TKey)key, (TValue)value);
             }
@@ -258,7 +258,7 @@ namespace Library.Collections
 
         bool IDictionary.Contains(object key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.ContainsKey((TKey)key);
             }
@@ -266,7 +266,7 @@ namespace Library.Collections
 
         IDictionaryEnumerator IDictionary.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return (IDictionaryEnumerator)this.GetEnumerator();
             }
@@ -274,7 +274,7 @@ namespace Library.Collections
 
         void IDictionary.Remove(object key)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Remove((TKey)key);
             }
@@ -282,7 +282,7 @@ namespace Library.Collections
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.GetEnumerator();
             }
@@ -292,7 +292,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -303,7 +303,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this.Keys.ToArray();
                 }
@@ -314,7 +314,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this.Values.ToArray();
                 }
@@ -325,7 +325,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return true;
                 }
@@ -336,7 +336,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -347,7 +347,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return false;
                 }
@@ -358,14 +358,14 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return this[(TKey)key];
                 }
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     this[(TKey)key] = (TValue)value;
                 }
@@ -376,7 +376,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return (ICollection)this.Keys;
                 }
@@ -387,7 +387,7 @@ namespace Library.Collections
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return (ICollection)this.Values;
                 }

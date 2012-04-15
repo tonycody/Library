@@ -27,7 +27,7 @@ namespace Library.Net.Upnp
 
         public void Connect(TimeSpan timeout)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _services = GetServicesFromDevice(out _location, timeout);
 

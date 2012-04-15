@@ -67,7 +67,7 @@ namespace Library.Net.Connection
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _connection;
                 }
@@ -78,7 +78,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 try
                 {
@@ -116,7 +116,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_connection != null)
                 {
@@ -139,7 +139,7 @@ namespace Library.Net.Connection
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            using (DeadlockMonitor.Lock(_receiveLock))
+            lock (_receiveLock)
             {
                 Stream stream = null;
                 Stream dataStream = null;
@@ -168,7 +168,7 @@ namespace Library.Net.Connection
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 256);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
                                 using (GZipStream gzipStream = new GZipStream(stream, CompressionMode.Decompress, true))
                                 {
@@ -234,7 +234,7 @@ namespace Library.Net.Connection
             if (stream == null) throw new ArgumentNullException("stream");
             if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
 
-            using (DeadlockMonitor.Lock(_sendLock))
+            lock (_sendLock)
             {
                 try
                 {
@@ -249,7 +249,7 @@ namespace Library.Net.Connection
 
                             try
                             {
-                                compressBuffer = _bufferManager.TakeBuffer(1024 * 256);
+                                compressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
                                 using (GZipStream gzipStream = new GZipStream(gzipBufferStream, CompressionMode.Compress, true))
                                 {

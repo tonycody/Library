@@ -17,7 +17,7 @@ namespace Library
 
         public byte[] TakeBuffer(int bufferSize)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return _bufferManager.TakeBuffer(bufferSize);
             }
@@ -25,7 +25,7 @@ namespace Library
 
         public void ReturnBuffer(byte[] buffer)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _bufferManager.ReturnBuffer(buffer);
             }
@@ -33,7 +33,7 @@ namespace Library
 
         public void Clear()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
 
             }
@@ -41,7 +41,7 @@ namespace Library
 
         protected override void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) return;
 

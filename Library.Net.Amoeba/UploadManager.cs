@@ -40,7 +40,7 @@ namespace Library.Net.Amoeba
 
             _cacheManager.GetUsingKeysEvent += (object sender, ref IList<Key> headers) =>
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     HashSet<Key> list = new HashSet<Key>();
 
@@ -72,7 +72,7 @@ namespace Library.Net.Amoeba
 
             _connectionsManager.UploadedEvent += (object sender, Key otherKey) =>
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     foreach (var item in _settings.UploadItems)
                     {
@@ -87,7 +87,7 @@ namespace Library.Net.Amoeba
 
             _cacheManager.RemoveKeyEvent += (object sender, Key otherKey) =>
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     foreach (var item in _settings.UploadItems)
                     {
@@ -105,7 +105,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
 
@@ -121,7 +121,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     List<Information> list = new List<Information>();
 
@@ -166,7 +166,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _settings.UploadedSeeds;
                 }
@@ -175,7 +175,7 @@ namespace Library.Net.Amoeba
 
         private void SetKeyCount(UploadItem item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 foreach (var key in item.UploadKeys.ToArray())
                 {
@@ -199,9 +199,9 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
-                        using (DeadlockMonitor.Lock(_settings.ThisLock))
+                        lock (_settings.ThisLock)
                         {
                             if (_settings.UploadItems.Count > 0)
                             {
@@ -217,7 +217,8 @@ namespace Library.Net.Amoeba
                                     {
                                         item2.State = UploadState.Completed;
 
-                                        _cacheManager.SetSeed(item2.Seed.DeepClone(), item2.Indexs);
+                                        _cacheManager.SetSeed(item2.Seed.DeepClone(), item2.FilePath, item2.Indexs);
+                                        item2.Indexs.Clear();
                                         _settings.UploadedSeeds.Add(item2.Seed.DeepClone());
                                     }
                                 }
@@ -282,7 +283,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     item.EncodingBytes = 0;
                                     item.EncodeBytes = 0;
@@ -293,7 +294,7 @@ namespace Library.Net.Amoeba
                             }
                             else if (item.Groups.Count == 0 && item.Keys.Count == 1)
                             {
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     item.Seed.Rank = item.Rank;
                                     item.Seed.Key = item.Keys[0];
@@ -363,7 +364,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     foreach (var header in group.Keys)
                                     {
@@ -441,7 +442,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     item.EncodingBytes = 0;
                                     item.EncodeBytes = 0;
@@ -484,7 +485,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     item.EncodingBytes = 0;
                                     item.EncodeBytes = 0;
@@ -515,7 +516,7 @@ namespace Library.Net.Amoeba
                             }
                             else if (item.Groups.Count == 0 && item.Keys.Count == 1)
                             {
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     item.Seed.Rank = item.Rank;
                                     item.Seed.Key = item.Keys[0];
@@ -588,7 +589,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     foreach (var header in group.Keys)
                                     {
@@ -631,9 +632,9 @@ namespace Library.Net.Amoeba
 
                                     index.CryptoAlgorithm = item.CryptoAlgorithm;
                                     index.CryptoKey = item.CryptoKey;
+                                 
+                                    item.Indexs.Add(index);
                                 }
-
-                                item.Indexs.Add(index);
 
                                 byte[] cryptoKey;
                                 KeyCollection keys;
@@ -671,7 +672,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                using (DeadlockMonitor.Lock(this.ThisLock))
+                                lock (this.ThisLock)
                                 {
                                     item.EncodingBytes = 0;
                                     item.EncodeBytes = 0;
@@ -705,7 +706,7 @@ namespace Library.Net.Amoeba
             DigitalSignature digitalSignature,
             int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 UploadItem item = new UploadItem();
 
@@ -745,7 +746,7 @@ namespace Library.Net.Amoeba
             DigitalSignature digitalSignature,
             int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 UploadItem item = new UploadItem();
 
@@ -774,7 +775,7 @@ namespace Library.Net.Amoeba
 
         public void Remove(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.UploadItems.Remove(_ids[id]);
                 _ids.Remove(id);
@@ -783,7 +784,7 @@ namespace Library.Net.Amoeba
 
         public void Restart(int id)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 var item = _ids[id];
 
@@ -820,7 +821,7 @@ namespace Library.Net.Amoeba
 
         public void SetPriority(int id, int priority)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _ids[id].Priority = priority;
             }
@@ -830,7 +831,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _state;
                 }
@@ -841,7 +842,7 @@ namespace Library.Net.Amoeba
         {
             while (_uploadManagerThread != null) Thread.Sleep(1000);
 
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
@@ -854,7 +855,7 @@ namespace Library.Net.Amoeba
 
         public override void Stop()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
@@ -866,9 +867,11 @@ namespace Library.Net.Amoeba
 
         #region ISettings メンバ
 
+        LockedList<UploadItem> _uploadItems = new LockedList<UploadItem>();
+
         public void Load(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
 
@@ -896,7 +899,7 @@ namespace Library.Net.Amoeba
 
         public void Save(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Save(directoryPath);
             }
@@ -919,7 +922,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -927,7 +930,7 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     base.Save(directoryPath);
                 }
@@ -937,7 +940,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return (LockedList<UploadItem>)this["UploadItems"];
                     }
@@ -948,7 +951,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return (SeedCollection)this["UploadedSeeds"];
                     }
@@ -970,7 +973,7 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) return;
 

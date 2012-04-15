@@ -31,7 +31,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _settings.ConnectionFilters;
                 }
@@ -100,7 +100,7 @@ namespace Library.Net.Amoeba
             {
                 ConnectionFilter connectionFilter = null;
 
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     foreach (var filter in this.Filters)
                     {
@@ -284,7 +284,7 @@ namespace Library.Net.Amoeba
 
         public void Load(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
             }
@@ -292,7 +292,7 @@ namespace Library.Net.Amoeba
 
         public void Save(string directoryPath)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _settings.Save(directoryPath);
             }
@@ -326,7 +326,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return (ConnectionFilterCollection)this["ConnectionFilters"];
                     }
@@ -348,7 +348,7 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 if (_disposed) return;
 

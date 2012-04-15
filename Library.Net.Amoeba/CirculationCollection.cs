@@ -46,7 +46,7 @@ namespace Library.Net.Amoeba
 
         private void Circular(TimeSpan circularTime)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 var now = DateTime.UtcNow;
 
@@ -78,7 +78,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                lock (this.ThisLock)
                 {
                     return _hashSet.Count;
                 }
@@ -87,7 +87,7 @@ namespace Library.Net.Amoeba
 
         public void AddRange(IEnumerable<T> collection)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Circular(_circularTime);
 
@@ -101,7 +101,7 @@ namespace Library.Net.Amoeba
 
         public bool Add(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Circular(_circularTime);
 
@@ -112,7 +112,7 @@ namespace Library.Net.Amoeba
 
         public void Clear()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 _circularDictionary.Clear();
                 _hashSet.Clear();
@@ -121,7 +121,7 @@ namespace Library.Net.Amoeba
 
         public bool Contains(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Circular(_circularTime);
 
@@ -131,7 +131,7 @@ namespace Library.Net.Amoeba
 
         public bool Remove(T item)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Circular(_circularTime);
 
@@ -141,7 +141,7 @@ namespace Library.Net.Amoeba
 
         public void TrimExcess()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Circular(_circularTime);
 
@@ -153,7 +153,7 @@ namespace Library.Net.Amoeba
 
         public IEnumerator<T> GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 this.Circular(_circularTime);
 
@@ -170,7 +170,7 @@ namespace Library.Net.Amoeba
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            lock (this.ThisLock)
             {
                 return this.GetEnumerator();
             }
