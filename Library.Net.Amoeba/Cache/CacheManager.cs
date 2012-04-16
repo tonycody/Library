@@ -936,10 +936,8 @@ namespace Library.Net.Amoeba
 
         public KeyCollection ParityDecoding(Group group, WatchEventHandler watchEvent)
         {
-            if (group.InformationLength > group.Keys.Count) throw new ArgumentOutOfRangeException();
-            if (group.BlockLength > 1024 * 1024 * 4) throw new ArgumentOutOfRangeException();
-            if (group.BlockLength * group.Keys.Count > group.Length) throw new ArgumentOutOfRangeException();
-
+            if (group.BlockLength > 1024 * 1024 * 16) throw new ArgumentOutOfRangeException();
+            
             if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
             {
                 return new KeyCollection(group.Keys.Select(n => n.DeepClone()));
