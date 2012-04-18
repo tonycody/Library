@@ -81,13 +81,14 @@ namespace Library.Net.Amoeba
                 {
                     List<Information> list = new List<Information>();
 
-                    foreach (var item in _settings.ShareIndex)
+                    foreach (var id in _ids)
                     {
                         List<InformationContext> contexts = new List<InformationContext>();
 
-                        contexts.Add(new InformationContext("Id", _ids.First(n => n.Value == item.Key).Key));
-                        contexts.Add(new InformationContext("Path", item.Key));
-                        contexts.Add(new InformationContext("BlockCount", item.Value.KeyAndCluster.Count));
+                        var item = _settings.ShareIndex[id.Value];
+                        contexts.Add(new InformationContext("Id", id.Key));
+                        contexts.Add(new InformationContext("Path", id.Value));
+                        contexts.Add(new InformationContext("BlockCount", item.KeyAndCluster.Count));
 
                         list.Add(new Information(contexts));
                     }
