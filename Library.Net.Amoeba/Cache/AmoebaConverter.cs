@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Library.Io;
 using Library.Net.Amoeba;
 using Library.Security;
+using System.Diagnostics;
 
 namespace Library.Net.Amoeba
 {
@@ -17,7 +18,7 @@ namespace Library.Net.Amoeba
         private enum CompressionAlgorithm
         {
             None = 0,
-            GZip = 1,
+            Deflate = 1,
         }
 
         private static BufferManager _bufferManager = new BufferManager();
@@ -31,27 +32,28 @@ namespace Library.Net.Amoeba
                 where T : ItemBase<T>
         {
             Stream stream = null;
-            BufferStream gzipBufferStream = null;
 
             try
             {
                 stream = item.Export(_bufferManager);
-                gzipBufferStream = new BufferStream(_bufferManager);
+                List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
 
+                try
                 {
+                    BufferStream deflateBufferStream = new BufferStream(_bufferManager);
                     byte[] compressBuffer = null;
 
                     try
                     {
                         compressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
-                        using (GZipStream gzipStream = new GZipStream(gzipBufferStream, CompressionMode.Compress, true))
+                        using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
                             int i = -1;
 
                             while ((i = stream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
                             {
-                                gzipStream.Write(compressBuffer, 0, i);
+                                deflateStream.Write(compressBuffer, 0, i);
                             }
                         }
                     }
@@ -60,26 +62,40 @@ namespace Library.Net.Amoeba
                         _bufferManager.ReturnBuffer(compressBuffer);
                     }
 
-                    gzipBufferStream.Seek(0, SeekOrigin.Begin);
+                    deflateBufferStream.Seek(0, SeekOrigin.Begin);
+                    list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                }
+                catch (Exception)
+                {
+
+                }
+
+                list.Add(new KeyValuePair<int, Stream>(0, new RangeStream(stream, true)));
+
+                list.Sort(new Comparison<KeyValuePair<int, Stream>>((KeyValuePair<int, Stream> x, KeyValuePair<int, Stream> y) =>
+                {
+                    return x.Value.Length.CompareTo(y.Value.Length);
+                }));
+
+#if DEBUG
+                if (list[0].Value.Length != stream.Length)
+                {
+                    Debug.WriteLine("AmoebaConverter ToStream : {0}→{1} {2}",
+                        NetworkConverter.ToSizeString(stream.Length),
+                        NetworkConverter.ToSizeString(list[0].Value.Length),
+                        NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
+                }
+#endif
+
+                for (int i = 1; i < list.Count; i++)
+                {
+                    list[i].Value.Dispose();
                 }
 
                 BufferStream headerStream = new BufferStream(_bufferManager);
-                Stream dataStream = null;
+                headerStream.WriteByte((byte)list[0].Key);
 
-                if (stream.Length < gzipBufferStream.Length)
-                {
-                    headerStream.WriteByte((byte)CompressionAlgorithm.None);
-                    dataStream = new AddStream(headerStream, stream);
-
-                    gzipBufferStream.Dispose();
-                }
-                else
-                {
-                    headerStream.WriteByte((byte)CompressionAlgorithm.GZip);
-                    dataStream = new AddStream(headerStream, gzipBufferStream);
-
-                    stream.Dispose();
-                }
+                var dataStream = new AddStream(headerStream, list[0].Value);
 
                 MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(dataStream));
                 return new AddStream(dataStream, crcStream);
@@ -88,8 +104,6 @@ namespace Library.Net.Amoeba
             {
                 if (stream != null)
                     stream.Dispose();
-                if (gzipBufferStream != null)
-                    gzipBufferStream.Dispose();
 
                 throw new ArgumentException(ex.Message, ex);
             }
@@ -123,9 +137,9 @@ namespace Library.Net.Amoeba
                     {
                         return ItemBase<T>.Import(dataStream, _bufferManager);
                     }
-                    else if (version == (byte)CompressionAlgorithm.GZip)
+                    else if (version == (byte)CompressionAlgorithm.Deflate)
                     {
-                        using (BufferStream gzipBufferStream = new BufferStream(_bufferManager))
+                        using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
                         {
                             byte[] decompressBuffer = null;
 
@@ -133,13 +147,13 @@ namespace Library.Net.Amoeba
                             {
                                 decompressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
-                                using (GZipStream gzipStream = new GZipStream(dataStream, CompressionMode.Decompress, true))
+                                using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {
                                     int i = -1;
 
-                                    while ((i = gzipStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
+                                    while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
                                     {
-                                        gzipBufferStream.Write(decompressBuffer, 0, i);
+                                        deflateBufferStream.Write(decompressBuffer, 0, i);
                                     }
                                 }
                             }
@@ -148,9 +162,16 @@ namespace Library.Net.Amoeba
                                 _bufferManager.ReturnBuffer(decompressBuffer);
                             }
 
-                            gzipBufferStream.Seek(0, SeekOrigin.Begin);
+#if DEBUG
+                            Debug.WriteLine("AmoebaConverter FromStream : {0}→{1} {2}",
+                                NetworkConverter.ToSizeString(dataStream.Length),
+                                NetworkConverter.ToSizeString(deflateBufferStream.Length),
+                                NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));
+#endif
 
-                            return ItemBase<T>.Import(gzipBufferStream, _bufferManager);
+                            deflateBufferStream.Seek(0, SeekOrigin.Begin);
+
+                            return ItemBase<T>.Import(deflateBufferStream, _bufferManager);
                         }
                     }
                     else

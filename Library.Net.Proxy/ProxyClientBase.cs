@@ -22,6 +22,7 @@ namespace Library.Net.Proxy
                 }
                 catch (Exception)
                 {
+
                 }
 
                 ar.Complete(false);

@@ -41,10 +41,6 @@
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="SevenZipSharp, Version=0.64.3890.29348, Culture=neutral, PublicKeyToken=20de82c62b055c88, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>.\SevenZipSharp.dll</HintPath>
-    </Reference>
     <Reference Include="System">
     </Reference>
     <Reference Include="System.Core">
@@ -119,6 +115,10 @@
       <Project>{197C654F-2461-446A-B531-4A789F14BE19}</Project>
       <Name>Library.Collections</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Library.Compression\Library.Compression.csproj">
+      <Project>{51ECCC57-56CB-44A0-9A43-DB596F982FC8}</Project>
+      <Name>Library.Compression</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Library.Configuration\Library.Configuration.csproj">
       <Project>{9AA70F88-4A83-4B3F-B494-7D37EA95766A}</Project>
       <Name>Library.Configuration</Name>
@@ -155,14 +155,6 @@
       <Project>{63EADC1F-9A8A-4945-A562-DA666D0BCB7B}</Project>
       <Name>Library</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="7z64.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="7z86.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Properties\Library.Net.Amoeba.License">

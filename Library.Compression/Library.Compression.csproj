@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{51ECCC57-56CB-44A0-9A43-DB596F982FC8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Library.Compression</RootNamespace>
+    <AssemblyName>Library.Compression</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <NoStdLib>False</NoStdLib>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>Full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DebugSymbols>true</DebugSymbols>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System">
+    </Reference>
+    <Reference Include="System.Core">
+    </Reference>
+    <Reference Include="System.Runtime.Serialization">
+    </Reference>
+    <Reference Include="System.ServiceModel">
+    </Reference>
+    <Reference Include="System.Xml.Linq">
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+    </Reference>
+    <Reference Include="System.Data">
+    </Reference>
+    <Reference Include="System.Xml">
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="LzmaStreamWriter.cs" />
+    <Compile Include="Lzma.cs" />
+    <Compile Include="Lzma\CRC.cs" />
+    <Compile Include="Lzma\InBuffer.cs" />
+    <Compile Include="Lzma\OutBuffer.cs" />
+    <Compile Include="Lzma\LzmaBase.cs" />
+    <Compile Include="Lzma\LzmaDecoder.cs" />
+    <Compile Include="Lzma\LzmaEncoder.cs" />
+    <Compile Include="Lzma\IMatchFinder.cs" />
+    <Compile Include="Lzma\LzBinTree.cs" />
+    <Compile Include="Lzma\LzInWindow.cs" />
+    <Compile Include="Lzma\LzOutWindow.cs" />
+    <Compile Include="Lzma\RangeCoder.cs" />
+    <Compile Include="Lzma\RangeCoderBit.cs" />
+    <Compile Include="Lzma\RangeCoderBitTree.cs" />
+    <Compile Include="Lzma\ICoder.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Library.Io\Library.Io.csproj">
+      <Project>{74597E45-7F3C-4958-8B6A-B16DE8DE47B9}</Project>
+      <Name>Library.Io</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library\Library.csproj">
+      <Project>{63EADC1F-9A8A-4945-A562-DA666D0BCB7B}</Project>
+      <Name>Library</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Properties\Library.Compression.Readme">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Properties\Library.Compression.License">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PreBuildEvent>call "$(SolutionDir)Increment.bat" "$(ProjectPath)" "$(ProjectDir)Properties\AssemblyInfo.cs"</PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
+    <RegisterForComInterop>False</RegisterForComInterop>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+    <BaseAddress>4194304</BaseAddress>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+</Project>

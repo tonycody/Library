@@ -115,9 +115,9 @@ namespace Library.Net.Amoeba
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 360));
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0) + new TimeSpan(0, 12, 0));
             _pushSeedsLink = new CirculationCollection<Keyword>(new TimeSpan(0, 30, 0));
-            _pushSeedsRequest = new CirculationCollection<Keyword>(new TimeSpan(0, 30, 360));
+            _pushSeedsRequest = new CirculationCollection<Keyword>(new TimeSpan(0, 30, 0) + new TimeSpan(0, 12, 0));
 
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));

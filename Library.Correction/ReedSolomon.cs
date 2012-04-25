@@ -27,54 +27,73 @@ namespace Library.Correction
             _encMatrix = _fecMath.CreateEncodeMatrix(k, n);
         }
 
+        public void Encode(ArraySegment<byte>[] src, ArraySegment<byte>[] repair, int[] index)
+        {
+            byte[][] srcBufs = new byte[src.Length][];
+            int[] srcOffs = new int[src.Length];
+            byte[][] repairBufs = new byte[repair.Length][];
+            int[] repairOffs = new int[repair.Length];
+
+            for (int i = 0; i < srcBufs.Length; i++)
+            {
+                srcBufs[i] = src[i].Array;
+                srcOffs[i] = src[i].Offset;
+            }
+
+            for (int i = 0; i < repairBufs.Length; i++)
+            {
+                repairBufs[i] = repair[i].Array;
+                repairOffs[i] = repair[i].Offset;
+            }
+
+            this.Encode(srcBufs, srcOffs, repairBufs, repairOffs, index, src[0].Count);
+        }
+
         protected void Encode(byte[][] src, int[] srcOff, byte[][] repair, int[] repairOff, int[] index, int packetLength)
         {
-            Parallel.For(0, repair.Length, new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, i =>
+            Parallel.For(0, repair.Length, new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, row =>
             {
                 Thread.CurrentThread.IsBackground = true;
                 Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
-                Encode(src, srcOff, repair[i], repairOff[i], index[i], packetLength);
-            });
-
-            //for (int i = 0; i < repair.Length; i++)
-            //{
-            //    Encode(src, srcOff, repair[i], repairOff[i], index[i], packetLength);
-            //}
-        }
-
-        protected void Encode(byte[][] src, int[] srcOff, byte[] repair, int repairOff, int index, int packetLength)
-        {
-            // *remember* indices start at 0, k starts at 1.
-            if (index < _k)
-            {
-                // < k, systematic so direct copy.
-                System.Array.Copy(src[index], srcOff[index], repair, repairOff, packetLength);
-            }
-            else
-            {
-                // index >= k && index < n
-                int pos = index * _k;
-                Array.Clear(repair, repairOff, packetLength);
-
-                for (int i = 0; i < _k; i++)
+                // *remember* indices start at 0, k starts at 1.
+                if (index[row] < _k)
                 {
-                    _fecMath.AddMul(repair, repairOff, src[i], srcOff[i], (byte)_encMatrix[pos + i], packetLength);
+                    // < k, systematic so direct copy.
+                    System.Array.Copy(src[index[row]], srcOff[index[row]], repair[row], repairOff[row], packetLength);
                 }
-            }
+                else
+                {
+                    // index[row] >= k && index[row] < n
+                    int pos = index[row] * _k;
+                    Array.Clear(repair[row], repairOff[row], packetLength);
+
+                    for (int col = 0; col < _k; col++)
+                    {
+                        _fecMath.AddMul(repair[row], repairOff[row], src[col], srcOff[col], (byte)_encMatrix[pos + col], packetLength);
+                    }
+                }
+            });
         }
 
-        protected void Decode(byte[][] pkts, int[] pktsOff, int[] index, int packetLength, bool shuffled)
+        public void Decode(ArraySegment<byte>[] pkts, int[] index)
         {
-            // This may be the second time shuffle has been called, if so
-            // this is ok because it will quickly determine that things are in
-            // order.  The previous shuffles may have been necessary to keep
-            // another data structure in sync with the byte[]'s
-            if (!shuffled)
+            ReedSolomon.CopyShuffle(pkts, index, _k);
+
+            byte[][] bufs = new byte[pkts.Length][];
+            int[] offs = new int[pkts.Length];
+
+            for (int i = 0; i < bufs.Length; i++)
             {
-                Shuffle(pkts, pktsOff, index, _k);
+                bufs[i] = pkts[i].Array;
+                offs[i] = pkts[i].Offset;
             }
 
+            this.Decode(bufs, offs, index, pkts[0].Count);
+        }
+  
+        private void Decode(byte[][] pkts, int[] pktsOff, int[] index, int packetLength)
+        {
             byte[] decMatrix = _fecMath.CreateDecodeMatrix(_encMatrix, index, _k, _n);
 
             // do the actual decoding..
@@ -96,19 +115,6 @@ namespace Library.Correction
                 }
             });
 
-            //for (int row = 0; row < _k; row++)
-            //{
-            //    if (index[row] >= _k)
-            //    {
-            //        tmpPkts[row] = new byte[packetLength];
-
-            //        for (int col = 0; col < _k; col++)
-            //        {
-            //            _fecMath.AddMul(tmpPkts[row], 0, pkts[col], pktsOff[col], (byte)decMatrix[row * _k + col], packetLength);
-            //        }
-            //    }
-            //}
-
             // move pkts to their final destination
             for (int row = 0; row < _k; row++)
             {
@@ -121,50 +127,7 @@ namespace Library.Correction
             }
         }
 
-        public void Encode(ArraySegment<byte>[] src, ArraySegment<byte>[] repair, int[] index)
-        {
-            byte[][] srcBufs = new byte[src.Length][];
-            int[] srcOffs = new int[src.Length];
-            byte[][] repairBufs = new byte[repair.Length][];
-            int[] repairOffs = new int[repair.Length];
-
-            for (int i = 0; i < srcBufs.Length; i++)
-            {
-                srcBufs[i] = src[i].Array;
-                srcOffs[i] = src[i].Offset;
-            }
-
-            for (int i = 0; i < repairBufs.Length; i++)
-            {
-                repairBufs[i] = repair[i].Array;
-                repairOffs[i] = repair[i].Offset;
-            }
-
-            Encode(srcBufs, srcOffs, repairBufs, repairOffs, index, src[0].Count);
-        }
-
-        public void Decode(ArraySegment<byte>[] pkts, int[] index)
-        {
-            // Must pre-shuffle so that no future shuffles bring the byte[]'s
-            // out of sync with the Buffer[]'s.  We use copyShuffle so that 
-            // the Buffer[]'s don't have their references shuffled around and
-            // therefore we can have the Buffer[]'s wrapping one large byte[]
-            // that will be decoded with all of the data in order in that block.
-            CopyShuffle(pkts, index, _k);
-
-            byte[][] bufs = new byte[pkts.Length][];
-            int[] offs = new int[pkts.Length];
-
-            for (int i = 0; i < bufs.Length; i++)
-            {
-                bufs[i] = pkts[i].Array;
-                offs[i] = pkts[i].Offset;
-            }
-
-            Decode(bufs, offs, index, pkts[0].Count, true);
-        }
-
-        protected static void CopyShuffle(ArraySegment<byte>[] pkts, int[] index, int k)
+        private static void CopyShuffle(ArraySegment<byte>[] pkts, int[] index, int k)
         {
             byte[] buffer = null;
 
@@ -202,42 +165,6 @@ namespace Library.Correction
             }
         }
 
-        protected static void Shuffle(byte[][] pkts, int[] pktsOff, int[] index, int k)
-        {
-            for (int i = 0; i < k; )
-            {
-                if (index[i] >= k || index[i] == i)
-                {
-                    i++;
-                }
-                else
-                {
-                    // put pkts in the right position (first check for conflicts).
-                    int c = index[i];
-
-                    if (index[c] == c)
-                    {
-                        throw new ArgumentException("Shuffle error at " + i);
-                    }
-
-                    // swap(pkts[c],pkts[i])
-                    byte[] tmp = pkts[i];
-                    pkts[i] = pkts[c];
-                    pkts[c] = tmp;
-
-                    // swap(pktsOff[c],pktsOff[i])
-                    int tmp2 = pktsOff[i];
-                    pktsOff[i] = pktsOff[c];
-                    pktsOff[c] = tmp2;
-
-                    // swap(index[c],index[i])
-                    int tmp3 = index[i];
-                    index[i] = index[c];
-                    index[c] = tmp3;
-                }
-            }
-        }
-
         private class Math
         {
             private int _gfBits;
@@ -248,7 +175,7 @@ namespace Library.Correction
              * and  Lee & Messerschmitt, p. 453.
              */
             private static string[] _prim_polys = {    
-                                      //. gfBits        polynomial
+                                      // gfBits         polynomial
             null,                     // 0              no code
             null,                     // 1              no code
             "111",                    // 2              1+x+x^2
@@ -527,11 +454,6 @@ namespace Library.Correction
                 }
             }
 
-            public void MatMul(byte[] a, byte[] b, byte[] c, int n, int k, int m)
-            {
-                MatMul(a, 0, b, 0, c, 0, n, k, m);
-            }
-
             public void MatMul(byte[] a, int aStart, byte[] b, int bStart, byte[] c, int cStart, int n, int k, int m)
             {
                 for (int row = 0; row < n; row++)
@@ -550,28 +472,6 @@ namespace Library.Correction
                         c[cStart + (row * m + col)] = acc;
                     }
                 }
-            }
-
-            public static bool IsIdentity(byte[] m, int k)
-            {
-                int pos = 0;
-
-                for (int row = 0; row < k; row++)
-                {
-                    for (int col = 0; col < k; col++)
-                    {
-                        if ((row == col && m[pos] != 1) || (row != col && m[pos] != 0))
-                        {
-                            return false;
-                        }
-                        else
-                        {
-                            pos++;
-                        }
-                    }
-                }
-
-                return true;
             }
 
             public void InvertMatrix(byte[] src, int k)

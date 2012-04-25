@@ -10,6 +10,7 @@ using Library.Collections;
 using Library.Correction;
 using Library.Io;
 using System.Threading;
+using Library.Compression;
 
 namespace Library.Net.Amoeba
 {
@@ -35,7 +36,7 @@ namespace Library.Net.Amoeba
 
         private bool _disposed = false;
         private object _thisLock = new object();
-        public const int ClusterSize = 1024 * 256;
+        public const int ClusterSize = 1024 * 32;
 
         public CacheManager(string cachePath, string WorkDirectory, BufferManager bufferManager)
         {
@@ -206,7 +207,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void CheckSeeds()
+        internal void CheckSeeds()
         {
             lock (this.ThisLock)
             {
@@ -221,6 +222,8 @@ namespace Library.Net.Amoeba
                     var info = item.Value;
 
                     bool flag = true;
+
+                    if (!(flag = this.Contains(seed.Key))) goto Break;
 
                     foreach (var index in info.Indexs)
                     {
@@ -243,9 +246,6 @@ namespace Library.Net.Amoeba
                         End: ;
                         }
                     }
-
-                    if (!(flag = this.Contains(seed.Key))) goto Break;
-                    if (!(flag = File.Exists(info.Path))) goto Break;
 
                 Break: ;
 
@@ -566,7 +566,7 @@ namespace Library.Net.Amoeba
             {
                 if (_settings.ShareIndex.ContainsKey(path))
                 {
-                    throw new Exception();
+                    throw new ArgumentException();
                 }
             }
 
@@ -617,6 +617,30 @@ namespace Library.Net.Amoeba
                     this.OnRemoveKeyEvent(key);
                 }
 
+                foreach (var item in _settings.Seeds.ToArray())
+                {
+                    var seed = item.Key;
+                    var info = item.Value;
+
+                    if (_ids[id] == info.Path)
+                    {
+                        _settings.Seeds.Remove(seed);
+
+                        this.SetPriority(seed.Key, 0);
+
+                        foreach (var index in info.Indexs)
+                        {
+                            foreach (var group in index.Groups)
+                            {
+                                foreach (var key in group.Keys)
+                                {
+                                    this.SetPriority(key, 0);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 _settings.ShareIndex.Remove(_ids[id]);
                 _ids.Remove(id);
             }
@@ -630,50 +654,27 @@ namespace Library.Net.Amoeba
             if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
             if (!Enum.IsDefined(typeof(HashAlgorithm), hashAlgorithm)) throw new ArgumentException("HashAlgorithm に存在しない列挙");
 
-            if (compressionAlgorithm == CompressionAlgorithm.XZ && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+            if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
                 IList<Key> keys = new List<Key>();
 
                 using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                using (var rijndael = new RijndaelManaged()
                 {
-                    using (var rijndael = new RijndaelManaged()
-                    {
-                        KeySize = 256,
-                        BlockSize = 256,
-                        Mode = CipherMode.CBC,
-                        Padding = PaddingMode.PKCS7
-                    })
-                    using (CryptoStream cs = new CryptoStream(outStream,
-                        rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
-                    {
-#if !DEBUG
-                        var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-#else
-                        var currentDirectory = Directory.GetCurrentDirectory();
-#endif
-
-                        if (System.Environment.Is64BitProcess)
-                        {
-                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
-                        }
-                        else
-                        {
-                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
-                        }
-
-                        var compressor = new SevenZip.SevenZipCompressor();
-
-                        compressor.ArchiveFormat = SevenZip.OutArchiveFormat.XZ;
-                        compressor.CompressionMethod = SevenZip.CompressionMethod.Lzma2;
-                        compressor.CompressionLevel = SevenZip.CompressionLevel.Low;
-                        //compressor.CustomParameters.Add("mt", "off");
-
-                        compressor.CompressStream(inStream, cs);
-                    }
+                    KeySize = 256,
+                    BlockSize = 256,
+                    Mode = CipherMode.CBC,
+                    Padding = PaddingMode.PKCS7
+                })
+                using (CryptoStream cs = new CryptoStream(outStream,
+                    rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                {
+                    Lzma.Compress(inStream, cs, _bufferManager);
                 }
-
+                
                 return new KeyCollection(keys);
             }
+
             else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
             {
                 IList<Key> keys = new List<Key>();
@@ -712,71 +713,20 @@ namespace Library.Net.Amoeba
             if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
             if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
 
-            if (compressionAlgorithm == CompressionAlgorithm.XZ && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+            if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
-                string tempFilePath = null;
-
-                try
+                using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+                using (var rijndael = new RijndaelManaged()
                 {
-                    using (var tempStream = CacheManager.GetUniqueStream(Path.Combine(_workDirectory, "Decode_Temp.xz")))
-                    {
-                        using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                        using (var rijndael = new RijndaelManaged()
-                        {
-                            KeySize = 256,
-                            BlockSize = 256,
-                            Mode = CipherMode.CBC,
-                            Padding = PaddingMode.PKCS7
-                        })
-                        using (CryptoStream cs = new CryptoStream(inStream,
-                            rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                        {
-                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024);
-
-                            try
-                            {
-                                int length = 0;
-
-                                while (0 < (length = cs.Read(buffer, 0, buffer.Length)))
-                                {
-                                    tempStream.Write(buffer, 0, length);
-                                }
-                            }
-                            finally
-                            {
-                                _bufferManager.ReturnBuffer(buffer);
-                            }
-                        }
-
-                        tempFilePath = tempStream.Name;
-
-                        tempStream.Seek(0, SeekOrigin.Begin);
-
-#if !DEBUG
-                        var currentDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-#else
-                        var currentDirectory = Directory.GetCurrentDirectory();
-#endif
-
-                        if (System.Environment.Is64BitProcess)
-                        {
-                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z64.dll"));
-                        }
-                        else
-                        {
-                            SevenZip.SevenZipCompressor.SetLibraryPath(Path.Combine(currentDirectory, "7z86.dll"));
-                        }
-
-                        var decompressor = new SevenZip.SevenZipExtractor(tempStream);
-                        decompressor.ExtractFile(decompressor.ArchiveFileNames[0], outStream);
-                    }
-                }
-                finally
+                    KeySize = 256,
+                    BlockSize = 256,
+                    Mode = CipherMode.CBC,
+                    Padding = PaddingMode.PKCS7
+                })
+                using (CryptoStream cs = new CryptoStream(inStream,
+                    rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                 {
-                    if (tempFilePath != null)
-                    {
-                        File.Delete(tempFilePath);
-                    }
+                    Lzma.Decompress(cs, outStream, _bufferManager);
                 }
             }
             else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
@@ -821,8 +771,7 @@ namespace Library.Net.Amoeba
             }
             else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
-                if (keys.Count > 128)
-                    throw new ArgumentOutOfRangeException("headers");
+                if (keys.Count > 128) throw new ArgumentOutOfRangeException("headers");
 
                 List<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
                 List<ArraySegment<byte>> parityBufferList = new List<ArraySegment<byte>>();
@@ -860,7 +809,6 @@ namespace Library.Net.Amoeba
                         parityBufferList.Add(new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength));
                     }
 
-                    //ReedSolomon reedSolomon = new ReedSolomon(8, bufferList.Count, bufferList.Count + parityBufferList.Count, 2);
                     ReedSolomon reedSolomon = new ReedSolomon(8, bufferList.Count, bufferList.Count + parityBufferList.Count, 8);
                     List<int> intList = new List<int>();
 
@@ -938,7 +886,7 @@ namespace Library.Net.Amoeba
         public KeyCollection ParityDecoding(Group group, WatchEventHandler watchEvent)
         {
             if (group.BlockLength > 1024 * 1024 * 16) throw new ArgumentOutOfRangeException();
-            
+
             if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
             {
                 return new KeyCollection(group.Keys.Select(n => n.DeepClone()));
@@ -949,7 +897,6 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    //ReedSolomon reedSolomon = new ReedSolomon(8, group.InformationLength, group.Keys.Count, 2);
                     ReedSolomon reedSolomon = new ReedSolomon(8, group.InformationLength, group.Keys.Count, 8);
                     List<int> intList = new List<int>();
 
@@ -1206,11 +1153,9 @@ namespace Library.Net.Amoeba
 
                         _fileStream.Flush();
                     }
-                    catch (IOException ex)
+                    catch (IOException)
                     {
                         _spaceClusters.UnionWith(clusterList);
-
-                        Log.Error(ex);
                     }
 
                     var clusters = new Clusters();
@@ -1243,8 +1188,6 @@ namespace Library.Net.Amoeba
                 {
                     _ids.Add(_id++, item.Key);
                 }
-
-                this.CheckSeeds();
             }
         }
 
@@ -1326,10 +1269,10 @@ namespace Library.Net.Amoeba
 
             public Settings()
                 : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedDictionary<string, ShareIndex>>() { Name = "ShareIndex", Value = new LockedDictionary<string,ShareIndex>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<string, ShareIndex>>() { Name = "ShareIndex", Value = new LockedDictionary<string, ShareIndex>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
                     new Library.Configuration.SettingsContext<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Seed, SeedInformation>>() { Name = "Seeds", Value = new LockedDictionary<Seed,SeedInformation>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Seed, SeedInformation>>() { Name = "Seeds", Value = new LockedDictionary<Seed, SeedInformation>() },
                 })
             {
 

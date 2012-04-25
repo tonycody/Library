@@ -16,7 +16,7 @@ namespace Library.Net.Connection
         private enum CompressAlgorithm : uint
         {
             None = 0,
-            GZip = 1,
+            Deflate = 1,
         }
 
         private ConnectionBase _connection;
@@ -38,7 +38,7 @@ namespace Library.Net.Connection
             _maxReceiveCount = maxReceiveCount;
             _bufferManager = bufferManager;
 
-            _myCompressAlgorithm = CompressAlgorithm.GZip;
+            _myCompressAlgorithm = CompressAlgorithm.Deflate;
         }
 
         public override long ReceivedByteCount
@@ -159,26 +159,26 @@ namespace Library.Net.Connection
                     }
                     else if (version == (byte)1)
                     {
-                        BufferStream gzipBufferStream = null;
+                        BufferStream deflateBufferStream = null;
 
                         try
                         {
-                            gzipBufferStream = new BufferStream(_bufferManager);
+                            deflateBufferStream = new BufferStream(_bufferManager);
                             byte[] decompressBuffer = null;
 
                             try
                             {
                                 decompressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
-                                using (GZipStream gzipStream = new GZipStream(stream, CompressionMode.Decompress, true))
+                                using (DeflateStream deflateStream = new DeflateStream(stream, CompressionMode.Decompress, true))
                                 {
                                     int i = -1;
 
-                                    while ((i = gzipStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
+                                    while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
                                     {
-                                        gzipBufferStream.Write(decompressBuffer, 0, i);
+                                        deflateBufferStream.Write(decompressBuffer, 0, i);
 
-                                        if (gzipBufferStream.Length > _maxReceiveCount) throw new ConnectionException();
+                                        if (deflateBufferStream.Length > _maxReceiveCount) throw new ConnectionException();
                                     }
                                 }
                             }
@@ -189,7 +189,7 @@ namespace Library.Net.Connection
                         }
                         catch (Exception ex)
                         {
-                            gzipBufferStream.Dispose();
+                            deflateBufferStream.Dispose();
 
                             throw ex;
                         }
@@ -197,14 +197,14 @@ namespace Library.Net.Connection
 #if DEBUG
                         Debug.WriteLine("Receive : {0}→{1} {2}",
                             NetworkConverter.ToSizeString(stream.Length),
-                            NetworkConverter.ToSizeString(gzipBufferStream.Length),
-                            NetworkConverter.ToSizeString(stream.Length - gzipBufferStream.Length));
+                            NetworkConverter.ToSizeString(deflateBufferStream.Length),
+                            NetworkConverter.ToSizeString(stream.Length - deflateBufferStream.Length));
 #endif
-                        gzipBufferStream.Seek(0, SeekOrigin.Begin);
+                        deflateBufferStream.Seek(0, SeekOrigin.Begin);
                         stream.Dispose();
                         dataStream.Dispose();
 
-                        return gzipBufferStream;
+                        return deflateBufferStream;
                     }
                     else
                     {
@@ -240,24 +240,24 @@ namespace Library.Net.Connection
                 {
                     List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
 
-                    if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.GZip))
+                    if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
                     {
                         try
                         {
-                            BufferStream gzipBufferStream = new BufferStream(_bufferManager);
+                            BufferStream deflateBufferStream = new BufferStream(_bufferManager);
                             byte[] compressBuffer = null;
 
                             try
                             {
                                 compressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
-                                using (GZipStream gzipStream = new GZipStream(gzipBufferStream, CompressionMode.Compress, true))
+                                using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                                 {
                                     int i = -1;
 
                                     while ((i = stream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
                                     {
-                                        gzipStream.Write(compressBuffer, 0, i);
+                                        deflateStream.Write(compressBuffer, 0, i);
                                     }
                                 }
                             }
@@ -266,8 +266,8 @@ namespace Library.Net.Connection
                                 _bufferManager.ReturnBuffer(compressBuffer);
                             }
 
-                            gzipBufferStream.Seek(0, SeekOrigin.Begin);
-                            list.Add(new KeyValuePair<int, Stream>(1, gzipBufferStream));
+                            deflateBufferStream.Seek(0, SeekOrigin.Begin);
+                            list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
                         }
                         catch (Exception)
                         {
@@ -282,16 +282,6 @@ namespace Library.Net.Connection
                         return x.Value.Length.CompareTo(y.Value.Length);
                     }));
 
-                    for (int i = 1; i < list.Count; i++)
-                    {
-                        list[i].Value.Dispose();
-                    }
-
-                    BufferStream headerStream = new BufferStream(_bufferManager);
-                    headerStream.WriteByte((byte)list[0].Key);
-
-                    using (var dataStream = new AddStream(headerStream, list[0].Value))
-                    {
 #if DEBUG
                         if (list[0].Value.Length != stream.Length)
                         {
@@ -302,6 +292,16 @@ namespace Library.Net.Connection
                         }
 #endif
 
+                    for (int i = 1; i < list.Count; i++)
+                    {
+                        list[i].Value.Dispose();
+                    }
+
+                    BufferStream headerStream = new BufferStream(_bufferManager);
+                    headerStream.WriteByte((byte)list[0].Key);
+
+                    using (var dataStream = new AddStream(headerStream, list[0].Value))
+                    {
                         _connection.Send(dataStream, timeout);
                     }
                 }

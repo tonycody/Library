@@ -94,6 +94,7 @@ namespace Library.Net.Amoeba
         private object _thisLock = new object();
 
         private readonly int _seedMaxCount = 1000000;
+        private readonly int _maxNodeCount = 128;
         private readonly int _maxLinkCount = 8192;
         private readonly int _maxRequestCount = 8192;
 
@@ -798,7 +799,7 @@ namespace Library.Net.Amoeba
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
-                if (seedRemoveStopwatch.Elapsed.Hours >= 1)
+                if (seedRemoveStopwatch.Elapsed.Minutes >= 30)
                 {
                     seedRemoveStopwatch.Restart();
 
@@ -814,6 +815,8 @@ namespace Library.Net.Amoeba
                         _uploadSeeds.Remove(item);
                         _cacheManager.RemoveSeed(item);
                     }
+
+                    _cacheManager.CheckSeeds();
                 }
 
                 if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
@@ -1556,7 +1559,7 @@ namespace Library.Net.Amoeba
                 _messagesManager[connectionManager.Node].PushNodesRequest = false;
             }
 
-            foreach (var node in e.Nodes)
+            foreach (var node in e.Nodes.Take(_maxNodeCount))
             {
                 if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
 
@@ -1569,7 +1572,8 @@ namespace Library.Net.Amoeba
                 lock (_messagesManager.ThisLock)
                 {
                     _messagesManager[connectionManager.Node].SurroundingNodes.Clear();
-                    _messagesManager[connectionManager.Node].SurroundingNodes.UnionWith(e.Nodes.Where(n => n != null && n.Id != null));
+                    _messagesManager[connectionManager.Node].SurroundingNodes
+                        .UnionWith(e.Nodes.Take(_maxNodeCount).Where(n => n != null && n.Id != null));
                 }
             }
         }
@@ -1627,7 +1631,7 @@ namespace Library.Net.Amoeba
             foreach (var key in this.OnGetFilterSeedsEvent(e.Seeds))
             {
                 if (key == null || key.Name == null || !key.VerifyCertificate()) continue;
-                if (_seedMaxCount < _seeds.Count) continue;
+                if (_seeds.Count > _seedMaxCount) continue;
 
                 _seeds.Add(key);
                 _messagesManager[connectionManager.Node].PushSeeds.Add(key);
@@ -1686,6 +1690,7 @@ namespace Library.Net.Amoeba
                 if (_messagesManager[connectionManager.Node].PushBlocksRequest.Contains(e.Key))
                 {
                     _messagesManager[connectionManager.Node].PushBlocksRequest.Remove(e.Key);
+                    _messagesManager[connectionManager.Node].PushBlocks.Add(e.Key);
                     _messagesManager[connectionManager.Node].Priority++;
 
                     // Infomathon
@@ -1702,9 +1707,9 @@ namespace Library.Net.Amoeba
                 {
                     _cacheManager[e.Key] = e.Value;
                 }
-                catch (SpaceNotFoundException ex)
+                catch (Exception)
                 {
-                    Log.Error(ex);
+
                 }
             }
             finally
@@ -1771,7 +1776,7 @@ namespace Library.Net.Amoeba
                 return GetFilterSeedsEvent(this, seeds);
             }
 
-            return new Seed[0];
+            return seeds;
         }
 
         protected virtual void OnUploadedEvent(Key key)
