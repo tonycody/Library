@@ -1,10 +1,2 @@
 ﻿namespace: Library.Net.Amoeba
 License: New BSD License
-
-File: SevenZipSharp.dll
-Url: http://sevenzipsharp.codeplex.com/
-License: LGPL v3.0
-
-Files: 7z86.dll, 7z64.dll
-Url: http://sevenzip.sourceforge.jp/
-Licenses: GNU LGPL + unRAR restriction
