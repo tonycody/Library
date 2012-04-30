@@ -356,10 +356,8 @@ namespace Library.Net.Amoeba
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Log.Error(ex);
-
                     return;
                 }
 
@@ -406,12 +404,22 @@ namespace Library.Net.Amoeba
                                     }
                                     catch (StopIOException)
                                     {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+                                        
                                         if (largeFlag)
                                         {
                                             throw new Exception();
                                         }
 
                                         continue;
+                                    }
+                                    catch (Exception)
+                                    {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+
+                                        throw;
                                     }
 
                                     Index index;
@@ -459,16 +467,28 @@ namespace Library.Net.Amoeba
 
                                             _cacheManager.Decoding(decodingProgressStream, item.Seed.CompressionAlgorithm, item.Seed.CryptoAlgorithm, item.Seed.CryptoKey,
                                                 new KeyCollection() { item.Seed.Key });
+
+                                            if (stream.Length != item.Seed.Length) throw new Exception();
                                         }
                                     }
                                     catch (StopIOException)
                                     {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+
                                         if (largeFlag)
                                         {
                                             throw new Exception();
                                         }
 
                                         continue;
+                                    }
+                                    catch (Exception)
+                                    {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+
+                                        throw;
                                     }
 
                                     string downloadDirectory;
@@ -567,12 +587,22 @@ namespace Library.Net.Amoeba
                                     }
                                     catch (StopIOException)
                                     {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+
                                         if (largeFlag)
                                         {
                                             throw new Exception();
                                         }
 
                                         continue;
+                                    }
+                                    catch (Exception)
+                                    {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+
+                                        throw;
                                     }
 
                                     Index index;
@@ -620,16 +650,28 @@ namespace Library.Net.Amoeba
 
                                             _cacheManager.Decoding(decodingProgressStream, item.Index.CompressionAlgorithm, item.Index.CryptoAlgorithm, item.Index.CryptoKey,
                                                 new KeyCollection(headers));
+
+                                            if (stream.Length != item.Seed.Length) throw new Exception();
                                         }
                                     }
                                     catch (StopIOException)
                                     {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+
                                         if (largeFlag)
                                         {
                                             throw new Exception();
                                         }
                                         
                                         continue;
+                                    }
+                                    catch (Exception)
+                                    {
+                                        if (File.Exists(fileName))
+                                            File.Delete(fileName);
+
+                                        throw;
                                     }
 
                                     string downloadDirectory;
@@ -663,11 +705,9 @@ namespace Library.Net.Amoeba
                         }
                     }
                 }
-                catch (Exception exception)
+                catch (Exception)
                 {
                     item.State = DownloadState.Error;
-
-                    Log.Error(exception);
                 }
             }
         }

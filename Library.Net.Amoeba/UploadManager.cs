@@ -226,10 +226,8 @@ namespace Library.Net.Amoeba
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Log.Error(ex);
-
                     return;
                 }
 
@@ -686,11 +684,9 @@ namespace Library.Net.Amoeba
                         }
                     }
                 }
-                catch (Exception exception)
+                catch (Exception)
                 {
                     item.State = UploadState.Error;
-
-                    Log.Error(exception);
                 }
             }
         }
