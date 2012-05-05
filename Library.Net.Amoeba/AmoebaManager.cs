@@ -406,11 +406,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void UploadRestart(int id)
+        public void UploadReset(int id)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Restart(id);
+                _uploadManager.Reset(id);
             }
         }
 
@@ -446,11 +446,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void DownloadRestart(int id)
+        public void DownloadReset(int id)
         {
             lock (this.ThisLock)
             {
-                _downloadManager.Restart(id);
+                _downloadManager.Reset(id);
             }
         }
 

@@ -757,7 +757,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void Restart(int id)
+        public void Reset(int id)
         {
             lock (this.ThisLock)
             {
