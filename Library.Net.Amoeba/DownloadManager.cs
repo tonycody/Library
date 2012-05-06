@@ -142,7 +142,7 @@ namespace Library.Net.Amoeba
                         contexts.Add(new InformationContext("State", item.Value.State));
                         contexts.Add(new InformationContext("Rank", item.Value.Rank));
                         contexts.Add(new InformationContext("Seed", item.Value.Seed));
-                        contexts.Add(new InformationContext("Path", item.Value.Path));
+                        if (item.Value.Path != null) contexts.Add(new InformationContext("Path", item.Value.Path));
 
                         if (item.Value.Rank == 1) contexts.Add(new InformationContext("BlockCount", 1));
                         else contexts.Add(new InformationContext("BlockCount", item.Value.Index.Groups.Sum(n => n.Keys.Count)));
