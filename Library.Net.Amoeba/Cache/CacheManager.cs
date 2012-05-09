@@ -460,9 +460,9 @@ namespace Library.Net.Amoeba
                 var clus = _settings.ClustersIndex[key];
                 _settings.ClustersIndex.Remove(key);
                 _spaceClusters.UnionWith(clus.Indexs);
-
-                this.OnRemoveKeyEvent(key);
             }
+
+            this.OnRemoveKeyEvent(key);
         }
 
         public void Resize(long size)
@@ -610,12 +610,11 @@ namespace Library.Net.Amoeba
 
         public void ShareRemove(int id)
         {
+            List<Key> keyList = new List<Key>();
+
             lock (this.ThisLock)
             {
-                foreach (var key in _settings.ShareIndex[_ids[id]].KeyAndCluster.Keys)
-                {
-                    this.OnRemoveKeyEvent(key);
-                }
+                keyList.AddRange(_settings.ShareIndex[_ids[id]].KeyAndCluster.Keys);
 
                 foreach (var item in _settings.Seeds.ToArray())
                 {
@@ -643,6 +642,11 @@ namespace Library.Net.Amoeba
 
                 _settings.ShareIndex.Remove(_ids[id]);
                 _ids.Remove(id);
+            }
+
+            foreach (var key in keyList)
+            {
+                this.OnRemoveKeyEvent(key);
             }
         }
 

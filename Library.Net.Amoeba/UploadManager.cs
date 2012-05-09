@@ -76,10 +76,9 @@ namespace Library.Net.Amoeba
                 {
                     foreach (var item in _settings.UploadItems)
                     {
-                        if (item.UploadKeys.Contains(otherKey))
+                        if (item.UploadKeys.Remove(otherKey))
                         {
                             item.UploadedKeys.Add(otherKey);
-                            item.UploadKeys.Remove(otherKey);
                         }
                     }
                 }
@@ -91,10 +90,9 @@ namespace Library.Net.Amoeba
                 {
                     foreach (var item in _settings.UploadItems)
                     {
-                        if (item.UploadKeys.Contains(otherKey))
+                        if (item.UploadKeys.Remove(otherKey))
                         {
                             item.UploadedKeys.Add(otherKey);
-                            item.UploadKeys.Remove(otherKey);
                         }
                     }
                 }
