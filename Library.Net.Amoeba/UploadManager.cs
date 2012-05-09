@@ -206,7 +206,7 @@ namespace Library.Net.Amoeba
                             if (_settings.UploadItems.Count > 0)
                             {
                                 item = _settings.UploadItems.Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ComputeCorrection)
-                                    .Take(8192).OrderBy(n => -n.Priority).FirstOrDefault();
+                                    .OrderBy(n => -n.Priority).FirstOrDefault();
                             }
 
                             foreach (var item2 in _settings.UploadItems)

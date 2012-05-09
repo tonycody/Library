@@ -317,7 +317,7 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Stop) return;
 
                 DownloadItem item = null;
-                
+
                 try
                 {
                     lock (this.ThisLock)
@@ -327,7 +327,7 @@ namespace Library.Net.Amoeba
                             if (_settings.DownloadItems.Count > 0)
                             {
                                 var items = _settings.DownloadItems.Where(n => n.State == DownloadState.Downloading || n.State == DownloadState.Decoding)
-                                    .Take(8192).ToList();
+                                    .ToList();
 
                                 if (compRound == 0 && compList.Count == 0)
                                 {
@@ -345,7 +345,7 @@ namespace Library.Net.Amoeba
                                 }
                                 else
                                 {
-                                    item = items.OrderBy(n => n.GetHashCode()).OrderBy(n => -n.Priority).ElementAtOrDefault(round);
+                                    item = items.ElementAtOrDefault(round);
                                 }
 
                                 round++;
