@@ -68,6 +68,7 @@ namespace Library.Net.Amoeba
                     List<InformationContext> contexts = new List<InformationContext>();
 
                     contexts.Add(new InformationContext("CacheSeedCount", _settings.Seeds.Keys.Count));
+                    contexts.Add(new InformationContext("ShareCount", _settings.ShareIndex.Count));
 
                     return new Information(contexts);
                 }

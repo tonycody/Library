@@ -64,22 +64,22 @@ namespace Library.Net.Amoeba
         private long _sentByteCount = 0;
 
         private volatile int _pullNodesRequestCount;
-        private volatile int _pullNodesCount;
+        private volatile int _pullNodeCount;
         private volatile int _pullBlocksLinkCount;
         private volatile int _pullBlocksRequestCount;
         private volatile int _pullBlockCount;
         private volatile int _pullSeedsLinkCount;
         private volatile int _pullSeedsRequestCount;
-        private volatile int _pullSeedsCount;
+        private volatile int _pullSeedCount;
 
         private volatile int _pushNodesRequestCount;
-        private volatile int _pushNodesCount;
+        private volatile int _pushNodeCount;
         private volatile int _pushBlocksLinkCount;
         private volatile int _pushBlocksRequestCount;
         private volatile int _pushBlockCount;
         private volatile int _pushSeedsLinkCount;
         private volatile int _pushSeedsRequestCount;
-        private volatile int _pushSeedsCount;
+        private volatile int _pushSeedCount;
 
         private CirculationCollection<Key> _relayBlocks;
         private volatile int _relayBlockCount;
@@ -301,19 +301,19 @@ namespace Library.Net.Amoeba
                     List<InformationContext> contexts = new List<InformationContext>();
 
                     contexts.Add(new InformationContext("PullNodesRequestCount", _pullNodesRequestCount));
-                    contexts.Add(new InformationContext("PullNodesCount", _pullNodesCount));
+                    contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
                     contexts.Add(new InformationContext("PullSeedsLinkCount", _pullSeedsLinkCount));
                     contexts.Add(new InformationContext("PullSeedsRequestCount", _pullSeedsRequestCount));
-                    contexts.Add(new InformationContext("PullSeedsCount", _pullSeedsCount));
+                    contexts.Add(new InformationContext("PullSeedCount", _pullSeedCount));
                     contexts.Add(new InformationContext("PullBlocksLinkCount", _pullBlocksLinkCount));
                     contexts.Add(new InformationContext("PullBlocksRequestCount", _pullBlocksRequestCount));
                     contexts.Add(new InformationContext("PullBlockCount", _pullBlockCount));
 
                     contexts.Add(new InformationContext("PushNodesRequestCount", _pushNodesRequestCount));
-                    contexts.Add(new InformationContext("PushNodesCount", _pushNodesCount));
+                    contexts.Add(new InformationContext("PushNodeCount", _pushNodeCount));
                     contexts.Add(new InformationContext("PushSeedsLinkCount", _pushSeedsLinkCount));
                     contexts.Add(new InformationContext("PushSeedsRequestCount", _pushSeedsRequestCount));
-                    contexts.Add(new InformationContext("PushSeedsCount", _pushSeedsCount));
+                    contexts.Add(new InformationContext("PushSeedCount", _pushSeedCount));
                     contexts.Add(new InformationContext("PushBlocksLinkCount", _pushBlocksLinkCount));
                     contexts.Add(new InformationContext("PushBlocksRequestCount", _pushBlocksRequestCount));
                     contexts.Add(new InformationContext("PushBlockCount", _pushBlockCount));
@@ -1177,7 +1177,7 @@ namespace Library.Net.Amoeba
                             messageManager.PullNodesRequest = false;
 
                             Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
-                            _pushNodesCount += nodes.Count;
+                            _pushNodeCount += nodes.Count;
                         }
                     }
 
@@ -1384,7 +1384,7 @@ namespace Library.Net.Amoeba
                                     messageManager.PushSeeds.AddRange(tempKeyList);
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Seeds {0} ({1})", keywords[i].Value, tempKeyList.Count));
-                                    _pushSeedsCount += tempKeyList.Count;
+                                    _pushSeedCount += tempKeyList.Count;
                                 }
                             }
                         }
@@ -1564,7 +1564,7 @@ namespace Library.Net.Amoeba
                 if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
 
                 _routeTable.Add(node);
-                _pullNodesCount++;
+                _pullNodeCount++;
             }
 
             lock (this.ThisLock)
@@ -1635,7 +1635,7 @@ namespace Library.Net.Amoeba
 
                 _seeds.Add(key);
                 _messagesManager[connectionManager.Node].PushSeeds.Add(key);
-                _pullSeedsCount++;
+                _pullSeedCount++;
             }
         }
 
