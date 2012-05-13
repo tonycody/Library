@@ -6,11 +6,11 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
+using System.Threading;
 using Library.Collections;
+using Library.Compression;
 using Library.Correction;
 using Library.Io;
-using System.Threading;
-using Library.Compression;
 
 namespace Library.Net.Amoeba
 {
@@ -24,7 +24,6 @@ namespace Library.Net.Amoeba
     {
         private Settings _settings;
         private FileStream _fileStream = null;
-        private string _workDirectory = Path.GetTempPath();
         private BufferManager _bufferManager;
         private HashSet<long> _spaceClusters;
         private Dictionary<int, string> _ids = new Dictionary<int, string>();
@@ -38,10 +37,9 @@ namespace Library.Net.Amoeba
         private object _thisLock = new object();
         public const int ClusterSize = 1024 * 32;
 
-        public CacheManager(string cachePath, string WorkDirectory, BufferManager bufferManager)
+        public CacheManager(string cachePath, BufferManager bufferManager)
         {
             _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-            _workDirectory = WorkDirectory;
 
             _settings = new Settings();
             _bufferManager = bufferManager;
@@ -122,7 +120,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private static FileStream GetUniqueStream(string path)
+        private static FileStream GetUniqueFileStream(string path)
         {
             if (!File.Exists(path))
             {

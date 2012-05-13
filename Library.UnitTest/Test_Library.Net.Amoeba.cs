@@ -12,7 +12,6 @@ using NUnit.Framework;
 
 namespace Library.UnitTest
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     [TestFixture, Category("Library.Net.Amoeba")]
     public class Test_Library_Net_Amoeba
     {
@@ -55,7 +54,7 @@ namespace Library.UnitTest
             seed.Comment = "eeee";
             seed.Rank = 1;
             seed.Key = new Key() { Hash = new byte[64], HashAlgorithm = HashAlgorithm.Sha512 };
-            seed.CompressionAlgorithm = CompressionAlgorithm.XZ;
+            seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
             seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
             seed.CryptoKey = new byte[32 + 32];
 
@@ -184,7 +183,7 @@ namespace Library.UnitTest
                 seed.Comment = "eeee";
                 seed.Rank = 1;
                 seed.Key = new Key() { Hash = new byte[64], HashAlgorithm = HashAlgorithm.Sha512 };
-                seed.CompressionAlgorithm = CompressionAlgorithm.XZ;
+                seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
                 seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
                 seed.CryptoKey = new byte[32 + 32];
 

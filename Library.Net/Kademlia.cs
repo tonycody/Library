@@ -38,6 +38,9 @@ namespace Library.Net
         /// <param name="column">ノードリストの列数</param>
         public Kademlia(int row, int column)
         {
+            if (row < 1) throw new ArgumentOutOfRangeException("row");
+            if (column < 1) throw new ArgumentOutOfRangeException("column");
+
             _row = row;
             _column = column;
             _nodesList = new List<T>[row];
@@ -62,23 +65,15 @@ namespace Library.Net
                     if (value.Equals(default(T)))
                     {
                         _baseNode = default(T);
+
+                        this.Clear();
                     }
                     else
                     {
                         List<T> tempList = new List<T>();
+                        tempList.AddRange(this.ToArray());
 
-                        for (int i = 0; i < _nodesList.Length; i++)
-                        {
-                            if (_nodesList[i] != null)
-                            {
-                                tempList.AddRange(_nodesList[i].ToArray().Reverse());
-                            }
-                        }
-
-                        for (int i = 0; i < _nodesList.Length; i++)
-                        {
-                            _nodesList[i] = null;
-                        }
+                        this.Clear();
 
                         _baseNode = value;
 
@@ -144,258 +139,6 @@ namespace Library.Net
         }
 
         #endregion
-
-        public static IEnumerable<T> Sort(T baseNode, byte[] id, IEnumerable<T> nodeList)
-        {
-            if (baseNode == null) throw new ArgumentNullException("baseNode");
-            else if (baseNode.Id == null) throw new ArgumentNullException("baseNode.Id");
-            else if (id == null) throw new ArgumentNullException("key");
-            else if (nodeList == null) throw new ArgumentNullException("nodeList");
-
-            var dic = new Dictionary<byte[], List<T>>(new BytesEqualityComparer());
-            byte[] myXor = Kademlia<T>.Xor(id, baseNode.Id);
-
-            foreach (var node in nodeList)
-            {
-                byte[] xor = Kademlia<T>.Xor(id, node.Id);
-
-                if (Collection.Compare(myXor, xor) > 0)
-                {
-                    if (!dic.ContainsKey(xor))
-                    {
-                        dic[xor] = new List<T>();
-                    }
-
-                    dic[xor].Add(node);
-                }
-            }
-
-            var list = new List<KeyValuePair<byte[], List<T>>>(dic);
-
-            list.Sort(delegate(KeyValuePair<byte[], List<T>> x, KeyValuePair<byte[], List<T>> y)
-            {
-                return Collection.Compare(x.Key, y.Key);
-            });
-
-            var sumList = new List<T>();
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                sumList.AddRange(list[i].Value);
-            }
-
-            return sumList;
-        }
-
-        public IEnumerable<T> Search(byte[] id)
-        {
-            if (id == null) throw new ArgumentNullException("key");
-
-            lock (this.ThisLock)
-            {
-                return Kademlia<T>.Sort(_baseNode, id, this.ToArray());
-            }
-        }
-
-        public T Verify()
-        {
-            lock (this.ThisLock)
-            {
-                List<INode> tempNodeList = new List<INode>();
-
-                for (int i = _nodesList.Length - 1; i >= 0; i--)
-                {
-                    if (_nodesList[i].Count(n => n != null) < _column)
-                    {
-                        if (_nodesList[i - 1].Count == _column)
-                        {
-                            return _nodesList[i - 1][0];
-                        }
-                    }
-                }
-
-                return default(T);
-            }
-        }
-
-        // Addより優先的に
-        public void Live(T item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            else if (item.Id == null) throw new ArgumentNullException("item.Id");
-
-            lock (this.ThisLock)
-            {
-                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
-                if (i == 0)
-                {
-                    return;
-                }
-
-                if (_nodesList[i - 1] != null)
-                {
-                    // 追加するnodeがNodeListに入っている場合
-                    if (_nodesList[i - 1].Contains(item))
-                    {
-                        // そのノードをNodeListの末尾に移す
-                        _nodesList[i - 1].Remove(item);
-                        _nodesList[i - 1].Add(item);
-                    }
-                    else
-                    {
-                        // 列に空きがない場合、先頭のノード削除
-                        if (_nodesList[i - 1].Count == _column)
-                        {
-                            _nodesList[i - 1].RemoveAt(0);
-                        }
-
-                        // そのノードを末尾に追加する
-                        _nodesList[i - 1].Add(item);
-                    }
-                }
-                else
-                {
-                    _nodesList[i - 1] = new List<T>();
-                    _nodesList[i - 1].Add(item);
-                }
-            }
-        }
-
-        public void Add(T item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            else if (item.Id == null) throw new ArgumentNullException("item.Id");
-
-            lock (this.ThisLock)
-            {
-                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
-                if (i == 0)
-                {
-                    return;
-                }
-
-                if (_nodesList[i - 1] != null)
-                {
-                    // 追加するnodeがNodeListに入っていない場合
-                    if (!_nodesList[i - 1].Contains(item))
-                    {
-                        // 列に空きがある場合
-                        if (_nodesList[i - 1].Count < _column)
-                        {
-                            // そのノードを先頭に追加する
-                            _nodesList[i - 1].Insert(0, item);
-                        }
-                    }
-                }
-                else
-                {
-                    _nodesList[i - 1] = new List<T>();
-                    _nodesList[i - 1].Add(item);
-                }
-            }
-        }
-
-        public void Clear()
-        {
-            lock (this.ThisLock)
-            {
-                for (int i = 0; i < _nodesList.Length; i++)
-                {
-                    _nodesList[i] = null;
-                }
-            }
-        }
-
-        public bool Contains(T item)
-        {
-            lock (this.ThisLock)
-            {
-                List<T> tempList = new List<T>();
-
-                for (int i = 0; i < _nodesList.Length; i++)
-                {
-                    if (_nodesList[i] != null)
-                    {
-                        tempList.AddRange(_nodesList[i].ToArray().Reverse());
-                    }
-                }
-
-                return tempList.Contains(item);
-            }
-        }
-
-        public void CopyTo(T[] array, int arrayIndex)
-        {
-            lock (this.ThisLock)
-            {
-                List<T> tempList = new List<T>();
-
-                for (int i = 0; i < _nodesList.Length; i++)
-                {
-                    if (_nodesList[i] != null)
-                    {
-                        tempList.AddRange(_nodesList[i].ToArray().Reverse());
-                    }
-                }
-
-                tempList.CopyTo(array, arrayIndex);
-            }
-        }
-
-        public bool Remove(T item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            else if (item.Id == null) throw new ArgumentNullException("item.Id");
-
-            lock (this.ThisLock)
-            {
-                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
-                if (i == 0)
-                {
-                    return false;
-                }
-
-                if (_nodesList[i - 1] != null)
-                {
-                    return _nodesList[i - 1].Remove(item);
-                }
-
-                return false;
-            }
-        }
-
-        public IEnumerator<T> GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                for (int i = 0; i < _nodesList.Length; i++)
-                {
-                    if (_nodesList[i] != null)
-                    {
-                        foreach (var node in _nodesList[i].ToArray().Reverse())
-                        {
-                            yield return node;
-                        }
-                    }
-                }
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        void ICollection.CopyTo(Array array, int index)
-        {
-            lock (this.ThisLock)
-            {
-                this.CopyTo(array.OfType<T>().ToArray(), index);
-            }
-        }
 
         private static int Distance(byte[] x, byte[] y)
         {
@@ -499,6 +242,256 @@ namespace Library.Net
                 }
 
                 return buffer;
+            }
+        }
+
+        public static IEnumerable<T> Sort(T baseNode, byte[] id, IEnumerable<T> nodeList)
+        {
+            if (baseNode == null) throw new ArgumentNullException("baseNode");
+            if (baseNode.Id == null) throw new ArgumentNullException("baseNode.Id");
+            if (id == null) throw new ArgumentNullException("key");
+            if (nodeList == null) throw new ArgumentNullException("nodeList");
+
+            var dic = new Dictionary<byte[], List<T>>(new BytesEqualityComparer());
+            byte[] myXor = Kademlia<T>.Xor(id, baseNode.Id);
+
+            foreach (var node in nodeList)
+            {
+                byte[] xor = Kademlia<T>.Xor(id, node.Id);
+
+                if (Collection.Compare(myXor, xor) > 0)
+                {
+                    if (!dic.ContainsKey(xor))
+                    {
+                        dic[xor] = new List<T>();
+                    }
+
+                    dic[xor].Add(node);
+                }
+            }
+
+            var list = new List<KeyValuePair<byte[], List<T>>>(dic);
+
+            list.Sort(delegate(KeyValuePair<byte[], List<T>> x, KeyValuePair<byte[], List<T>> y)
+            {
+                return Collection.Compare(x.Key, y.Key);
+            });
+
+            var sumList = new List<T>();
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                sumList.AddRange(list[i].Value);
+            }
+
+            return sumList;
+        }
+
+        // Addより優先的に
+        public void Live(T item)
+        {
+            if (_baseNode == null) throw new ArgumentNullException("BaseNode");
+            if (_baseNode.Id == null) throw new ArgumentNullException("BaseNode.Id");
+            if (item == null) throw new ArgumentNullException("item");
+            if (item.Id == null) throw new ArgumentNullException("item.Id");
+
+            lock (this.ThisLock)
+            {
+                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
+                if (i == 0) return;
+
+                if (_nodesList[i - 1] != null)
+                {
+                    // 追加するnodeがNodeListに入っている場合
+                    if (_nodesList[i - 1].Contains(item))
+                    {
+                        // そのノードをNodeListの末尾に移す
+                        _nodesList[i - 1].Remove(item);
+                        _nodesList[i - 1].Add(item);
+                    }
+                    else
+                    {
+                        // 列に空きがない場合、先頭のノード削除
+                        if (_nodesList[i - 1].Count == _column)
+                        {
+                            _nodesList[i - 1].RemoveAt(0);
+                        }
+
+                        // そのノードを末尾に追加する
+                        _nodesList[i - 1].Add(item);
+                    }
+                }
+                else
+                {
+                    _nodesList[i - 1] = new List<T>();
+                    _nodesList[i - 1].Add(item);
+                }
+            }
+        }
+
+        public void Add(T item)
+        {
+            if (_baseNode == null) throw new ArgumentNullException("BaseNode");
+            if (_baseNode.Id == null) throw new ArgumentNullException("BaseNode.Id");
+            if (item == null) throw new ArgumentNullException("item");
+            if (item.Id == null) throw new ArgumentNullException("item.Id");
+
+            lock (this.ThisLock)
+            {
+                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
+                if (i == 0)                    return;
+
+                if (_nodesList[i - 1] != null)
+                {
+                    // 追加するnodeがNodeListに入っていない場合
+                    if (!_nodesList[i - 1].Contains(item))
+                    {
+                        // 列に空きがある場合
+                        if (_nodesList[i - 1].Count < _column)
+                        {
+                            // そのノードを先頭に追加する
+                            _nodesList[i - 1].Insert(0, item);
+                        }
+                    }
+                }
+                else
+                {
+                    _nodesList[i - 1] = new List<T>();
+                    _nodesList[i - 1].Add(item);
+                }
+            }
+        }
+
+        public IEnumerable<T> Search(byte[] id)
+        {
+            if (_baseNode == null) throw new ArgumentNullException("BaseNode");
+            if (_baseNode.Id == null) throw new ArgumentNullException("BaseNode.Id");
+            if (id == null) throw new ArgumentNullException("key");
+
+            lock (this.ThisLock)
+            {
+                return Kademlia<T>.Sort(_baseNode, id, this.ToArray());
+            }
+        }
+
+        public T Verify()
+        {
+            lock (this.ThisLock)
+            {
+                List<INode> tempNodeList = new List<INode>();
+
+                for (int i = 0; i < _nodesList.Length; i++)
+                {
+                    if (_nodesList[i] != null)
+                    {
+                        if (_nodesList[i].Count == _column)
+                        {
+                            return _nodesList[i][0];
+                        }
+                    }
+                }
+
+                return default(T);
+            }
+        }
+
+        public void Clear()
+        {
+            lock (this.ThisLock)
+            {
+                for (int i = 0; i < _nodesList.Length; i++)
+                {
+                    _nodesList[i] = null;
+                }
+            }
+        }
+
+        public bool Contains(T item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (item.Id == null) throw new ArgumentNullException("item.Id");
+            
+            lock (this.ThisLock)
+            {
+                for (int i = _nodesList.Length - 1; i >= 0; i--)
+                {
+                    if (_nodesList[i] != null)
+                    {
+                        if (_nodesList[i].Contains(item)) return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        public void CopyTo(T[] array, int arrayIndex)
+        {
+            lock (this.ThisLock)
+            {
+                List<T> tempList = new List<T>();
+
+                for (int i = _nodesList.Length - 1; i >= 0; i--)
+                {
+                    if (_nodesList[i] != null)
+                    {
+                        tempList.AddRange(_nodesList[i].ToArray().Reverse());
+                    }
+                }
+
+                tempList.CopyTo(array, arrayIndex);
+            }
+        }
+
+        public bool Remove(T item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (item.Id == null) throw new ArgumentNullException("item.Id");
+
+            lock (this.ThisLock)
+            {
+                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
+                if (i == 0) return false;
+
+                if (_nodesList[i - 1] != null)
+                {
+                    return _nodesList[i - 1].Remove(item);
+                }
+
+                return false;
+            }
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                for (int i = _nodesList.Length - 1; i >= 0; i--)
+                {
+                    if (_nodesList[i] != null)
+                    {
+                        foreach (var node in _nodesList[i].ToArray().Reverse())
+                        {
+                            yield return node;
+                        }
+                    }
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                return this.GetEnumerator();
+            }
+        }
+
+        void ICollection.CopyTo(Array array, int index)
+        {
+            lock (this.ThisLock)
+            {
+                this.CopyTo(array.OfType<T>().ToArray(), index);
             }
         }
 

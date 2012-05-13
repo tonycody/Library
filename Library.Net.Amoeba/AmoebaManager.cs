@@ -27,14 +27,14 @@ namespace Library.Net.Amoeba
         private bool _disposed = false;
         private object _thisLock = new object();
 
-        public AmoebaManager(string cachePath, string WorkDirectory, BufferManager bufferManager)
+        public AmoebaManager(string cachePath, BufferManager bufferManager)
         {
             _cachePath = cachePath;
 
             _bufferManager = bufferManager;
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
-            _cacheManager = new CacheManager(_cachePath, WorkDirectory, _bufferManager);
+            _cacheManager = new CacheManager(_cachePath, _bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
             _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);

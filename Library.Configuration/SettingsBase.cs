@@ -125,7 +125,7 @@ namespace Library.Configuration
             {
                 string uniquePath = null;
 
-                using (FileStream stream = SettingsBase.GetUniqueStream(Path.Combine(directoryPath, value.Name + ".temp")))
+                using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, value.Name + ".temp")))
                 {
                     uniquePath = stream.Name;
 
@@ -151,7 +151,7 @@ namespace Library.Configuration
             return this._contextList.Any(n => n.Name == propertyName);
         }
 
-        private static FileStream GetUniqueStream(string path)
+        private static FileStream GetUniqueFileStream(string path)
         {
             if (!File.Exists(path))
             {

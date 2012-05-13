@@ -68,6 +68,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Test_Library.Net.cs" />
     <Compile Include="Test_Library.Io.cs" />
     <Compile Include="Test_Library.Net.Amoeba.cs" />
     <Compile Include="Test_Library.Configuration.cs" />

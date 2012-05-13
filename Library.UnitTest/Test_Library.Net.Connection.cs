@@ -11,7 +11,6 @@ using NUnit.Framework;
 
 namespace Library.UnitTest
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     [TestFixture, Category("Library.Net.Connection")]
     public class Test_Library_Net_Connection
     {

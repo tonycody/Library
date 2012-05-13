@@ -222,27 +222,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private static string GetUniqueDirectoryPath(string path)
-        {
-            if (!Directory.Exists(path))
-            {
-                return path;
-            }
-
-            for (int index = 1; ; index++)
-            {
-                string text = string.Format(@"{0} ({1})",
-                    path,
-                    index);
-
-                if (!File.Exists(text))
-                {
-                    return text;
-                }
-            }
-        }
-
-        private static FileStream GetUniqueStream(string path)
+        private static FileStream GetUniqueFileStream(string path)
         {
             if (!File.Exists(path))
             {
@@ -384,7 +364,7 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = DownloadManager.GetUniqueStream(Path.Combine(this._workDirectory, "index")))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
@@ -451,7 +431,7 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = DownloadManager.GetUniqueStream(Path.Combine(this.BaseDirectory, string.Format("_temp_{0}", item.Seed.Name))))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("_temp_{0}", item.Seed.Name))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
@@ -567,7 +547,7 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = DownloadManager.GetUniqueStream(Path.Combine(this._workDirectory, "index")))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
@@ -634,7 +614,7 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = DownloadManager.GetUniqueStream(Path.Combine(this.BaseDirectory, string.Format("_temp_{0}", item.Seed.Name))))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("_temp_{0}", item.Seed.Name))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
