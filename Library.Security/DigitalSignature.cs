@@ -28,18 +28,18 @@ namespace Library.Security
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxPublickeyLength = 1024 * 4;
-        public const int MaxPrivatekeyLength = 1024 * 4;
+        public const int MaxPublickeyLength = 1024 * 8;
+        public const int MaxPrivatekeyLength = 1024 * 8;
 
         public DigitalSignature(DigitalSignatureAlgorithm digitalSignatureAlgorithm)
         {
             this.DigitalSignatureAlgorithm = digitalSignatureAlgorithm;
 
-            if (digitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsa521_Sha512)
+            if (digitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
             {
                 byte[] publicKey, privateKey;
 
-                ECDsa521_Sha512.CreateKeys(out publicKey, out privateKey);
+                ECDsaP521_Sha512.CreateKeys(out publicKey, out privateKey);
 
                 this.PublicKey = publicKey;
                 this.PrivateKey = privateKey;

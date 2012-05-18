@@ -12,7 +12,7 @@ namespace Library.Security
         [EnumMember(Value = "Rsa2048_Sha512")]
         Rsa2048_Sha512 = 0,
 
-        [EnumMember(Value = "ECDsa521_Sha512")]
-        ECDsa521_Sha512 = 1,
+        [EnumMember(Value = "ECDsaP521_Sha512")]
+        ECDsaP521_Sha512 = 1,
     }
 }

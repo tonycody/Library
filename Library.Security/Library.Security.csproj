@@ -39,6 +39,7 @@
     </Reference>
     <Reference Include="System.Runtime.Serialization">
     </Reference>
+    <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq">
     </Reference>
     <Reference Include="System.Data.DataSetExtensions">
@@ -55,7 +56,7 @@
     <Compile Include="CertificateItemBase.cs" />
     <Compile Include="DigitalSignature.cs" />
     <Compile Include="DigitalSignatureAlgorithm.cs" />
-    <Compile Include="Signature\ECDsa521_Sha512.cs" />
+    <Compile Include="Signature\ECDsaP521_Sha512.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Signature\Rsa2048_Sha512.cs" />
   </ItemGroup>

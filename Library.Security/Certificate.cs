@@ -26,8 +26,8 @@ namespace Library.Security
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxPublickeyLength = 1024;
-        public const int MaxSignatureLength = 1024;
+        public const int MaxPublickeyLength = 1024 * 8;
+        public const int MaxSignatureLength = 1024 * 8;
 
         internal Certificate(DigitalSignature digitalSignature, Stream stream)
         {
@@ -35,9 +35,9 @@ namespace Library.Security
 
             byte[] signature;
 
-            if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsa521_Sha512)
+            if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
             {
-                signature = ECDsa521_Sha512.Sign(digitalSignature.PrivateKey, stream);
+                signature = ECDsaP521_Sha512.Sign(digitalSignature.PrivateKey, stream);
             }
             else if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
             {
@@ -202,9 +202,9 @@ namespace Library.Security
 
         internal bool Verify(Stream stream)
         {
-            if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsa521_Sha512)
+            if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
             {
-                return ECDsa521_Sha512.Verify(this.PublicKey, this.Signature, stream);
+                return ECDsaP521_Sha512.Verify(this.PublicKey, this.Signature, stream);
             }
             else if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
             {

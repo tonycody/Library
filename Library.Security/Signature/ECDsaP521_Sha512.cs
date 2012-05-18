@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Library.Security
 {
-    internal static class ECDsa521_Sha512
+    internal static class ECDsaP521_Sha512
     {
         /// <summary>
         /// 公開鍵と秘密鍵を作成して返す
@@ -19,23 +19,19 @@ namespace Library.Security
         {
             CngKeyCreationParameters ckcp = new CngKeyCreationParameters();
             ckcp.ExportPolicy = CngExportPolicies.AllowPlaintextExport;
+            ckcp.KeyUsage = CngKeyUsages.Signing;
 
             using (CngKey ck = CngKey.Create(CngAlgorithm.ECDsaP521, null, ckcp))
             using (ECDsaCng ecdsa = new ECDsaCng(ck))
             {
                 publicKey = Encoding.ASCII.GetBytes(ecdsa.ToXmlString(ECKeyXmlFormat.Rfc4050));
-
-                // Windows 7の環境では"Pkcs8PrivateBlob"でExportするとKeyの種類が正しく認識されない
-                // Windows 7用の.netの問題？
-                privateKey = ecdsa.Key.Export(CngKeyBlobFormat.EccPrivateBlob);
-                //privateKey = ecdsa.Key.Export(CngKeyBlobFormat.Pkcs8PrivateBlob);
+                privateKey = ecdsa.Key.Export(CngKeyBlobFormat.Pkcs8PrivateBlob);
             }
         }
 
         public static byte[] Sign(byte[] privateKey, Stream stream)
         {
-            //using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
-            using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.EccPrivateBlob))
+            using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
             using (ECDsaCng ecdsa = new ECDsaCng(ck))
             {
                 ecdsa.HashAlgorithm = CngAlgorithm.Sha512;

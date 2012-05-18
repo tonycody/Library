@@ -68,7 +68,7 @@
     <Compile Include="CompressConnection.cs" />
     <Compile Include="ConnectionBase.cs" />
     <Compile Include="CrcConnection.cs" />
-    <Compile Include="KeyExchange\ECDiffieHellman521_Sha512.cs" />
+    <Compile Include="KeyExchange\ECDiffieHellmanP521_Sha512.cs" />
     <Compile Include="KeyDerivation\KeyDerivationFunction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecureProtocolVersion.cs" />

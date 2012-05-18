@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace Library.Net.Connection
 {
-    class ECDiffieHellman521_Sha512
+    class ECDiffieHellmanP521_Sha512
     {
         /// <summary>
         /// 公開鍵と秘密鍵を作成して返す
@@ -17,6 +17,7 @@ namespace Library.Net.Connection
         {
             CngKeyCreationParameters ckcp = new CngKeyCreationParameters();
             ckcp.ExportPolicy = CngExportPolicies.AllowPlaintextExport;
+            ckcp.KeyUsage = CngKeyUsages.KeyAgreement;
 
             using (CngKey ck = CngKey.Create(CngAlgorithm.ECDiffieHellmanP521, null, ckcp))
             using (ECDiffieHellmanCng ecdh = new ECDiffieHellmanCng(ck))

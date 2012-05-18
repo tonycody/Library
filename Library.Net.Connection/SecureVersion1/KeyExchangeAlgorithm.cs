@@ -10,10 +10,10 @@ namespace Library.Net.Connection.SecureVersion1
     [DataContract(Name = "KeyExchangeAlgorithm", Namespace = "http://Library/Net/Connection/SecureVersion1")]
     enum KeyExchangeAlgorithm
     {
-        [EnumMember(Value = "ECDiffieHellman521_Sha512")]
-        ECDiffieHellman521_Sha512 = 0x01,
-
         [EnumMember(Value = "Rsa2048_Sha512")]
-        Rsa2048_Sha512 = 0x02,
+        Rsa2048_Sha512 = 0x01,
+        
+        [EnumMember(Value = "ECDiffieHellmanP521_Sha512")]
+        ECDiffieHellmanP521_Sha512 = 0x02,
     }
 }

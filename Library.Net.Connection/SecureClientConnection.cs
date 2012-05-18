@@ -59,7 +59,7 @@ namespace Library.Net.Connection
             {
                 _myProtocol1 = new SecureVersion1.Protocol()
                 {
-                    KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellman521_Sha512 | SecureVersion1.KeyExchangeAlgorithm.Rsa2048_Sha512,
+                    KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512 | SecureVersion1.KeyExchangeAlgorithm.Rsa2048_Sha512,
                     CryptoAlgorithm = SecureVersion1.CryptoAlgorithm.Rijndael256,
                     HashAlgorithm = SecureVersion1.HashAlgorithm.Sha512
                 };
@@ -234,10 +234,10 @@ namespace Library.Net.Connection
                     {
                         _protocol1 = _myProtocol1 & _otherProtocol1;
 
-                        if (_protocol1.KeyExchangeAlgorithm.HasFlag(SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellman521_Sha512))
+                        if (_protocol1.KeyExchangeAlgorithm.HasFlag(SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512))
                         {
                             byte[] publicKey, privateKey;
-                            ECDiffieHellman521_Sha512.CreateKeys(out publicKey, out privateKey);
+                            ECDiffieHellmanP521_Sha512.CreateKeys(out publicKey, out privateKey);
 
                             {
                                 SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
@@ -273,7 +273,7 @@ namespace Library.Net.Connection
                                 }
                             }
 
-                            byte[] cryptoKey = ECDiffieHellman521_Sha512.DeriveKeyMaterial(privateKey, otherPublicKey);
+                            byte[] cryptoKey = ECDiffieHellmanP521_Sha512.DeriveKeyMaterial(privateKey, otherPublicKey);
 
                             if (cryptoKey == null) throw new ConnectionException();
 
