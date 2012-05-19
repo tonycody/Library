@@ -13,11 +13,13 @@ namespace Library.Security
     {
         private enum SerializeId : byte
         {
-            DigitalSignatureAlgorithm = 0,
-            PublicKey = 1,
-            Signature = 2,
+            Nickname = 0,
+            DigitalSignatureAlgorithm = 1,
+            PublicKey = 2,
+            Signature = 3,
         }
 
+        private string _nickname;
         private DigitalSignatureAlgorithm _digitalSignatureAlgorithm = 0;
         private byte[] _publicKey = null;
         private byte[] _signature = null;
@@ -48,6 +50,7 @@ namespace Library.Security
                 return;
             }
 
+            this.Nickname = digitalSignature.Nickname;
             this.DigitalSignatureAlgorithm = digitalSignature.DigitalSignatureAlgorithm;
             this.PublicKey = digitalSignature.PublicKey;
             this.Signature = signature;
@@ -68,7 +71,14 @@ namespace Library.Security
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.DigitalSignatureAlgorithm)
+                        if (id == (byte)SerializeId.Nickname)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Nickname = reader.ReadToEnd();
+                            }
+                        }
+                        else if (id == (byte)SerializeId.DigitalSignatureAlgorithm)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
@@ -100,6 +110,25 @@ namespace Library.Security
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
+
+                if (this.Nickname != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                    using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                    {
+                        writer.Write(this.Nickname);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Nickname);
+
+                    streams.Add(bufferStream);
+                }
 
                 if (this.DigitalSignatureAlgorithm != 0)
                 {
@@ -164,7 +193,8 @@ namespace Library.Security
             if ((object)other == null || this.GetHashCode() != other.GetHashCode()) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.DigitalSignatureAlgorithm != other.DigitalSignatureAlgorithm
+            if (this.Nickname != other.Nickname
+                || this.DigitalSignatureAlgorithm != other.DigitalSignatureAlgorithm
                 || ((this.PublicKey == null) != (other.PublicKey == null))
                 || ((this.Signature == null) != (other.Signature == null)))
             {
@@ -213,6 +243,25 @@ namespace Library.Security
             else
             {
                 return false;
+            }
+        }
+
+        [DataMember(Name = "Nickname")]
+        public string Nickname
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _nickname;
+                }
+            }
+            private set
+            {
+                lock (this.ThisLock)
+                {
+                    _nickname = value;
+                }
             }
         }
 
