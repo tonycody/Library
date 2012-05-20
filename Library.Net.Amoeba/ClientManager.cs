@@ -116,7 +116,7 @@ namespace Library.Net.Amoeba
 
                 string scheme = null;
                 string host = null;
-                int port = 4050;
+                int port = -1;
 
                 {
                     Regex regex = new Regex(@"(.*?):(.*):(\d*)");
@@ -137,6 +137,7 @@ namespace Library.Net.Amoeba
                         {
                             scheme = match2.Groups[1].Value;
                             host = match2.Groups[2].Value;
+                            port = 4050;
                         }
                     }
                 }
@@ -204,7 +205,7 @@ namespace Library.Net.Amoeba
                 {
                     string proxyScheme = null;
                     string proxyHost = null;
-                    int proxyPort = 0;
+                    int proxyPort = -1;
 
                     {
                         Regex regex = new Regex(@"(.*?):(.*):(\d*)");
@@ -225,23 +226,22 @@ namespace Library.Net.Amoeba
                             {
                                 proxyScheme = match2.Groups[1].Value;
                                 proxyHost = match2.Groups[2].Value;
+
+                                if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
+                                    || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
+                                    || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                                {
+                                    proxyPort = 1080;
+                                }
+                                else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                                {
+                                    proxyPort = 80;
+                                }
                             }
                         }
                     }
 
-                    if (proxyPort == 0)
-                    {
-                        if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
-                            || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
-                            || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
-                        {
-                            proxyPort = 1080;
-                        }
-                        else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
-                        {
-                            proxyPort = 80;
-                        }
-                    }
+                    if (proxyHost == null) return null;
 
                     socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
                     ProxyClientBase proxy = null;

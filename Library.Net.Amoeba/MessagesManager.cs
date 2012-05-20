@@ -24,10 +24,13 @@ namespace Library.Net.Amoeba
                     foreach (var item in _messageManagerDictionary.Keys.ToArray())
                     {
                         _messageManagerDictionary[item].PushSeeds.TrimExcess();
+                        _messageManagerDictionary[item].PushBlocks.TrimExcess();
+
                         _messageManagerDictionary[item].PullBlocksLink.TrimExcess();
                         _messageManagerDictionary[item].PullBlocksRequest.TrimExcess();
                         _messageManagerDictionary[item].PullSeedsLink.TrimExcess();
                         _messageManagerDictionary[item].PullSeedsRequest.TrimExcess();
+
                         _messageManagerDictionary[item].PushBlocksLink.TrimExcess();
                         _messageManagerDictionary[item].PushBlocksRequest.TrimExcess();
                         _messageManagerDictionary[item].PushSeedsLink.TrimExcess();

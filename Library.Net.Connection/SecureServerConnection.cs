@@ -59,7 +59,7 @@ namespace Library.Net.Connection
             {
                 _myProtocol1 = new SecureVersion1.Protocol()
                 {
-                    KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512 | SecureVersion1.KeyExchangeAlgorithm.Rsa2048_Sha512,
+                    KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512 | SecureVersion1.KeyExchangeAlgorithm.Rsa2048,
                     CryptoAlgorithm = SecureVersion1.CryptoAlgorithm.Rijndael256,
                     HashAlgorithm = SecureVersion1.HashAlgorithm.Sha512
                 };
@@ -68,7 +68,7 @@ namespace Library.Net.Connection
             {
                 _myProtocol1 = new SecureVersion1.Protocol()
                 {
-                    KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.Rsa2048_Sha512,
+                    KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.Rsa2048,
                     CryptoAlgorithm = SecureVersion1.CryptoAlgorithm.Rijndael256,
                     HashAlgorithm = SecureVersion1.HashAlgorithm.Sha512
                 };
@@ -299,7 +299,7 @@ namespace Library.Net.Connection
                                 throw new ConnectionException();
                             }
                         }
-                        else if (_protocol1.KeyExchangeAlgorithm.HasFlag(SecureVersion1.KeyExchangeAlgorithm.Rsa2048_Sha512))
+                        else if (_protocol1.KeyExchangeAlgorithm.HasFlag(SecureVersion1.KeyExchangeAlgorithm.Rsa2048))
                         {
                             byte[] publicKey, privateKey;
                             Rsa2048.CreateKeys(out publicKey, out privateKey);
