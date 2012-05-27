@@ -17,6 +17,7 @@ namespace Library.Net.Amoeba
     delegate void GetUsingKeysEventHandler(object sender, ref IList<Key> keys);
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
     delegate void SetKeyEventHandler(object sender, Key key);
+    delegate void RemoveShareEventHandler(object sender, string path);
     delegate void RemoveKeyEventHandler(object sender, Key key);
     delegate bool WatchEventHandler(object sender);
 
@@ -30,6 +31,7 @@ namespace Library.Net.Amoeba
         private int _id = 0;
 
         internal SetKeyEventHandler SetKeyEvent;
+        internal RemoveShareEventHandler RemoveShareEvent;
         internal RemoveKeyEventHandler RemoveKeyEvent;
         public GetUsingKeysEventHandler GetUsingKeysEvent;
 
@@ -65,7 +67,7 @@ namespace Library.Net.Amoeba
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
 
-                    contexts.Add(new InformationContext("CacheSeedCount", _settings.Seeds.Keys.Count));
+                    contexts.Add(new InformationContext("SeedCount", _settings.Seeds.Keys.Count));
                     contexts.Add(new InformationContext("ShareCount", _settings.ShareIndex.Count));
 
                     return new Information(contexts);
@@ -367,6 +369,14 @@ namespace Library.Net.Amoeba
             }
         }
 
+        protected virtual void OnRemoveShareEvent(string path)
+        {
+            if (RemoveShareEvent != null)
+            {
+                RemoveShareEvent(this, path);
+            }
+        }
+
         protected virtual void OnRemoveKeyEvent(Key key)
         {
             if (RemoveKeyEvent != null)
@@ -511,6 +521,27 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
+                foreach (var item in _settings.Seeds.ToArray())
+                {
+                    if (seed != item.Key) continue;
+                    var info = item.Value;
+
+                    _settings.Seeds.Remove(seed);
+
+                    this.SetPriority(seed.Key, 0);
+
+                    foreach (var index in info.Indexs)
+                    {
+                        foreach (var group in index.Groups)
+                        {
+                            foreach (var key in group.Keys)
+                            {
+                                this.SetPriority(key, 0);
+                            }
+                        }
+                    }
+                }
+
                 _settings.Seeds.Remove(seed);
             }
         }
@@ -607,13 +638,15 @@ namespace Library.Net.Amoeba
             return keys;
         }
 
-        public void ShareRemove(int id)
+        public void RemoveShare(int id)
         {
             List<Key> keyList = new List<Key>();
+            string path = null;
 
             lock (this.ThisLock)
             {
                 keyList.AddRange(_settings.ShareIndex[_ids[id]].KeyAndCluster.Keys);
+                path = _ids[id];
 
                 foreach (var item in _settings.Seeds.ToArray())
                 {
@@ -642,6 +675,8 @@ namespace Library.Net.Amoeba
                 _settings.ShareIndex.Remove(_ids[id]);
                 _ids.Remove(id);
             }
+
+            this.OnRemoveShareEvent(path);
 
             foreach (var key in keyList)
             {

@@ -11,7 +11,7 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Seed", Namespace = "http://Library/Net/Amoeba")]
-    public class Seed : CertificateItemBase<Seed>, ISeed<Key, Keyword>, IThisLock
+    public class Seed : CertificateItemBase<Seed>, ISeed<Key>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -123,7 +123,10 @@ namespace Library.Net.Amoeba
 
                         else if (id == (byte)SerializeId.Keyword)
                         {
-                            this.Keywords.Add(Keyword.Import(rangeStream, bufferManager));
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Keywords.Add(reader.ReadToEnd());
+                            }
                         }
 
                         else if (id == (byte)SerializeId.CompressionAlgorithm)
@@ -257,13 +260,21 @@ namespace Library.Net.Amoeba
                 // Keywords
                 foreach (var k in this.Keywords)
                 {
-                    Stream exportStream = k.Export(bufferManager);
-
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                    using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                    {
+                        writer.Write(k);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Keyword);
 
-                    streams.Add(new AddStream(bufferStream, exportStream));
+                    streams.Add(bufferStream);
                 }
 
                 // CompressionAlgorithm
@@ -424,7 +435,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IKey<Key, Keyword> メンバ
+        #region IKey<Key> メンバ
 
         [DataMember(Name = "Name")]
         public string Name
@@ -566,9 +577,9 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IKeywords<Keyword> メンバ
+        #region IKeywords メンバ
 
-        IList<Keyword> IKeywords<Keyword>.Keywords
+        IList<string> IKeywords.Keywords
         {
             get
             {

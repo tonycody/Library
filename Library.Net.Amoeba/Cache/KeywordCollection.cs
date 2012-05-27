@@ -3,15 +3,15 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class KeywordCollection : LockedList<Keyword>, IEnumerable<Keyword>
+    public class KeywordCollection : LockedList<string>, IEnumerable<string>
     {
         public KeywordCollection() : base() { }
         public KeywordCollection(int capacity) : base(capacity) { }
-        public KeywordCollection(IEnumerable<Keyword> collections) : base(collections) { }
+        public KeywordCollection(IEnumerable<string> collections) : base(collections) { }
 
         #region IEnumerable<Keyword> メンバ
 
-        IEnumerator<Keyword> IEnumerable<Keyword>.GetEnumerator()
+        IEnumerator<string> IEnumerable<string>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

@@ -5,9 +5,8 @@ using System.Text;
 
 namespace Library.Net.Amoeba
 {
-    interface IKeywords<TKeyword>
-        where TKeyword : IKeyword
+    interface IKeywords
     {
-        IList<TKeyword> Keywords { get; }
+        IList<string> Keywords { get; }
     }
 }

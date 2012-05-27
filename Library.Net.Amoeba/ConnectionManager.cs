@@ -19,22 +19,6 @@ namespace Library.Net.Amoeba
         public IEnumerable<Node> Nodes { get; set; }
     }
 
-    class PullSeedsLinkEventArgs : EventArgs
-    {
-        public IEnumerable<Keyword> Keywords { get; set; }
-    }
-
-    class PullSeedsRequestEventArgs : EventArgs
-    {
-        public IEnumerable<Keyword> Keywords { get; set; }
-    }
-
-    class PullSeedsEventArgs : EventArgs
-    {
-        public Keyword Keyword { get; set; }
-        public IEnumerable<Seed> Seeds { get; set; }
-    }
-
     class PullBlocksLinkEventArgs : EventArgs
     {
         public IEnumerable<Key> Keys { get; set; }
@@ -51,15 +35,14 @@ namespace Library.Net.Amoeba
         public ArraySegment<byte> Value { get; set; }
     }
 
-    delegate void PullNodesRequestEventHandler(object sender, EventArgs e);
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
-    delegate void PullSeedsLinkEventHandler(object sender, PullSeedsLinkEventArgs e);
-    delegate void PullSeedsRequestEventHandler(object sender, PullSeedsRequestEventArgs e);
-    delegate void PullSeedsEventHandler(object sender, PullSeedsEventArgs e);
+
     delegate void PullBlocksLinkEventHandler(object sender, PullBlocksLinkEventArgs e);
     delegate void PullBlocksRequestEventHandler(object sender, PullBlocksRequestEventArgs e);
     delegate void PullBlockEventHandler(object sender, PullBlockEventArgs e);
+
     delegate void PullCancelEventHandler(object sender, EventArgs e);
+
     delegate void CloseEventHandler(object sender, EventArgs e);
 
     class ConnectionManager : ManagerBase, IThisLock
@@ -68,13 +51,12 @@ namespace Library.Net.Amoeba
         {
             Alive = 0,
             Cancel = 1,
+
             Ping = 2,
             Pong = 3,
-            NodesRequest = 4,
+
             Nodes = 5,
-            SeedsLink = 6,
-            SeedsRequest = 7,
-            Seeds = 8,
+
             BlocksLink = 9,
             BlocksRequest = 10,
             Block = 11,
@@ -103,15 +85,14 @@ namespace Library.Net.Amoeba
         private object _thisLock = new object();
         private bool _disposed = false;
 
-        public event PullNodesRequestEventHandler PullNodesRequestEvent;
         public event PullNodesEventHandler PullNodesEvent;
-        public event PullSeedsLinkEventHandler PullSeedsLinkEvent;
-        public event PullSeedsRequestEventHandler PullSeedsRequestEvent;
-        public event PullSeedsEventHandler PullSeedsEvent;
+
         public event PullBlocksLinkEventHandler PullBlocksLinkEvent;
         public event PullBlocksRequestEventHandler PullBlocksRequestEvent;
         public event PullBlockEventHandler PullBlockEvent;
+
         public event PullCancelEventHandler PullCancelEvent;
+
         public event CloseEventHandler CloseEvent;
 
         public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, BufferManager bufferManager)
@@ -487,29 +468,10 @@ namespace Library.Net.Amoeba
 
                                     _responseTime = DateTime.UtcNow - _pingTime;
                                 }
-                                else if (type == (byte)SerializeId.NodesRequest)
-                                {
-                                    this.OnPullNodesRequest(new EventArgs());
-                                }
                                 else if (type == (byte)SerializeId.Nodes)
                                 {
                                     var message = NodesMessage.Import(stream2, _bufferManager);
                                     this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
-                                }
-                                else if (type == (byte)SerializeId.SeedsLink)
-                                {
-                                    var message = SeedLinkMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSeedsLink(new PullSeedsLinkEventArgs() { Keywords = message.Keywords });
-                                }
-                                else if (type == (byte)SerializeId.SeedsRequest)
-                                {
-                                    var message = SeedRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSeedsRequest(new PullSeedsRequestEventArgs() { Keywords = message.Keywords });
-                                }
-                                else if (type == (byte)SerializeId.Seeds)
-                                {
-                                    var message = SeedMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSeeds(new PullSeedsEventArgs() { Keyword = message.Keyword, Seeds = message.Seeds });
                                 }
                                 else if (type == (byte)SerializeId.BlocksLink)
                                 {
@@ -544,43 +506,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual void OnPullNodesRequest(EventArgs e)
-        {
-            if (this.PullNodesRequestEvent != null)
-            {
-                this.PullNodesRequestEvent(this, e);
-            }
-        }
-
         protected virtual void OnPullNodes(PullNodesEventArgs e)
         {
             if (this.PullNodesEvent != null)
             {
                 this.PullNodesEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullSeedsLink(PullSeedsLinkEventArgs e)
-        {
-            if (this.PullSeedsLinkEvent != null)
-            {
-                this.PullSeedsLinkEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullSeedsRequest(PullSeedsRequestEventArgs e)
-        {
-            if (this.PullSeedsRequestEvent != null)
-            {
-                this.PullSeedsRequestEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullSeeds(PullSeedsEventArgs e)
-        {
-            if (this.PullSeedsEvent != null)
-            {
-                this.PullSeedsEvent(this, e);
             }
         }
 
@@ -627,37 +557,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void PushNodesRequest()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                try
-                {
-                    using (Stream stream = new BufferStream(_bufferManager))
-                    {
-                        stream.WriteByte((byte)SerializeId.NodesRequest);
-                        stream.Flush();
-                        stream.Seek(0, SeekOrigin.Begin);
-
-                        _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
-                    }
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
         public void PushNodes(IEnumerable<Node> nodes)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -673,121 +572,6 @@ namespace Library.Net.Amoeba
 
                     var message = new NodesMessage();
                     message.Nodes.AddRange(nodes);
-
-                    stream = new AddStream(stream, message.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushSeedsLink(IEnumerable<Keyword> keywords)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.SeedsLink);
-                    stream.Flush();
-
-                    var message = new SeedLinkMessage();
-                    message.Keywords.AddRange(keywords);
-
-                    stream = new AddStream(stream, message.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushSeedsRequest(IEnumerable<Keyword> keywords)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.SeedsRequest);
-                    stream.Flush();
-
-                    var message = new SeedRequestMessage();
-                    message.Keywords.AddRange(keywords);
-
-                    stream = new AddStream(stream, message.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushSeeds(Keyword keyword, IEnumerable<Seed> seeds)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.Seeds);
-                    stream.Flush();
-
-                    var message = new SeedMessage();
-                    message.Keyword = keyword;
-                    message.Seeds.AddRange(seeds);
 
                     stream = new AddStream(stream, message.Export(_bufferManager));
 
@@ -1038,355 +822,6 @@ namespace Library.Net.Amoeba
                             _nodes = new NodeCollection();
 
                         return _nodes;
-                    }
-                }
-            }
-
-            #region IThisLock メンバ
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "SeedLinkMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class SeedLinkMessage : ItemBase<SeedLinkMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Keyword = 0,
-            }
-
-            private KeywordCollection _keywords;
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Keyword)
-                            {
-                                this.Keywords.Add(Keyword.Import(rangeStream, bufferManager));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-
-                    // Keywords
-                    foreach (var k in this.Keywords)
-                    {
-                        Stream exportStream = k.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Keyword);
-
-                        streams.Add(new AddStream(bufferStream, exportStream));
-                    }
-
-                    return new AddStream(streams);
-                }
-            }
-
-            public override SeedLinkMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
-                    {
-                        return SeedLinkMessage.Import(stream, bufferManager);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Keywords")]
-            public KeywordCollection Keywords
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_keywords == null)
-                            _keywords = new KeywordCollection();
-
-                        return _keywords;
-                    }
-                }
-            }
-
-            #region IThisLock メンバ
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "SeedRequestMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class SeedRequestMessage : ItemBase<SeedRequestMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Keyword = 0,
-            }
-
-            private KeywordCollection _keywords;
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Keyword)
-                            {
-                                this.Keywords.Add(Keyword.Import(rangeStream, bufferManager));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-
-                    // Keywords
-                    foreach (var k in this.Keywords)
-                    {
-                        Stream exportStream = k.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Keyword);
-
-                        streams.Add(new AddStream(bufferStream, exportStream));
-                    }
-
-                    return new AddStream(streams);
-                }
-            }
-
-            public override SeedRequestMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
-                    {
-                        return SeedRequestMessage.Import(stream, bufferManager);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Keywords")]
-            public KeywordCollection Keywords
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_keywords == null)
-                            _keywords = new KeywordCollection();
-
-                        return _keywords;
-                    }
-                }
-            }
-
-            #region IThisLock メンバ
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "SeedMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class SeedMessage : ItemBase<SeedMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Keyword = 0,
-                Seed = 1,
-            }
-
-            private Keyword _keyword;
-            private SeedCollection _seeds;
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Keyword)
-                            {
-                                this.Keyword = Keyword.Import(rangeStream, bufferManager);
-                            }
-                            else if (id == (byte)SerializeId.Seed)
-                            {
-                                this.Seeds.Add(Seed.Import(rangeStream, bufferManager));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
-
-                    // Keyword
-                    if (this.Keyword != null)
-                    {
-                        Stream exportStream = this.Keyword.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Keyword);
-
-                        streams.Add(new AddStream(bufferStream, exportStream));
-                    }
-                    // Seeds
-                    foreach (var s in this.Seeds)
-                    {
-                        Stream exportStream = s.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Seed);
-
-                        streams.Add(new AddStream(bufferStream, exportStream));
-                    }
-
-                    return new AddStream(streams);
-                }
-            }
-
-            public override SeedMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
-                    {
-                        return SeedMessage.Import(stream, bufferManager);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Keyword")]
-            public Keyword Keyword
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        return _keyword;
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        _keyword = value;
-                    }
-                }
-            }
-
-            [DataMember(Name = "Seeds")]
-            public SeedCollection Seeds
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_seeds == null)
-                            _seeds = new SeedCollection();
-
-                        return _seeds;
                     }
                 }
             }

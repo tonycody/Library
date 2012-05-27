@@ -84,6 +84,20 @@ namespace Library.Net.Amoeba
                 }
             };
 
+            _cacheManager.RemoveShareEvent += (object sender, string path) =>
+            {
+                lock (this.ThisLock)
+                {
+                    foreach (var item in _ids.ToArray())
+                    {
+                        if (item.Value.Type == UploadType.Share && item.Value.FilePath == path)
+                        {
+                            this.Remove(item.Key);
+                        }
+                    }
+                }
+            };
+
             _cacheManager.RemoveKeyEvent += (object sender, Key otherKey) =>
             {
                 lock (this.ThisLock)

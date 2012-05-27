@@ -70,7 +70,6 @@
     <Compile Include="CirculationCollection.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
-    <Compile Include="Cache\IKeyword.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
@@ -98,7 +97,6 @@
     <Compile Include="Cache\IndexCollection.cs" />
     <Compile Include="Cache\Seed.cs" />
     <Compile Include="Cache\SeedCollection.cs" />
-    <Compile Include="Cache\Keyword.cs" />
     <Compile Include="Cache\KeywordCollection.cs" />
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\CacheManagerStreamReader.cs" />
