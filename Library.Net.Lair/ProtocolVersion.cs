@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
 
-namespace Library.Net.Nest
+namespace Library.Net.Lair
 {
     [Flags]
-    [DataContract(Name = "ProtocolVersion", Namespace = "http://Library/Net/Nest")]
+    [DataContract(Name = "ProtocolVersion", Namespace = "http://Library/Net/Lair")]
     public enum ProtocolVersion
     {
         [EnumMember(Value = "Version1")]

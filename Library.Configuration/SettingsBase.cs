@@ -64,13 +64,13 @@ namespace Library.Configuration
         {
             get
             {
-                ISettingsContext t = this._contextList.First(n => n.Name == propertyName);
+                ISettingsContext t = _contextList.First(n => n.Name == propertyName);
 
                 return t.Value;
             }
             set
             {
-                ISettingsContext t = this._contextList.First(n => n.Name == propertyName);
+                ISettingsContext t = _contextList.First(n => n.Name == propertyName);
 
                 t.Value = value;
             }
@@ -148,7 +148,7 @@ namespace Library.Configuration
 
         protected bool Contains(string propertyName)
         {
-            return this._contextList.Any(n => n.Name == propertyName);
+            return _contextList.Any(n => n.Name == propertyName);
         }
 
         private static FileStream GetUniqueFileStream(string path)

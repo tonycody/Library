@@ -69,7 +69,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._list.Count;
+                    return _list.Count;
                 }
             }
         }
@@ -80,14 +80,14 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._list[index];
+                    return _list[index];
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    this._list[index] = value;
+                    _list[index] = value;
                 }
             }
         }
@@ -98,7 +98,7 @@ namespace Library.Collections
             {
                 if (_capacity != null && _list.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
 
-                this._list.Add(item);
+                _list.Add(item);
             }
         }
 
@@ -117,7 +117,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._list.Clear();
+                _list.Clear();
             }
         }
 
@@ -125,7 +125,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._list.Contains(item);
+                return _list.Contains(item);
             }
         }
 
@@ -133,7 +133,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._list.CopyTo(array, arrayIndex);
+                _list.CopyTo(array, arrayIndex);
             }
         }
 
@@ -152,7 +152,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return new LockedList<T>(this._list.GetRange(index, count));
+                return new LockedList<T>(_list.GetRange(index, count));
             }
         }
 
@@ -208,7 +208,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._list.IndexOf(item);
+                return _list.IndexOf(item);
             }
         }
 
@@ -216,7 +216,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._list.Insert(index, item);
+                _list.Insert(index, item);
             }
         }
 
@@ -224,7 +224,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._list.Remove(item);
+                return _list.Remove(item);
             }
         }
 
@@ -232,7 +232,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._list.RemoveAt(index);
+                _list.RemoveAt(index);
             }
         }
 
@@ -240,7 +240,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._list.TrimExcess();
+                _list.TrimExcess();
             }
         }
 
@@ -265,7 +265,7 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 this.Add((T)item);
-                return this._list.Count - 1;
+                return _list.Count - 1;
             }
         }
 

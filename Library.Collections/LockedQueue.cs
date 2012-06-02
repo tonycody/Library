@@ -51,7 +51,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._queue.Count;
+                    return _queue.Count;
                 }
             }
         }
@@ -60,7 +60,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._queue.Clear();
+                _queue.Clear();
             }
         }
 
@@ -68,7 +68,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._queue.Contains(item);
+                return _queue.Contains(item);
             }
         }
 
@@ -76,7 +76,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._queue.CopyTo(array, arrayIndex);
+                _queue.CopyTo(array, arrayIndex);
             }
         }
 
@@ -84,7 +84,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._queue.Dequeue();
+                return _queue.Dequeue();
             }
         }
 
@@ -94,7 +94,7 @@ namespace Library.Collections
             {
                 if (_capacity != null && _queue.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
 
-                this._queue.Enqueue(item);
+                _queue.Enqueue(item);
             }
         }
 
@@ -102,7 +102,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._queue.Peek();
+                return _queue.Peek();
             }
         }
 
@@ -110,7 +110,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._queue.ToArray();
+                return _queue.ToArray();
             }
         }
 
@@ -118,7 +118,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._queue.TrimExcess();
+                _queue.TrimExcess();
             }
         }
 

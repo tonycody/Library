@@ -9,16 +9,13 @@ using System.Threading;
 using System.Xml;
 using Library.Io;
 using Library.Net.Connection;
+using Library.Security;
 
-namespace Library.Net.Nest
+namespace Library.Net.Lair
 {
     public class MessagesEventArgs : EventArgs
     {
-        public IEnumerable<CommandMessage> Messages
-        {
-            get;
-            set;
-        }
+        public IEnumerable<CommandMessage> Messages { get; set; }
     }
 
     public delegate void PullMessagesEventHandler(object sender, MessagesEventArgs e);
@@ -42,7 +39,8 @@ namespace Library.Net.Nest
         private bool _onClose = false;
 
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 3, 0);
-        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 6, 0);
+        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 3, 0);
+        private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 1, 0);
 
         private object _thisLock = new object();
         private bool _disposed = false;
@@ -64,8 +62,7 @@ namespace Library.Net.Nest
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    if (_disposed)
-                        throw new ObjectDisposedException(this.GetType().FullName);
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     return _protocolVersion;
                 }
@@ -76,8 +73,7 @@ namespace Library.Net.Nest
         {
             get
             {
-                if (_disposed)
-                    throw new ObjectDisposedException(this.GetType().FullName);
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return _connection.ReceivedByteCount;
             }
@@ -87,8 +83,7 @@ namespace Library.Net.Nest
         {
             get
             {
-                if (_disposed)
-                    throw new ObjectDisposedException(this.GetType().FullName);
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return _connection.SentByteCount;
             }
@@ -96,8 +91,7 @@ namespace Library.Net.Nest
 
         public void Connect()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
@@ -176,8 +170,7 @@ namespace Library.Net.Nest
 
         public void Close()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
@@ -202,10 +195,9 @@ namespace Library.Net.Nest
             {
                 for (; ; )
                 {
-                    if (_disposed)
-                        throw new ObjectDisposedException(this.GetType().FullName);
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                    while ((DateTime.UtcNow - _sendUpdateTime) < _sendTimeSpan)
+                    while ((DateTime.UtcNow - _sendUpdateTime) < _aliveTimeSpan)
                     {
                         Thread.Sleep(new TimeSpan(0, 0, 1));
                     }
@@ -221,8 +213,7 @@ namespace Library.Net.Nest
 
         private void Alive()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             if (_protocolVersion == ProtocolVersion.Version1)
             {
@@ -257,8 +248,7 @@ namespace Library.Net.Nest
             {
                 for (; ; )
                 {
-                    if (_disposed)
-                        throw new ObjectDisposedException(this.GetType().FullName);
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     if (_protocolVersion == ProtocolVersion.Version1)
                     {
@@ -311,8 +301,7 @@ namespace Library.Net.Nest
 
         protected virtual void OnClose(EventArgs e)
         {
-            if (_onClose)
-                return;
+            if (_onClose) return;
             _onClose = true;
 
             if (this.CloseEvent != null)
@@ -323,8 +312,7 @@ namespace Library.Net.Nest
 
         public void PushMessages(IEnumerable<CommandMessage> messages)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             if (_protocolVersion == ProtocolVersion.Version1)
             {
@@ -358,7 +346,7 @@ namespace Library.Net.Nest
             }
         }
 
-        [DataContract(Name = "CommandsMessage", Namespace = "http://Library/Net/Nest/ConnectionManager")]
+        [DataContract(Name = "CommandsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
         private class CommandsMessage : ItemBase<CommandsMessage>, IThisLock
         {
             private enum SerializeId : byte
@@ -509,14 +497,8 @@ namespace Library.Net.Nest
     [Serializable]
     public class ConnectionManagerException : ManagerException
     {
-        public ConnectionManagerException() : base()
-        {
-        }
-        public ConnectionManagerException(string message) : base(message)
-        {
-        }
-        public ConnectionManagerException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+        public ConnectionManagerException() : base() { }
+        public ConnectionManagerException(string message) : base(message) { }
+        public ConnectionManagerException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

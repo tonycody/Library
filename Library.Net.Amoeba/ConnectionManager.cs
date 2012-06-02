@@ -284,15 +284,18 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            try
+            using (DeadlockMonitor.Lock(this.ThisLock))
             {
-                _connection.Close(new TimeSpan(0, 0, 30));
+                try
+                {
+                    _connection.Close(new TimeSpan(0, 0, 30));
 
-                this.OnClose(new EventArgs());
-            }
-            catch (Exception ex)
-            {
-                throw new ConnectionManagerException(ex.Message, ex);
+                    this.OnClose(new EventArgs());
+                }
+                catch (Exception ex)
+                {
+                    throw new ConnectionManagerException(ex.Message, ex);
+                }
             }
         }
 

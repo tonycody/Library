@@ -45,9 +45,9 @@ namespace Library.UnitTest
             seed.Name = "aaaa.zip";
             seed.Keywords.AddRange(new KeywordCollection 
             {
-                new Keyword() { Value = "bbbb", HashAlgorithm = HashAlgorithm.Sha512 },
-                new Keyword() { Value = "cccc", HashAlgorithm = HashAlgorithm.Sha512 },
-                new Keyword() { Value = "dddd", HashAlgorithm = HashAlgorithm.Sha512 },
+                "bbbb",
+                "cccc",
+                "dddd",
             });
             seed.CreationTime = DateTime.Now;
             seed.Length = 10000;
@@ -58,7 +58,7 @@ namespace Library.UnitTest
             seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
             seed.CryptoKey = new byte[32 + 32];
 
-            DigitalSignature digitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.Rsa2048_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.Rsa2048_Sha512);
             seed.CreateCertificate(digitalSignature);
 
             var stringSeed = AmoebaConverter.ToSeedString(seed);
@@ -77,7 +77,7 @@ namespace Library.UnitTest
             box.Boxes.Add(new Box() { Name = "Box" });
             box.Seeds.Add(new Seed() { Name = "Seed" });
 
-            DigitalSignature digitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             box.CreateCertificate(digitalSignature);
 
             var streamBox = AmoebaConverter.ToBoxStream(box);
@@ -91,7 +91,7 @@ namespace Library.UnitTest
         {
             foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.ECDsaP521_Sha512 })
             {
-                DigitalSignature sigunature = new DigitalSignature(a);
+                DigitalSignature sigunature = new DigitalSignature("123", a);
 
                 var streamSigunature = AmoebaConverter.ToSignatureStream(sigunature);
                 var sigunature2 = AmoebaConverter.FromSignatureStream(streamSigunature);
@@ -145,27 +145,6 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_Keyword()
-        {
-            var keyword = new Keyword();
-            keyword.Value = "aaaa";
-            keyword.HashAlgorithm = HashAlgorithm.Sha512;
-
-            var keyword2 = keyword.DeepClone();
-
-            Assert.AreEqual(keyword, keyword2, "Keyword #1");
-
-            Keyword keyword3;
-
-            using (var keywordStream = keyword.Export(_bufferManager))
-            {
-                keyword3 = Keyword.Import(keywordStream, _bufferManager);
-            }
-
-            Assert.AreEqual(keyword, keyword3, "Keyword #2");
-        }
-
-        [Test]
         public void Test_Seed()
         {
             foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.ECDsaP521_Sha512 })
@@ -174,9 +153,9 @@ namespace Library.UnitTest
                 seed.Name = "aaaa.zip";
                 seed.Keywords.AddRange(new KeywordCollection 
             {
-                new Keyword() { Value = "bbbb", HashAlgorithm = HashAlgorithm.Sha512 },
-                new Keyword() { Value = "cccc", HashAlgorithm = HashAlgorithm.Sha512 },
-                new Keyword() { Value = "dddd", HashAlgorithm = HashAlgorithm.Sha512 },
+                "bbbb",
+                "cccc",
+                "dddd",
             });
                 seed.CreationTime = DateTime.Now;
                 seed.Length = 10000;
@@ -187,7 +166,7 @@ namespace Library.UnitTest
                 seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
                 seed.CryptoKey = new byte[32 + 32];
 
-                DigitalSignature digitalSignature = new DigitalSignature(a);
+                DigitalSignature digitalSignature = new DigitalSignature("123", a);
                 seed.CreateCertificate(digitalSignature);
 
                 var seed2 = seed.DeepClone();
@@ -220,7 +199,7 @@ namespace Library.UnitTest
             box.Seeds.Add(new Seed() { Name = "Seed" });
             box.Boxes.Add(new Box() { Name = "Box" });
 
-            DigitalSignature digitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             box.CreateCertificate(digitalSignature);
 
             var box2 = box.DeepClone();

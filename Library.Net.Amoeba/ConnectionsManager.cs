@@ -1351,9 +1351,9 @@ namespace Library.Net.Amoeba
 
         protected virtual void OnUploadedEvent(Key key)
         {
-            if (UploadedEvent != null)
+            if (this.UploadedEvent != null)
             {
-                UploadedEvent(this, key);
+                this.UploadedEvent(this, key);
             }
         }
 

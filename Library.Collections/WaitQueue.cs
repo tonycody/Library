@@ -65,7 +65,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._queue.Count;
+                    return _queue.Count;
                 }
             }
         }
@@ -74,7 +74,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._queue.Clear();
+                _queue.Clear();
             }
         }
 
@@ -82,7 +82,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._queue.Contains(item);
+                return _queue.Contains(item);
             }
         }
 
@@ -90,7 +90,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._queue.CopyTo(array, arrayIndex);
+                _queue.CopyTo(array, arrayIndex);
             }
         }
 
@@ -100,10 +100,10 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    if (this._queue.Count > 0)
+                    if (_queue.Count > 0)
                     {
                         _upperResetEvent.Set();
-                        return this._queue.Dequeue();
+                        return _queue.Dequeue();
                     }
                     else
                     {
@@ -121,10 +121,10 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    if (this._queue.Count > 0)
+                    if (_queue.Count > 0)
                     {
                         _upperResetEvent.Set();
-                        return this._queue.Dequeue();
+                        return _queue.Dequeue();
                     }
                     else
                     {
@@ -142,7 +142,7 @@ namespace Library.Collections
 
             lock (this.ThisLock)
             {
-                this._queue.Enqueue(item);
+                _queue.Enqueue(item);
 
                 _lowerResetEvent.Set();
                 _upperResetEvent.Reset();
@@ -160,7 +160,7 @@ namespace Library.Collections
             {
                 if (_disposed) throw new ObjectDisposedException("WaitQueue<T>");
 
-                this._queue.Enqueue(item);
+                _queue.Enqueue(item);
 
                 _lowerResetEvent.Set();
                 _upperResetEvent.Reset();
@@ -173,9 +173,9 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    if (this._queue.Count > 0)
+                    if (_queue.Count > 0)
                     {
-                        return this._queue.Peek();
+                        return _queue.Peek();
                     }
                     else
                     {
@@ -193,9 +193,9 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    if (this._queue.Count > 0)
+                    if (_queue.Count > 0)
                     {
-                        return this._queue.Peek();
+                        return _queue.Peek();
                     }
                     else
                     {
@@ -211,7 +211,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._queue.ToArray();
+                return _queue.ToArray();
             }
         }
 
@@ -219,7 +219,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._queue.TrimExcess();
+                _queue.TrimExcess();
             }
         }
 
@@ -256,7 +256,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                ((ICollection)this._queue).CopyTo(array.OfType<T>().ToArray(), index);
+                ((ICollection)_queue).CopyTo(array.OfType<T>().ToArray(), index);
             }
         }
 

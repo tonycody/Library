@@ -100,13 +100,13 @@ namespace Library.Net.Connection
             }
         }
 
-        public byte[] PublicKey
+        public Certificate Certificate
         {
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _connectionSignature.Certificate.PublicKey;
+                return _connectionSignature.Certificate;
             }
         }
 

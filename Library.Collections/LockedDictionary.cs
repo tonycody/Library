@@ -75,7 +75,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._dic.Comparer;
+                    return _dic.Comparer;
                 }
             }
         }
@@ -86,7 +86,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._dic.Count;
+                    return _dic.Count;
                 }
             }
         }
@@ -97,14 +97,14 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._dic[key];
+                    return _dic[key];
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    this._dic[key] = value;
+                    _dic[key] = value;
                 }
             }
         }
@@ -115,7 +115,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._dic.Keys.ToArray();
+                    return _dic.Keys.ToArray();
                 }
             }
         }
@@ -126,7 +126,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return this._dic.Values.ToList();
+                    return _dic.Values.ToList();
                 }
             }
         }
@@ -151,7 +151,7 @@ namespace Library.Collections
                 }
                 else
                 {
-                    this._dic.Add(key, value);
+                    _dic.Add(key, value);
                     return true;
                 }
             }
@@ -161,7 +161,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this._dic.Clear();
+                _dic.Clear();
             }
         }
 
@@ -169,7 +169,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._dic.ContainsKey(key);
+                return _dic.ContainsKey(key);
             }
         }
 
@@ -177,7 +177,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._dic.ContainsValue(value);
+                return _dic.ContainsValue(value);
             }
         }
 
@@ -196,7 +196,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._dic.Remove(key);
+                return _dic.Remove(key);
             }
         }
 
@@ -204,7 +204,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._dic.TryGetValue(key, out value);
+                return _dic.TryGetValue(key, out value);
             }
         }
 
@@ -220,7 +220,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return this._dic.Contains(item);
+                return _dic.Contains(item);
             }
         }
 
@@ -228,7 +228,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                ((IDictionary<TKey, TValue>)this._dic).CopyTo(array, arrayIndex);
+                ((IDictionary<TKey, TValue>)_dic).CopyTo(array, arrayIndex);
             }
         }
 
@@ -236,7 +236,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return ((IDictionary<TKey, TValue>)this._dic).Remove(keyValuePair);
+                return ((IDictionary<TKey, TValue>)_dic).Remove(keyValuePair);
             }
         }
 
@@ -244,7 +244,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                ((ICollection)this._dic).CopyTo(array, index);
+                ((ICollection)_dic).CopyTo(array, index);
             }
         }
 

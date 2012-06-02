@@ -6,9 +6,9 @@ using System.Runtime.Serialization;
 using System.IO;
 using Library.Io;
 
-namespace Library.Net.Nest
+namespace Library.Net.Lair
 {
-    [DataContract(Name = "CommandMessage", Namespace = "http://Library/Net/Nest")]
+    [DataContract(Name = "CommandMessage", Namespace = "http://Library/Net/Lair")]
     public class CommandMessage : ItemBase<CommandMessage>, IThisLock
     {
         private enum SerializeId : byte
@@ -51,7 +51,7 @@ namespace Library.Net.Nest
                         }
                         else if (id == (byte)SerializeId.Content)
                         {
-                            byte[] buff = new byte[(int)rangeStream.Length];
+                            byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
                             rangeStream.Read(buff, 0, buff.Length);
 
                             this.Content = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);

@@ -229,8 +229,8 @@ namespace Library.Correction
 
             public Math(int gfBits)
             {
-                this._gfBits = gfBits;
-                this._gfSize = ((1 << gfBits) - 1);
+                _gfBits = gfBits;
+                _gfSize = ((1 << gfBits) - 1);
 
                 _gf_exp = new byte[2 * _gfSize];
                 _gf_log = new int[_gfSize + 1];

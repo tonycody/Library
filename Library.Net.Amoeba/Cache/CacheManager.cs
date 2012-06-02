@@ -355,33 +355,33 @@ namespace Library.Net.Amoeba
 
         protected virtual void OnGetUsingHeaders(ref IList<Key> keys)
         {
-            if (GetUsingKeysEvent != null)
+            if (this.GetUsingKeysEvent != null)
             {
-                GetUsingKeysEvent(this, ref keys);
+                this.GetUsingKeysEvent(this, ref keys);
             }
         }
 
         protected virtual void OnSetKeyEvent(Key key)
         {
-            if (SetKeyEvent != null)
+            if (this.SetKeyEvent != null)
             {
-                SetKeyEvent(this, key);
+                this.SetKeyEvent(this, key);
             }
         }
 
         protected virtual void OnRemoveShareEvent(string path)
         {
-            if (RemoveShareEvent != null)
+            if (this.RemoveShareEvent != null)
             {
-                RemoveShareEvent(this, path);
+                this.RemoveShareEvent(this, path);
             }
         }
 
         protected virtual void OnRemoveKeyEvent(Key key)
         {
-            if (RemoveKeyEvent != null)
+            if (this.RemoveKeyEvent != null)
             {
-                RemoveKeyEvent(this, key);
+                this.RemoveKeyEvent(this, key);
             }
         }
 

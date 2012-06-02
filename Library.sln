@@ -27,7 +27,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.UnitTest", "Library
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Security", "Library.Security\Library.Security.csproj", "{D314C626-A6FC-4FD5-BE3C-9D36C2738418}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.Nest", "Library.Net.Nest\Library.Net.Nest.csproj", "{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.Lair", "Library.Net.Lair\Library.Net.Lair.csproj", "{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Update", "Library.Update\Library.Update.csproj", "{5D842D8A-5BFE-4D68-956B-E1E690EDB48A}"
 EndProject

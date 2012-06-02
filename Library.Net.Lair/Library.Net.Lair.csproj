@@ -8,8 +8,8 @@
     <ProjectGuid>{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Library.Net.Nest</RootNamespace>
-    <AssemblyName>Library.Net.Nest</AssemblyName>
+    <RootNamespace>Library.Net.Lair</RootNamespace>
+    <AssemblyName>Library.Net.Lair</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -49,17 +49,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChannelCollection.cs" />
-    <Compile Include="CirculationCollection.cs" />
     <Compile Include="CommandMessage.cs" />
     <Compile Include="ConnectionManager.cs" />
-    <Compile Include="ConnectionType.cs" />
-    <Compile Include="IdCollection.cs" />
     <Compile Include="ProtocolVersion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerManager.cs" />
-    <Compile Include="SessionManager.cs" />
-    <Compile Include="UriCollection.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
@@ -96,10 +89,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Properties\Library.Net.Nest.License">
+    <Content Include="Properties\Library.Net.Lair.License">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Properties\Library.Net.Nest.readme" />
+    <None Include="Properties\Library.Net.Lair.readme" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
