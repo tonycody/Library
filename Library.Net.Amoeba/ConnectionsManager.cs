@@ -1569,7 +1569,6 @@ namespace Library.Net.Amoeba
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "UploadingConnectionCountLowerLimit", Value = 3 },
                     new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 3 },
-                    new Library.Configuration.SettingsContext<KeywordCollection>() { Name = "SearchKeywords", Value = new KeywordCollection() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
                 })
@@ -1672,17 +1671,6 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         this["DownloadingConnectionCountLowerLimit"] = value;
-                    }
-                }
-            }
-
-            public KeywordCollection SearchKeywords
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        return (KeywordCollection)this["SearchKeywords"];
                     }
                 }
             }
