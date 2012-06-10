@@ -54,7 +54,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    return _settings.Seeds.Keys.ToArray();
+                    return _settings.SeedInformation.Select(n => n.Seed).ToArray();
                 }
             }
         }
@@ -67,7 +67,7 @@ namespace Library.Net.Amoeba
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
 
-                    contexts.Add(new InformationContext("SeedCount", _settings.Seeds.Keys.Count));
+                    contexts.Add(new InformationContext("SeedCount", _settings.SeedInformation.Count));
                     contexts.Add(new InformationContext("ShareCount", _settings.ShareIndex.Count));
 
                     return new Information(contexts);
@@ -217,14 +217,12 @@ namespace Library.Net.Amoeba
 
                 Random random = new Random();
 
-                foreach (var item in _settings.Seeds.ToArray())
+                for (int i = 0; i < _settings.SeedInformation.Count; i++)
                 {
-                    var seed = item.Key;
-                    var info = item.Value;
-
+                    var info = _settings.SeedInformation[i];
                     bool flag = true;
 
-                    if (!(flag = this.Contains(seed.Key))) goto Break;
+                    if (!(flag = this.Contains(info.Seed.Key))) goto Break;
 
                     foreach (var index in info.Indexs)
                     {
@@ -252,9 +250,9 @@ namespace Library.Net.Amoeba
 
                     if (flag)
                     {
-                        if (this.GetPriority(seed.Key) == 0)
+                        if (this.GetPriority(info.Seed.Key) == 0)
                         {
-                            this.SetPriority(seed.Key, 1);
+                            this.SetPriority(info.Seed.Key, 1);
 
                             foreach (var index in info.Indexs)
                             {
@@ -273,9 +271,10 @@ namespace Library.Net.Amoeba
                     }
                     else
                     {
-                        _settings.Seeds.Remove(seed);
+                        _settings.SeedInformation.RemoveAt(i);
+                        i--;
 
-                        this.SetPriority(seed.Key, 0);
+                        this.SetPriority(info.Seed.Key, 0);
 
                         foreach (var index in info.Indexs)
                         {
@@ -506,14 +505,15 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (_settings.Seeds.ContainsKey(seed))
+                if (_settings.SeedInformation.Any(n => n.Seed == seed))
                     return;
 
                 var info = new SeedInformation();
+                info.Seed = seed;
                 info.Path = path;
                 info.Indexs.AddRange(indexs);
 
-                _settings.Seeds.Add(seed, info);
+                _settings.SeedInformation.Add(info);
             }
         }
 
@@ -521,14 +521,15 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                foreach (var item in _settings.Seeds.ToArray())
+                for (int i = 0; i < _settings.SeedInformation.Count; i++)
                 {
-                    if (seed != item.Key) continue;
-                    var info = item.Value;
+                    var info = _settings.SeedInformation[i];
+                    if (seed != info.Seed) continue;
 
-                    _settings.Seeds.Remove(seed);
+                    _settings.SeedInformation.RemoveAt(i);
+                    i--;
 
-                    this.SetPriority(seed.Key, 0);
+                    this.SetPriority(info.Seed.Key, 0);
 
                     foreach (var index in info.Indexs)
                     {
@@ -541,8 +542,6 @@ namespace Library.Net.Amoeba
                         }
                     }
                 }
-
-                _settings.Seeds.Remove(seed);
             }
         }
 
@@ -648,16 +647,16 @@ namespace Library.Net.Amoeba
                 keyList.AddRange(_settings.ShareIndex[_ids[id]].KeyAndCluster.Keys);
                 path = _ids[id];
 
-                foreach (var item in _settings.Seeds.ToArray())
+                for (int i = 0; i < _settings.SeedInformation.Count; i++)
                 {
-                    var seed = item.Key;
-                    var info = item.Value;
+                    var info = _settings.SeedInformation[i];
 
                     if (_ids[id] == info.Path)
                     {
-                        _settings.Seeds.Remove(seed);
+                        _settings.SeedInformation.RemoveAt(i);
+                        i--;
 
-                        this.SetPriority(seed.Key, 0);
+                        this.SetPriority(info.Seed.Key, 0);
 
                         foreach (var index in info.Indexs)
                         {
@@ -1310,7 +1309,7 @@ namespace Library.Net.Amoeba
                     new Library.Configuration.SettingsContext<LockedDictionary<string, ShareIndex>>() { Name = "ShareIndex", Value = new LockedDictionary<string, ShareIndex>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
                     new Library.Configuration.SettingsContext<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Seed, SeedInformation>>() { Name = "Seeds", Value = new LockedDictionary<Seed, SeedInformation>() },
+                    new Library.Configuration.SettingsContext<LockedList<SeedInformation>>() { Name = "SeedInformation", Value = new LockedList<SeedInformation>() },
                 })
             {
 
@@ -1372,13 +1371,13 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public LockedDictionary<Seed, SeedInformation> Seeds
+            public LockedList<SeedInformation> SeedInformation
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Seed, SeedInformation>)this["Seeds"];
+                        return (LockedList<SeedInformation>)this["SeedInformation"];
                     }
                 }
             }
@@ -1399,11 +1398,31 @@ namespace Library.Net.Amoeba
         [DataContract(Name = "SeedInformation", Namespace = "http://Library/Net/Amoeba/CacheManager")]
         private class SeedInformation : IThisLock
         {
+            private Seed _seed;
             private string _path;
             private IndexCollection _indexs;
 
             private object _thisLock;
             private static object _thisStaticLock = new object();
+
+            [DataMember(Name = "Seed")]
+            public Seed Seed
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return _seed;
+                    }
+                }
+                set
+                {
+                    lock (this.ThisLock)
+                    {
+                        _seed = value;
+                    }
+                }
+            }
 
             [DataMember(Name = "Path")]
             public string Path
