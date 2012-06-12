@@ -104,8 +104,8 @@ namespace Library.Net.Amoeba
             _surroundingNodes = new LockedHashSet<Node>();
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
-            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0) + new TimeSpan(0, 12, 0));
+            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
 
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));

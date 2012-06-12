@@ -205,9 +205,9 @@ namespace Library.Net.Amoeba
                     {
                         _bufferManager.ReturnBuffer(_blockBuffer);
                         _blockBuffer = null;
-
-                        _cacheManager.GetUsingKeysEvent -= this.GetUsingKeysEvent;
                     }
+
+                    _cacheManager.GetUsingKeysEvent -= this.GetUsingKeysEvent;
 
                     _disposed = true;
                 }
