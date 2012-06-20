@@ -514,6 +514,25 @@ namespace Library.Net.Amoeba
 
                 if (_connectionManagers.Count >= this.ConnectionCountLimit)
                 {
+                    // PushNodes
+                    try
+                    {
+                        var nodes = _connectionManagers.Select(n => n.Node).ToList();
+                        nodes.Remove(connectionManager.Node);
+
+                        if (nodes.Count > 0)
+                        {
+                            connectionManager.PushNodes(nodes);
+
+                            Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
+                            _pushNodeCount += nodes.Count;
+                        }
+                    }
+                    catch (ConnectionManagerException)
+                    {
+
+                    }
+
                     try
                     {
                         connectionManager.PushCancel();
@@ -926,12 +945,39 @@ namespace Library.Net.Amoeba
 
                 Stopwatch nodeUpdateTime = new Stopwatch();
                 Stopwatch updateTime = new Stopwatch();
+                Stopwatch checkTime = new Stopwatch();
+                checkTime.Start();
 
                 for (; ; )
                 {
                     Thread.Sleep(1000);
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
+
+                    // Check
+                    if (checkTime.Elapsed.TotalSeconds > 180)
+                    {
+                        checkTime.Restart();
+
+                        if ((this.ConnectionCountLimit - _connectionManagers.Count) < (this.ConnectionCountLimit / 3)
+                            && _connectionManagers.Count >= 3)
+                        {
+                            List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node));
+
+                            nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                            {
+                                return _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
+                            }));
+
+                            if (nodes.IndexOf(connectionManager.Node) < 3)
+                            {
+                                connectionManager.PushCancel();
+
+                                Debug.WriteLine("ConnectionManager: Push Cancel");
+                                return;
+                            }
+                        }
+                    }
 
                     // PushNodes
                     if (!nodeUpdateTime.IsRunning || nodeUpdateTime.Elapsed.TotalSeconds > 60)
@@ -1183,9 +1229,11 @@ namespace Library.Net.Amoeba
             }
             catch (Exception)
             {
-                this.RemoveConnectionManager(connectionManager);
 
-                return;
+            }
+            finally
+            {
+                this.RemoveConnectionManager(connectionManager);
             }
         }
 
