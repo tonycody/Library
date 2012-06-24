@@ -191,11 +191,11 @@ namespace Library.Net.Amoeba
                     {
                         xml.WriteStartDocument();
 
-                        xml.WriteStartElement("Configuration");
+                        xml.WriteStartElement("Protocol");
 
                         if (_myProtocolVersion == ProtocolVersion.Version1)
                         {
-                            xml.WriteStartElement("Protocol");
+                            xml.WriteStartElement("Amoeba");
                             xml.WriteAttributeString("Version", "1");
 
                             xml.WriteEndElement(); //Protocol
@@ -218,7 +218,7 @@ namespace Library.Net.Amoeba
                         {
                             if (xml.NodeType == XmlNodeType.Element)
                             {
-                                if (xml.LocalName == "Protocol")
+                                if (xml.LocalName == "Amoeba")
                                 {
                                     var version = xml.GetAttribute("Version");
 

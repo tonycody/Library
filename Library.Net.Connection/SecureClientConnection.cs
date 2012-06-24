@@ -126,11 +126,11 @@ namespace Library.Net.Connection
                     {
                         xml.WriteStartDocument();
 
-                        xml.WriteStartElement("Configuration");
+                        xml.WriteStartElement("Protocol");
 
                         if (_myProtocolVersion == SecureProtocolVersion.Version1)
                         {
-                            xml.WriteStartElement("Protocol");
+                            xml.WriteStartElement("SecureConnection");
                             xml.WriteAttributeString("Version", "1");
 
                             xml.WriteElementString("KeyExchangeAlgorithm", _myProtocol1.KeyExchangeAlgorithm.ToString());
@@ -159,7 +159,7 @@ namespace Library.Net.Connection
                         {
                             if (xml.NodeType == XmlNodeType.Element)
                             {
-                                if (xml.LocalName == "Protocol")
+                                if (xml.LocalName == "SecureConnection")
                                 {
                                     if (xml.GetAttribute("Version") == "1")
                                     {
@@ -242,8 +242,12 @@ namespace Library.Net.Connection
                             {
                                 SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
                                 connectionSignature.Key = publicKey;
-                                connectionSignature.CreationTime = DateTime.UtcNow;
-                                connectionSignature.CreateCertificate(_digitalSignature);
+
+                                if (_digitalSignature != null)
+                                {
+                                    connectionSignature.CreationTime = DateTime.UtcNow;
+                                    connectionSignature.CreateCertificate(_digitalSignature);
+                                }
 
                                 using (Stream stream = connectionSignature.Export(_bufferManager))
                                 {
@@ -259,10 +263,13 @@ namespace Library.Net.Connection
 
                                 if (connectionSignature.VerifyCertificate())
                                 {
-                                    DateTime now = DateTime.UtcNow;
-                                    TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
+                                    if (connectionSignature.Certificate != null)
+                                    {
+                                        DateTime now = DateTime.UtcNow;
+                                        TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
 
-                                    if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
+                                        if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
+                                    }
 
                                     _connectionSignature = connectionSignature;
                                     otherPublicKey = _connectionSignature.Key;
@@ -307,8 +314,12 @@ namespace Library.Net.Connection
                             {
                                 SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
                                 connectionSignature.Key = publicKey;
-                                connectionSignature.CreationTime = DateTime.UtcNow;
-                                connectionSignature.CreateCertificate(_digitalSignature);
+
+                                if (_digitalSignature != null)
+                                {
+                                    connectionSignature.CreationTime = DateTime.UtcNow;
+                                    connectionSignature.CreateCertificate(_digitalSignature);
+                                }
 
                                 using (Stream stream = connectionSignature.Export(_bufferManager))
                                 {
@@ -324,10 +335,13 @@ namespace Library.Net.Connection
 
                                 if (connectionSignature.VerifyCertificate())
                                 {
-                                    DateTime now = DateTime.UtcNow;
-                                    TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
+                                    if (connectionSignature.Certificate != null)
+                                    {
+                                        DateTime now = DateTime.UtcNow;
+                                        TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
 
-                                    if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
+                                        if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
+                                    }
 
                                     _connectionSignature = connectionSignature;
                                     otherPublicKey = _connectionSignature.Key;
