@@ -7,12 +7,12 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Library.Net.Lair")]
-[assembly: AssemblyCopyright("Copyright © Lyrise 2011-2012")]
+[assembly: AssemblyCopyright("Copyright © Lyrise 2009-2012")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
-[assembly: Guid("226f3aef-8948-491c-aed3-bd257289e9fe")]
-[assembly: AssemblyVersion("0.0.0.56")] // XnGKhRyRYCPZp4uTNjbPOOmIGtQePq+z0KbPFbUn1x62MVLFZTYEpUoDGqS1hSr9esmIFxYSCY7BRmRNBNLUQw==
+[assembly: Guid("5AA52EB2-1037-4319-97DC-9BBE976D1CE6")]
+[assembly: AssemblyVersion("0.0.0.1697")] // ZSMRLVNAMhGFj2msQK7YfE0jdgL+MA35hZ0bAqcj5btbB1r4L2ORgw5YWxAauDxULDplPyCfwqPnwCM7x15RgA==
 
 #if DEBUG
 [assembly: InternalsVisibleTo("Library.UnitTest")]

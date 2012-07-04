@@ -31,6 +31,7 @@ namespace Library.Net.Amoeba
         private string _comment = null;
         private SeedCollection _seeds = null;
         private BoxCollection _boxes = null;
+
         private int _hashCode = 0;
 
         private object _thisLock;
@@ -279,7 +280,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IDirectory<Keyword> メンバ
+        #region IDirectory<Keyword>
 
         [DataMember(Name = "Name")]
         public string Name
@@ -386,7 +387,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

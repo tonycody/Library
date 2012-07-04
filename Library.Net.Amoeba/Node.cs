@@ -23,6 +23,7 @@ namespace Library.Net.Amoeba
 
         private byte[] _id;
         private UriCollection _uris;
+
         private int _hashCode = 0;
 
         private object _thisLock;
@@ -140,7 +141,9 @@ namespace Library.Net.Amoeba
 
             if (this.Id != null && other.Id != null)
             {
-                if (!Collection.Equals(this.Id, other.Id)) return false;
+                if (this.Id.Length != other.Id.Length) return false;
+
+                for (int i = 0; i < this.Id.Length; i++) if (this.Id[i] != other.Id[i]) return false;
             }
 
             if (!Collection.Equals(this.Uris, other.Uris)) return false;
@@ -168,7 +171,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region INode メンバ
+        #region INode
 
         /// <summary>
         /// Idを取得または設定します
@@ -234,7 +237,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

@@ -371,7 +371,7 @@ namespace Library.Collections
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

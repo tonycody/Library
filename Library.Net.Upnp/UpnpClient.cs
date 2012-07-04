@@ -502,7 +502,7 @@ namespace Library.Net.Upnp
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

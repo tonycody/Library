@@ -448,7 +448,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public virtual object ThisLock
         {

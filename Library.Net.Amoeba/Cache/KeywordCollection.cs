@@ -3,13 +3,20 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class KeywordCollection : LockedList<string>, IEnumerable<string>
+    public class KeywordCollection : FilterList<string>, IEnumerable<string>
     {
         public KeywordCollection() : base() { }
         public KeywordCollection(int capacity) : base(capacity) { }
         public KeywordCollection(IEnumerable<string> collections) : base(collections) { }
 
-        #region IEnumerable<Keyword> メンバ
+        protected override bool Filter(string item)
+        {
+            if (item == null || item.Length > 256) return true;
+
+            return false;
+        }
+
+        #region IEnumerable<Keyword>
 
         IEnumerator<string> IEnumerable<string>.GetEnumerator()
         {
@@ -21,7 +28,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable メンバ
+        #region IEnumerable
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {

@@ -280,7 +280,7 @@ namespace Library.Net.Amoeba
             return null;
         }
 
-        #region ISettings メンバ
+        #region ISettings
 
         public void Load(string directoryPath)
         {
@@ -333,7 +333,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -361,7 +361,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

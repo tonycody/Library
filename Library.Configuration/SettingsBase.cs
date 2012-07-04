@@ -24,7 +24,7 @@ namespace Library.Configuration
 
         public T Value { get; set; }
 
-        #region IContext メンバ
+        #region IContext
 
         public Type Type
         {
@@ -76,7 +76,7 @@ namespace Library.Configuration
             }
         }
 
-        #region ISettings メンバ
+        #region ISettings
 
         public virtual void Load(string directoryPath)
         {

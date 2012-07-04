@@ -52,7 +52,7 @@ namespace Library
             return base.Equals(obj);
         }
 
-        #region IEquatable<T> メンバ
+        #region IEquatable<T>
 
         public virtual bool Equals(T other)
         {
@@ -61,7 +61,7 @@ namespace Library
 
         #endregion
 
-        #region IDeepCloneable<T> メンバ
+        #region IDeepCloneable<T>
 
         public abstract T DeepClone();
 

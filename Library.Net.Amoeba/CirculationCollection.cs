@@ -9,7 +9,7 @@ namespace Library.Net.Amoeba
 {
     class CirculationCollection<T> : IEnumerable<T>, IEnumerable, IThisLock
     {
-        private HashSet<T> _hashSet;
+        private LockedHashSet<T> _hashSet;
         private Dictionary<T, DateTime> _circularDictionary;
         private DateTime _lastCircularTime = DateTime.MinValue;
         private object _thisLock = new object();
@@ -17,31 +17,16 @@ namespace Library.Net.Amoeba
 
         public CirculationCollection(TimeSpan circularTime)
         {
-            _hashSet = new HashSet<T>();
+            _hashSet = new LockedHashSet<T>();
             _circularDictionary = new Dictionary<T, DateTime>();
             _circularTime = circularTime;
         }
 
-        public CirculationCollection(IEnumerable<T> collection, TimeSpan circularTime)
+        public CirculationCollection(TimeSpan circularTime, int capacity)
         {
-            _hashSet = new HashSet<T>();
+            _hashSet = new LockedHashSet<T>(capacity);
             _circularDictionary = new Dictionary<T, DateTime>();
             _circularTime = circularTime;
-
-            this.AddRange(collection);
-        }
-
-        public CirculationCollection(IEqualityComparer<T> comparer, TimeSpan circularTime)
-        {
-            _hashSet = new HashSet<T>(comparer);
-            _circularDictionary = new Dictionary<T, DateTime>();
-            _circularTime = circularTime;
-        }
-
-        public CirculationCollection(IEnumerable<T> collection, IEqualityComparer<T> comparer, TimeSpan circularTime)
-            : this(comparer, circularTime)
-        {
-            this.AddRange(collection);
         }
 
         private void Circular(TimeSpan circularTime)
@@ -149,7 +134,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IEnumerable<T> メンバ
+        #region IEnumerable<T>
 
         public IEnumerator<T> GetEnumerator()
         {
@@ -166,7 +151,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable メンバ
+        #region IEnumerable
 
         IEnumerator IEnumerable.GetEnumerator()
         {
@@ -178,7 +163,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

@@ -8,7 +8,7 @@ namespace Library.Net.Lair
 {
     [Flags]
     [DataContract(Name = "ProtocolVersion", Namespace = "http://Library/Net/Lair")]
-    public enum ProtocolVersion
+    enum ProtocolVersion
     {
         [EnumMember(Value = "Version1")]
         Version1 = 0x01,

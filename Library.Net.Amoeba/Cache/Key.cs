@@ -19,6 +19,7 @@ namespace Library.Net.Amoeba
 
         private byte[] _hash;
         private HashAlgorithm _hashAlgorithm = 0;
+     
         private int _hashCode = 0;
 
         private object _thisLock;
@@ -155,7 +156,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IHeader メンバ
+        #region IHeader
 
         [DataMember(Name = "Hash")]
         public byte[] Hash
@@ -203,7 +204,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IHashAlgorithm メンバ
+        #region IHashAlgorithm
 
         [DataMember(Name = "HashAlgorithm")]
         public HashAlgorithm HashAlgorithm
@@ -227,7 +228,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

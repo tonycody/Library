@@ -64,7 +64,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {
@@ -101,14 +101,14 @@ namespace Library.Net.Amoeba
         {
             _id = id;
 
-            _surroundingNodes = new LockedHashSet<Node>();
+            _surroundingNodes = new LockedHashSet<Node>(128);
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
-            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
+            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 30);
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 30);
 
-            _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
-            _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
+            _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
         }
 
         public int Id
@@ -260,7 +260,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

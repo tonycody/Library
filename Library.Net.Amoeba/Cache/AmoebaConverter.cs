@@ -247,6 +247,34 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public static Stream ToSignatureStream(DigitalSignature item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+
+            try
+            {
+                return AmoebaConverter.ToStream<DigitalSignature>(item);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static DigitalSignature FromSignatureStream(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+
+            try
+            {
+                return AmoebaConverter.FromStream<DigitalSignature>(stream);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         public static string ToSeedString(Seed item)
         {
             if (item == null) throw new ArgumentNullException("item");
@@ -303,34 +331,6 @@ namespace Library.Net.Amoeba
             try
             {
                 return AmoebaConverter.FromStream<Box>(stream);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Stream ToSignatureStream(DigitalSignature item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                return AmoebaConverter.ToStream<DigitalSignature>(item);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static DigitalSignature FromSignatureStream(Stream stream)
-        {
-            if (stream == null) throw new ArgumentNullException("stream");
-
-            try
-            {
-                return AmoebaConverter.FromStream<DigitalSignature>(stream);
             }
             catch (Exception)
             {

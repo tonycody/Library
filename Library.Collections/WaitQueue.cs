@@ -279,7 +279,7 @@ namespace Library.Collections
             }
         }
 
-        #region ICollection<T> メンバ
+        #region ICollection<T>
 
         void ICollection<T>.Add(T item)
         {
@@ -346,7 +346,7 @@ namespace Library.Collections
             }
         }
 
-        #region IDisposable メンバ
+        #region IDisposable
 
         public void Dispose()
         {
@@ -359,7 +359,7 @@ namespace Library.Collections
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

@@ -873,7 +873,7 @@ namespace Library.Net.Amoeba
             _uploadManagerThread = null;
         }
 
-        #region ISettings メンバ
+        #region ISettings
 
         LockedList<UploadItem> _uploadItems = new LockedList<UploadItem>();
 
@@ -966,7 +966,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -994,7 +994,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

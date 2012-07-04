@@ -160,7 +160,7 @@ namespace Library.Collections
             }
         }
 
-        #region ICollection<T> メンバ
+        #region ICollection<T>
 
         void ICollection<T>.Add(T item)
         {
@@ -202,7 +202,7 @@ namespace Library.Collections
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

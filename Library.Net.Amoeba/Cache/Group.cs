@@ -22,12 +22,12 @@ namespace Library.Net.Amoeba
             Length = 4,
         }
 
+        private KeyCollection _keys = null;
+
         private CorrectionAlgorithm _correctionAlgorithm = 0;
         private int _informationLength = 0;
         private int _blockLength = 0;
         private long _length = 0;
-
-        private KeyCollection _keys = null;
 
         private object _thisLock;
         private static object _thisStaticLock = new object();
@@ -217,7 +217,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IGroup<Key> メンバ
+        #region IGroup<Key>
 
         IList<Key> IGroup<Key>.Keys
         {
@@ -247,7 +247,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region ICorrectionAlgorithm メンバ
+        #region ICorrectionAlgorithm
 
         [DataMember(Name = "CorrectionAlgorithm")]
         public CorrectionAlgorithm CorrectionAlgorithm
@@ -334,7 +334,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

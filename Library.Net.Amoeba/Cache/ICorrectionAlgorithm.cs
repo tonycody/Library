@@ -19,11 +19,8 @@ namespace Library.Net.Amoeba
     interface ICorrectionAlgorithm
     {
         CorrectionAlgorithm CorrectionAlgorithm { get; }
-
         int InformationLength { get; }
-
         int BlockLength { get; }
-
         long Length { get; }
     }
 }

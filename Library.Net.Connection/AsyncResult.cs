@@ -108,7 +108,7 @@ namespace Library.Net.Connection
             asyncResult._manualResetEvent.Close();
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

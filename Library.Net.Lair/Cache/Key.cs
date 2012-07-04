@@ -1,28 +1,33 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.Serialization;
 using System.IO;
+using System.Runtime.Serialization;
+using System.Text;
+using Library;
 using Library.Io;
+using System.Collections.Generic;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "CommandMessage", Namespace = "http://Library/Net/Lair")]
-    public class CommandMessage : ItemBase<CommandMessage>, IThisLock
+    [DataContract(Name = "Key", Namespace = "http://Library/Net/Lair")]
+    public class Key : ItemBase<Key>, IKey, IThisLock
     {
         private enum SerializeId : byte
         {
-            Command = 0,
-            Content = 1,
+            Hash = 0,
+            HashAlgorithm = 1,
         }
 
-        private string _command;
-        private ArraySegment<byte> _content;
+        private byte[] _hash;
+        private HashAlgorithm _hashAlgorithm = 0;
+
+        private int _hashCode = 0;
+
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public CommandMessage()
+        public const int MaxHashLength = 64;
+
+        public Key()
         {
 
         }
@@ -42,19 +47,19 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Command)
+                        if (id == (byte)SerializeId.Hash)
+                        {
+                            byte[] buffer = new byte[rangeStream.Length];
+                            rangeStream.Read(buffer, 0, buffer.Length);
+
+                            this.Hash = buffer;
+                        }
+                        else if (id == (byte)SerializeId.HashAlgorithm)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Command = reader.ReadToEnd();
+                                this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
                             }
-                        }
-                        else if (id == (byte)SerializeId.Content)
-                        {
-                            byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                            rangeStream.Read(buff, 0, buff.Length);
-
-                            this.Content = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
                         }
                     }
                 }
@@ -68,8 +73,18 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Command
-                if (this.Command != null)
+                // Hash
+                if (this.Hash != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Hash);
+                    bufferStream.Write(this.Hash, 0, this.Hash.Length);
+
+                    streams.Add(bufferStream);
+                }
+                // HashAlgorithm
+                if (this.HashAlgorithm != 0)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -78,22 +93,12 @@ namespace Library.Net.Lair
                     using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
                     using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
                     {
-                        writer.Write(this.Command);
+                        writer.Write(this.HashAlgorithm.ToString());
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Command);
-
-                    streams.Add(bufferStream);
-                }
-                // Content
-                if (this.Content != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Content.Count), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(this.Content.Array, this.Content.Offset, this.Content.Count);
+                    bufferStream.WriteByte((byte)SerializeId.HashAlgorithm);
 
                     streams.Add(bufferStream);
                 }
@@ -106,92 +111,122 @@ namespace Library.Net.Lair
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
-                if (this.Command == null) return 0;
-                else return this.Command.GetHashCode();
+                return _hashCode;
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is CommandMessage)) return false;
+            if ((object)obj == null || !(obj is Key)) return false;
 
-            return this.Equals((CommandMessage)obj);
+            return this.Equals((Key)obj);
         }
 
-        public override bool Equals(CommandMessage other)
+        public override bool Equals(Key other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Command != other.Command)
-                || (this.Content.Offset != other.Content.Offset)
-                || (this.Content.Count != other.Content.Count)
-                || ((this.Content.Array == null) != (other.Content.Array == null)))
+            if ((this.Hash == null) != (other.Hash == null)
+                || this.HashAlgorithm != other.HashAlgorithm)
             {
                 return false;
             }
 
-            if (this.Content.Array != null && other.Content.Array != null)
+            if (this.Hash != null && other.Hash != null)
             {
-                if (!Collection.Equals(this.Content.Array, this.Content.Offset,
-                    other.Content.Array, other.Content.Offset, this.Content.Count)) return false;
+                if (!Collection.Equals(this.Hash, other.Hash)) return false;
             }
 
             return true;
         }
 
-        public override CommandMessage DeepClone()
+        public override Key DeepClone()
         {
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
                 using (var bufferManager = new BufferManager())
                 using (var stream = this.Export(bufferManager))
                 {
-                    return CommandMessage.Import(stream, bufferManager);
+                    return Key.Import(stream, bufferManager);
                 }
             }
         }
 
-        [DataMember(Name = "Command")]
-        public string Command
+        #region IHeader
+
+        [DataMember(Name = "Hash")]
+        public byte[] Hash
         {
             get
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    return _command;
+                    return _hash;
                 }
             }
             set
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    _command = value;
+                    if (value != null && value.Length > Key.MaxHashLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _hash = value;
+                    }
+
+                    if (value != null && value.Length != 0)
+                    {
+                        try
+                        {
+                            if (value.Length >= 4) _hashCode = Math.Abs(BitConverter.ToInt32(value, 0));
+                            else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                            else _hashCode = value[0];
+                        }
+                        catch
+                        {
+                            _hashCode = 0;
+                        }
+                    }
+                    else
+                    {
+                        _hashCode = 0;
+                    }
                 }
             }
         }
 
-        [DataMember(Name = "Content")]
-        public ArraySegment<byte> Content
+        #endregion
+
+        #region IHashAlgorithm
+
+        [DataMember(Name = "HashAlgorithm")]
+        public HashAlgorithm HashAlgorithm
         {
             get
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
-                {
-                    return _content;
-                }
+                return _hashAlgorithm;
             }
             set
             {
-                using (DeadlockMonitor.Lock(this.ThisLock))
+                if (!Enum.IsDefined(typeof(HashAlgorithm), value))
                 {
-                    _content = value;
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _hashAlgorithm = value;
                 }
             }
         }
 
-        #region IThisLock メンバ
+        #endregion
+
+        #region IThisLock
 
         public object ThisLock
         {
@@ -199,7 +234,7 @@ namespace Library.Net.Lair
             {
                 using (DeadlockMonitor.Lock(_thisStaticLock))
                 {
-                    if (_thisLock == null)
+                    if (_thisLock == null) 
                         _thisLock = new object();
 
                     return _thisLock;

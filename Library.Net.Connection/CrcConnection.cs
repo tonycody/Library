@@ -185,7 +185,7 @@ namespace Library.Net.Connection
             _disposed = true;
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

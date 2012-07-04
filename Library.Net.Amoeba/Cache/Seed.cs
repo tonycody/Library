@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Collections.Generic;
 using Library;
 using Library.Io;
 using Library.Security;
@@ -32,6 +32,13 @@ namespace Library.Net.Amoeba
             Certificate = 10,
         }
 
+        private string _name = null;
+        private long _length = 0;
+        private DateTime _creationTime = DateTime.MinValue;
+        private string _comment = null;
+        private int _rank = 0;
+        private Key _key = null;
+
         private KeywordCollection _keywords = null;
 
         private CompressionAlgorithm _compressionAlgorithm = 0;
@@ -39,12 +46,6 @@ namespace Library.Net.Amoeba
         private CryptoAlgorithm _cryptoAlgorithm = 0;
         private byte[] _cryptoKey = null;
 
-        private string _name = null;
-        private long _length = 0;
-        private DateTime _creationTime = DateTime.MinValue;
-        private string _comment = null;
-        private int _rank = 0;
-        private Key _key = null;
         private int _hashCode = 0;
 
         private object _thisLock;
@@ -358,7 +359,6 @@ namespace Library.Net.Amoeba
             return this.Equals((Seed)obj);
         }
 
-        // EqualsをLockで囲むとデッドロックする
         public override bool Equals(Seed other)
         {
             if ((object)other == null) return false;
@@ -435,7 +435,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IKey<Key> メンバ
+        #region IKey<Key>
 
         [DataMember(Name = "Name")]
         public string Name
@@ -577,7 +577,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IKeywords メンバ
+        #region IKeywords
 
         IList<string> IKeywords.Keywords
         {
@@ -607,7 +607,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region ICompressionAlgorithm メンバ
+        #region ICompressionAlgorithm
 
         [DataMember(Name = "CompressionAlgorithm")]
         public CompressionAlgorithm CompressionAlgorithm
@@ -637,7 +637,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region ICryptoAlgorithm メンバ
+        #region ICryptoAlgorithm
 
         [DataMember(Name = "CryptoAlgorithm")]
         public CryptoAlgorithm CryptoAlgorithm
@@ -693,7 +693,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

@@ -508,7 +508,7 @@ namespace Library.Net.Proxy
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

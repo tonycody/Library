@@ -241,7 +241,7 @@ namespace Library.Net.Connection.SecureVersion1
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

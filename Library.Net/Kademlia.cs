@@ -128,7 +128,7 @@ namespace Library.Net
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {
@@ -497,7 +497,7 @@ namespace Library.Net
 
         private class BytesEqualityComparer : IEqualityComparer<byte[]>
         {
-            #region IEqualityComparer<byte[]> メンバ
+            #region IEqualityComparer<byte[]>
 
             public bool Equals(byte[] x, byte[] y)
             {

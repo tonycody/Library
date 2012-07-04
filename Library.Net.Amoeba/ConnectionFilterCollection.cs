@@ -12,7 +12,7 @@ namespace Library.Net.Amoeba
         public ConnectionFilterCollection(int capacity) : base(capacity) { }
         public ConnectionFilterCollection(IEnumerable<ConnectionFilter> collections) : base(collections) { }
 
-        #region IEnumerable<ConnectionFilter> メンバ
+        #region IEnumerable<ConnectionFilter>
 
         IEnumerator<ConnectionFilter> IEnumerable<ConnectionFilter>.GetEnumerator()
         {
@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable メンバ
+        #region IEnumerable
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {

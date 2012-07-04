@@ -3,13 +3,20 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class GroupCollection : LockedList<Group>, IEnumerable<Group>
+    public class GroupCollection : FilterList<Group>, IEnumerable<Group>
     {
         public GroupCollection() : base() { }
         public GroupCollection(int capacity) : base(capacity) { }
         public GroupCollection(IEnumerable<Group> collections) : base(collections) { }
 
-        #region IEnumerable<Group> メンバ
+        protected override bool Filter(Group item)
+        {
+            if (item == null) return true;
+
+            return false;
+        }
+
+        #region IEnumerable<Group>
 
         IEnumerator<Group> IEnumerable<Group>.GetEnumerator()
         {
@@ -21,7 +28,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable メンバ
+        #region IEnumerable
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {

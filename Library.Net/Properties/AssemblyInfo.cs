@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("178e272e-2e93-48ea-866c-a6da86ca3484")]
-[assembly: AssemblyVersion("0.0.0.60")] // 1Wy25oRRRo/QuaX/SqP+u4in8n2H7/ezbFGYwcK2G9bXOF6IOlk4QpYW1s8+N2TpCQP3OaeVmRoz/6vEl/kiSw==
+[assembly: AssemblyVersion("0.0.0.61")] // dYBQQP/1gATR5uHEwtfoeGiKo5TprsxxdWg90g/rkl1XBz5JKBdX/yC5a3P2XoaYU5DwUOp12DsjxaZNn1iXag==
 
 #if DEBUG
 [assembly: InternalsVisibleTo("Library.UnitTest")]

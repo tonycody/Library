@@ -6,13 +6,20 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class UriCollection : LockedList<string>, IEnumerable<string>
+    public class UriCollection : FilterList<string>, IEnumerable<string>
     {
         public UriCollection() : base() { }
         public UriCollection(int capacity) : base(capacity) { }
         public UriCollection(IEnumerable<string> collections) : base(collections) { }
 
-        #region IEnumerable<string> メンバ
+        protected override bool Filter(string item)
+        {
+            if (item == null || item.Length > 256) return true;
+
+            return false;
+        }
+
+        #region IEnumerable<string>
 
         IEnumerator<string> IEnumerable<string>.GetEnumerator()
         {
@@ -24,7 +31,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable メンバ
+        #region IEnumerable
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {

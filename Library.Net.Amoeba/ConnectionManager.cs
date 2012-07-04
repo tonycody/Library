@@ -55,11 +55,11 @@ namespace Library.Net.Amoeba
             Ping = 2,
             Pong = 3,
 
-            Nodes = 5,
+            Nodes = 4,
 
-            BlocksLink = 9,
-            BlocksRequest = 10,
-            Block = 11,
+            BlocksLink = 5,
+            BlocksRequest = 6,
+            Block = 7,
         }
 
         private byte[] _mySessionId;
@@ -829,7 +829,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -934,7 +934,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1039,7 +1039,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1185,7 +1185,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1236,7 +1236,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

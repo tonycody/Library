@@ -147,7 +147,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IDeepClone<ConnectionFilter> メンバ
+        #region IDeepClone<ConnectionFilter>
 
         public ConnectionFilter DeepClone()
         {
@@ -171,7 +171,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {
@@ -276,7 +276,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IDeepClone<UriCondition> メンバ
+        #region IDeepClone<UriCondition>
 
         public UriCondition DeepClone()
         {
@@ -300,7 +300,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

@@ -361,7 +361,7 @@ namespace Library.Net.Proxy
             _respText = line.Substring(end + 1).Trim();
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

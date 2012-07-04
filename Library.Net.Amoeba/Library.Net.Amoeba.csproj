@@ -67,6 +67,7 @@
     <Compile Include="Cache\BoxCollection.cs" />
     <Compile Include="Cache\IBox.cs" />
     <Compile Include="Cache\IKeywords.cs" />
+    <Compile Include="FilterList.cs" />
     <Compile Include="CirculationCollection.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />

@@ -58,15 +58,15 @@ namespace Library.Net.Amoeba
         private long _receivedByteCount = 0;
         private long _sentByteCount = 0;
 
-        private volatile int _pullNodeCount;
-        private volatile int _pullBlocksLinkCount;
-        private volatile int _pullBlocksRequestCount;
-        private volatile int _pullBlockCount;
-
         private volatile int _pushNodeCount;
-        private volatile int _pushBlocksLinkCount;
-        private volatile int _pushBlocksRequestCount;
+        private volatile int _pushBlockLinkCount;
+        private volatile int _pushBlockRequestCount;
         private volatile int _pushBlockCount;
+
+        private volatile int _pullNodeCount;
+        private volatile int _pullBlockLinkCount;
+        private volatile int _pullBlockRequestCount;
+        private volatile int _pullBlockCount;
 
         private CirculationCollection<Key> _relayBlocks;
         private volatile int _relayBlockCount;
@@ -252,15 +252,15 @@ namespace Library.Net.Amoeba
 
                     List<InformationContext> contexts = new List<InformationContext>();
 
-                    contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
-                    contexts.Add(new InformationContext("PullBlocksLinkCount", _pullBlocksLinkCount));
-                    contexts.Add(new InformationContext("PullBlocksRequestCount", _pullBlocksRequestCount));
-                    contexts.Add(new InformationContext("PullBlockCount", _pullBlockCount));
-
                     contexts.Add(new InformationContext("PushNodeCount", _pushNodeCount));
-                    contexts.Add(new InformationContext("PushBlocksLinkCount", _pushBlocksLinkCount));
-                    contexts.Add(new InformationContext("PushBlocksRequestCount", _pushBlocksRequestCount));
+                    contexts.Add(new InformationContext("PushBlockLinkCount", _pushBlockLinkCount));
+                    contexts.Add(new InformationContext("PushBlockRequestCount", _pushBlockRequestCount));
                     contexts.Add(new InformationContext("PushBlockCount", _pushBlockCount));
+
+                    contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
+                    contexts.Add(new InformationContext("PullBlocksLinkCount", _pullBlockLinkCount));
+                    contexts.Add(new InformationContext("PullBlocksRequestCount", _pullBlockRequestCount));
+                    contexts.Add(new InformationContext("PullBlockCount", _pullBlockCount));
 
                     contexts.Add(new InformationContext("BlockCount", _cacheManager.Count));
                     contexts.Add(new InformationContext("RelayBlockCount", _relayBlockCount));
@@ -1028,7 +1028,7 @@ namespace Library.Net.Amoeba
                                     connectionManager.PushBlocksLink(tempList);
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push BlocksLink ({0})", tempList.Count));
-                                    _pushBlocksLinkCount += tempList.Count;
+                                    _pushBlockLinkCount += tempList.Count;
                                 }
                                 catch (Exception e)
                                 {
@@ -1069,13 +1069,13 @@ namespace Library.Net.Amoeba
                                 {
                                     connectionManager.PushBlocksRequest(tempList);
 
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push BlocksRequest ({0})", tempList.Count));
+                                    _pushBlockRequestCount += tempList.Count;
+
                                     foreach (var header in tempList)
                                     {
                                         _downloadBlocks.Remove(header);
                                     }
-
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push BlocksRequest ({0})", tempList.Count));
-                                    _pushBlocksRequestCount += tempList.Count;
                                 }
                                 catch (Exception e)
                                 {
@@ -1152,11 +1152,12 @@ namespace Library.Net.Amoeba
                                     buffer = _cacheManager[key];
 
                                     connectionManager.PushBlock(key, buffer);
-                                    messageManager.PullBlocksRequest.Remove(key);
-                                    messageManager.PushBlocks.Add(key);
-
+                                  
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
                                     _pushBlockCount++;
+                                    
+                                    messageManager.PullBlocksRequest.Remove(key);
+                                    messageManager.PushBlocks.Add(key);
                                 }
                                 catch (ConnectionManagerException e)
                                 {
@@ -1194,12 +1195,14 @@ namespace Library.Net.Amoeba
                                     buffer = _cacheManager[key];
 
                                     connectionManager.PushBlock(key, buffer);
-                                    messageManager.PullBlocksRequest.Remove(key);
-                                    messageManager.PushBlocks.Add(key);
-                                    messageManager.Priority--;
-
+                                  
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
                                     _pushBlockCount++;
+
+                                    messageManager.PullBlocksRequest.Remove(key);
+                                    messageManager.PushBlocks.Add(key);
+                                   
+                                    messageManager.Priority--;
 
                                     // Infomation
                                     {
@@ -1281,7 +1284,7 @@ namespace Library.Net.Amoeba
                 if (header == null || header.Hash == null || header.HashAlgorithm != HashAlgorithm.Sha512) continue;
 
                 _messagesManager[connectionManager.Node].PullBlocksLink.Add(header);
-                _pullBlocksLinkCount++;
+                _pullBlockLinkCount++;
             }
         }
 
@@ -1299,7 +1302,7 @@ namespace Library.Net.Amoeba
                 if (header == null || header.Hash == null || header.HashAlgorithm != HashAlgorithm.Sha512) continue;
 
                 _messagesManager[connectionManager.Node].PullBlocksRequest.Add(header);
-                _pullBlocksRequestCount++;
+                _pullBlockRequestCount++;
             }
         }
 
@@ -1567,7 +1570,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region ISettings メンバ
+        #region ISettings
 
         public void Load(string directoryPath)
         {
@@ -1745,7 +1748,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1773,7 +1776,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

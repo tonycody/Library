@@ -14,7 +14,7 @@ namespace Library
 
         protected abstract void Dispose(bool disposing);
 
-        #region IDisposable メンバ
+        #region IDisposable
 
         public void Dispose()
         {

@@ -6,13 +6,20 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class NodeCollection : LockedList<Node>, IEnumerable<Node>
+    public class NodeCollection : FilterList<Node>, IEnumerable<Node>
     {
         public NodeCollection() : base() { }
         public NodeCollection(int capacity) : base(capacity) { }
         public NodeCollection(IEnumerable<Node> collections) : base(collections) { }
 
-        #region IEnumerable<Node> メンバ
+        protected override bool Filter(Node item)
+        {
+            if (item == null) return true;
+
+            return false;
+        }
+
+        #region IEnumerable<Node>
 
         IEnumerator<Node> IEnumerable<Node>.GetEnumerator()
         {
@@ -24,7 +31,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable メンバ
+        #region IEnumerable
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {

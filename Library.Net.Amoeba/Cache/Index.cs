@@ -216,7 +216,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IIndex<Group, Header> メンバ
+        #region IIndex<Group, Header>
 
         IList<Group> IIndex<Group, Key>.Groups
         {
@@ -246,7 +246,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region ICompressionAlgorithm メンバ
+        #region ICompressionAlgorithm
 
         [DataMember(Name = "CompressionAlgorithm")]
         public CompressionAlgorithm CompressionAlgorithm
@@ -276,7 +276,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region ICryptoAlgorithm メンバ
+        #region ICryptoAlgorithm
 
         [DataMember(Name = "CryptoAlgorithm")]
         public CryptoAlgorithm CryptoAlgorithm
@@ -332,7 +332,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

@@ -1208,7 +1208,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region ISettings メンバ
+        #region ISettings
 
         public void Load(string directoryPath)
         {
@@ -1238,7 +1238,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable<Header> メンバ
+        #region IEnumerable<Header>
 
         public IEnumerator<Key> GetEnumerator()
         {
@@ -1261,7 +1261,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region IEnumerable メンバ
+        #region IEnumerable
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
@@ -1382,7 +1382,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1458,7 +1458,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1563,7 +1563,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1624,7 +1624,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            #region IThisLock メンバ
+            #region IThisLock
 
             public object ThisLock
             {
@@ -1643,7 +1643,7 @@ namespace Library.Net.Amoeba
             #endregion
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

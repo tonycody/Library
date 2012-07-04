@@ -43,6 +43,14 @@ namespace Library.Collections
             }
         }
 
+        public void TrimExcess()
+        {
+            lock (this.ThisLock)
+            {
+                _hashSet.TrimExcess();
+            }
+        }
+
         public bool Add(T item)
         {
             lock (this.ThisLock)
@@ -217,7 +225,7 @@ namespace Library.Collections
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {
