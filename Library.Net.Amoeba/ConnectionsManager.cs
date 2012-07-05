@@ -258,8 +258,8 @@ namespace Library.Net.Amoeba
                     contexts.Add(new InformationContext("PushBlockCount", _pushBlockCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
-                    contexts.Add(new InformationContext("PullBlocksLinkCount", _pullBlockLinkCount));
-                    contexts.Add(new InformationContext("PullBlocksRequestCount", _pullBlockRequestCount));
+                    contexts.Add(new InformationContext("PullBlockLinkCount", _pullBlockLinkCount));
+                    contexts.Add(new InformationContext("PullBlockRequestCount", _pullBlockRequestCount));
                     contexts.Add(new InformationContext("PullBlockCount", _pullBlockCount));
 
                     contexts.Add(new InformationContext("BlockCount", _cacheManager.Count));
