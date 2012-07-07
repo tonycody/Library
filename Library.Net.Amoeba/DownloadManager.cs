@@ -386,7 +386,7 @@ namespace Library.Net.Amoeba
                                     {
                                         if (File.Exists(fileName))
                                             File.Delete(fileName);
-                                        
+
                                         if (largeFlag)
                                         {
                                             throw new Exception();
@@ -431,7 +431,7 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("_temp_{0}", item.Seed.Name))))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
@@ -614,7 +614,7 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("_temp_{0}", item.Seed.Name))))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
@@ -643,7 +643,7 @@ namespace Library.Net.Amoeba
                                         {
                                             throw new Exception();
                                         }
-                                        
+
                                         continue;
                                     }
                                     catch (Exception)

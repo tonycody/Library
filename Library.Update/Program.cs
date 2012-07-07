@@ -47,7 +47,7 @@ namespace Library.Update
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message, "Library.Update Error");
+                MessageBox.Show(e.Message, "Library.Update Error", MessageBoxButtons.OK);
             }
         }
     }

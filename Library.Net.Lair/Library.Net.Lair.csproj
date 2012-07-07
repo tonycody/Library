@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{82230C99-6599-4130-AAC9-FC926ABC0724}</ProjectGuid>
+    <ProjectGuid>{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Library.Net.Amoeba</RootNamespace>
