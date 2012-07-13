@@ -274,5 +274,40 @@ namespace Library.Net.Lair
                 return null;
             }
         }
+
+        public static string ToChannelString(Channel item)
+        {
+            if (item == null) throw new ArgumentNullException("Channel");
+
+            try
+            {
+                using (Stream stream = LairConverter.ToStream<Channel>(item))
+                {
+                    return "Channel@" + LairConverter.ToBase64String(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Channel FromChannelString(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (!item.StartsWith("Channel@")) throw new ArgumentException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
+                {
+                    return LairConverter.FromStream<Channel>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
     }
 }

@@ -11,8 +11,6 @@ namespace Library.Security
     public abstract class CertificateItemBase<T> : ItemBase<T>
         where T : CertificateItemBase<T>
     {
-        private volatile Certificate _certificate;
-
         public void CreateCertificate(DigitalSignature digitalSignature)
         {
             if (digitalSignature == null)
@@ -44,18 +42,6 @@ namespace Library.Security
         }
 
         protected abstract Stream GetCertificateStream();
-
-        [DataMember(Name = "Certificate")]
-        public Certificate Certificate
-        {
-            get
-            {
-                return _certificate;
-            }
-            protected set
-            {
-                _certificate = value;
-            }
-        }
+        public abstract Certificate Certificate { get; protected set; }
     }
 }

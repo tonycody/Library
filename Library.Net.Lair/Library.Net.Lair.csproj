@@ -8,8 +8,8 @@
     <ProjectGuid>{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Library.Net.Amoeba</RootNamespace>
-    <AssemblyName>Library.Net.Amoeba</AssemblyName>
+    <RootNamespace>Library.Net.Lair</RootNamespace>
+    <AssemblyName>Library.Net.Lair</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
@@ -39,6 +39,13 @@
     <ErrorReport>none</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System">

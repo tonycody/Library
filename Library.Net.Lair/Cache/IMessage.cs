@@ -10,7 +10,6 @@ namespace Library.Net.Lair
         where TChannel : IChannel
     {
         TChannel Channel { get; }
-        string Title { get; }
         DateTime CreationTime { get; }
         string Content { get; }
     }

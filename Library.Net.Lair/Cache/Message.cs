@@ -16,24 +16,25 @@ namespace Library.Net.Lair
         private enum SerializeId : byte
         {
             Channel = 0,
-            Title = 1,
-            CreationTime = 2,
-            Content = 3,
+            CreationTime = 1,
+            Content = 2,
 
-            Certificate = 4,
+            Certificate = 3,
         }
 
         private Channel _channel = null;
-        private string _title = null;
         private DateTime _creationTime = DateTime.MinValue;
         private string _content = null;
 
+        private Certificate _certificate;
+
+        private bool _hash_recache = false;
+        private byte[] _hash_sha512 = null;
         private int _hashCode = 0;
 
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxTitleLength = 256;
         public const int MaxContentLength = 1024;
 
         public Message()
@@ -59,13 +60,6 @@ namespace Library.Net.Lair
                         if (id == (byte)SerializeId.Channel)
                         {
                             this.Channel = Channel.Import(rangeStream, bufferManager);
-                        }
-                        else if (id == (byte)SerializeId.Title)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Title = reader.ReadToEnd();
-                            }
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
@@ -108,25 +102,6 @@ namespace Library.Net.Lair
                     bufferStream.WriteByte((byte)SerializeId.Channel);
 
                     streams.Add(new AddStream(bufferStream, exportStream));
-                }
-                // Title
-                if (this.Title != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
-                    using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
-                    {
-                        writer.Write(this.Title);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Title);
-
-                    streams.Add(bufferStream);
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
@@ -205,7 +180,6 @@ namespace Library.Net.Lair
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Channel != other.Channel
-                || this.Title != other.Title
                 || this.CreationTime != other.CreationTime
                 || this.Content != other.Content
 
@@ -221,7 +195,7 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                return this.Title;
+                return this.Content;
             }
         }
 
@@ -257,6 +231,54 @@ namespace Library.Net.Lair
                 }
             }
         }
+        
+        [DataMember(Name = "Certificate")]
+        public override Certificate Certificate
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _certificate;
+                }
+            }
+            protected set
+            {
+                lock (this.ThisLock)
+                {
+                    _hash_recache = true;
+
+                    _certificate = value;
+                }
+            }
+        }
+
+        public bool VerifyKey(Key key)
+        {
+            lock (this.ThisLock)
+            {
+                if (_hash_recache)
+                {
+                    using (BufferManager bufferManager = new BufferManager())
+                    using (Stream stream = this.Export(bufferManager))
+                    {
+                        if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                        {
+                            _hash_sha512 = Sha512.ComputeHash(stream);
+                        }
+                    }
+
+                    _hash_recache = false;
+                }
+
+                if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                {
+                    return Collection.Equals(key.Hash, _hash_sha512);
+                }
+
+                return false;
+            }
+        }
 
         #region IMessage<Channel>
 
@@ -274,33 +296,9 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    _channel = value;
-                }
-            }
-        }
+                    _hash_recache = true;
 
-        [DataMember(Name = "Title")]
-        public string Title
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _title;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    if (value != null && value.Length > Message.MaxTitleLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _title = value;
-                    }
+                    _channel = value;
                 }
             }
         }
@@ -319,6 +317,8 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
+                    _hash_recache = true;
+
                     var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                     _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                 }
@@ -345,6 +345,8 @@ namespace Library.Net.Lair
                     }
                     else
                     {
+                        _hash_recache = true;
+
                         _content = value;
                     }
                 }

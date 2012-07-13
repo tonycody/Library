@@ -23,6 +23,8 @@ namespace Library.Net.Connection.SecureVersion1
         private byte[] _key = null;
         private DateTime _creationTime = DateTime.MinValue;
 
+        private Certificate _certificate;
+
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
@@ -191,6 +193,25 @@ namespace Library.Net.Connection.SecureVersion1
                 finally
                 {
                     this.Certificate = temp;
+                }
+            }
+        }
+
+        [DataMember(Name = "Certificate")]
+        public override Certificate Certificate
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _certificate;
+                }
+            }
+            protected set
+            {
+                lock (this.ThisLock)
+                {
+                    _certificate = value;
                 }
             }
         }

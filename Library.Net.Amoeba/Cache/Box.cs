@@ -32,6 +32,8 @@ namespace Library.Net.Amoeba
         private SeedCollection _seeds = null;
         private BoxCollection _boxes = null;
 
+        private Certificate _certificate;
+
         private int _hashCode = 0;
 
         private object _thisLock;
@@ -276,6 +278,25 @@ namespace Library.Net.Amoeba
                 finally
                 {
                     this.Certificate = temp;
+                }
+            }
+        }
+
+        [DataMember(Name = "Certificate")]
+        public override Certificate Certificate
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _certificate;
+                }
+            }
+            protected set
+            {
+                lock (this.ThisLock)
+                {
+                    _certificate = value;
                 }
             }
         }

@@ -26,6 +26,8 @@ namespace Library.Net.Lair
         private DateTime _creationTime = DateTime.MinValue;
         private KeyCollection _keys = null;
 
+        private Certificate _certificate;
+
         private int _hashCode = 0;
 
         private object _thisLock;
@@ -212,6 +214,25 @@ namespace Library.Net.Lair
                 finally
                 {
                     this.Certificate = temp;
+                }
+            }
+        }
+
+        [DataMember(Name = "Certificate")]
+        public override Certificate Certificate
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _certificate;
+                }
+            }
+            protected set
+            {
+                lock (this.ThisLock)
+                {
+                    _certificate = value;
                 }
             }
         }
