@@ -1183,8 +1183,8 @@ namespace Library.Net.Lair
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                messages = new List<Message>();
-                filetrs = new List<Filter>();
+                messages = _settings.Messages.Where(n => n.Channel == channel).ToList();
+                filetrs = _settings.Filters.Where(n => n.Channel == channel).ToList();
             }
         }
 
@@ -1193,6 +1193,13 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                var now = DateTime.UtcNow;
+
+                if (message == null || message.Channel.Id == null || string.IsNullOrWhiteSpace(message.Channel.Name)
+                    || string.IsNullOrWhiteSpace(message.Content)
+                    || (now - message.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                    || !message.VerifyCertificate()) return;
 
                 _settings.Messages.Add(message);
             }
@@ -1203,6 +1210,13 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                
+                var now = DateTime.UtcNow;
+
+                if (filter == null || filter.Channel.Id == null || string.IsNullOrWhiteSpace(filter.Channel.Name)
+                    || filter.Keys.Count == 0
+                    || (now - filter.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                    || !filter.VerifyCertificate()) return;
 
                 _settings.Filters.Add(filter);
             }

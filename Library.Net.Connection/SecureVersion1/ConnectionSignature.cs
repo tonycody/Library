@@ -197,7 +197,6 @@ namespace Library.Net.Connection.SecureVersion1
             }
         }
 
-        [DataMember(Name = "Certificate")]
         public override Certificate Certificate
         {
             get

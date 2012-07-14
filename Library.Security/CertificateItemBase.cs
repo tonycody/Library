@@ -42,6 +42,8 @@ namespace Library.Security
         }
 
         protected abstract Stream GetCertificateStream();
+        
+        [DataMember(Name = "Certificate")]
         public abstract Certificate Certificate { get; protected set; }
     }
 }

@@ -437,7 +437,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        [DataMember(Name = "Certificate")]
         public override Certificate Certificate
         {
             get

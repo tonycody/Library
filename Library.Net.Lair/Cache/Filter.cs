@@ -218,7 +218,6 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Certificate")]
         public override Certificate Certificate
         {
             get

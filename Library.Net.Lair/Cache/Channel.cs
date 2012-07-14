@@ -163,6 +163,7 @@ namespace Library.Net.Lair
 
         #region IChannel
 
+        [DataMember(Name = "Id")]
         public byte[] Id
         {
             get
@@ -206,6 +207,7 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "Name")]
         public string Name
         {
             get
