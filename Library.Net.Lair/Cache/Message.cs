@@ -35,7 +35,7 @@ namespace Library.Net.Lair
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxContentLength = 1024;
+        public const int MaxContentLength = 8192;
 
         public Message()
         {
