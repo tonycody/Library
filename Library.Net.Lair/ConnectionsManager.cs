@@ -37,6 +37,8 @@ namespace Library.Net.Lair
         private CirculationCollection<Node> _removeNodes;
         private LockedDictionary<Node, int> _nodesStatus;
 
+        private HashSet<Channel> _pushChannelsRequestList = new HashSet<Channel>();
+
         private volatile Thread _connectionsManagerThread = null;
         private volatile Thread _createClientConnection1Thread = null;
         private volatile Thread _createClientConnection2Thread = null;
@@ -53,12 +55,12 @@ namespace Library.Net.Lair
         private long _sentByteCount = 0;
 
         private volatile int _pushNodeCount;
-        private volatile int _pushMessageRequestCount;
+        private volatile int _pushChannelRequestCount;
         private volatile int _pushMessageCount;
         private volatile int _pushFilterCount;
 
         private volatile int _pullNodeCount;
-        private volatile int _pullMessageRequestCount;
+        private volatile int _pullChannelRequestCount;
         private volatile int _pullMessageCount;
         private volatile int _pullFilterCount;
 
@@ -249,19 +251,21 @@ namespace Library.Net.Lair
                     List<InformationContext> contexts = new List<InformationContext>();
 
                     contexts.Add(new InformationContext("PushNodeCount", _pushNodeCount));
-                    contexts.Add(new InformationContext("PushMessageRequestCount", _pushMessageRequestCount));
+                    contexts.Add(new InformationContext("PushChannelRequestCount", _pushChannelRequestCount));
                     contexts.Add(new InformationContext("PushMessageCount", _pushMessageCount));
                     contexts.Add(new InformationContext("PushFilterCount", _pushFilterCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
-                    contexts.Add(new InformationContext("PushMessageRequestCount", _pullMessageRequestCount));
-                    contexts.Add(new InformationContext("PushMessageCount", _pullMessageCount));
-                    contexts.Add(new InformationContext("PushFilterCount", _pullFilterCount));
+                    contexts.Add(new InformationContext("PullChannelRequestCount", _pullChannelRequestCount));
+                    contexts.Add(new InformationContext("PullMessageCount", _pullMessageCount));
+                    contexts.Add(new InformationContext("PullFilterCount", _pullFilterCount));
 
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
 
                     contexts.Add(new InformationContext("OtherNodeCount", _routeTable.Count));
+                    contexts.Add(new InformationContext("MessageCount", _settings.Messages.Values.Sum(n => n.Count)));
+                    contexts.Add(new InformationContext("FilterCount", _settings.Filters.Values.Sum(n => n.Count)));
 
                     return new Information(contexts);
                 }
@@ -738,12 +742,34 @@ namespace Library.Net.Lair
 
                     var now = DateTime.UtcNow;
 
-                    foreach (var m in _settings.Messages.ToArray())
+                    foreach (var c in _settings.Messages.Keys.ToArray())
                     {
-                        if ((now - m.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                        var list = _settings.Messages[c];
+
+                        foreach (var m in list.ToArray())
                         {
-                            _settings.Messages.Remove(m);
+                            if ((now - m.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                            {
+                                list.Remove(m);
+                            }
                         }
+
+                        if (list.Count == 0) _settings.Messages.Remove(c);
+                    }
+
+                    foreach (var c in _settings.Filters.Keys.ToArray())
+                    {
+                        var list = _settings.Filters[c];
+
+                        foreach (var f in list.ToArray())
+                        {
+                            if ((now - f.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                            {
+                                list.Remove(f);
+                            }
+                        }
+
+                        if (list.Count == 0) _settings.Filters.Remove(c);
                     }
                 }
 
@@ -753,14 +779,14 @@ namespace Library.Net.Lair
 
                     HashSet<Channel> channels = new HashSet<Channel>();
 
-                    foreach (var m in _settings.Messages)
+                    foreach (var c in _settings.Messages.Keys)
                     {
-                        channels.Add(m.Channel);
+                        channels.Add(c);
                     }
 
-                    foreach (var f in _settings.Filters)
+                    foreach (var c in _settings.Filters.Keys)
                     {
-                        channels.Add(f.Channel);
+                        channels.Add(c);
                     }
 
                     foreach (var c in channels)
@@ -785,7 +811,7 @@ namespace Library.Net.Lair
 
                     {
                         {
-                            var list = _settings.Messages.Select(n => n.Channel)
+                            var list = _pushChannelsRequestList
                                 .OrderBy(n => _random.Next()).ToList();
 
                             for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
@@ -946,8 +972,10 @@ namespace Library.Net.Lair
                                 {
                                     connectionManager.PushChannelsRequest(tempList);
 
+                                    _pushChannelsRequestList.ExceptWith(tempList);
+
                                     Debug.WriteLine(string.Format("ConnectionManager: Push ChannelsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
-                                    _pushMessageRequestCount += tempList.Count;
+                                    _pushChannelRequestCount += tempList.Count;
                                 }
                                 catch (Exception e)
                                 {
@@ -971,35 +999,57 @@ namespace Library.Net.Lair
                             HashSet<Message> messages = new HashSet<Message>();
                             HashSet<Filter> filters = new HashSet<Filter>();
 
-                            foreach (var m in _settings.Messages)
+                            foreach (var c in channels)
                             {
-                                if (channels.Contains(m.Channel) && !messageManager.PushMessages.Contains(m)
-                                    && messages.Count < 8192)
+                                if (!_settings.Messages.ContainsKey(c)) continue;
+
+                                foreach (var m in _settings.Messages[c])
                                 {
-                                    messages.Add(m);
+                                    if (!messageManager.PushMessages.Contains(m))
+                                    {
+                                        messages.Add(m);
+                                    }
                                 }
                             }
 
-                            foreach (var f in _settings.Filters)
+                            messages.IntersectWith(messages.OrderBy(n => _random.Next()).Take(8192));
+
+                            foreach (var c in channels)
                             {
-                                if (channels.Contains(f.Channel) && !messageManager.PushFilters.Contains(f)
-                                    && filters.Count < 8192)
+                                if (!_settings.Filters.ContainsKey(c)) continue;
+
+                                foreach (var f in _settings.Filters[c])
                                 {
-                                    filters.Add(f);
+                                    if (!messageManager.PushFilters.Contains(f))
+                                    {
+                                        filters.Add(f);
+                                    }
                                 }
                             }
 
-                            connectionManager.PushMessages(messages);
+                            filters.IntersectWith(filters.OrderBy(n => _random.Next()).Take(8192));
 
-                            Debug.WriteLine(string.Format("ConnectionManager: Push Messages ({0})", messages.Count));
-                            _pushMessageCount += messages.Count;
+                            if (messages.Count != 0)
+                            {
+                                connectionManager.PushMessages(messages);
 
-                            connectionManager.PushFilters(filters);
+                                Debug.WriteLine(string.Format("ConnectionManager: Push Messages ({0})", messages.Count));
+                                _pushMessageCount += messages.Count;
+                            }
 
-                            Debug.WriteLine(string.Format("ConnectionManager: Push Filters ({0})", filters.Count));
-                            _pushFilterCount += filters.Count;
+                            if (filters.Count != 0)
+                            {
+                                connectionManager.PushFilters(filters);
 
-                            messageManager.PullChannelsRequest.Clear();
+                                Debug.WriteLine(string.Format("ConnectionManager: Push Filters ({0})", filters.Count));
+                                _pushFilterCount += filters.Count;
+                            }
+
+                            if (messages.Count != 0 || filters.Count != 0)
+                            {
+                                messageManager.PullChannelsRequest.Clear();
+                            }
+
                             messageManager.PushMessages.AddRange(messages);
                             messageManager.Priority -= messages.Count;
                             messageManager.PushFilters.AddRange(filters);
@@ -1062,7 +1112,7 @@ namespace Library.Net.Lair
                 if (c == null || c.Id == null || string.IsNullOrWhiteSpace(c.Name)) continue;
 
                 _messagesManager[connectionManager.Node].PullChannelsRequest.Add(c);
-                _pullMessageRequestCount++;
+                _pullChannelRequestCount++;
             }
         }
 
@@ -1082,9 +1132,13 @@ namespace Library.Net.Lair
                 if (m == null || m.Channel.Id == null || string.IsNullOrWhiteSpace(m.Channel.Name)
                     || string.IsNullOrWhiteSpace(m.Content)
                     || (now - m.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                    || (m.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || !m.VerifyCertificate()) continue;
 
-                _settings.Messages.Add(m);
+                if (!_settings.Messages.ContainsKey(m.Channel))
+                    _settings.Messages[m.Channel] = new LockedHashSet<Message>();
+
+                _settings.Messages[m.Channel].Add(m);
                 _messagesManager[connectionManager.Node].Priority++;
 
                 _pullMessageCount++;
@@ -1107,9 +1161,32 @@ namespace Library.Net.Lair
                 if (f == null || f.Channel.Id == null || string.IsNullOrWhiteSpace(f.Channel.Name)
                     || f.Keys.Count == 0
                     || (now - f.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                    || (f.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || !f.VerifyCertificate()) continue;
 
-                _settings.Filters.Add(f);
+                if (!_settings.Filters.ContainsKey(f.Channel))
+                    _settings.Filters[f.Channel] = new LockedHashSet<Filter>();
+
+                _settings.Filters[f.Channel].Add(f);
+
+                Dictionary<byte[], Filter> dic = new Dictionary<byte[], Filter>(new BytesEqualityComparer());
+
+                foreach (var f2 in _settings.Filters[f.Channel])
+                {
+                    if (!dic.ContainsKey(f2.Certificate.PublicKey))
+                    {
+                        dic[f2.Certificate.PublicKey] = f2;
+                    }
+                    else
+                    {
+                        var f3 = dic[f2.Certificate.PublicKey];
+
+                        if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.PublicKey] = f2;
+                    }
+                }
+
+                _settings.Filters[f.Channel].Clear();
+                _settings.Filters[f.Channel].UnionWith(dic.Values);
                 _messagesManager[connectionManager.Node].Priority++;
 
                 _pullFilterCount++;
@@ -1183,8 +1260,19 @@ namespace Library.Net.Lair
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                messages = _settings.Messages.Where(n => n.Channel == channel).ToList();
-                filetrs = _settings.Filters.Where(n => n.Channel == channel).ToList();
+                _pushChannelsRequestList.Add(channel);
+
+                var tm = new List<Message>();
+                var tf = new List<Filter>();
+
+                if (_settings.Messages.ContainsKey(channel))
+                    tm.AddRange(_settings.Messages[channel]);
+
+                if (_settings.Filters.ContainsKey(channel))
+                    tf.AddRange(_settings.Filters[channel]);
+
+                messages = tm;
+                filetrs = tf;
             }
         }
 
@@ -1199,9 +1287,13 @@ namespace Library.Net.Lair
                 if (message == null || message.Channel.Id == null || string.IsNullOrWhiteSpace(message.Channel.Name)
                     || string.IsNullOrWhiteSpace(message.Content)
                     || (now - message.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                    || (message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || !message.VerifyCertificate()) return;
 
-                _settings.Messages.Add(message);
+                if (!_settings.Messages.ContainsKey(message.Channel))
+                    _settings.Messages[message.Channel] = new LockedHashSet<Message>();
+
+                _settings.Messages[message.Channel].Add(message);
             }
         }
 
@@ -1210,15 +1302,38 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                
+
                 var now = DateTime.UtcNow;
 
                 if (filter == null || filter.Channel.Id == null || string.IsNullOrWhiteSpace(filter.Channel.Name)
                     || filter.Keys.Count == 0
                     || (now - filter.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                    || (filter.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || !filter.VerifyCertificate()) return;
 
-                _settings.Filters.Add(filter);
+                if (!_settings.Filters.ContainsKey(filter.Channel))
+                    _settings.Filters[filter.Channel] = new LockedHashSet<Filter>();
+
+                _settings.Filters[filter.Channel].Add(filter);
+
+                Dictionary<byte[], Filter> dic = new Dictionary<byte[], Filter>(new BytesEqualityComparer());
+
+                foreach (var f2 in _settings.Filters[filter.Channel])
+                {
+                    if (!dic.ContainsKey(f2.Certificate.PublicKey))
+                    {
+                        dic[f2.Certificate.PublicKey] = f2;
+                    }
+                    else
+                    {
+                        var f3 = dic[f2.Certificate.PublicKey];
+
+                        if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.PublicKey] = f2;
+                    }
+                }
+
+                _settings.Filters[filter.Channel].Clear();
+                _settings.Filters[filter.Channel].UnionWith(dic.Values);
             }
         }
 
@@ -1366,8 +1481,8 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingsContext<int>() { Name = "UploadingConnectionCountLowerLimit", Value = 3 },
                     new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 3 },
                     new Library.Configuration.SettingsContext<ChannelCollection>() { Name = "Channels", Value = new ChannelCollection() },
-                    new Library.Configuration.SettingsContext<LockedHashSet<Message>>() { Name = "Messages", Value = new LockedHashSet<Message>() },
-                    new Library.Configuration.SettingsContext<LockedHashSet<Filter>>() { Name = "Filters", Value = new LockedHashSet<Filter>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Message>>>() { Name = "Messages", Value = new LockedDictionary<Channel, LockedHashSet<Message>>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Filter>>>() { Name = "Filters", Value = new LockedDictionary<Channel, LockedHashSet<Filter>>() },
                 })
             {
 
@@ -1483,24 +1598,24 @@ namespace Library.Net.Lair
                 }
             }
 
-            public LockedHashSet<Message> Messages
+            public LockedDictionary<Channel, LockedHashSet<Message>> Messages
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedHashSet<Message>)this["Messages"];
+                        return (LockedDictionary<Channel, LockedHashSet<Message>>)this["Messages"];
                     }
                 }
             }
 
-            public LockedHashSet<Filter> Filters
+            public LockedDictionary<Channel, LockedHashSet<Filter>> Filters
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedHashSet<Filter>)this["Filters"];
+                        return (LockedDictionary<Channel, LockedHashSet<Filter>>)this["Filters"];
                     }
                 }
             }
@@ -1512,6 +1627,41 @@ namespace Library.Net.Lair
                 get
                 {
                     return _thisLock;
+                }
+            }
+
+            #endregion
+        }
+
+        private class BytesEqualityComparer : IEqualityComparer<byte[]>
+        {
+            #region IEqualityComparer<byte[]>
+
+            public bool Equals(byte[] x, byte[] y)
+            {
+                if ((x == null) != (y == null)) return false;
+
+                if (x != null && y != null)
+                {
+                    if (!Collection.Equals(x, y))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            public int GetHashCode(byte[] obj)
+            {
+                if (obj != null && obj.Length != 0)
+                {
+                    if (obj.Length >= 2) return BitConverter.ToUInt16(obj, 0);
+                    else return obj[0];
+                }
+                else
+                {
+                    return 0;
                 }
             }
 
