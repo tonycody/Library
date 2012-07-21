@@ -252,7 +252,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public bool VerifyKey(Key key)
+        public byte[] GetHash(HashAlgorithm hashAlgorithm)
         {
             lock (this.ThisLock)
             {
@@ -261,18 +261,39 @@ namespace Library.Net.Lair
                     using (BufferManager bufferManager = new BufferManager())
                     using (Stream stream = this.Export(bufferManager))
                     {
-                        if (key.HashAlgorithm == HashAlgorithm.Sha512)
-                        {
-                            _hash_sha512 = Sha512.ComputeHash(stream);
-                        }
+                        _hash_sha512 = Sha512.ComputeHash(stream);
                     }
 
                     _hash_recache = false;
                 }
 
-                if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                if (hashAlgorithm == HashAlgorithm.Sha512)
                 {
-                    return Collection.Equals(key.Hash, _hash_sha512);
+                    return _hash_sha512;
+                }
+
+                return null;
+            }
+        }
+
+        public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
+        {
+            lock (this.ThisLock)
+            {
+                if (_hash_recache)
+                {
+                    using (BufferManager bufferManager = new BufferManager())
+                    using (Stream stream = this.Export(bufferManager))
+                    {
+                        _hash_sha512 = Sha512.ComputeHash(stream);
+                    }
+
+                    _hash_recache = false;
+                }
+
+                if (hashAlgorithm == HashAlgorithm.Sha512)
+                {
+                    return Collection.Equals(hash, _hash_sha512);
                 }
 
                 return false;

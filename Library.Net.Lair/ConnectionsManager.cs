@@ -1159,7 +1159,6 @@ namespace Library.Net.Lair
             foreach (var f in e.Filters.Take(_maxRequestCount))
             {
                 if (f == null || f.Channel.Id == null || string.IsNullOrWhiteSpace(f.Channel.Name)
-                    || f.Keys.Count == 0
                     || (now - f.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || (f.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || !f.VerifyCertificate()) continue;
@@ -1266,10 +1265,21 @@ namespace Library.Net.Lair
                 var tf = new List<Filter>();
 
                 if (_settings.Messages.ContainsKey(channel))
-                    tm.AddRange(_settings.Messages[channel]);
+                {
+                    var list = _settings.Messages[channel].ToList();
+
+                    list.Sort(new Comparison<Message>((Message x, Message y) =>
+                    {
+                        return y.CreationTime.CompareTo(x.CreationTime);
+                    }));
+
+                    tm.AddRange(list.Take(1024));
+                }
 
                 if (_settings.Filters.ContainsKey(channel))
+                {
                     tf.AddRange(_settings.Filters[channel]);
+                }
 
                 messages = tm;
                 filetrs = tf;
@@ -1306,7 +1316,6 @@ namespace Library.Net.Lair
                 var now = DateTime.UtcNow;
 
                 if (filter == null || filter.Channel.Id == null || string.IsNullOrWhiteSpace(filter.Channel.Name)
-                    || filter.Keys.Count == 0
                     || (now - filter.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || (filter.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || !filter.VerifyCertificate()) return;
