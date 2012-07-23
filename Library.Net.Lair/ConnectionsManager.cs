@@ -345,7 +345,7 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (_searchNodeStopwatch.Elapsed.TotalSeconds > 10 || !_searchNodeStopwatch.IsRunning)
+                if (!_searchNodeStopwatch.IsRunning || _searchNodeStopwatch.Elapsed.TotalSeconds > 10)
                 {
                     lock (_connectionsNodes.ThisLock)
                     {
@@ -380,31 +380,34 @@ namespace Library.Net.Lair
                 }
             }
 
-            var requestNodes = Kademlia<Node>.Sort(this.BaseNode, id, _searchNodes).ToList();
-            var returnNodes = new List<Node>();
-
-            foreach (var item in requestNodes)
+            lock (this.ThisLock)
             {
-                if (_connectionsNodes.Contains(item))
-                {
-                    returnNodes.Add(item);
-                }
-                else
-                {
-                    var list = _connectionsNodes.Where(n => _messagesManager[n].SurroundingNodes.Contains(item)).ToList();
+                var requestNodes = Kademlia<Node>.Sort(this.BaseNode, id, _searchNodes).ToList();
+                var returnNodes = new List<Node>();
 
-                    list.Sort(new Comparison<Node>((Node x, Node y) =>
+                foreach (var item in requestNodes)
+                {
+                    if (_connectionsNodes.Contains(item))
                     {
-                        return _responseTimeDic[x].CompareTo(_responseTimeDic[y]);
-                    }));
+                        returnNodes.Add(item);
+                    }
+                    else
+                    {
+                        var list = _connectionsNodes.Where(n => _messagesManager[n].SurroundingNodes.Contains(item)).ToList();
 
-                    returnNodes.AddRange(list.Where(n => !returnNodes.Contains(n)));
+                        list.Sort(new Comparison<Node>((Node x, Node y) =>
+                        {
+                            return _responseTimeDic[x].CompareTo(_responseTimeDic[y]);
+                        }));
+
+                        returnNodes.AddRange(list.Where(n => !returnNodes.Contains(n)));
+                    }
+
+                    if (returnNodes.Count >= count) break;
                 }
 
-                if (returnNodes.Count >= count) break;
+                return returnNodes.Take(count);
             }
-
-            return returnNodes.Take(count);
         }
 
         //private IEnumerable<Node> GetSearchNode(byte[] id, int count)
@@ -838,24 +841,30 @@ namespace Library.Net.Lair
 
                     {
                         LockedDictionary<Node, LockedHashSet<Channel>> pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
-                        LockedDictionary<Node, LockedHashSet<Channel>> pushFiltersRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
 
                         Parallel.ForEach(pushChannelsRequestList, new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
                         {
-                            List<Node> requestNodes = new List<Node>();
-
-                            var node = this.GetSearchNode(item.Id, 1).Where(n => !requestNodes.Contains(n)).FirstOrDefault();
-                            if (node != null) requestNodes.Add(node);
-
-                            for (int i = 0; i < requestNodes.Count; i++)
+                            try
                             {
-                                lock (pushChannelsRequestDictionary.ThisLock)
-                                {
-                                    if (!pushChannelsRequestDictionary.ContainsKey(requestNodes[i]))
-                                        pushChannelsRequestDictionary[requestNodes[i]] = new LockedHashSet<Channel>();
+                                List<Node> requestNodes = new List<Node>();
 
-                                    pushChannelsRequestDictionary[requestNodes[i]].Add(item);
+                                var node = this.GetSearchNode(item.Id, 1).FirstOrDefault();
+                                if (node != null) requestNodes.Add(node);
+
+                                for (int i = 0; i < requestNodes.Count; i++)
+                                {
+                                    lock (pushChannelsRequestDictionary.ThisLock)
+                                    {
+                                        if (!pushChannelsRequestDictionary.ContainsKey(requestNodes[i]))
+                                            pushChannelsRequestDictionary[requestNodes[i]] = new LockedHashSet<Channel>();
+
+                                        pushChannelsRequestDictionary[requestNodes[i]].Add(item);
+                                    }
                                 }
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e);
                             }
                         });
 
