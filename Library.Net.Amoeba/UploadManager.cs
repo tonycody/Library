@@ -229,8 +229,6 @@ namespace Library.Net.Amoeba
                                     {
                                         item2.State = UploadState.Completed;
 
-                                        _cacheManager.SetSeed(item2.Seed.DeepClone(), item2.FilePath, item2.Indexs);
-                                        item2.Indexs.Clear();
                                         _settings.UploadedSeeds.Add(item2.Seed.DeepClone());
                                     }
                                 }
@@ -327,6 +325,9 @@ namespace Library.Net.Amoeba
                                     }
 
                                     this.SetKeyCount(item);
+
+                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexs);
+                                    item.Indexs.Clear();
                                 }
 
                                 item.State = UploadState.Uploading;
@@ -552,6 +553,9 @@ namespace Library.Net.Amoeba
                                     }
 
                                     this.SetKeyCount(item);
+
+                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.FilePath, item.Indexs);
+                                    item.Indexs.Clear();
                                 }
 
                                 item.State = UploadState.Uploading;
@@ -642,7 +646,7 @@ namespace Library.Net.Amoeba
 
                                     index.CryptoAlgorithm = item.CryptoAlgorithm;
                                     index.CryptoKey = item.CryptoKey;
-                                 
+
                                     item.Indexs.Add(index);
                                 }
 

@@ -651,7 +651,7 @@ namespace Library.Net.Amoeba
                 {
                     var info = _settings.SeedInformation[i];
 
-                    if (_ids[id] == info.Path)
+                    if (path == info.Path)
                     {
                         _settings.SeedInformation.RemoveAt(i);
                         i--;
