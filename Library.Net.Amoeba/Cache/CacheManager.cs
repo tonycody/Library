@@ -16,9 +16,9 @@ namespace Library.Net.Amoeba
 {
     delegate void GetUsingKeysEventHandler(object sender, ref IList<Key> keys);
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
-    delegate void SetKeyEventHandler(object sender, Key key);
+    delegate void SetKeyEventHandler(object sender, IEnumerable<Key> keys);
     delegate void RemoveShareEventHandler(object sender, string path);
-    delegate void RemoveKeyEventHandler(object sender, Key key);
+    delegate void RemoveKeyEventHandler(object sender, IEnumerable<Key> keys);
     delegate bool WatchEventHandler(object sender);
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
@@ -28,8 +28,12 @@ namespace Library.Net.Amoeba
         private BufferManager _bufferManager;
         private HashSet<long> _spaceClusters;
         private Dictionary<int, string> _ids = new Dictionary<int, string>();
+        private volatile Dictionary<Key, string> _shareIndexLink = null;
+        private volatile HashSet<Key> _shareIndexHashSet = null;
         private int _id = 0;
 
+        private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
+        
         internal SetKeyEventHandler SetKeyEvent;
         internal RemoveShareEventHandler RemoveShareEvent;
         internal RemoveKeyEventHandler RemoveKeyEvent;
@@ -217,12 +221,26 @@ namespace Library.Net.Amoeba
 
                 Random random = new Random();
 
+                var keys = new HashSet<Key>();
+
+                keys.UnionWith(_settings.ClustersIndex.Keys);
+
+                foreach (var item in _settings.ShareIndex)
+                {
+                    keys.UnionWith(item.Value.KeyAndCluster.Keys);
+                }
+
+                var pathList = new HashSet<string>();
+
+                pathList.UnionWith(_settings.ShareIndex.Keys);
+
                 for (int i = 0; i < _settings.SeedInformation.Count; i++)
                 {
                     var info = _settings.SeedInformation[i];
                     bool flag = true;
 
-                    if (!(flag = this.Contains(info.Seed.Key))) goto Break;
+                    if (!(flag = pathList.Contains(info.Path))) goto Break;
+                    if (!(flag = keys.Contains(info.Seed.Key))) goto Break;
 
                     foreach (var index in info.Indexs)
                     {
@@ -232,7 +250,7 @@ namespace Library.Net.Amoeba
 
                             foreach (var key in group.Keys)
                             {
-                                if (this.Contains(key))
+                                if (keys.Contains(key))
                                 {
                                     count++;
                                     if (count >= group.InformationLength) goto End;
@@ -260,7 +278,7 @@ namespace Library.Net.Amoeba
                                 {
                                     foreach (var key in group.Keys
                                         .Reverse<Key>()
-                                        .Where(n => this.Contains(n))
+                                        .Where(n => keys.Contains(n))
                                         .Take(group.InformationLength))
                                     {
                                         this.SetPriority(key, 1);
@@ -302,31 +320,57 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 this.CheckSpace();
-                if (clusterCount <= _spaceClusters.Count)
-                    return;
+                if (clusterCount <= _spaceClusters.Count) return;
 
                 var usingHeaders = new HashSet<Key>(tempHeaders);
+                usingHeaders.UnionWith(_lockedKeys.Keys);
 
-                var removeHeaders = _settings.ClustersIndex.Keys.Where(n => !usingHeaders.Contains(n)).ToList();
+                var removeHeaders = _settings.ClustersIndex.Keys
+                    .Where(n => !usingHeaders.Contains(n) && _settings.ClustersIndex[n].Priority == 0)
+                    .ToList();
+
                 removeHeaders.Sort(new Comparison<Key>((x, y) =>
                 {
                     var xc = _settings.ClustersIndex[x];
                     var yc = _settings.ClustersIndex[y];
-
-                    if (xc.Priority != yc.Priority)
-                    {
-                        xc.Priority.CompareTo(yc.Priority);
-                    }
 
                     return xc.UpdateTime.CompareTo(yc.UpdateTime);
                 }));
 
                 foreach (var header in removeHeaders)
                 {
-                    if (clusterCount <= _spaceClusters.Count)
-                        return;
+                    if (clusterCount <= _spaceClusters.Count) return;
 
                     this.Remove(header);
+                }
+            }
+        }
+
+        public void Lock(Key key)
+        {
+            lock (this.ThisLock)
+            {
+                if (_lockedKeys.ContainsKey(key))
+                {
+                    _lockedKeys[key]++;
+                }
+                else
+                {
+                    _lockedKeys[key] = 1;
+                }
+            }
+        }
+
+        public void Unlock(Key key)
+        {
+            lock (this.ThisLock)
+            {
+                if (_lockedKeys.ContainsKey(key))
+                {
+                    if (--_lockedKeys[key] == 0)
+                    {
+                        _lockedKeys.Remove(key);
+                    }
                 }
             }
         }
@@ -360,11 +404,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual void OnSetKeyEvent(Key key)
+        protected virtual void OnSetKeyEvent(IEnumerable<Key> keys)
         {
             if (this.SetKeyEvent != null)
             {
-                this.SetKeyEvent(this, key);
+                this.SetKeyEvent(this, keys);
             }
         }
 
@@ -376,11 +420,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual void OnRemoveKeyEvent(Key key)
+        protected virtual void OnRemoveKeyEvent(IEnumerable<Key> keys)
         {
             if (this.RemoveKeyEvent != null)
             {
-                this.RemoveKeyEvent(this, key);
+                this.RemoveKeyEvent(this, keys);
             }
         }
 
@@ -419,9 +463,11 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (_settings.ClustersIndex.ContainsKey(key))
+                Clusters clusters = null;
+
+                if (_settings.ClustersIndex.TryGetValue(key, out clusters))
                 {
-                    return _settings.ClustersIndex[key].Priority;
+                    return clusters.Priority;
                 }
 
                 return 0;
@@ -432,9 +478,11 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (_settings.ClustersIndex.ContainsKey(key))
+                Clusters clusters = null;
+
+                if (_settings.ClustersIndex.TryGetValue(key, out clusters))
                 {
-                    _settings.ClustersIndex[key].Priority = priority;
+                    clusters.Priority = priority;
                 }
             }
         }
@@ -448,10 +496,11 @@ namespace Library.Net.Amoeba
                     return true;
                 }
 
-                foreach (var item in _settings.ShareIndex)
+                _shareIndexHashSetUpdate();
+
+                if (_shareIndexHashSet.Contains(key))
                 {
-                    if (item.Value.KeyAndCluster.ContainsKey(key))
-                        return true;
+                    return true;
                 }
 
                 return false;
@@ -460,17 +509,22 @@ namespace Library.Net.Amoeba
 
         public void Remove(Key key)
         {
+            bool flag = false;
+
             lock (this.ThisLock)
             {
-                if (!_settings.ClustersIndex.ContainsKey(key))
-                    return;
+                Clusters clusters = null;
 
-                var clus = _settings.ClustersIndex[key];
-                _settings.ClustersIndex.Remove(key);
-                _spaceClusters.UnionWith(clus.Indexs);
+                if (_settings.ClustersIndex.TryGetValue(key, out clusters))
+                {
+                    _settings.ClustersIndex.Remove(key);
+                    _spaceClusters.UnionWith(clusters.Indexs);
+
+                    flag = true;
+                }
             }
 
-            this.OnRemoveKeyEvent(key);
+            if (flag) this.OnRemoveKeyEvent(new Key[] { key });
         }
 
         public void Resize(long size)
@@ -587,6 +641,39 @@ namespace Library.Net.Amoeba
             this.CheckSpace();
         }
 
+        private void _shareIndexLinkUpdate()
+        {
+            lock (this.ThisLock)
+            {
+                if (_shareIndexLink != null) return;
+
+                _shareIndexLink = new Dictionary<Key, string>();
+
+                foreach (var item in _settings.ShareIndex)
+                {
+                    foreach (var key in item.Value.KeyAndCluster.Keys)
+                    {
+                        _shareIndexLink[key] = item.Key;
+                    }
+                }
+            }
+        }
+
+        private void _shareIndexHashSetUpdate()
+        {
+            lock (this.ThisLock)
+            {
+                if (_shareIndexHashSet != null) return;
+
+                _shareIndexHashSet = new HashSet<Key>();
+
+                foreach (var item in _settings.ShareIndex)
+                {
+                    _shareIndexHashSet.UnionWith(item.Value.KeyAndCluster.Keys);
+                }
+            }
+        }
+
         public KeyCollection Share(Stream inStream, string path, HashAlgorithm hashAlgorithm, int blockLength)
         {
             if (inStream == null) throw new ArgumentNullException("inStream");
@@ -627,60 +714,35 @@ namespace Library.Net.Amoeba
             {
                 _settings.ShareIndex.Add(path, shareIndex);
                 _ids.Add(_id++, path);
+
+                _shareIndexLink = null;
+                _shareIndexHashSet = null;
             }
 
-            foreach (var key in keys)
-            {
-                this.OnSetKeyEvent(key);
-            }
+            this.OnSetKeyEvent(keys);
 
             return keys;
         }
 
         public void RemoveShare(int id)
         {
-            List<Key> keyList = new List<Key>();
+            List<Key> keys = new List<Key>();
             string path = null;
 
             lock (this.ThisLock)
             {
-                keyList.AddRange(_settings.ShareIndex[_ids[id]].KeyAndCluster.Keys);
                 path = _ids[id];
+                keys.AddRange(_settings.ShareIndex[path].KeyAndCluster.Keys);
 
-                for (int i = 0; i < _settings.SeedInformation.Count; i++)
-                {
-                    var info = _settings.SeedInformation[i];
-
-                    if (path == info.Path)
-                    {
-                        _settings.SeedInformation.RemoveAt(i);
-                        i--;
-
-                        this.SetPriority(info.Seed.Key, 0);
-
-                        foreach (var index in info.Indexs)
-                        {
-                            foreach (var group in index.Groups)
-                            {
-                                foreach (var key in group.Keys)
-                                {
-                                    this.SetPriority(key, 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                _settings.ShareIndex.Remove(_ids[id]);
+                _settings.ShareIndex.Remove(path);
                 _ids.Remove(id);
+
+                _shareIndexLink = null;
+                _shareIndexHashSet = null;
             }
 
             this.OnRemoveShareEvent(path);
-
-            foreach (var key in keyList)
-            {
-                this.OnRemoveKeyEvent(key);
-            }
+            this.OnRemoveKeyEvent(keys);
         }
 
         public KeyCollection Encoding(Stream inStream,
@@ -803,7 +865,7 @@ namespace Library.Net.Amoeba
                 group.BlockLength = blockLength;
                 group.Length = keys.Sum(n => (long)this.GetLength(n));
                 group.Keys.AddRange(keys.Select(n => n.DeepClone()));
-
+                
                 return group;
             }
             else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
@@ -873,17 +935,28 @@ namespace Library.Net.Amoeba
                         }
                     }
 
+                    foreach (var key in keys)
+                    {
+                        this.Lock(key);
+                    }
+
                     for (int i = 0; i < parityBufferList.Count; i++)
                     {
                         if (hashAlgorithm == HashAlgorithm.Sha512)
                         {
-                            var header = new Key()
+                            var key = new Key()
                             {
                                 Hash = Sha512.ComputeHash(parityBufferList[i]),
                                 HashAlgorithm = hashAlgorithm
                             };
-                            this[header] = parityBufferList[i];
-                            parityHeaders.Add(header);
+
+                            lock (this.ThisLock)
+                            {
+                                this[key] = parityBufferList[i];
+                                this.Lock(key);
+                            }
+
+                            parityHeaders.Add(key);
                         }
                         else
                         {
@@ -1018,155 +1091,172 @@ namespace Library.Net.Amoeba
             }
         }
 
+        bool _creatingSpaceIsRun = false;
+
         public ArraySegment<byte> this[Key key]
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_settings.ClustersIndex.ContainsKey(key))
                     {
-                        var clusters = _settings.ClustersIndex[key];
+                        Clusters clusters = null;
 
-                        if ((clusters.Indexs[0] * CacheManager.ClusterSize) > _fileStream.Length)
+                        if (_settings.ClustersIndex.TryGetValue(key, out clusters))
                         {
-                            this.Remove(key);
-                            throw new BlockNotFoundException();
-                        }
-
-                        clusters.UpdateTime = DateTime.UtcNow;
-
-                        byte[] buffer = _bufferManager.TakeBuffer(clusters.Length);
-
-                        try
-                        {
-                            for (int i = 0, remain = clusters.Length; i < clusters.Indexs.Length; i++, remain -= CacheManager.ClusterSize)
+                            if ((clusters.Indexs[0] * CacheManager.ClusterSize) > _fileStream.Length)
                             {
-                                try
+                                this.Remove(key);
+                               
+                                throw new BlockNotFoundException();
+                            }
+
+                            clusters.UpdateTime = DateTime.UtcNow;
+
+                            byte[] buffer = _bufferManager.TakeBuffer(clusters.Length);
+
+                            try
+                            {
+                                for (int i = 0, remain = clusters.Length; i < clusters.Indexs.Length; i++, remain -= CacheManager.ClusterSize)
                                 {
-                                    if ((clusters.Indexs[i] * CacheManager.ClusterSize) > _fileStream.Length)
+                                    try
+                                    {
+                                        if ((clusters.Indexs[i] * CacheManager.ClusterSize) > _fileStream.Length)
+                                        {
+                                            this.Remove(key);
+                                          
+                                            throw new BlockNotFoundException();
+                                        }
+
+                                        int length = Math.Min(remain, CacheManager.ClusterSize);
+                                        _fileStream.Seek(clusters.Indexs[i] * CacheManager.ClusterSize, SeekOrigin.Begin);
+                                        _fileStream.Read(buffer, CacheManager.ClusterSize * i, length);
+                                    }
+                                    catch (EndOfStreamException)
                                     {
                                         this.Remove(key);
+                                       
                                         throw new BlockNotFoundException();
                                     }
-
-                                    int length = Math.Min(remain, CacheManager.ClusterSize);
-                                    _fileStream.Seek(clusters.Indexs[i] * CacheManager.ClusterSize, SeekOrigin.Begin);
-                                    _fileStream.Read(buffer, CacheManager.ClusterSize * i, length);
+                                    catch (IOException)
+                                    {
+                                        this.Remove(key);
+                                       
+                                        throw new BlockNotFoundException();
+                                    }
+                                    catch (ArgumentOutOfRangeException)
+                                    {
+                                        this.Remove(key);
+                                       
+                                        throw new BlockNotFoundException();
+                                    }
                                 }
-                                catch (EndOfStreamException)
-                                {
-                                    this.Remove(key);
-                                    throw new BlockNotFoundException();
-                                }
-                                catch (IOException)
-                                {
-                                    this.Remove(key);
-                                    throw new BlockNotFoundException();
-                                }
-                                catch (ArgumentOutOfRangeException)
-                                {
-                                    this.Remove(key);
-                                    throw new BlockNotFoundException();
-                                }
-                            }
-
-                            if (key.HashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
-                                {
-                                    this.Remove(key);
-                                    throw new BlockNotFoundException();
-                                }
-                            }
-
-                            return new ArraySegment<byte>(buffer, 0, clusters.Length);
-                        }
-                        catch (Exception)
-                        {
-                            _bufferManager.ReturnBuffer(buffer);
-
-                            throw;
-                        }
-                    }
-                    else if (_settings.ShareIndex.Any(n => n.Value.KeyAndCluster.ContainsKey(key)))
-                    {
-                        KeyValuePair<string, ShareIndex> target = new KeyValuePair<string, ShareIndex>();
-
-                        foreach (var item in _settings.ShareIndex)
-                        {
-                            if (item.Value.KeyAndCluster.ContainsKey(key))
-                            {
-                                target = item;
-                            }
-                        }
-
-                        byte[] buffer = _bufferManager.TakeBuffer(target.Value.BlockLength);
-
-                        try
-                        {
-                            using (Stream stream = new FileStream(target.Key, FileMode.Open, FileAccess.Read, FileShare.Read))
-                            {
-                                int i = target.Value.KeyAndCluster[key];
-
-                                stream.Seek((long)target.Value.BlockLength * i, SeekOrigin.Begin);
-
-                                int length = (int)Math.Min(stream.Length - stream.Position, target.Value.BlockLength);
-                                stream.Read(buffer, 0, length);
 
                                 if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                 {
-                                    if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
+                                    if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
                                     {
-                                        _settings.ShareIndex.Remove(target.Key);
+                                        this.Remove(key);
+                                      
                                         throw new BlockNotFoundException();
                                     }
                                 }
 
-                                return new ArraySegment<byte>(buffer, 0, length);
+                                return new ArraySegment<byte>(buffer, 0, clusters.Length);
+                            }
+                            catch (Exception)
+                            {
+                                _bufferManager.ReturnBuffer(buffer);
+
+                                throw;
                             }
                         }
-                        catch (Exception)
-                        {
-                            _bufferManager.ReturnBuffer(buffer);
+                    }
 
-                            throw new BlockNotFoundException();
+                    {
+                        string path = null;
+
+                        _shareIndexLinkUpdate();
+
+                        if (_shareIndexLink.TryGetValue(key, out path))
+                        {
+                            var shareIndex = _settings.ShareIndex[path];
+
+                            byte[] buffer = _bufferManager.TakeBuffer(shareIndex.BlockLength);
+
+                            try
+                            {
+                                using (Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+                                    int i = shareIndex.KeyAndCluster[key];
+
+                                    stream.Seek((long)shareIndex.BlockLength * i, SeekOrigin.Begin);
+
+                                    int length = (int)Math.Min(stream.Length - stream.Position, shareIndex.BlockLength);
+                                    stream.Read(buffer, 0, length);
+
+                                    if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                                    {
+                                        if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
+                                        {
+                                            foreach (var item in _ids)
+                                            {
+                                                if (item.Value == path)
+                                                {
+                                                    this.RemoveShare(item.Key);
+
+                                                    break;
+                                                }
+                                            }
+
+                                            throw new BlockNotFoundException();
+                                        }
+                                    }
+
+                                    return new ArraySegment<byte>(buffer, 0, length);
+                                }
+                            }
+                            catch (Exception)
+                            {
+                                _bufferManager.ReturnBuffer(buffer);
+
+                                throw new BlockNotFoundException();
+                            }
                         }
                     }
-                    else
-                    {
-                        throw new BlockNotFoundException();
-                    }
+
+                    throw new BlockNotFoundException();
                 }
             }
             set
             {
+                if (_spaceClusters.Count < 8192 && !_creatingSpaceIsRun) // 32KB(cluster size) * 8192(clusters count) = 256MB
+                {
+                    _creatingSpaceIsRun = true;
+
+                    ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
+                    {
+                        this.CreatingSpace(8192);
+
+                        _creatingSpaceIsRun = false;
+                    }));
+                }
+
                 lock (this.ThisLock)
                 {
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        if (!Collection.Equals(Sha512.ComputeHash(value), key.Hash))
-                            return;
+                        if (!Collection.Equals(Sha512.ComputeHash(value), key.Hash)) return;
                     }
 
-                    if (_settings.ClustersIndex.ContainsKey(key)
-                        || _settings.ShareIndex.Any(n => n.Value.KeyAndCluster.ContainsKey(key)))
-                    {
-                        return;
-                    }
+                    if (this.Contains(key)) return;
 
                     List<long> clusterList = new List<long>();
 
                     try
                     {
                         int count = (value.Count + CacheManager.ClusterSize - 1) / CacheManager.ClusterSize;
-
-                        if (_spaceClusters.Count < count)
-                        {
-                            this.CreatingSpace(Math.Max(count, 8192) - _spaceClusters.Count); // 32KB(cluster size) * 8192(clusters count) = 256MB
-                            if (_spaceClusters.Count < count)
-                                throw new SpaceNotFoundException();
-                        }
+                        if (_spaceClusters.Count < count) throw new SpaceNotFoundException();
 
                         clusterList.AddRange(_spaceClusters.Take(count));
                         _spaceClusters.ExceptWith(clusterList);
@@ -1190,9 +1280,13 @@ namespace Library.Net.Amoeba
 
                         _fileStream.Flush();
                     }
-                    catch (IOException)
+                    catch (SpaceNotFoundException e)
                     {
-                        _spaceClusters.UnionWith(clusterList);
+                        Log.Error(e);
+                    }
+                    catch (IOException e)
+                    {
+                        Log.Error(e);
                     }
 
                     var clusters = new Clusters();
@@ -1201,10 +1295,9 @@ namespace Library.Net.Amoeba
                     clusters.UpdateTime = DateTime.UtcNow;
                     clusters.Priority = 0;
                     _settings.ClustersIndex[key] = clusters;
-
                 }
 
-                this.OnSetKeyEvent(key);
+                this.OnSetKeyEvent(new Key[] { key });
             }
         }
 
@@ -1225,6 +1318,9 @@ namespace Library.Net.Amoeba
                 {
                     _ids.Add(_id++, item.Key);
                 }
+
+                _shareIndexLink = null;
+                _shareIndexHashSet = null;
             }
         }
 

@@ -603,6 +603,13 @@ namespace Library.Net.Amoeba
                 if (disposing)
                 {
                     this.Stop();
+
+                    _uploadManager.Dispose();
+                    _downloadManager.Dispose();
+                    _connectionsManager.Dispose();
+                    _cacheManager.Dispose();
+                    _serverManager.Dispose();
+                    _clientManager.Dispose();
                 }
 
                 _disposed = true;

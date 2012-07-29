@@ -29,6 +29,12 @@ namespace Library.Net.Amoeba
         private int _id = 0;
         private ManagerState _state = ManagerState.Stop;
 
+        private Thread _setThread;
+        private Thread _removeThread;
+
+        private WaitQueue<Key> _setKeys = new WaitQueue<Key>();
+        private WaitQueue<Key> _removeKeys = new WaitQueue<Key>();
+
         private bool _disposed = false;
         private object _thisLock = new object();
 
@@ -39,7 +45,7 @@ namespace Library.Net.Amoeba
             _bufferManager = bufferManager;
 
             _settings = new Settings();
-            
+
             _cacheManager.GetUsingKeysEvent += (object sender, ref IList<Key> headers) =>
             {
                 lock (this.ThisLock)
@@ -72,21 +78,67 @@ namespace Library.Net.Amoeba
                 }
             };
 
-            _cacheManager.SetKeyEvent += (object sender, Key otherKey) =>
+            _cacheManager.SetKeyEvent += (object sender, IEnumerable<Key> keys) =>
             {
-                lock (this.ThisLock)
+                foreach (var key in keys)
                 {
-                    _countCache.SetKey(otherKey, true);
+                    _setKeys.Enqueue(key);
                 }
             };
 
-            _cacheManager.RemoveKeyEvent += (object sender, Key otherKey) =>
+            _cacheManager.RemoveKeyEvent += (object sender, IEnumerable<Key> keys) =>
             {
-                lock (this.ThisLock)
+                foreach (var key in keys)
                 {
-                    _countCache.SetKey(otherKey, false);
+                    _removeKeys.Enqueue(key);
                 }
             };
+
+            _setThread = new Thread(new ThreadStart(() =>
+            {
+                try
+                {
+                    for (; ; )
+                    {
+                        var key = _setKeys.Dequeue();
+
+                        lock (this.ThisLock)
+                        {
+                            _countCache.SetKey(key, true);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+
+                }
+            }));
+            _setThread.Priority = ThreadPriority.BelowNormal;
+            _setThread.Name = "DownloadManager_SetThread";
+            _setThread.Start();
+
+            _removeThread = new Thread(new ThreadStart(() =>
+            {
+                try
+                {
+                    for (; ; )
+                    {
+                        var key = _removeKeys.Dequeue();
+
+                        lock (this.ThisLock)
+                        {
+                            _countCache.SetKey(key, false);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+
+                }
+            }));
+            _removeThread.Priority = ThreadPriority.BelowNormal;
+            _removeThread.Name = "DownloadManager_RemoveThread";
+            _removeThread.Start();
         }
 
         public string BaseDirectory
@@ -170,7 +222,7 @@ namespace Library.Net.Amoeba
                 }
             }
         }
-  
+
         public SeedCollection DownloadedSeeds
         {
             get
@@ -417,11 +469,11 @@ namespace Library.Net.Amoeba
                                         item.Indexs.Add(index);
 
                                         item.Rank++;
+
+                                        this.SetKeyCount(item);
+
+                                        item.State = DownloadState.Downloading;
                                     }
-
-                                    this.SetKeyCount(item);
-
-                                    item.State = DownloadState.Downloading;
                                 }
                                 else
                                 {
@@ -599,11 +651,11 @@ namespace Library.Net.Amoeba
                                         item.Indexs.Add(index);
 
                                         item.Rank++;
+
+                                        this.SetKeyCount(item);
+
+                                        item.State = DownloadState.Downloading;
                                     }
-
-                                    this.SetKeyCount(item);
-
-                                    item.State = DownloadState.Downloading;
                                 }
                                 else
                                 {
@@ -685,9 +737,11 @@ namespace Library.Net.Amoeba
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     item.State = DownloadState.Error;
+
+                    Log.Error(e);
                 }
             }
         }
@@ -814,8 +868,8 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                _ids.Clear();
                 _id = 0;
+                _ids.Clear();
 
                 foreach (var item in _settings.DownloadItems)
                 {
@@ -926,6 +980,12 @@ namespace Library.Net.Amoeba
                 if (disposing)
                 {
                     this.Stop();
+
+                    _setKeys.Dispose();
+                    _removeKeys.Dispose();
+
+                    _setThread.Join();
+                    _removeThread.Join();
                 }
 
                 _disposed = true;

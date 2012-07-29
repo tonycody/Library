@@ -14,7 +14,7 @@ using Library.Net.Connection;
 
 namespace Library.Net.Amoeba
 {
-    delegate void UploadedEventHandler(object sender, Key key);
+    delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -1119,6 +1119,8 @@ namespace Library.Net.Amoeba
 
                                 tempKeys.AddRange(_settings.UploadBlocksRequest);
                                 tempKeys.AddRange(_settings.DiffusionBlocksRequest);
+                                
+                                KeyCollection removeKeys = new KeyCollection();
 
                                 foreach (var key in tempKeys.OrderBy(n => _random.Next()))
                                 {
@@ -1127,14 +1129,14 @@ namespace Library.Net.Amoeba
                                         _settings.UploadBlocksRequest.Remove(key);
                                         _settings.DiffusionBlocksRequest.Remove(key);
 
-                                        this.OnUploadedEvent(key);
+                                        removeKeys.Add(key);
                                     }
                                     else if (!_cacheManager.Contains(key))
                                     {
                                         _settings.UploadBlocksRequest.Remove(key);
                                         _settings.DiffusionBlocksRequest.Remove(key);
 
-                                        this.OnUploadedEvent(key);
+                                        removeKeys.Add(key);
                                     }
                                     else
                                     {
@@ -1145,7 +1147,7 @@ namespace Library.Net.Amoeba
                                             _settings.UploadBlocksRequest.Remove(key);
                                             _settings.DiffusionBlocksRequest.Remove(key);
 
-                                            this.OnUploadedEvent(key);
+                                            removeKeys.Add(key);
                                         }
                                         else if (searchNodes.First() == connectionManager.Node)
                                         {
@@ -1157,6 +1159,8 @@ namespace Library.Net.Amoeba
                                             break;
                                         }
                                     }
+
+                                    this.OnUploadedEvent(removeKeys);
                                 }
                             }
 
@@ -1194,7 +1198,7 @@ namespace Library.Net.Amoeba
                                     }
                                 }
 
-                                this.OnUploadedEvent(key);
+                                this.OnUploadedEvent(new Key[] { key });
                             }
                         }
 
@@ -1417,11 +1421,11 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        protected virtual void OnUploadedEvent(Key key)
+        protected virtual void OnUploadedEvent(IEnumerable<Key> keys)
         {
             if (this.UploadedEvent != null)
             {
-                this.UploadedEvent(this, key);
+                this.UploadedEvent(this, keys);
             }
         }
 
@@ -1605,6 +1609,8 @@ namespace Library.Net.Amoeba
 
                     _routeTable.Add(node);
                 }
+
+                _cacheManager.CheckSeeds();
             }
         }
 

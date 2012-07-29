@@ -151,7 +151,12 @@ namespace Library.Net.Amoeba
                         throw new NotSupportedException();
                     }
 
-                    _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
+                    lock (_cacheManager.ThisLock)
+                    {
+                        _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
+                        _cacheManager.Lock(key);
+                    }
+
                     _keyList.Add(key.DeepClone());
 
                     _blockBufferPosition = 0;
@@ -184,7 +189,12 @@ namespace Library.Net.Amoeba
                     throw new NotSupportedException();
                 }
 
-                _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
+                lock (_cacheManager.ThisLock)
+                {
+                    _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
+                    _cacheManager.Lock(key);
+                }
+
                 _keyList.Add(key.DeepClone());
 
                 _blockBufferPosition = 0;
