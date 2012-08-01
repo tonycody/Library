@@ -1792,7 +1792,7 @@ namespace Library.Net.Amoeba
 
                 if (disposing)
                 {
-                    this.Stop();
+
                 }
 
                 _disposed = true;

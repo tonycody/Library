@@ -568,6 +568,8 @@ namespace Library.Net.Amoeba
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
+                this.Stop();
+
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
@@ -602,8 +604,6 @@ namespace Library.Net.Amoeba
 
                 if (disposing)
                 {
-                    this.Stop();
-
                     _uploadManager.Dispose();
                     _downloadManager.Dispose();
                     _connectionsManager.Dispose();

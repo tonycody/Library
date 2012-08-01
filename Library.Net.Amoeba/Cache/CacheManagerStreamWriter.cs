@@ -19,8 +19,6 @@ namespace Library.Net.Amoeba
         private LockedList<Key> _keyList = new LockedList<Key>();
         private long _length;
 
-        private GetUsingKeysEventHandler GetUsingKeysEvent;
-
         private bool _disposed = false;
 
         public CacheManagerStreamWriter(out IList<Key> keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
@@ -31,16 +29,6 @@ namespace Library.Net.Amoeba
             _bufferManager = bufferManager;
             _blockBuffer = bufferManager.TakeBuffer(blockLength);
             _blockBufferLength = blockLength;
-
-            this.GetUsingKeysEvent = new GetUsingKeysEventHandler((object sender, ref IList<Key> headers) =>
-            {
-                foreach (var item in _keyList)
-                {
-                    headers.Add(item);
-                }
-            });
-
-            _cacheManager.GetUsingKeysEvent += this.GetUsingKeysEvent;
         }
 
         public override bool CanRead
@@ -153,8 +141,8 @@ namespace Library.Net.Amoeba
 
                     lock (_cacheManager.ThisLock)
                     {
-                        _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
                         _cacheManager.Lock(key);
+                        _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
                     }
 
                     _keyList.Add(key.DeepClone());
@@ -191,8 +179,8 @@ namespace Library.Net.Amoeba
 
                 lock (_cacheManager.ThisLock)
                 {
-                    _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
                     _cacheManager.Lock(key);
+                    _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
                 }
 
                 _keyList.Add(key.DeepClone());
@@ -216,8 +204,6 @@ namespace Library.Net.Amoeba
                         _bufferManager.ReturnBuffer(_blockBuffer);
                         _blockBuffer = null;
                     }
-
-                    _cacheManager.GetUsingKeysEvent -= this.GetUsingKeysEvent;
 
                     _disposed = true;
                 }

@@ -37,7 +37,7 @@ namespace Library.Net.Lair
         private CirculationCollection<Node> _removeNodes;
         private LockedDictionary<Node, int> _nodesStatus;
 
-        private HashSet<Channel> _pushChannelsRequestList = new HashSet<Channel>();
+        private LockedHashSet<Channel> _pushChannelsRequestList = new LockedHashSet<Channel>();
 
         private volatile Thread _connectionsManagerThread = null;
         private volatile Thread _createClientConnection1Thread = null;

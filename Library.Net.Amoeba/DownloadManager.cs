@@ -46,38 +46,6 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings();
 
-            _cacheManager.GetUsingKeysEvent += (object sender, ref IList<Key> headers) =>
-            {
-                lock (this.ThisLock)
-                {
-                    HashSet<Key> list = new HashSet<Key>();
-
-                    foreach (var item in _settings.DownloadItems)
-                    {
-                        if (item.Seed != null)
-                        {
-                            list.Add(item.Seed.Key);
-                        }
-
-                        if (item.Index != null)
-                        {
-                            foreach (var group in item.Index.Groups)
-                            {
-                                if (group != null)
-                                {
-                                    list.UnionWith(group.Keys);
-                                }
-                            }
-                        }
-                    }
-
-                    foreach (var item in list)
-                    {
-                        headers.Add(item);
-                    }
-                }
-            };
-
             _cacheManager.SetKeyEvent += (object sender, IEnumerable<Key> keys) =>
             {
                 foreach (var key in keys)
@@ -466,6 +434,15 @@ namespace Library.Net.Amoeba
                                     lock (this.ThisLock)
                                     {
                                         item.Index = index;
+
+                                        foreach (var group in item.Index.Groups)
+                                        {
+                                            foreach (var key in group.Keys)
+                                            {
+                                                _cacheManager.Lock(key);
+                                            }
+                                        }
+
                                         item.Indexs.Add(index);
 
                                         item.Rank++;
@@ -544,11 +521,31 @@ namespace Library.Net.Amoeba
                                     Directory.CreateDirectory(downloadDirectory);
                                     File.Move(fileName, DownloadManager.GetUniqueFilePath(Path.Combine(downloadDirectory, DownloadManager.GetNormalizedPath(item.Seed.Name))));
 
-                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexs);
-                                    item.Indexs.Clear();
-                                    _settings.DownloadedSeeds.Add(item.Seed.DeepClone());
+                                    lock (this.ThisLock)
+                                    {
+                                        _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexs);
+                                        _settings.DownloadedSeeds.Add(item.Seed.DeepClone());
 
-                                    item.State = DownloadState.Completed;
+                                        if (item.Seed != null)
+                                        {
+                                            _cacheManager.Unlock(item.Seed.Key);
+                                        }
+
+                                        if (item.Index != null)
+                                        {
+                                            foreach (var group in item.Index.Groups)
+                                            {
+                                                foreach (var key in group.Keys)
+                                                {
+                                                    _cacheManager.Unlock(key);
+                                                }
+                                            }
+                                        }
+
+                                        item.Indexs.Clear();
+
+                                        item.State = DownloadState.Completed;
+                                    }
                                 }
                             }
                         }
@@ -643,11 +640,21 @@ namespace Library.Net.Amoeba
                                     {
                                         index = Index.Import(stream, _bufferManager);
                                     }
+
                                     File.Delete(fileName);
 
                                     lock (this.ThisLock)
                                     {
                                         item.Index = index;
+
+                                        foreach (var group in item.Index.Groups)
+                                        {
+                                            foreach (var key in group.Keys)
+                                            {
+                                                _cacheManager.Lock(key);
+                                            }
+                                        }
+
                                         item.Indexs.Add(index);
 
                                         item.Rank++;
@@ -727,11 +734,31 @@ namespace Library.Net.Amoeba
                                     Directory.CreateDirectory(downloadDirectory);
                                     File.Move(fileName, DownloadManager.GetUniqueFilePath(Path.Combine(downloadDirectory, DownloadManager.GetNormalizedPath(item.Seed.Name))));
 
-                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexs);
-                                    item.Indexs.Clear();
-                                    _settings.DownloadedSeeds.Add(item.Seed.DeepClone());
+                                    lock (this.ThisLock)
+                                    {
+                                        _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexs);
+                                        _settings.DownloadedSeeds.Add(item.Seed.DeepClone());
 
-                                    item.State = DownloadState.Completed;
+                                        if (item.Seed != null)
+                                        {
+                                            _cacheManager.Unlock(item.Seed.Key);
+                                        }
+
+                                        if (item.Index != null)
+                                        {
+                                            foreach (var group in item.Index.Groups)
+                                            {
+                                                foreach (var key in group.Keys)
+                                                {
+                                                    _cacheManager.Unlock(key);
+                                                }
+                                            }
+                                        }
+
+                                        item.Indexs.Clear();
+
+                                        item.State = DownloadState.Completed;
+                                    }
                                 }
                             }
                         }
@@ -758,6 +785,14 @@ namespace Library.Net.Amoeba
                 item.State = DownloadState.Downloading;
                 item.Priority = priority;
 
+                if (this.State == ManagerState.Start)
+                {
+                    if (item.Seed != null)
+                    {
+                        _cacheManager.Lock(item.Seed.Key);
+                    }
+                }
+
                 _settings.DownloadItems.Add(item);
                 _ids.Add(_id++, item);
             }
@@ -777,6 +812,14 @@ namespace Library.Net.Amoeba
                 item.State = DownloadState.Downloading;
                 item.Priority = priority;
 
+                if (this.State == ManagerState.Start)
+                {
+                    if (item.Seed != null)
+                    {
+                        _cacheManager.Lock(item.Seed.Key);
+                    }
+                }
+
                 _settings.DownloadItems.Add(item);
                 _ids.Add(_id++, item);
             }
@@ -786,7 +829,34 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                _settings.DownloadItems.Remove(_ids[id]);
+                var item = _ids[id];
+
+                if (this.State == ManagerState.Start)
+                {
+                    if (item.State != DownloadState.Completed)
+                    {
+                        if (item.Seed != null)
+                        {
+                            _cacheManager.Unlock(item.Seed.Key);
+                        }
+
+                        if (item.Index != null)
+                        {
+                            foreach (var group in item.Index.Groups)
+                            {
+                                if (group != null)
+                                {
+                                    foreach (var key in group.Keys)
+                                    {
+                                        _cacheManager.Unlock(key);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                _settings.DownloadItems.Remove(item);
                 _ids.Remove(id);
             }
         }
@@ -833,6 +903,31 @@ namespace Library.Net.Amoeba
                 _downloadManagerThread = new Thread(this.DownloadManagerThread);
                 _downloadManagerThread.Priority = ThreadPriority.Lowest;
                 _downloadManagerThread.Start();
+
+                foreach (var item in _settings.DownloadItems)
+                {
+                    if (item.State != DownloadState.Completed)
+                    {
+                        if (item.Seed != null)
+                        {
+                            _cacheManager.Lock(item.Seed.Key);
+                        }
+
+                        if (item.Index != null)
+                        {
+                            foreach (var group in item.Index.Groups)
+                            {
+                                if (group != null)
+                                {
+                                    foreach (var key in group.Keys)
+                                    {
+                                        _cacheManager.Lock(key);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -846,6 +941,34 @@ namespace Library.Net.Amoeba
 
             _downloadManagerThread.Join();
             _downloadManagerThread = null;
+
+            lock (this.ThisLock)
+            {
+                foreach (var item in _settings.DownloadItems)
+                {
+                    if (item.State != DownloadState.Completed)
+                    {
+                        if (item.Seed != null)
+                        {
+                            _cacheManager.Unlock(item.Seed.Key);
+                        }
+
+                        if (item.Index != null)
+                        {
+                            foreach (var group in item.Index.Groups)
+                            {
+                                if (group != null)
+                                {
+                                    foreach (var key in group.Keys)
+                                    {
+                                        _cacheManager.Unlock(key);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         #region ISettings
@@ -979,8 +1102,6 @@ namespace Library.Net.Amoeba
 
                 if (disposing)
                 {
-                    this.Stop();
-
                     _setKeys.Dispose();
                     _removeKeys.Dispose();
 

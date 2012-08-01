@@ -21,8 +21,6 @@ namespace Library.Net.Amoeba
         private long _position = 0;
         private long _length = 0;
 
-        private GetUsingKeysEventHandler GetUsingKeysEvent;
-
         private bool _disposed = false;
 
         public CacheManagerStreamReader(KeyCollection keys, CacheManager cacheManager, BufferManager bufferManager)
@@ -35,16 +33,6 @@ namespace Library.Net.Amoeba
             _keysIndex++;
 
             _length = keys.Sum(n => (long)cacheManager.GetLength(n));
-
-            this.GetUsingKeysEvent = new GetUsingKeysEventHandler((object sender, ref IList<Key> headers) =>
-            {
-                foreach (var item in _keys)
-                {
-                    headers.Add(item);
-                }
-            });
-
-            _cacheManager.GetUsingKeysEvent += this.GetUsingKeysEvent;
         }
 
         public override bool CanRead
@@ -182,8 +170,6 @@ namespace Library.Net.Amoeba
                         _bufferManager.ReturnBuffer(_blockBuffer.Array);
                         _blockBuffer = new ArraySegment<byte>();
                     }
-
-                    _cacheManager.GetUsingKeysEvent -= this.GetUsingKeysEvent;
                 }
 
                 _disposed = true;

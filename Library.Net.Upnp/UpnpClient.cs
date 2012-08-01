@@ -496,6 +496,7 @@ namespace Library.Net.Upnp
             {
                 if (disposing)
                 {
+
                 }
 
                 _disposed = true;

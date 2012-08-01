@@ -45,38 +45,6 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings();
 
-            _cacheManager.GetUsingKeysEvent += (object sender, ref IList<Key> headers) =>
-            {
-                lock (this.ThisLock)
-                {
-                    HashSet<Key> list = new HashSet<Key>();
-
-                    foreach (var item in _settings.UploadItems)
-                    {
-                        if (item.Seed != null)
-                        {
-                            list.Add(item.Seed.Key);
-                        }
-
-                        list.UnionWith(item.UploadKeys);
-                        list.UnionWith(item.Keys);
-
-                        foreach (var group in item.Groups)
-                        {
-                            if (group != null)
-                            {
-                                list.UnionWith(group.Keys);
-                            }
-                        }
-                    }
-
-                    foreach (var item in list)
-                    {
-                        headers.Add(item);
-                    }
-                }
-            };
-
             _connectionsManager.UploadedEvent += (object sender, IEnumerable<Key> keys) =>
             {
                 foreach (var key in keys)
@@ -115,6 +83,16 @@ namespace Library.Net.Amoeba
                                 if (item.UploadKeys.Remove(key))
                                 {
                                     item.UploadedKeys.Add(key);
+
+                                    if (item.State == UploadState.Uploading)
+                                    {
+                                        if (item.UploadKeys.Count == 0)
+                                        {
+                                            item.State = UploadState.Completed;
+
+                                            _settings.UploadedSeeds.Add(item.Seed.DeepClone());
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -243,6 +221,16 @@ namespace Library.Net.Amoeba
                     {
                         item.UploadedKeys.Add(key);
                         item.UploadKeys.Remove(key);
+
+                        if (item.State == UploadState.Uploading)
+                        {
+                            if (item.UploadKeys.Count == 0)
+                            {
+                                item.State = UploadState.Completed;
+
+                                _settings.UploadedSeeds.Add(item.Seed.DeepClone());
+                            }
+                        }
                     }
                 }
             }
@@ -268,19 +256,6 @@ namespace Library.Net.Amoeba
                                 item = _settings.UploadItems.Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ComputeCorrection)
                                     .OrderBy(n => -n.Priority).FirstOrDefault();
                             }
-
-                            foreach (var item2 in _settings.UploadItems)
-                            {
-                                if (item2.State == UploadState.Uploading)
-                                {
-                                    if (item2.UploadKeys.Count == 0)
-                                    {
-                                        item2.State = UploadState.Completed;
-
-                                        _settings.UploadedSeeds.Add(item2.Seed.DeepClone());
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -304,64 +279,54 @@ namespace Library.Net.Amoeba
 
                                 try
                                 {
-                                    try
+                                    using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                        using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
-                                            item.EncodingBytes = Math.Min(readSize, stream.Length);
-                                        }, 1024 * 1024, true))
-                                        using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
-
-                                            item.EncodingBytes = Math.Min(readSize, stream.Length);
-                                        }, 1024 * 1024, true))
-                                        {
-                                            item.EncodeBytes = stream.Length;
-                                            item.Seed.Length = stream.Length;
-
-                                            if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
-
-                                            item.State = UploadState.ComputeHash;
-                                            cryptoKey = Sha512.ComputeHash(hashProgressStream);
-                                            //cryptoKey = new byte[64];
-
-                                            stream.Seek(0, SeekOrigin.Begin);
-                                            item.EncodingBytes = 0;
-
-                                            item.State = UploadState.Encoding;
-                                            keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
-                                        }
-                                    }
-                                    catch (StopIOException)
+                                        item.EncodingBytes = Math.Min(readSize, stream.Length);
+                                    }, 1024 * 1024, true))
+                                    using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        continue;
-                                    }
+                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
-                                    lock (this.ThisLock)
+                                        item.EncodingBytes = Math.Min(readSize, stream.Length);
+                                    }, 1024 * 1024, true))
                                     {
+                                        item.EncodeBytes = stream.Length;
+                                        item.Seed.Length = stream.Length;
+
+                                        if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
+
+                                        item.State = UploadState.ComputeHash;
+                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+                                        //cryptoKey = new byte[64];
+
+                                        stream.Seek(0, SeekOrigin.Begin);
                                         item.EncodingBytes = 0;
-                                        item.EncodeBytes = 0;
 
-                                        item.CryptoKey = cryptoKey;
-                                        item.Keys.AddRange(keys);
+                                        item.State = UploadState.Encoding;
+                                        keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                                     }
                                 }
-                                finally
+                                catch (StopIOException)
                                 {
-                                    lock (this.ThisLock)
+                                    continue;
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    foreach (var key in keys)
                                     {
-                                        if (keys != null)
-                                        {
-                                            foreach (var key in keys)
-                                            {
-                                                _cacheManager.Unlock(key);
-                                            }
-                                        }
-                                    }
+                                        item.UploadKeys.Add(key);
+                                        item.LockedKeys.Add(key);
+                                    } 
+                                    
+                                    item.EncodingBytes = 0;
+                                    item.EncodeBytes = 0;
+
+                                    item.CryptoKey = cryptoKey;
+                                    item.Keys.AddRange(keys);
                                 }
                             }
                             else if (item.Groups.Count == 0 && item.Keys.Count == 1)
@@ -370,6 +335,7 @@ namespace Library.Net.Amoeba
                                 {
                                     item.Seed.Rank = item.Rank;
                                     item.Seed.Key = item.Keys[0];
+                                    item.Keys.Clear();
 
                                     item.Seed.CompressionAlgorithm = item.CompressionAlgorithm;
 
@@ -392,6 +358,13 @@ namespace Library.Net.Amoeba
 
                                     _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexs);
                                     item.Indexs.Clear();
+
+                                    foreach (var key in item.LockedKeys)
+                                    {
+                                        _cacheManager.Unlock(key);
+                                    }
+
+                                    item.LockedKeys.Clear();
 
                                     item.State = UploadState.Uploading;
                                 }
@@ -429,59 +402,44 @@ namespace Library.Net.Amoeba
 
                                 try
                                 {
-                                    try
+                                    group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
                                     {
-                                        group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
-                                        {
-                                            return (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
-                                        });
-                                    }
-                                    catch (StopException)
-                                    {
-                                        continue;
-                                    }
-
-                                    lock (this.ThisLock)
-                                    {
-                                        foreach (var key in group.Keys)
-                                        {
-                                            item.UploadKeys.Add(key);
-                                        }
-
-                                        item.Groups.Add(group);
-
-                                        item.EncodingBytes = item.Groups.Sum(n =>
-                                        {
-                                            long sumLength = 0;
-
-                                            for (int i = 0; i < n.InformationLength; i++)
-                                            {
-                                                if (_cacheManager.Contains(n.Keys[i]))
-                                                {
-                                                    sumLength += (long)_cacheManager.GetLength(n.Keys[i]);
-                                                }
-                                            }
-
-                                            return sumLength;
-                                        });
-
-                                        for (int i = 0; i < length; i++)
-                                        {
-                                            item.Keys.RemoveAt(0);
-                                        }
-                                    }
+                                        return (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                    });
                                 }
-                                finally
+                                catch (StopException)
                                 {
-                                    lock (this.ThisLock)
+                                    continue;
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    foreach (var key in group.Keys.Skip(group.InformationLength))
                                     {
-                                        if (group != null)
+                                        item.UploadKeys.Add(key);
+                                        item.LockedKeys.Add(key);
+                                    }
+
+                                    item.Groups.Add(group);
+
+                                    item.EncodingBytes = item.Groups.Sum(n =>
+                                    {
+                                        long sumLength = 0;
+
+                                        for (int i = 0; i < n.InformationLength; i++)
                                         {
-                                            foreach (var key in group.Keys)
+                                            if (_cacheManager.Contains(n.Keys[i]))
                                             {
-                                                _cacheManager.Unlock(key);
+                                                sumLength += (long)_cacheManager.GetLength(n.Keys[i]);
                                             }
                                         }
+
+                                        return sumLength;
+                                    });
+
+                                    for (int i = 0; i < length; i++)
+                                    {
+                                        item.Keys.RemoveAt(0);
                                     }
                                 }
                             }
@@ -502,62 +460,52 @@ namespace Library.Net.Amoeba
 
                                 try
                                 {
-                                    try
+                                    using (var stream = index.Export(_bufferManager))
+                                    using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        using (var stream = index.Export(_bufferManager))
-                                        using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
-                                            item.EncodingBytes = Math.Min(readSize, stream.Length);
-                                        }, 1024 * 1024, true))
-                                        using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
-
-                                            item.EncodingBytes = Math.Min(readSize, stream.Length);
-                                        }, 1024 * 1024, true))
-                                        {
-                                            item.EncodeBytes = stream.Length;
-
-                                            item.State = UploadState.ComputeHash;
-                                            cryptoKey = Sha512.ComputeHash(hashProgressStream);
-
-                                            stream.Seek(0, SeekOrigin.Begin);
-                                            item.EncodingBytes = 0;
-
-                                            item.State = UploadState.Encoding;
-                                            keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
-                                        }
-                                    }
-                                    catch (StopIOException)
+                                        item.EncodingBytes = Math.Min(readSize, stream.Length);
+                                    }, 1024 * 1024, true))
+                                    using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        continue;
-                                    }
+                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
-                                    lock (this.ThisLock)
+                                        item.EncodingBytes = Math.Min(readSize, stream.Length);
+                                    }, 1024 * 1024, true))
                                     {
+                                        item.EncodeBytes = stream.Length;
+
+                                        item.State = UploadState.ComputeHash;
+                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+
+                                        stream.Seek(0, SeekOrigin.Begin);
                                         item.EncodingBytes = 0;
-                                        item.EncodeBytes = 0;
 
-                                        item.CryptoKey = cryptoKey;
-                                        item.Keys.AddRange(keys);
-                                        item.Rank++;
-                                        item.Groups.Clear();
+                                        item.State = UploadState.Encoding;
+                                        keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                                     }
                                 }
-                                finally
+                                catch (StopIOException)
                                 {
-                                    lock (this.ThisLock)
+                                    continue;
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    foreach (var key in keys)
                                     {
-                                        if (keys != null)
-                                        {
-                                            foreach (var key in keys)
-                                            {
-                                                _cacheManager.Unlock(key);
-                                            }
-                                        }
+                                        item.UploadKeys.Add(key);
+                                        item.LockedKeys.Add(key);
                                     }
+
+                                    item.EncodingBytes = 0;
+                                    item.EncodeBytes = 0;
+
+                                    item.CryptoKey = cryptoKey;
+                                    item.Keys.AddRange(keys);
+                                    item.Rank++;
+                                    item.Groups.Clear();
                                 }
                             }
                         }
@@ -571,70 +519,55 @@ namespace Library.Net.Amoeba
 
                                 try
                                 {
-                                    try
+                                    using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                        using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
-                                            item.EncodingBytes = Math.Min(readSize, stream.Length);
-                                        }, 1024 * 1024, true))
-                                        {
-                                            item.EncodeBytes = stream.Length;
-                                            item.Seed.Length = stream.Length;
-
-                                            if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
-
-                                            keys = _cacheManager.Share(hashProgressStream, stream.Name, item.HashAlgorithm, item.BlockLength);
-                                        }
-                                    }
-                                    catch (StopIOException)
+                                        item.EncodingBytes = Math.Min(readSize, stream.Length);
+                                    }, 1024 * 1024, true))
                                     {
-                                        continue;
-                                    }
+                                        item.EncodeBytes = stream.Length;
+                                        item.Seed.Length = stream.Length;
 
-                                    lock (this.ThisLock)
-                                    {
-                                        item.EncodingBytes = 0;
-                                        item.EncodeBytes = 0;
+                                        if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
 
-                                        if (keys.Count == 1)
-                                        {
-                                            item.Keys.Add(keys[0]);
-                                        }
-                                        else
-                                        {
-                                            Group group = new Group();
-                                            group.CorrectionAlgorithm = CorrectionAlgorithm.None;
-                                            group.InformationLength = keys.Count;
-                                            group.BlockLength = item.BlockLength;
-                                            group.Length = item.Seed.Length;
-                                            group.Keys.AddRange(keys);
-
-                                            foreach (var key in group.Keys)
-                                            {
-                                                item.UploadKeys.Add(key);
-                                            }
-
-                                            item.Groups.Add(group);
-                                        }
-
-                                        item.State = UploadState.Encoding;
+                                        keys = _cacheManager.Share(hashProgressStream, stream.Name, item.HashAlgorithm, item.BlockLength);
                                     }
                                 }
-                                finally
+                                catch (StopIOException)
                                 {
-                                    lock (this.ThisLock)
+                                    continue;
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    item.EncodingBytes = 0;
+                                    item.EncodeBytes = 0;
+
+                                    if (keys.Count == 1)
                                     {
-                                        if (keys != null)
-                                        {
-                                            foreach (var key in keys)
-                                            {
-                                                _cacheManager.Unlock(key);
-                                            }
-                                        }
+                                        item.Keys.Add(keys[0]);
                                     }
+                                    else
+                                    {
+                                        Group group = new Group();
+                                        group.CorrectionAlgorithm = CorrectionAlgorithm.None;
+                                        group.InformationLength = keys.Count;
+                                        group.BlockLength = item.BlockLength;
+                                        group.Length = item.Seed.Length;
+                                        group.Keys.AddRange(keys);
+
+                                        foreach (var key in keys)
+                                        {
+                                            item.UploadKeys.Add(key);
+                                            item.LockedKeys.Add(key);
+                                        }
+
+                                        item.Groups.Add(group);
+                                    }
+
+                                    item.State = UploadState.Encoding;
                                 }
                             }
                             else if (item.Groups.Count == 0 && item.Keys.Count == 1)
@@ -643,6 +576,7 @@ namespace Library.Net.Amoeba
                                 {
                                     item.Seed.Rank = item.Rank;
                                     item.Seed.Key = item.Keys[0];
+                                    item.Keys.Clear();
 
                                     if (item.Rank != 1)
                                     {
@@ -669,6 +603,13 @@ namespace Library.Net.Amoeba
                                     _cacheManager.SetSeed(item.Seed.DeepClone(), item.FilePath, item.Indexs);
                                     item.Indexs.Clear();
 
+                                    foreach (var key in item.LockedKeys)
+                                    {
+                                        _cacheManager.Unlock(key);
+                                    }
+
+                                    item.LockedKeys.Clear();
+                                    
                                     item.State = UploadState.Uploading;
                                 }
                             }
@@ -705,59 +646,44 @@ namespace Library.Net.Amoeba
 
                                 try
                                 {
-                                    try
+                                    group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
                                     {
-                                        group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
-                                        {
-                                            return (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
-                                        });
-                                    }
-                                    catch (StopException)
-                                    {
-                                        continue;
-                                    }
-
-                                    lock (this.ThisLock)
-                                    {
-                                        foreach (var key in group.Keys)
-                                        {
-                                            item.UploadKeys.Add(key);
-                                        }
-
-                                        item.Groups.Add(group);
-
-                                        item.EncodingBytes = item.Groups.Sum(n =>
-                                        {
-                                            long sumLength = 0;
-
-                                            for (int i = 0; i < n.InformationLength; i++)
-                                            {
-                                                if (_cacheManager.Contains(n.Keys[i]))
-                                                {
-                                                    sumLength += (long)_cacheManager.GetLength(n.Keys[i]);
-                                                }
-                                            }
-
-                                            return sumLength;
-                                        });
-
-                                        for (int i = 0; i < length; i++)
-                                        {
-                                            item.Keys.RemoveAt(0);
-                                        }
-                                    }
+                                        return (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                    });
                                 }
-                                finally
+                                catch (StopException)
                                 {
-                                    lock (this.ThisLock)
+                                    continue;
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    foreach (var key in group.Keys.Skip(group.InformationLength))
                                     {
-                                        if (group != null)
+                                        item.UploadKeys.Add(key);
+                                        item.LockedKeys.Add(key);
+                                    }
+
+                                    item.Groups.Add(group);
+
+                                    item.EncodingBytes = item.Groups.Sum(n =>
+                                    {
+                                        long sumLength = 0;
+
+                                        for (int i = 0; i < n.InformationLength; i++)
                                         {
-                                            foreach (var key in group.Keys)
+                                            if (_cacheManager.Contains(n.Keys[i]))
                                             {
-                                                _cacheManager.Unlock(key);
+                                                sumLength += (long)_cacheManager.GetLength(n.Keys[i]);
                                             }
                                         }
+
+                                        return sumLength;
+                                    });
+
+                                    for (int i = 0; i < length; i++)
+                                    {
+                                        item.Keys.RemoveAt(0);
                                     }
                                 }
                             }
@@ -783,62 +709,53 @@ namespace Library.Net.Amoeba
 
                                 try
                                 {
-                                    try
+                                    using (var stream = index.Export(_bufferManager))
+                                    using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        using (var stream = index.Export(_bufferManager))
-                                        using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
-                                            item.EncodingBytes = Math.Min(readSize, stream.Length);
-                                        }, 1024 * 1024, true))
-                                        using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
-
-                                            item.EncodingBytes = Math.Min(readSize, stream.Length);
-                                        }, 1024 * 1024, true))
-                                        {
-                                            item.EncodeBytes = stream.Length;
-
-                                            item.State = UploadState.ComputeHash;
-                                            cryptoKey = Sha512.ComputeHash(hashProgressStream);
-
-                                            stream.Seek(0, SeekOrigin.Begin);
-                                            item.EncodingBytes = 0;
-
-                                            item.State = UploadState.Encoding;
-                                            keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
-                                        }
-                                    }
-                                    catch (StopIOException)
+                                        item.EncodingBytes = Math.Min(readSize, stream.Length);
+                                    }, 1024 * 1024, true))
+                                    using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        continue;
-                                    }
+                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
-                                    lock (this.ThisLock)
+                                        item.EncodingBytes = Math.Min(readSize, stream.Length);
+                                    }, 1024 * 1024, true))
                                     {
+                                        item.EncodeBytes = stream.Length;
+
+                                        item.State = UploadState.ComputeHash;
+                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+
+                                        stream.Seek(0, SeekOrigin.Begin);
                                         item.EncodingBytes = 0;
-                                        item.EncodeBytes = 0;
 
-                                        item.CryptoKey = cryptoKey;
-                                        item.Keys.AddRange(keys);
-                                        item.Rank++;
-                                        item.Groups.Clear();
+                                        item.State = UploadState.Encoding;
+                                        keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                                     }
                                 }
-                                finally
+                                catch (StopIOException)
                                 {
-                                    lock (this.ThisLock)
+                                    continue;
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    foreach (var key in keys)
                                     {
-                                        if (keys != null)
-                                        {
-                                            foreach (var key in keys)
-                                            {
-                                                _cacheManager.Unlock(key);
-                                            }
-                                        }
+                                        item.UploadKeys.Add(key);
+                                        item.LockedKeys.Add(key);
                                     }
+
+                                    item.EncodingBytes = 0;
+                                    item.EncodeBytes = 0;
+
+                                    item.CryptoKey = cryptoKey;
+                                    item.Keys.AddRange(keys);
+                                    item.Rank++;
+
+                                    item.Groups.Clear();
                                 }
                             }
                         }
@@ -892,8 +809,6 @@ namespace Library.Net.Amoeba
                 _id++;
             }
         }
-
-        Dictionary<DownloadItem, int> Ids = new Dictionary<DownloadItem, int>();
 
         public void Share(string filePath,
             string name,
@@ -1030,6 +945,14 @@ namespace Library.Net.Amoeba
                 _uploadManagerThread = new Thread(this.UploadManagerThread);
                 _uploadManagerThread.Priority = ThreadPriority.Lowest;
                 _uploadManagerThread.Start();
+
+                foreach (var item in _settings.UploadItems)
+                {
+                    foreach (var key in item.LockedKeys)
+                    {
+                        _cacheManager.Lock(key);
+                    }
+                }
             }
         }
 
@@ -1043,6 +966,17 @@ namespace Library.Net.Amoeba
 
             _uploadManagerThread.Join();
             _uploadManagerThread = null;
+
+            lock (this.ThisLock)
+            {
+                foreach (var item in _settings.UploadItems)
+                {
+                    foreach (var key in item.LockedKeys)
+                    {
+                        _cacheManager.Unlock(key);
+                    }
+                }
+            }
         }
 
         #region ISettings
@@ -1174,8 +1108,6 @@ namespace Library.Net.Amoeba
 
                 if (disposing)
                 {
-                    this.Stop();
-
                     _uploadedKeys.Dispose();
                     _removeShare.Dispose();
 

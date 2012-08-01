@@ -57,6 +57,7 @@ namespace Library.Net.Amoeba
         private byte[] _cryptoKey;
         private CorrectionAlgorithm _correctionAlgorithm;
         private HashAlgorithm _hashAlgorithm;
+        private List<Key> _LockedKeys;
         private HashSet<Key> _uploadKeys;
         private HashSet<Key> _uploadedKeys;
         private Seed _seed;
@@ -341,6 +342,21 @@ namespace Library.Net.Amoeba
                         _groups = new GroupCollection();
 
                     return _groups;
+                }
+            }
+        }
+
+        [DataMember(Name = "LockedKeys")]
+        public List<Key> LockedKeys
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_LockedKeys == null)
+                        _LockedKeys = new List<Key>();
+
+                    return _LockedKeys;
                 }
             }
         }
