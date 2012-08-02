@@ -272,7 +272,7 @@ namespace Library.Net.Lair
 
                 if (disposing)
                 {
-                    this.Stop();
+
                 }
 
                 _disposed = true;

@@ -604,6 +604,8 @@ namespace Library.Net.Amoeba
 
                 if (disposing)
                 {
+                    this.Stop();
+
                     _uploadManager.Dispose();
                     _downloadManager.Dispose();
                     _connectionsManager.Dispose();

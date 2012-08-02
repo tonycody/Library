@@ -302,6 +302,8 @@ namespace Library.Net.Lair
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
+                this.Stop();
+
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
@@ -331,6 +333,10 @@ namespace Library.Net.Lair
                 if (disposing)
                 {
                     this.Stop();
+
+                    _connectionsManager.Dispose();
+                    _serverManager.Dispose();
+                    _clientManager.Dispose();
                 }
 
                 _disposed = true;
