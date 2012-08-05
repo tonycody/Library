@@ -429,9 +429,13 @@ namespace Library.Net.Amoeba
 
             try
             {
+                Stopwatch sw = new Stopwatch();
+
                 for (; ; )
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    sw.Restart();
 
                     if (_protocolVersion == ProtocolVersion.Version1)
                     {
@@ -498,6 +502,10 @@ namespace Library.Net.Amoeba
                     {
                         throw new ConnectionManagerException();
                     }
+
+                    sw.Stop();
+
+                    if (sw.ElapsedMilliseconds < 1000) Thread.Sleep(1000 - (int)sw.ElapsedMilliseconds);
                 }
             }
             catch (Exception)

@@ -22,6 +22,7 @@ namespace Library.Net.Amoeba
         private UploadManager _uploadManager;
 
         private ManagerState _state = ManagerState.Stop;
+       
         private bool _disposed = false;
         private object _thisLock = new object();
 

@@ -104,13 +104,13 @@ namespace Library.Net.Amoeba
             _surroundingNodes = new LockedHashSet<Node>(128);
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
-            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 30);
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 30);
+            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
 
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
         }
-
+    
         public int Id
         {
             get
