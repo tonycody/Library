@@ -9,6 +9,7 @@ namespace Library.Net.Lair
     class MessagesManager : IThisLock
     {
         private LockedDictionary<Node, MessageManager> _messageManagerDictionary = new LockedDictionary<Node, MessageManager>();
+        private LockedDictionary<Node, DateTime> _updateTimeDictionary = new LockedDictionary<Node, DateTime>();
         private int _id = 0;
         private DateTime _lastCircularTime = DateTime.MinValue;
         private object _thisLock = new object();
@@ -21,14 +22,30 @@ namespace Library.Net.Lair
 
                 if ((now - _lastCircularTime) > new TimeSpan(0, 1, 0))
                 {
-                    foreach (var item in _messageManagerDictionary.Keys.ToArray())
+                    if (_messageManagerDictionary.Count > 128)
                     {
-                        _messageManagerDictionary[item].PushMessages.TrimExcess();
-                        _messageManagerDictionary[item].PushFilters.TrimExcess();
+                        var nodes = _messageManagerDictionary.Keys.ToList();
 
-                        _messageManagerDictionary[item].PushChannelsRequest.TrimExcess();
+                        nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                        {
+                            return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
+                        }));
 
-                        _messageManagerDictionary[item].PullChannelsRequest.TrimExcess();
+                        foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
+                        {
+                            _messageManagerDictionary.Remove(node);
+                            _updateTimeDictionary.Remove(node);
+                        }
+                    }
+
+                    foreach (var node in _messageManagerDictionary.Keys.ToArray())
+                    {
+                        _messageManagerDictionary[node].PushMessages.TrimExcess();
+                        _messageManagerDictionary[node].PushFilters.TrimExcess();
+
+                        _messageManagerDictionary[node].PushChannelsRequest.TrimExcess();
+
+                        _messageManagerDictionary[node].PullChannelsRequest.TrimExcess();
                     }
 
                     _lastCircularTime = now;
@@ -42,13 +59,18 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
+                    this.Circular();
+
                     if (!_messageManagerDictionary.ContainsKey(node))
                     {
                         while (_messageManagerDictionary.Any(n => n.Value.Id == _id)) _id++;
                         _messageManagerDictionary[node] = new MessageManager(_id);
                     }
 
-                    this.Circular();
+                    if (!_updateTimeDictionary.ContainsKey(node))
+                    {
+                        _updateTimeDictionary[node] = DateTime.UtcNow;
+                    }
 
                     return _messageManagerDictionary[node];
                 }
@@ -60,6 +82,7 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 _messageManagerDictionary.Remove(node);
+                _updateTimeDictionary.Remove(node);
             }
         }
 
@@ -86,8 +109,8 @@ namespace Library.Net.Lair
         private long _sentByteCount;
 
         private LockedHashSet<Node> _surroundingNodes;
-        private CirculationCollection<Message> _pushMessages;
-        private CirculationCollection<Filter> _pushFilters;
+        private CirculationCollection<byte[]> _pushMessages;
+        private CirculationCollection<byte[]> _pushFilters;
 
         private CirculationCollection<Channel> _pushChannelsRequest;
         private CirculationCollection<Channel> _pullChannelsRequest;
@@ -99,11 +122,11 @@ namespace Library.Net.Lair
             _id = id;
 
             _surroundingNodes = new LockedHashSet<Node>(128);
-            _pushMessages = new CirculationCollection<Message>(new TimeSpan(64, 0, 0, 0));
-            _pushFilters = new CirculationCollection<Filter>(new TimeSpan(64, 0, 0, 0));
+            _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushFilters = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
 
-            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 60, 0), 8192 * 30);
-            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 30, 0), 8192 * 30);
+            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
         }
 
         public int Id
@@ -200,7 +223,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Message> PushMessages
+        public CirculationCollection<byte[]> PushMessages
         {
             get
             {
@@ -211,7 +234,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Filter> PushFilters
+        public CirculationCollection<byte[]> PushFilters
         {
             get
             {

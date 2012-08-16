@@ -12,6 +12,6 @@ namespace Library.Net.Lair
     {
         TChannel Channel { get; }
         DateTime CreationTime { get; }
-        IList<TKey> Keys { get; }
+        IEnumerable<TKey> Keys { get; }
     }
 }

@@ -37,8 +37,9 @@ namespace Library.Collections
         }
 
         public LockedList(IEnumerable<T> collection)
-            : this()
         {
+            _list = new List<T>();
+            
             foreach (var item in collection)
             {
                 this.Add(item);

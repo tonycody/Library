@@ -29,6 +29,20 @@ namespace Library.Net.Lair
             _circularTime = circularTime;
         }
 
+        public CirculationCollection(TimeSpan circularTime, IEqualityComparer<T> comparer)
+        {
+            _hashSet = new LockedHashSet<T>(comparer);
+            _circularDictionary = new Dictionary<T, DateTime>(comparer);
+            _circularTime = circularTime;
+        }
+
+        public CirculationCollection(TimeSpan circularTime, int capacity, IEqualityComparer<T> comparer)
+        {
+            _hashSet = new LockedHashSet<T>(capacity, comparer);
+            _circularDictionary = new Dictionary<T, DateTime>(comparer);
+            _circularTime = circularTime;
+        }
+
         private void Circular(TimeSpan circularTime)
         {
             lock (this.ThisLock)

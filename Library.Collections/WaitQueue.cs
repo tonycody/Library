@@ -22,14 +22,15 @@ namespace Library.Collections
         }
 
         public WaitQueue(int capacity)
-            : this()
         {
-            this.Capacity = capacity;
+            _queue = new Queue<T>();
+            _capacity = capacity;
         }
 
         public WaitQueue(IEnumerable<T> collection)
-            : this()
         {
+            _queue = new Queue<T>();
+
             foreach (var item in collection)
             {
                 this.Enqueue(item);

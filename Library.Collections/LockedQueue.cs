@@ -18,15 +18,22 @@ namespace Library.Collections
             _queue = new Queue<T>();
         }
 
-        public LockedQueue(IEnumerable<T> collection)
-            : this()
+        public LockedQueue(int capacity)
         {
+            _queue = new Queue<T>(capacity);
+            _capacity = capacity;
+        }
+
+        public LockedQueue(IEnumerable<T> collection)
+        {
+            _queue = new Queue<T>();
+            
             foreach (var item in collection)
             {
                 this.Enqueue(item);
             }
         }
-        
+
         public int Capacity
         {
             get

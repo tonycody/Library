@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Channel", Namespace = "http://Library/Net/Lair")]
-    public class Channel : ItemBase<Channel>, IChannel, IThisLock
+    public class Channel : ItemBase<Channel>, IChannel
     {
         private enum SerializeId : byte
         {
@@ -21,45 +21,40 @@ namespace Library.Net.Lair
 
         private int _hashCode = 0;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
-
         public const int MaxIdLength = 64;
         public const int MaxNameLength = 256;
 
-        public Channel()
+        public Channel(byte[] id, string name)
         {
-
+            this.Id = id;
+            this.Name = name;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            Encoding encoding = new UTF8Encoding(false);
+            byte[] lengthBuffer = new byte[4];
+
+            for (; ; )
             {
-                Encoding encoding = new UTF8Encoding(false);
-                byte[] lengthBuffer = new byte[4];
+                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                int length = NetworkConverter.ToInt32(lengthBuffer);
+                byte id = (byte)stream.ReadByte();
 
-                for (; ; )
+                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
-
-                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    if (id == (byte)SerializeId.Id)
                     {
-                        if (id == (byte)SerializeId.Id)
-                        {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
+                        byte[] buffer = new byte[rangeStream.Length];
+                        rangeStream.Read(buffer, 0, buffer.Length);
 
-                            this.Id = buffer;
-                        }
-                        else if (id == (byte)SerializeId.Name)
+                        this.Id = buffer;
+                    }
+                    else if (id == (byte)SerializeId.Name)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Name = reader.ReadToEnd();
-                            }
+                            this.Name = reader.ReadToEnd();
                         }
                     }
                 }
@@ -68,51 +63,45 @@ namespace Library.Net.Lair
 
         public override Stream Export(BufferManager bufferManager)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            // Id
+            if (this.Id != null)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Id);
+                bufferStream.Write(this.Id, 0, this.Id.Length);
 
-                // Id
-                if (this.Id != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Id);
-                    bufferStream.Write(this.Id, 0, this.Id.Length);
-
-                    streams.Add(bufferStream);
-                }
-                // Name
-                if (this.Name != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
-                    using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
-                    {
-                        writer.Write(this.Name);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Name);
-
-                    streams.Add(bufferStream);
-                }
-
-                return new AddStream(streams);
+                streams.Add(bufferStream);
             }
+            // Name
+            if (this.Name != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                {
+                    writer.Write(this.Name);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Name);
+
+                streams.Add(bufferStream);
+            }
+
+            return new AddStream(streams);
         }
 
         public override int GetHashCode()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
-            {
-                return _hashCode;
-            }
+            return _hashCode;
         }
 
         public override bool Equals(object obj)
@@ -143,21 +132,15 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
-            {
-                return this.Name;
-            }
+            return this.Name;
         }
 
         public override Channel DeepClone()
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            using (var bufferManager = new BufferManager())
+            using (var stream = this.Export(bufferManager))
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
-                {
-                    return Channel.Import(stream, bufferManager);
-                }
+                return Channel.Import(stream, bufferManager);
             }
         }
 
@@ -168,41 +151,35 @@ namespace Library.Net.Lair
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _id;
-                }
+                return _id;
             }
-            set
+            protected set
             {
-                lock (this.ThisLock)
+                if (value != null && (value.Length > Channel.MaxIdLength))
                 {
-                    if (value != null && (value.Length > Channel.MaxIdLength))
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _id = value;
-                    }
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _id = value;
+                }
 
-                    if (value != null && value.Length != 0)
+                if (value != null && value.Length != 0)
+                {
+                    try
                     {
-                        try
-                        {
-                            if (value.Length >= 4) _hashCode = Math.Abs(BitConverter.ToInt32(value, 0));
-                            else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                            else _hashCode = value[0];
-                        }
-                        catch
-                        {
-                            _hashCode = 0;
-                        }
+                        if (value.Length >= 4) _hashCode = Math.Abs(BitConverter.ToInt32(value, 0));
+                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                        else _hashCode = value[0];
                     }
-                    else
+                    catch
                     {
                         _hashCode = 0;
                     }
+                }
+                else
+                {
+                    _hashCode = 0;
                 }
             }
         }
@@ -212,41 +189,17 @@ namespace Library.Net.Lair
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _name;
-                }
+                return _name;
             }
-            set
+            protected set
             {
-                lock (this.ThisLock)
+                if (value != null && value.Length > Channel.MaxNameLength)
                 {
-                    if (value != null && value.Length > Channel.MaxNameLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _name = value;
-                    }
+                    throw new ArgumentException();
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                using (DeadlockMonitor.Lock(_thisStaticLock))
+                else
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    _name = value;
                 }
             }
         }

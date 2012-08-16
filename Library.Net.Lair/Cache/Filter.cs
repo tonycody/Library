@@ -11,7 +11,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Filter", Namespace = "http://Library/Net/Lair")]
-    public class Filter : CertificateItemBase<Filter>, IFilter<Key, Channel>, IThisLock
+    public class Filter : ReadOnlyCertificateItemBase<Filter>, IFilter<Key, Channel>
     {
         private enum SerializeId : byte
         {
@@ -30,49 +30,55 @@ namespace Library.Net.Lair
 
         private int _hashCode = 0;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        public const int MaxKeysCount = 256;
 
-        public Filter()
+        public Filter(Channel channel, IEnumerable<Key> keys, DigitalSignature digitalSignature)
         {
+            if (channel == null) throw new ArgumentNullException("channel");
+            if (channel.Name == null) throw new ArgumentNullException("channel.Name");
+            if (channel.Id == null) throw new ArgumentNullException("channel.Id");
+            if (keys == null) throw new ArgumentNullException("keys");
+            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
 
+            this.Channel = channel;
+            this.CreationTime = DateTime.UtcNow;
+            this.ProtectedKeys.AddRange(keys);
+
+            this.CreateCertificate(digitalSignature);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            lock (this.ThisLock)
+            Encoding encoding = new UTF8Encoding(false);
+            byte[] lengthBuffer = new byte[4];
+
+            for (; ; )
             {
-                Encoding encoding = new UTF8Encoding(false);
-                byte[] lengthBuffer = new byte[4];
+                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                int length = NetworkConverter.ToInt32(lengthBuffer);
+                byte id = (byte)stream.ReadByte();
 
-                for (; ; )
+                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
-
-                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    if (id == (byte)SerializeId.Channel)
                     {
-                        if (id == (byte)SerializeId.Channel)
+                        this.Channel = Channel.Import(rangeStream, bufferManager);
+                    }
+                    else if (id == (byte)SerializeId.CreationTime)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.Channel = Channel.Import(rangeStream, bufferManager);
+                            this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
-                        else if (id == (byte)SerializeId.CreationTime)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                            }
-                        }
-                        else if (id == (byte)SerializeId.Key)
-                        {
-                            this.Keys.Add(Key.Import(rangeStream, bufferManager));
-                        }
+                    }
+                    else if (id == (byte)SerializeId.Key)
+                    {
+                        this.ProtectedKeys.Add(Key.Import(rangeStream, bufferManager));
+                    }
 
-                        else if (id == (byte)SerializeId.Certificate)
-                        {
-                            this.Certificate = Certificate.Import(rangeStream, bufferManager);
-                        }
+                    else if (id == (byte)SerializeId.Certificate)
+                    {
+                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
                     }
                 }
             }
@@ -80,75 +86,69 @@ namespace Library.Net.Lair
 
         public override Stream Export(BufferManager bufferManager)
         {
-            lock (this.ThisLock)
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            // Channel
+            if (this.Channel != null)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                Stream exportStream = this.Channel.Export(bufferManager);
 
-                // Channel
-                if (this.Channel != null)
-                {
-                    Stream exportStream = this.Channel.Export(bufferManager);
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Channel);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Channel);
-
-                    streams.Add(new AddStream(bufferStream, exportStream));
-                }
-                // CreationTime
-                if (this.CreationTime != DateTime.MinValue)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
-                    using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
-                    {
-                        writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CreationTime);
-
-                    streams.Add(bufferStream);
-                }
-                // Keys
-                foreach (var k in this.Keys)
-                {
-                    Stream exportStream = k.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
-
-                    streams.Add(new AddStream(bufferStream, exportStream));
-                }
-
-                // Certificate
-                if (this.Certificate != null)
-                {
-                    Stream exportStream = this.Certificate.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Certificate);
-
-                    streams.Add(new AddStream(bufferStream, exportStream));
-                }
-
-                return new AddStream(streams);
+                streams.Add(new AddStream(bufferStream, exportStream));
             }
+            // CreationTime
+            if (this.CreationTime != DateTime.MinValue)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                {
+                    writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.CreationTime);
+
+                streams.Add(bufferStream);
+            }
+            // Keys
+            foreach (var k in this.Keys)
+            {
+                Stream exportStream = k.Export(bufferManager);
+
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Key);
+
+                streams.Add(new AddStream(bufferStream, exportStream));
+            }
+
+            // Certificate
+            if (this.Certificate != null)
+            {
+                Stream exportStream = this.Certificate.Export(bufferManager);
+
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Certificate);
+
+                streams.Add(new AddStream(bufferStream, exportStream));
+            }
+
+            return new AddStream(streams);
         }
 
         public override int GetHashCode()
         {
-            lock (this.ThisLock)
-            {
-                return _hashCode;
-            }
+            return _hashCode;
         }
 
         public override bool Equals(object obj)
@@ -179,42 +179,33 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            lock (this.ThisLock)
-            {
-                return this.Channel.Name;
-            }
+            return this.Channel.Name;
         }
 
         public override Filter DeepClone()
         {
-            lock (this.ThisLock)
+            using (var bufferManager = new BufferManager())
+            using (var stream = this.Export(bufferManager))
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
-                {
-                    return Filter.Import(stream, bufferManager);
-                }
+                return Filter.Import(stream, bufferManager);
             }
         }
 
         protected override Stream GetCertificateStream()
         {
-            lock (this.ThisLock)
-            {
-                var temp = this.Certificate;
-                this.Certificate = null;
+            var temp = this.Certificate;
+            this.Certificate = null;
 
-                try
+            try
+            {
+                using (BufferManager bufferManager = new BufferManager())
                 {
-                    using (BufferManager bufferManager = new BufferManager())
-                    {
-                        return this.Export(bufferManager);
-                    }
+                    return this.Export(bufferManager);
                 }
-                finally
-                {
-                    this.Certificate = temp;
-                }
+            }
+            finally
+            {
+                this.Certificate = temp;
             }
         }
 
@@ -222,18 +213,38 @@ namespace Library.Net.Lair
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _certificate;
-                }
+                return _certificate;
             }
             protected set
             {
-                lock (this.ThisLock)
+                _certificate = value;
+            }
+        }
+
+        private byte[] _sha512_hash = null;
+
+        public byte[] GetHash(HashAlgorithm hashAlgorithm)
+        {
+            if (_sha512_hash == null)
+            {
+                using (BufferManager bufferManager = new BufferManager())
+                using (Stream stream = this.Export(bufferManager))
                 {
-                    _certificate = value;
+                    _sha512_hash = Sha512.ComputeHash(stream);
                 }
             }
+
+            if (hashAlgorithm == HashAlgorithm.Sha512)
+            {
+                return _sha512_hash;
+            }
+
+            return null;
+        }
+
+        public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
+        {
+            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #region IFilter<Channel>
@@ -243,17 +254,11 @@ namespace Library.Net.Lair
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _channel;
-                }
+                return _channel;
             }
-            set
+            protected set
             {
-                lock (this.ThisLock)
-                {
-                    _channel = value;
-                }
+                _channel = value;
             }
         }
 
@@ -262,62 +267,32 @@ namespace Library.Net.Lair
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _creationTime;
-                }
+                return _creationTime;
             }
-            set
+            protected set
             {
-                lock (this.ThisLock)
-                {
-                    var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                    _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                }
+                var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
             }
         }
 
-        IList<Key> IFilter<Key, Channel>.Keys
+        public IEnumerable<Key> Keys
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return this.Keys;
-                }
+                return this.ProtectedKeys;
             }
         }
 
         [DataMember(Name = "Keys")]
-        public KeyCollection Keys
+        protected KeyCollection ProtectedKeys
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    if (_keys == null)
-                        _keys = new KeyCollection();
+                if (_keys == null)
+                    _keys = new KeyCollection(Filter.MaxKeysCount);
 
-                    return _keys;
-                }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                lock (_thisStaticLock)
-                {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
-                }
+                return _keys;
             }
         }
 

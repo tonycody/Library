@@ -151,20 +151,23 @@ namespace Library.Net.Lair
 
         public ConnectionFilter DeepClone()
         {
-            var ds = new DataContractSerializer(typeof(ConnectionFilter));
-
-            using (MemoryStream ms = new MemoryStream())
+            lock (this.ThisLock)
             {
-                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
-                {
-                    ds.WriteObject(textDictionaryWriter, this);
-                }
+                var ds = new DataContractSerializer(typeof(ConnectionFilter));
 
-                ms.Position = 0;
-
-                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                using (MemoryStream ms = new MemoryStream())
                 {
-                    return (ConnectionFilter)ds.ReadObject(textDictionaryReader);
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
+                    {
+                        ds.WriteObject(textDictionaryWriter, this);
+                    }
+
+                    ms.Position = 0;
+
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                    {
+                        return (ConnectionFilter)ds.ReadObject(textDictionaryReader);
+                    }
                 }
             }
         }
@@ -280,20 +283,23 @@ namespace Library.Net.Lair
 
         public UriCondition DeepClone()
         {
-            var ds = new DataContractSerializer(typeof(UriCollection));
-
-            using (MemoryStream ms = new MemoryStream())
+            lock (this.ThisLock)
             {
-                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
-                {
-                    ds.WriteObject(textDictionaryWriter, this);
-                }
+                var ds = new DataContractSerializer(typeof(UriCollection));
 
-                ms.Position = 0;
-
-                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                using (MemoryStream ms = new MemoryStream())
                 {
-                    return (UriCondition)ds.ReadObject(textDictionaryReader);
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
+                    {
+                        ds.WriteObject(textDictionaryWriter, this);
+                    }
+
+                    ms.Position = 0;
+
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                    {
+                        return (UriCondition)ds.ReadObject(textDictionaryReader);
+                    }
                 }
             }
         }

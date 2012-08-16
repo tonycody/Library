@@ -68,6 +68,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BytesEqualityComparer.cs" />
     <Compile Include="LairManager.cs" />
     <Compile Include="Cache\Channel.cs" />
     <Compile Include="Cache\ChannelCollection.cs" />

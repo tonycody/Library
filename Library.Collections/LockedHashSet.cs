@@ -25,6 +25,27 @@ namespace Library.Collections
             _capacity = capacity;
         }
 
+        public LockedHashSet(IEnumerable<T> collection)
+        {
+            _hashSet = new HashSet<T>(collection);
+        }
+
+        public LockedHashSet(IEqualityComparer<T> comparer)
+        {
+            _hashSet = new HashSet<T>(comparer);
+        }
+
+        public LockedHashSet(int capacity, IEqualityComparer<T> comparer)
+        {
+            _hashSet = new HashSet<T>(comparer);
+            _capacity = capacity;
+        }
+
+        public LockedHashSet(IEnumerable<T> collection, IEqualityComparer<T> comparer)
+        {
+            _hashSet = new HashSet<T>(collection, comparer);
+        }
+
         public int Capacity
         {
             get

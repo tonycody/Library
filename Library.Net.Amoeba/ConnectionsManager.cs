@@ -777,7 +777,7 @@ namespace Library.Net.Amoeba
 
                     {
                         {
-                            var list = _cacheManager.Where(n => n != null && n.Hash != null && n.HashAlgorithm == HashAlgorithm.Sha512)
+                            var list = _cacheManager.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
                                 .OrderBy(n => _random.Next()).ToList();
 
                             int count = (int)((8192) / (_connectionManagers.Count + 1));
@@ -793,7 +793,7 @@ namespace Library.Net.Amoeba
                         }
 
                         {
-                            var list = _downloadBlocks.Where(n => n != null && n.Hash != null && n.HashAlgorithm == HashAlgorithm.Sha512)
+                            var list = _downloadBlocks.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
                                 .OrderBy(n => _random.Next()).ToList();
 
                             int count = (int)((8192) / (_connectionManagers.Count + 1));
@@ -1110,6 +1110,7 @@ namespace Library.Net.Amoeba
                     if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
                     {
                         // PushBlock (Upload)
+                        if ((_random.Next(0, 100) + 1) <= (int)(100 * this.ResponseTimePriority(connectionManager.Node)))
                         {
                             List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node.DeepClone()));
                             KeyCollection uploadKeys = new KeyCollection();

@@ -22,18 +22,19 @@ namespace Library.Collections
             _capacity = capacity;
         }
 
-        public LockedDictionary(IEqualityComparer<TKey> comparer)
-        {
-            _dic = new Dictionary<TKey, TValue>(comparer);
-        }
-
         public LockedDictionary(IDictionary<TKey, TValue> dictionary)
-            : this()
         {
+            _dic = new Dictionary<TKey, TValue>();
+            
             foreach (var item in dictionary)
             {
                 this.Add(item.Key, item.Value);
             }
+        }
+
+        public LockedDictionary(IEqualityComparer<TKey> comparer)
+        {
+            _dic = new Dictionary<TKey, TValue>(comparer);
         }
 
         public LockedDictionary(int capacity, IEqualityComparer<TKey> comparer)
@@ -43,8 +44,9 @@ namespace Library.Collections
         }
 
         public LockedDictionary(IDictionary<TKey, TValue> dictionary, IEqualityComparer<TKey> comparer)
-            : this(comparer)
         {
+            _dic = new Dictionary<TKey, TValue>(comparer);
+
             foreach (var item in dictionary)
             {
                 this.Add(item.Key, item.Value);

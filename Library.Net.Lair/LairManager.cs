@@ -17,6 +17,11 @@ namespace Library.Net.Lair
         private ConnectionsManager _connectionsManager;
 
         private ManagerState _state = ManagerState.Stop;
+
+        public event UnlockChannelsEventHandler UnlockChannelsEvent;
+        public event UnlockMessagesEventHandler UnlockMessagesEvent;
+        public event UnlockFiltersEventHandler UnlockFiltersEvent;
+
         private bool _disposed = false;
         private object _thisLock = new object();
 
@@ -28,6 +33,30 @@ namespace Library.Net.Lair
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _bufferManager);
+
+            _connectionsManager.UnlockChannelsEvent += (object sender, ref IList<Channel> channels) =>
+            {
+                if (this.UnlockChannelsEvent != null)
+                {
+                    this.UnlockChannelsEvent(this, ref channels);
+                }
+            };
+
+            _connectionsManager.UnlockMessagesEvent += (object sender, Channel channel, ref IList<Message> messages) =>
+            {
+                if (this.UnlockMessagesEvent != null)
+                {
+                    this.UnlockMessagesEvent(this, channel, ref messages);
+                }
+            };
+
+            _connectionsManager.UnlockFiltersEvent += (object sender, Channel channel, ref IList<Filter> filters) =>
+            {
+                if (this.UnlockFiltersEvent != null)
+                {
+                    this.UnlockFiltersEvent(this, channel, ref filters);
+                }
+            };
         }
 
         public ConnectionFilterCollection Filters
@@ -83,19 +112,6 @@ namespace Library.Net.Lair
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     return _connectionsManager.OtherNodes;
-                }
-            }
-        }
-
-        public ChannelCollection Channels
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    return _connectionsManager.Channels;
                 }
             }
         }
@@ -228,6 +244,16 @@ namespace Library.Net.Lair
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 _connectionsManager.SetOtherNodes(nodes);
+            }
+        }
+
+        public IEnumerable<Channel> GetChannels()
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                return _connectionsManager.GetChannels();
             }
         }
 

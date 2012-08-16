@@ -53,7 +53,7 @@ namespace Library.UnitTest
             seed.Length = 10000;
             seed.Comment = "eeee";
             seed.Rank = 1;
-            seed.Key = new Key() { Hash = new byte[64], HashAlgorithm = HashAlgorithm.Sha512 };
+            seed.Key = new Key(new byte[64], HashAlgorithm.Sha512);
             seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
             seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
             seed.CryptoKey = new byte[32 + 32];
@@ -126,10 +126,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_Key()
         {
-            var key = new Key();
-            key.Hash = new byte[64];
-            key.HashAlgorithm = HashAlgorithm.Sha512;
-
+            var key = new Key(new byte[64], HashAlgorithm.Sha512);
             var key2 = key.DeepClone();
 
             Assert.AreEqual(key, key2, "Key #1");
@@ -161,7 +158,7 @@ namespace Library.UnitTest
                 seed.Length = 10000;
                 seed.Comment = "eeee";
                 seed.Rank = 1;
-                seed.Key = new Key() { Hash = new byte[64], HashAlgorithm = HashAlgorithm.Sha512 };
+                seed.Key = new Key(new byte[64], HashAlgorithm.Sha512);
                 seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
                 seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
                 seed.CryptoKey = new byte[32 + 32];
