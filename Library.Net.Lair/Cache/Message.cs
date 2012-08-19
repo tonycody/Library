@@ -28,9 +28,7 @@ namespace Library.Net.Lair
 
         private Certificate _certificate;
 
-        private int _hashCode = 0;
-
-        public const int MaxContentLength = 8192;
+        public const int MaxContentLength = 1024 * 2;
 
         public Message(Channel channel, string content, DigitalSignature digitalSignature)
         {
@@ -158,7 +156,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            return _hashCode;
+            if (_content == null) return 0;
+            else return _content.GetHashCode();
         }
 
         public override bool Equals(object obj)

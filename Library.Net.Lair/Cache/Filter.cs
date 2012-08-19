@@ -28,8 +28,6 @@ namespace Library.Net.Lair
 
         private Certificate _certificate;
 
-        private int _hashCode = 0;
-
         public const int MaxKeysCount = 256;
 
         public Filter(Channel channel, IEnumerable<Key> keys, DigitalSignature digitalSignature)
@@ -148,7 +146,7 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            return _hashCode;
+            return _creationTime.GetHashCode();
         }
 
         public override bool Equals(object obj)
