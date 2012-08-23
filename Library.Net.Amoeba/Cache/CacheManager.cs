@@ -237,7 +237,11 @@ namespace Library.Net.Amoeba
                     var info = _settings.SeedInformation[i];
                     bool flag = true;
 
-                    if (!(flag = pathList.Contains(info.Path))) goto Break;
+                    if (info.Path != null)
+                    {
+                        if (!(flag = pathList.Contains(info.Path))) goto Break;
+                    }
+
                     if (!(flag = keys.Contains(info.Seed.Key))) goto Break;
 
                     foreach (var index in info.Indexs)
@@ -294,7 +298,7 @@ namespace Library.Net.Amoeba
                     {
                         foreach (var group in index.Groups)
                         {
-                            usingHeaders.UnionWith(group.Keys);
+                            usingHeaders.UnionWith(group.Keys.Take(group.InformationLength));
                         }
                     }
                 }
