@@ -8,7 +8,7 @@ namespace Library.Net.Amoeba
 {
     // パフォーマンス上の理由から仕方なく、これは高速化にかなり貢献してる
 
-    class CountCache
+    sealed class CountCache
     {
         private Dictionary<Group, HashSet<Key>> _keyTrueList = new Dictionary<Group, HashSet<Key>>();
         private Dictionary<Group, HashSet<Key>> _keyFalseList = new Dictionary<Group, HashSet<Key>>();

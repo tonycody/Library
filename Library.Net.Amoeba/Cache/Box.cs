@@ -13,7 +13,7 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Box", Namespace = "http://Library/Net/Amoeba")]
-    public class Box : CertificateItemBase<Box>, IBox, IThisLock
+    public sealed class Box : CertificateItemBase<Box>, IBox, IThisLock
     {
         private enum SerializeId : byte
         {

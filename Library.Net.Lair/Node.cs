@@ -13,7 +13,7 @@ namespace Library.Net.Lair
     /// ノードに関する情報を表します
     /// </summary>
     [DataContract(Name = "Node", Namespace = "http://Library/Net/Lair")]
-    public class Node : ItemBase<Node>, INode, IThisLock
+    public sealed class Node : ItemBase<Node>, INode, IThisLock
     {
         private enum SerializeId : byte
         {

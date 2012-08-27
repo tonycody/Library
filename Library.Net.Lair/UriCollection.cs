@@ -6,7 +6,7 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public class UriCollection : FilterList<string>, IEnumerable<string>
+    public sealed class UriCollection : FilterList<string>, IEnumerable<string>
     {
         public UriCollection() : base() { }
         public UriCollection(int capacity) : base(capacity) { }

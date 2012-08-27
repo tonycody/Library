@@ -6,7 +6,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class IndexCollection : FilterList<Index>, IEnumerable<Index>
+    public sealed class IndexCollection : FilterList<Index>, IEnumerable<Index>
     {
         public IndexCollection() : base() { }
         public IndexCollection(int capacity) : base(capacity) { }

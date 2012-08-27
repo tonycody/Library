@@ -11,7 +11,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Message", Namespace = "http://Library/Net/Lair")]
-    public class Message : ReadOnlyCertificateItemBase<Message>, IMessage<Channel>
+    public sealed class Message : ReadOnlyCertificateItemBase<Message>, IMessage<Channel>
     {
         private enum SerializeId : byte
         {
@@ -264,7 +264,7 @@ namespace Library.Net.Lair
             {
                 return _channel;
             }
-            protected set
+            private set
             {
                 _channel = value;
             }
@@ -277,7 +277,7 @@ namespace Library.Net.Lair
             {
                 return _creationTime;
             }
-            protected set
+            private set
             {
                 var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                 _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
@@ -291,7 +291,7 @@ namespace Library.Net.Lair
             {
                 return _content;
             }
-            protected set
+            private set
             {
                 if (value != null && value.Length > Message.MaxContentLength)
                 {

@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class KeywordCollection : FilterList<string>, IEnumerable<string>
+    public sealed class KeywordCollection : FilterList<string>, IEnumerable<string>
     {
         public KeywordCollection() : base() { }
         public KeywordCollection(int capacity) : base(capacity) { }

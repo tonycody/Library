@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class GroupCollection : FilterList<Group>, IEnumerable<Group>
+    public sealed class GroupCollection : FilterList<Group>, IEnumerable<Group>
     {
         public GroupCollection() : base() { }
         public GroupCollection(int capacity) : base(capacity) { }

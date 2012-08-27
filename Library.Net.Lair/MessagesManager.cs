@@ -6,7 +6,7 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    class MessagesManager : IThisLock
+    sealed class MessagesManager : IThisLock
     {
         private LockedDictionary<Node, MessageManager> _messageManagerDictionary = new LockedDictionary<Node, MessageManager>();
         private LockedDictionary<Node, DateTime> _updateTimeDictionary = new LockedDictionary<Node, DateTime>();

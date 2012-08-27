@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Library.Net.Lair
 {
-    internal class BytesEqualityComparer : IEqualityComparer<byte[]>
+    sealed class BytesEqualityComparer : IEqualityComparer<byte[]>
     {
         #region IEqualityComparer<byte[]>
 

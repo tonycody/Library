@@ -42,7 +42,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Amoeba")]
-    class UploadItem : IDeepCloneable<UploadItem>, IThisLock
+    sealed class UploadItem : IDeepCloneable<UploadItem>, IThisLock
     {
         private string _filePath;
         private UploadState _state;
@@ -466,7 +466,7 @@ namespace Library.Net.Amoeba
 
         #region IThisLock
 
-        public virtual object ThisLock
+        public object ThisLock
         {
             get
             {
@@ -474,6 +474,7 @@ namespace Library.Net.Amoeba
                 {
                     if (_thisLock == null)
                         _thisLock = new object();
+
                     return _thisLock;
                 }
             }

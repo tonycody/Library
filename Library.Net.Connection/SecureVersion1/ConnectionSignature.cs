@@ -10,7 +10,7 @@ using Library.Io;
 namespace Library.Net.Connection.SecureVersion1
 {
     [DataContract(Name = "ConnectionSignature", Namespace = "http://Library/Net/Connection/SecureVersion1")]
-    class ConnectionSignature : CertificateItemBase<ConnectionSignature>, IThisLock
+    sealed class ConnectionSignature : CertificateItemBase<ConnectionSignature>, IThisLock
     {
         private enum SerializeId : byte
         {

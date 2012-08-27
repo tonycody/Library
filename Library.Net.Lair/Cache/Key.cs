@@ -9,7 +9,7 @@ using System.Collections.Generic;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Key", Namespace = "http://Library/Net/Lair")]
-    public class Key : ItemBase<Key>, IKey
+    public sealed class Key : ItemBase<Key>, IKey
     {
         private enum SerializeId : byte
         {
@@ -149,7 +149,7 @@ namespace Library.Net.Lair
             {
                 return _hash;
             }
-            protected set
+            private set
             {
                 if (value != null && value.Length > Key.MaxHashLength)
                 {
@@ -191,7 +191,7 @@ namespace Library.Net.Lair
             {
                 return _hashAlgorithm;
             }
-            protected set
+            private set
             {
                 if (!Enum.IsDefined(typeof(HashAlgorithm), value))
                 {

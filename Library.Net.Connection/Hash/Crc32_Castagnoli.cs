@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Library.Net.Connection
 {
-    public static class Crc32_Castagnoli
+    static class Crc32_Castagnoli
     {
         private static readonly uint[] _table;
 

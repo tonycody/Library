@@ -9,7 +9,7 @@ using Library.Io;
 namespace Library.Security
 {
     [DataContract(Name = "Certificate", Namespace = "http://Library/Security")]
-    public class Certificate : ItemBase<Certificate>, IThisLock
+    public sealed class Certificate : ItemBase<Certificate>, IThisLock
     {
         private enum SerializeId : byte
         {

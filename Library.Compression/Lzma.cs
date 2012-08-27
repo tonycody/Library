@@ -7,7 +7,7 @@ using Library.Io;
 
 namespace Library.Compression
 {
-    public class Lzma
+    public static class Lzma
     {
         public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {

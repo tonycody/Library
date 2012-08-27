@@ -12,4 +12,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c11a4dc2-bbf1-4d08-863f-ea93a7027dbd")]
-[assembly: AssemblyVersion("0.0.0.54")] // Sdz4DOehm/0PxbSkPJDcBEdvCG6LWGhhtOyISNLWZHGKiSEQwhVTQqaZS6FZCcUZNYyF6Qu7vMXld/FV4x9wnw==
+[assembly: AssemblyVersion("0.0.0.55")] // 8Ox+wzyjHD8VkODS7gfca/iq0KAFFnxoa9rRaJShomYZRlMnSmq2Sk0gZKe38wBEt/LioTIqScvRcIrFS4TDnQ==

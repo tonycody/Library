@@ -7,7 +7,7 @@ using System.Collections;
 
 namespace Library.Net.Amoeba
 {
-    class CirculationCollection<T> : IEnumerable<T>, IEnumerable, IThisLock
+    sealed class CirculationCollection<T> : IEnumerable<T>, IEnumerable, IThisLock
     {
         private LockedHashSet<T> _hashSet;
         private Dictionary<T, DateTime> _circularDictionary;

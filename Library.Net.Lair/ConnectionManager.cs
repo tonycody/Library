@@ -739,7 +739,7 @@ namespace Library.Net.Lair
         #region Message
 
         [DataContract(Name = "NodesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private class NodesMessage : ItemBase<NodesMessage>, IThisLock
+        private sealed class NodesMessage : ItemBase<NodesMessage>, IThisLock
         {
             private enum SerializeId : byte
             {
@@ -841,7 +841,7 @@ namespace Library.Net.Lair
         }
 
         [DataContract(Name = "ChannelsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private class ChannelsRequestMessage : ItemBase<ChannelsRequestMessage>, IThisLock
+        private sealed class ChannelsRequestMessage : ItemBase<ChannelsRequestMessage>, IThisLock
         {
             private enum SerializeId : byte
             {

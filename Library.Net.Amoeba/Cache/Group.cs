@@ -10,7 +10,7 @@ using Library.Io;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Group", Namespace = "http://Library/Net/Amoeba")]
-    public class Group : ItemBase<Group>, IGroup<Key>, IThisLock
+    public sealed class Group : ItemBase<Group>, IGroup<Key>, IThisLock
     {
         private enum SerializeId : byte
         {

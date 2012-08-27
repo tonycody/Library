@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class SeedCollection : FilterList<Seed>, IEnumerable<Seed>
+    public sealed class SeedCollection : FilterList<Seed>, IEnumerable<Seed>
     {
         public SeedCollection() : base() { }
         public SeedCollection(int capacity) : base(capacity) { }

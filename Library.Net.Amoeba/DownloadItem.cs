@@ -25,7 +25,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "DownloadItem", Namespace = "http://Library/Net/Amoeba")]
-    class DownloadItem : IDeepCloneable<DownloadItem>, IThisLock
+    sealed class DownloadItem : IDeepCloneable<DownloadItem>, IThisLock
     {
         private int _priority = 3;
         private DownloadState _state;
@@ -190,13 +190,15 @@ namespace Library.Net.Amoeba
 
         #region IThisLock
 
-        public virtual object ThisLock
+        public object ThisLock
         {
             get
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) _thisLock = new object();
+                    if (_thisLock == null)
+                        _thisLock = new object();
+
                     return _thisLock;
                 }
             }

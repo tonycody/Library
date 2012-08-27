@@ -6,7 +6,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class BoxCollection : FilterList<Box>, IEnumerable<Box>
+    public sealed class BoxCollection : FilterList<Box>, IEnumerable<Box>
     {
         public BoxCollection() : base() { }
         public BoxCollection(int capacity) : base(capacity) { }

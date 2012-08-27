@@ -6,7 +6,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public class NodeCollection : FilterList<Node>, IEnumerable<Node>
+    public sealed class NodeCollection : FilterList<Node>, IEnumerable<Node>
     {
         public NodeCollection() : base() { }
         public NodeCollection(int capacity) : base(capacity) { }

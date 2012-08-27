@@ -11,7 +11,7 @@ using Library.Io;
 namespace Library.Security
 {
     [DataContract(Name = "DigitalSignature", Namespace = "http://Library/Security")]
-    public class DigitalSignature : ItemBase<DigitalSignature>, IThisLock
+    public sealed class DigitalSignature : ItemBase<DigitalSignature>, IThisLock
     {
         private enum SerializeId : byte
         {

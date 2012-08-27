@@ -49,7 +49,7 @@ namespace Library.Correction
             this.Encode(srcBufs, srcOffs, repairBufs, repairOffs, index, src[0].Count);
         }
 
-        protected void Encode(byte[][] src, int[] srcOff, byte[][] repair, int[] repairOff, int[] index, int packetLength)
+        private void Encode(byte[][] src, int[] srcOff, byte[][] repair, int[] repairOff, int[] index, int packetLength)
         {
             Parallel.For(0, repair.Length, new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, row =>
             {

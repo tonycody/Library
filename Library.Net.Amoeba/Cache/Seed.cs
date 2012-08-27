@@ -11,7 +11,7 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Seed", Namespace = "http://Library/Net/Amoeba")]
-    public class Seed : CertificateItemBase<Seed>, ISeed<Key>, IThisLock
+    public sealed class Seed : CertificateItemBase<Seed>, ISeed<Key>, IThisLock
     {
         private enum SerializeId : byte
         {

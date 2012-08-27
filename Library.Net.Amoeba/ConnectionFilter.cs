@@ -32,7 +32,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "ConnectionFilter", Namespace = "http://Library/Net/Amoeba")]
-    public class ConnectionFilter : IDeepCloneable<ConnectionFilter>, IEquatable<ConnectionFilter>, IThisLock
+    public sealed class ConnectionFilter : IDeepCloneable<ConnectionFilter>, IEquatable<ConnectionFilter>, IThisLock
     {
         private UriCondition _uriCondition;
         private ConnectionType _connectionType;
@@ -195,7 +195,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UriCondition", Namespace = "http://Library/Net/Amoeba")]
-    public class UriCondition : IDeepCloneable<UriCondition>, IEquatable<UriCondition>, IThisLock
+    public sealed class UriCondition : IDeepCloneable<UriCondition>, IEquatable<UriCondition>, IThisLock
     {
         private string _value = null;
         private Regex _regex;

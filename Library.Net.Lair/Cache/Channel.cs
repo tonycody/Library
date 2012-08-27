@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Channel", Namespace = "http://Library/Net/Lair")]
-    public class Channel : ItemBase<Channel>, IChannel
+    public sealed class Channel : ItemBase<Channel>, IChannel
     {
         private enum SerializeId : byte
         {
@@ -153,7 +153,7 @@ namespace Library.Net.Lair
             {
                 return _id;
             }
-            protected set
+            private set
             {
                 if (value != null && (value.Length > Channel.MaxIdLength))
                 {
@@ -191,7 +191,7 @@ namespace Library.Net.Lair
             {
                 return _name;
             }
-            protected set
+            private set
             {
                 if (value != null && value.Length > Channel.MaxNameLength)
                 {

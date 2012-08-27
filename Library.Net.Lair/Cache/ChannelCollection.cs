@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public class ChannelCollection : FilterList<Channel>, IEnumerable<Channel>
+    public sealed class ChannelCollection : FilterList<Channel>, IEnumerable<Channel>
     {
         public ChannelCollection() : base() { }
         public ChannelCollection(int capacity) : base(capacity) { }

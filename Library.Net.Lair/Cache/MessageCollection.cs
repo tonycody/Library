@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public class MessageCollection : FilterList<Message>, IEnumerable<Message>
+    public sealed class MessageCollection : FilterList<Message>, IEnumerable<Message>
     {
         public MessageCollection() : base() { }
         public MessageCollection(int capacity) : base(capacity) { }
