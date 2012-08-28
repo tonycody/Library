@@ -145,7 +145,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<Seed> Seeds
+        public IEnumerable<Seed> CacheSeeds
         {
             get
             {
@@ -153,7 +153,20 @@ namespace Library.Net.Amoeba
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                    return _cacheManager.Seeds;
+                    return _cacheManager.CacheSeeds;
+                }
+            }
+        }
+
+        public IEnumerable<Seed> ShareSeeds
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    return _cacheManager.ShareSeeds;
                 }
             }
         }
@@ -435,13 +448,23 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void RemoveSeed(Seed seed)
+        public void RemoveCacheSeed(Seed seed)
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _cacheManager.RemoveSeed(seed);
+                _cacheManager.RemoveCacheSeed(seed);
+            }
+        }
+        
+        public void RemoveShareSeed(Seed seed)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _cacheManager.RemoveShareSeed(seed);
             }
         }
 

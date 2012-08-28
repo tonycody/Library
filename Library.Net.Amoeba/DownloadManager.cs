@@ -389,9 +389,9 @@ namespace Library.Net.Amoeba
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
-                                            if (!isStop)
+                                            if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
                                             {
-                                                isStop = (stream.Length > item.Index.Groups.Sum(n => n.Length));
+                                                isStop = true;
                                                 largeFlag = true;
                                             }
                                         }, 1024 * 1024, true))
@@ -465,9 +465,9 @@ namespace Library.Net.Amoeba
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
-                                            if (!isStop)
+                                            if (!isStop && (stream.Length > item.Seed.Length))
                                             {
-                                                isStop = (stream.Length > item.Seed.Length);
+                                                isStop = true;
                                                 largeFlag = true;
                                             }
                                         }, 1024 * 1024, true))
@@ -555,18 +555,46 @@ namespace Library.Net.Amoeba
                             {
                                 item.State = DownloadState.Downloading;
 
+                                int limitCount = (int)(1024 * (Math.Pow(item.Priority, 3) / Math.Pow(6, 3)));
+                                int downloadingCount = 0;
+
+                                List<Key> keyList = new List<Key>();
+
                                 foreach (var group in item.Index.Groups.ToArray())
                                 {
                                     if (_countCache.GetCount(group) >= group.InformationLength) continue;
 
-                                    var keys = _countCache.GetKeys(group, false).Where(n => !_connectionsManager.DownloadWaiting(n)).ToList();
+                                    List<Key> keys = new List<Key>();
+
+                                    foreach (var key in _countCache.GetKeys(group, false))
+                                    {
+                                        if (_connectionsManager.DownloadWaiting(key))
+                                        {
+                                            downloadingCount++;
+                                        }
+                                        else
+                                        {
+                                            keys.Add(key);
+                                        }
+                                    }
+
+                                    if (downloadingCount > limitCount) goto End;
+
                                     int length = group.InformationLength - (group.Keys.Count - keys.Count);
+                                    if (length <= 0) continue;
 
                                     foreach (var key in keys.OrderBy(n => random.Next()).Take(length))
                                     {
-                                        _connectionsManager.Download(key);
+                                        keyList.Add(key);
                                     }
                                 }
+
+                                foreach (var key in keyList.OrderBy(n => random.Next()).Take(limitCount - downloadingCount))
+                                {
+                                    _connectionsManager.Download(key);
+                                }
+
+                            End: ;
                             }
                             else
                             {
@@ -601,9 +629,9 @@ namespace Library.Net.Amoeba
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
-                                            if (!isStop)
+                                            if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
                                             {
-                                                isStop = (stream.Length > item.Index.Groups.Sum(n => n.Length));
+                                                isStop = true;
                                                 largeFlag = true;
                                             }
                                         }, 1024 * 1024, true))
@@ -678,9 +706,9 @@ namespace Library.Net.Amoeba
                                         {
                                             isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
-                                            if (!isStop)
+                                            if (!isStop && (stream.Length > item.Seed.Length))
                                             {
-                                                isStop = (stream.Length > item.Seed.Length);
+                                                isStop = true;
                                                 largeFlag = true;
                                             }
                                         }, 1024 * 1024, true))

@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Library.Net.Proxy
 {
-    internal class AsyncResult : IAsyncResult, IThisLock
+    class AsyncResult : IAsyncResult, IThisLock
     {
         private AsyncCallback _callback;
         private object _state;

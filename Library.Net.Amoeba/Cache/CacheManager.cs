@@ -50,13 +50,30 @@ namespace Library.Net.Amoeba
             _spaceClusters = new HashSet<long>();
         }
 
-        public IEnumerable<Seed> Seeds
+        public IEnumerable<Seed> CacheSeeds
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _settings.SeedInformation.Select(n => n.Seed).ToArray();
+                    return _settings.SeedInformation
+                        .Where(n => n.Path == null)
+                        .Select(n => n.Seed)
+                        .ToArray();
+                }
+            }
+        }
+
+        public IEnumerable<Seed> ShareSeeds
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _settings.SeedInformation
+                        .Where(n => n.Path != null)
+                        .Select(n => n.Seed)
+                        .ToArray();
                 }
             }
         }
@@ -501,6 +518,8 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
+                if (path != null) this.RemoveCacheSeed(seed);
+
                 if (_settings.SeedInformation.Any(n => n.Seed == seed))
                     return;
 
@@ -513,14 +532,39 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void RemoveSeed(Seed seed)
+        public void RemoveCacheSeed(Seed seed)
         {
             lock (this.ThisLock)
             {
                 for (int i = 0; i < _settings.SeedInformation.Count; i++)
                 {
                     var info = _settings.SeedInformation[i];
-                    if (seed != info.Seed) continue;
+                    if (info.Path != null || seed != info.Seed) continue;
+
+                    _settings.SeedInformation.RemoveAt(i);
+                    i--;
+                }
+            }
+        }
+
+        public void RemoveShareSeed(Seed seed)
+        {
+            lock (this.ThisLock)
+            {
+                for (int i = 0; i < _settings.SeedInformation.Count; i++)
+                {
+                    var info = _settings.SeedInformation[i];
+                    if (info.Path == null || seed != info.Seed) continue;
+
+                    foreach (var item in _ids.ToArray())
+                    {
+                        if (item.Value == info.Path)
+                        {
+                            this.RemoveShare(item.Key);
+
+                            break;
+                        }
+                    }
 
                     _settings.SeedInformation.RemoveAt(i);
                     i--;
@@ -1134,7 +1178,7 @@ namespace Library.Net.Amoeba
                                     {
                                         if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
                                         {
-                                            foreach (var item in _ids)
+                                            foreach (var item in _ids.ToArray())
                                             {
                                                 if (item.Value == path)
                                                 {
