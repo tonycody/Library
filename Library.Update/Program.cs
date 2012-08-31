@@ -34,7 +34,8 @@ namespace Library.Update
                 if (Directory.Exists(args[2]))
                     Directory.Delete(args[2], true);
 
-                Directory.Move(args[1], args[2]);
+                Program.CopyDirectory(args[1], args[2]);
+                Directory.Delete(args[1], true);
 
                 if (args[3] != "")
                 {
@@ -48,6 +49,25 @@ namespace Library.Update
             catch (Exception e)
             {
                 MessageBox.Show(e.Message, "Library.Update Error", MessageBoxButtons.OK);
+            }
+        }
+
+        public static void CopyDirectory(string sourceDirectoryPath, string destDirectoryPath)
+        {
+            if (!Directory.Exists(destDirectoryPath))
+            {
+                Directory.CreateDirectory(destDirectoryPath);
+                File.SetAttributes(destDirectoryPath, File.GetAttributes(sourceDirectoryPath));
+            }
+
+            foreach (string file in Directory.GetFiles(sourceDirectoryPath))
+            {
+                File.Copy(file, Path.Combine(destDirectoryPath, Path.GetFileName(file)), true);
+            }
+
+            foreach (string dir in Directory.GetDirectories(sourceDirectoryPath))
+            {
+                CopyDirectory(dir, Path.Combine(destDirectoryPath, Path.GetFileName(dir)));
             }
         }
     }
