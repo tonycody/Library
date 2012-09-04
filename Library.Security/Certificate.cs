@@ -28,6 +28,7 @@ namespace Library.Security
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
+        public const int MaxNickNameLength = 256;
         public const int MaxPublickeyLength = 1024 * 8;
         public const int MaxSignatureLength = 1024 * 8;
 
@@ -260,7 +261,14 @@ namespace Library.Security
             {
                 lock (this.ThisLock)
                 {
-                    _nickname = value;
+                    if (value != null && value.Length > Certificate.MaxNickNameLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _nickname = value;
+                    }
                 }
             }
         }
