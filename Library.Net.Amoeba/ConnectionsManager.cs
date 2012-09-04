@@ -92,7 +92,7 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings();
 
-            _routeTable = new Kademlia<Node>(512, 20);
+            _routeTable = new Kademlia<Node>(512, 30);
 
             _connectionManagers = new LockedList<ConnectionManager>();
             _messagesManager = new MessagesManager();
@@ -262,13 +262,29 @@ namespace Library.Net.Amoeba
                     contexts.Add(new InformationContext("PullBlockRequestCount", _pullBlockRequestCount));
                     contexts.Add(new InformationContext("PullBlockCount", _pullBlockCount));
 
-                    contexts.Add(new InformationContext("BlockCount", _cacheManager.Count));
-                    contexts.Add(new InformationContext("RelayBlockCount", _relayBlockCount));
-
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
 
                     contexts.Add(new InformationContext("OtherNodeCount", _routeTable.Count));
+
+                    {
+                        HashSet<Node> nodes = new HashSet<Node>();
+
+                        foreach (var connectionManager in _connectionManagers)
+                        {
+                            nodes.Add(connectionManager.Node);
+
+                            foreach (var node in _messagesManager[connectionManager.Node].SurroundingNodes)
+                            {
+                                nodes.Add(node);
+                            }
+                        }
+
+                        contexts.Add(new InformationContext("SurroundingNodeCount", nodes.Count));
+                    }
+
+                    contexts.Add(new InformationContext("BlockCount", _cacheManager.Count));
+                    contexts.Add(new InformationContext("RelayBlockCount", _relayBlockCount));
 
                     return new Information(contexts);
                 }
@@ -734,7 +750,7 @@ namespace Library.Net.Amoeba
                         connectionManager.Connect();
                         if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
 
-                        if (connectionManager.Node.Uris.Count != 0) _routeTable.Add(connectionManager.Node);
+                        if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
 
                         _acceptConnectionCount++;
 
@@ -1440,7 +1456,7 @@ namespace Library.Net.Amoeba
                 {
                     if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
 
-                    _routeTable.Add(node);
+                    _routeTable.Live(node);
                 }
             }
         }

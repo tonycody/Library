@@ -91,7 +91,7 @@ namespace Library.Net.Lair
 
             _settings = new Settings();
 
-            _routeTable = new Kademlia<Node>(512, 20);
+            _routeTable = new Kademlia<Node>(512, 30);
 
             _connectionManagers = new LockedList<ConnectionManager>();
             _messagesManager = new MessagesManager();
@@ -261,6 +261,23 @@ namespace Library.Net.Lair
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
 
                     contexts.Add(new InformationContext("OtherNodeCount", _routeTable.Count));
+
+                    {
+                        HashSet<Node> nodes = new HashSet<Node>();
+
+                        foreach (var connectionManager in _connectionManagers)
+                        {
+                            nodes.Add(connectionManager.Node);
+
+                            foreach (var node in _messagesManager[connectionManager.Node].SurroundingNodes)
+                            {
+                                nodes.Add(node);
+                            }
+                        }
+
+                        contexts.Add(new InformationContext("SurroundingNodeCount", nodes.Count));
+                    }
+
                     contexts.Add(new InformationContext("MessageCount", _settings.Messages.Values.Sum(n => n.Count)));
                     contexts.Add(new InformationContext("FilterCount", _settings.Filters.Values.Sum(n => n.Count)));
 
@@ -732,7 +749,7 @@ namespace Library.Net.Lair
                         connectionManager.Connect();
                         if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
 
-                        if (connectionManager.Node.Uris.Count != 0) _routeTable.Add(connectionManager.Node);
+                        if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
 
                         _acceptConnectionCount++;
 
@@ -1297,6 +1314,8 @@ namespace Library.Net.Lair
             _messagesManager[connectionManager.Node].Priority++;
 
             _pullMessageCount++;
+        
+            if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
         }
 
         private void connectionManager_PullFilterEvent(object sender, PullFilterEventArgs e)
@@ -1344,6 +1363,8 @@ namespace Library.Net.Lair
             _messagesManager[connectionManager.Node].Priority++;
 
             _pullFilterCount++;
+
+            if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
         }
 
         private void connectionManager_PullCancelEvent(object sender, EventArgs e)
@@ -1402,7 +1423,7 @@ namespace Library.Net.Lair
                 {
                     if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
 
-                    _routeTable.Add(node);
+                    _routeTable.Live(node);
                 }
             }
         }

@@ -653,12 +653,7 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                ShareIndex tempShareIndex = null;
-
-                if (_settings.ShareIndex.TryGetValue(path, out tempShareIndex))
-                {
-                    return new KeyCollection(tempShareIndex.KeyAndCluster.Keys);
-                }
+                if (_settings.ShareIndex.ContainsKey(path)) throw new ArgumentException();
             }
 
             byte[] buffer = _bufferManager.TakeBuffer(blockLength);
