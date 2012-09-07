@@ -227,7 +227,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        internal void CheckSeeds()
+        public void CheckSeeds()
         {
             lock (this.ThisLock)
             {

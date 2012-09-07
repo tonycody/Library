@@ -534,6 +534,13 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public void CheckSeeds()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            _cacheManager.CheckSeeds();
+        }
+
         public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
