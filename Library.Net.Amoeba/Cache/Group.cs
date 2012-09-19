@@ -192,7 +192,9 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.CorrectionAlgorithm != other.CorrectionAlgorithm
+            if ((this.Keys == null) != (other.Keys == null)
+
+                || this.CorrectionAlgorithm != other.CorrectionAlgorithm
                 || this.InformationLength != other.InformationLength
                 || this.BlockLength != other.BlockLength
                 || this.Length != other.Length)
@@ -200,7 +202,12 @@ namespace Library.Net.Amoeba
                 return false;
             }
 
-            if (!Collection.Equals(this.Keys, other.Keys)) return false;
+            if (this.Keys != null && other.Keys != null)
+            {
+                if (this.Keys.Count != other.Keys.Count) return false;
+
+                for (int i = 0; i < this.Keys.Count; i++) if (this.Keys[i] != other.Keys[i]) return false;
+            }
 
             return true;
         }

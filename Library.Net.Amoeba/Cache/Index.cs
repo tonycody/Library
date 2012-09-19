@@ -184,7 +184,9 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.CompressionAlgorithm != other.CompressionAlgorithm
+            if ((this.Groups == null) != (other.Groups == null)
+
+                || this.CompressionAlgorithm != other.CompressionAlgorithm
 
                 || this.CryptoAlgorithm != other.CryptoAlgorithm
                 || (this.CryptoKey == null) != (other.CryptoKey == null))
@@ -192,7 +194,12 @@ namespace Library.Net.Amoeba
                 return false;
             }
 
-            if (!Collection.Equals(this.Groups, other.Groups)) return false;
+            if (this.Groups != null && other.Groups != null)
+            {
+                if (this.Groups.Count != other.Groups.Count) return false;
+
+                for (int i = 0; i < this.Groups.Count; i++) if (this.Groups[i] != other.Groups[i]) return false;
+            }
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {

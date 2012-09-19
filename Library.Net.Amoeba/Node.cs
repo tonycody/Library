@@ -134,7 +134,8 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Id == null) != (other.Id == null))
+            if ((this.Id == null) != (other.Id == null)
+                || (this.Uris == null) != (other.Uris == null))
             {
                 return false;
             }
@@ -146,7 +147,12 @@ namespace Library.Net.Amoeba
                 for (int i = 0; i < this.Id.Length; i++) if (this.Id[i] != other.Id[i]) return false;
             }
 
-            if (!Collection.Equals(this.Uris, other.Uris)) return false;
+            if (this.Uris != null && other.Uris != null)
+            {
+                if (this.Uris.Count != other.Uris.Count) return false;
+
+                for (int i = 0; i < this.Uris.Count; i++) if (this.Uris[i] != other.Uris[i]) return false;
+            }
 
             return true;
         }

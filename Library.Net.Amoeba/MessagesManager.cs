@@ -62,18 +62,19 @@ namespace Library.Net.Amoeba
                 {
                     this.Circular();
 
-                    if (!_messageManagerDictionary.ContainsKey(node))
+                    MessageManager messageManager = null;
+
+                    if (!_messageManagerDictionary.TryGetValue(node, out messageManager))
                     {
                         while (_messageManagerDictionary.Any(n => n.Value.Id == _id)) _id++;
-                        _messageManagerDictionary[node] = new MessageManager(_id);
+
+                        messageManager = new MessageManager(_id);
+                        _messageManagerDictionary[node] = messageManager;
                     }
 
-                    if (!_updateTimeDictionary.ContainsKey(node))
-                    {
-                        _updateTimeDictionary[node] = DateTime.UtcNow;
-                    }
+                    _updateTimeDictionary[node] = DateTime.UtcNow;
 
-                    return _messageManagerDictionary[node];
+                    return messageManager;
                 }
             }
         }

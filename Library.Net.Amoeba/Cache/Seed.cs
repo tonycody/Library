@@ -374,17 +374,24 @@ namespace Library.Net.Amoeba
                 || this.Rank != other.Rank
                 || this.Key != other.Key
 
+                || (this.Keywords == null) != (other.Keywords == null)
+
                 || this.CompressionAlgorithm != other.CompressionAlgorithm
 
                 || this.CryptoAlgorithm != other.CryptoAlgorithm
-                || ((this.CryptoKey == null) != (other.CryptoKey == null))
+                || (this.CryptoKey == null) != (other.CryptoKey == null)
 
                 || this.Certificate != other.Certificate)
             {
                 return false;
             }
 
-            if (!Collection.Equals(this.Keywords, other.Keywords)) return false;
+            if (this.Keywords != null && other.Keywords != null)
+            {
+                if (this.Keywords.Count != other.Keywords.Count) return false;
+
+                for (int i = 0; i < this.Keywords.Count; i++) if (this.Keywords[i] != other.Keywords[i]) return false;
+            }
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {

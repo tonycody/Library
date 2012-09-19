@@ -281,6 +281,7 @@ namespace Library.Tool
                     }
                     catch (XmlException)
                     {
+
                     }
                 }
 
@@ -326,6 +327,8 @@ namespace Library.Tool
 
                 File.Delete(languageManagerPath);
                 File.Move(languageManagerPath + ".tmp", languageManagerPath);
+
+                Program.LanguageSetting(languageXmlPath);
 
                 return;
             }
@@ -433,6 +436,99 @@ namespace Library.Tool
                 startInfo.WorkingDirectory = Path.GetFullPath(args[2]);
 
                 Process.Start(startInfo);
+            }
+        }
+
+        private static void LanguageSetting(string languageXmlPath)
+        {
+            var directoryPath = Path.GetDirectoryName(languageXmlPath);
+
+            if (!Directory.Exists(directoryPath)) return;
+
+            Dictionary<string, Dictionary<string, string>> _dic = new Dictionary<string, Dictionary<string, string>>();
+
+            foreach (string path in Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories))
+            {
+                if (languageXmlPath == path) continue;
+
+                Dictionary<string, string> dic = new Dictionary<string, string>();
+
+                using (XmlTextReader xml = new XmlTextReader(path))
+                {
+                    try
+                    {
+                        while (xml.Read())
+                        {
+                            if (xml.NodeType == XmlNodeType.Element)
+                            {
+                                if (xml.LocalName == "Translate")
+                                {
+                                    dic.Add(xml.GetAttribute("Key"), xml.GetAttribute("Value"));
+                                }
+                            }
+                        }
+                    }
+                    catch (XmlException)
+                    {
+
+                    }
+                }
+
+                _dic[Path.GetFileNameWithoutExtension(path)] = dic;
+            }
+
+            foreach (string path in Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories))
+            {
+                if (languageXmlPath == path) continue;
+
+                StringBuilder builder = new StringBuilder();
+
+                using (FileStream stream = new FileStream(languageXmlPath, FileMode.Open))
+                using (XmlTextReader xml = new XmlTextReader(stream))
+                {
+                    try
+                    {
+                        while (xml.Read())
+                        {
+                            if (xml.NodeType == XmlNodeType.Element)
+                            {
+                                if (xml.LocalName == "Translate")
+                                {
+                                    var key = xml.GetAttribute("Key");
+                                    string value = "";
+
+                                    if (!_dic[Path.GetFileNameWithoutExtension(path)].TryGetValue(key, out value))
+                                    {
+                                        value = xml.GetAttribute("Value");
+                                    }
+
+                                    builder.AppendLine(string.Format("  <Translate Key=\"{0}\" Value=\"{1}\" />",
+                                        System.Web.HttpUtility.HtmlEncode(key), System.Web.HttpUtility.HtmlEncode(value)));
+                                }
+                            }
+                            else if (xml.NodeType == XmlNodeType.Whitespace)
+                            {
+                                if (xml.Value.StartsWith("\r\n\r\n"))
+                                {
+                                    builder.AppendLine("");
+                                }
+                            }
+                        }
+                    }
+                    catch (XmlException)
+                    {
+
+                    }
+                }
+
+                using (FileStream stream = new FileStream(path, FileMode.Create))
+                using (StreamWriter writer = new StreamWriter(stream))
+                {
+                    writer.WriteLine("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>");
+                    writer.WriteLine("<Configuration>");
+                    writer.Write(builder.ToString());
+                    writer.WriteLine("</Configuration>");
+                }
             }
         }
 

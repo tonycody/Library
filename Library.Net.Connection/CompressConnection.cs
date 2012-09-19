@@ -283,13 +283,13 @@ namespace Library.Net.Connection
                     }));
 
 #if DEBUG
-                        if (list[0].Value.Length != stream.Length)
-                        {
-                            Debug.WriteLine("Send : {0}→{1} {2}",
-                                NetworkConverter.ToSizeString(stream.Length),
-                                NetworkConverter.ToSizeString(list[0].Value.Length),
-                                NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
-                        }
+                    if (list[0].Value.Length != stream.Length)
+                    {
+                        Debug.WriteLine("Send : {0}→{1} {2}",
+                            NetworkConverter.ToSizeString(stream.Length),
+                            NetworkConverter.ToSizeString(list[0].Value.Length),
+                            NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
+                    }
 #endif
 
                     for (int i = 1; i < list.Count; i++)

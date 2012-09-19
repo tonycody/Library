@@ -776,7 +776,7 @@ namespace Library.Net.Amoeba
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
-                if (seedRemoveStopwatch.Elapsed.Minutes >= 30)
+                if (seedRemoveStopwatch.Elapsed.TotalMinutes >= 30)
                 {
                     seedRemoveStopwatch.Restart();
 
@@ -796,7 +796,7 @@ namespace Library.Net.Amoeba
                             var list = _cacheManager.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
                                 .OrderBy(n => _random.Next()).ToList();
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -812,7 +812,7 @@ namespace Library.Net.Amoeba
                             var list = _downloadBlocks.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
                                 .OrderBy(n => _random.Next()).ToList();
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -831,7 +831,7 @@ namespace Library.Net.Amoeba
                             var messageManager = _messagesManager[node];
                             var list = messageManager.PullBlocksLink.OrderBy(n => _random.Next()).ToList();
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -850,7 +850,7 @@ namespace Library.Net.Amoeba
 
                             if (list.Any(n => _cacheManager.Contains(n))) continue;
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -1037,7 +1037,7 @@ namespace Library.Net.Amoeba
                         if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
                         {
                             KeyCollection tempList = null;
-                            int count = (int)((4096 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
+                            int count = (int)((2048 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (this.ThisLock)
                             {
@@ -1079,7 +1079,7 @@ namespace Library.Net.Amoeba
                         if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit)
                         {
                             KeyCollection tempList = null;
-                            int count = (int)((4096 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
+                            int count = (int)((2048 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (this.ThisLock)
                             {
@@ -1134,9 +1134,9 @@ namespace Library.Net.Amoeba
                             {
                                 KeyCollection tempKeys = new KeyCollection();
 
-                                tempKeys.AddRange(_settings.UploadBlocksRequest);
-                                tempKeys.AddRange(_settings.DiffusionBlocksRequest);
-                                
+                                tempKeys.AddRange(_settings.UploadBlocksRequest.Take(1024));
+                                tempKeys.AddRange(_settings.DiffusionBlocksRequest.Take(1024));
+
                                 KeyCollection removeKeys = new KeyCollection();
 
                                 foreach (var key in tempKeys.OrderBy(n => _random.Next()))
@@ -1176,9 +1176,9 @@ namespace Library.Net.Amoeba
                                             break;
                                         }
                                     }
-
-                                    this.OnUploadedEvent(removeKeys);
                                 }
+
+                                this.OnUploadedEvent(removeKeys);
                             }
 
                             foreach (var key in uploadKeys)
@@ -1190,10 +1190,10 @@ namespace Library.Net.Amoeba
                                     buffer = _cacheManager[key];
 
                                     connectionManager.PushBlock(key, buffer);
-                                  
+
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
                                     _pushBlockCount++;
-                                    
+
                                     messageManager.PullBlocksRequest.Remove(key);
                                     messageManager.PushBlocks.Add(key);
                                 }
