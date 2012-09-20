@@ -191,8 +191,9 @@ namespace Library.Security
 
         public override bool Equals(Certificate other)
         {
-            if ((object)other == null || this.GetHashCode() != other.GetHashCode()) return false;
+            if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
+            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Nickname != other.Nickname
                 || this.DigitalSignatureAlgorithm != other.DigitalSignatureAlgorithm

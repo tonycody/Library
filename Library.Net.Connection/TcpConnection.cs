@@ -206,6 +206,7 @@ namespace Library.Net.Connection
 
                     if (length == 0)
                     {
+                        Thread.Sleep(1000);
                         goto Restart;
                     }
                     else if (length > _maxReceiveCount)
