@@ -1032,7 +1032,7 @@ namespace Library.Net.Lair
                             {
                                 _pushChannelsRequestDictionary.Clear();
 
-                                foreach (var item in pushChannelsRequestDictionary)
+                                foreach (var item in pushChannelsRequestDictionary.OrderBy(n => _random.Next()))
                                 {
                                     _pushChannelsRequestDictionary.Add(item.Key, item.Value);
                                 }
