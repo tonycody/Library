@@ -944,17 +944,25 @@ namespace Library.Net.Lair
                 {
                     uploadStopwatch.Restart();
 
-                    foreach (var c in this.GetChannels())
+                    Parallel.ForEach(this.GetChannels(), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
                     {
-                        var node = this.GetSearchNode(c.Id, 1).FirstOrDefault();
-
-                        if (node != null)
+                        try
                         {
-                            var messageManager = _messagesManager[node];
+                            List<Node> requestNodes = new List<Node>();
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
-                            messageManager.PullChannelsRequest.Add(c);
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                var messageManager = _messagesManager[requestNodes[i]];
+
+                                messageManager.PullChannelsRequest.Add(item);
+                            }
                         }
-                    }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    });
                 }
 
                 if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
@@ -1005,9 +1013,7 @@ namespace Library.Net.Lair
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-
-                                var node = this.GetSearchNode(item.Id, 1).FirstOrDefault();
-                                if (node != null) requestNodes.Add(node);
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {

@@ -9,7 +9,6 @@ namespace Library.Net.Lair
 {
     public class LairManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
-        private string _cachePath;
         private BufferManager _bufferManager;
 
         private ClientManager _clientManager;
@@ -25,10 +24,8 @@ namespace Library.Net.Lair
         private bool _disposed = false;
         private object _thisLock = new object();
 
-        public LairManager(string cachePath, BufferManager bufferManager)
+        public LairManager(BufferManager bufferManager)
         {
-            _cachePath = cachePath;
-
             _bufferManager = bufferManager;
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);

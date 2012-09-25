@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{5FC132BA-75E0-4167-9258-3D2B23DE4E31}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Library.Net.Nest</RootNamespace>
+    <AssemblyName>Library.Net.Nest</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System">
+    </Reference>
+    <Reference Include="System.Core">
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq">
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+    </Reference>
+    <Reference Include="Microsoft.CSharp">
+    </Reference>
+    <Reference Include="System.Data">
+    </Reference>
+    <Reference Include="System.Xml">
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ChannelCollection.cs" />
+    <Compile Include="CirculationCollection.cs" />
+    <Compile Include="CommandMessage.cs" />
+    <Compile Include="ConnectionManager.cs" />
+    <Compile Include="ConnectionType.cs" />
+    <Compile Include="IdCollection.cs" />
+    <Compile Include="ProtocolVersion.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SessionManager.cs" />
+    <Compile Include="UriCollection.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
+      <Project>{197C654F-2461-446A-B531-4A789F14BE19}</Project>
+      <Name>Library.Collections</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Configuration\Library.Configuration.csproj">
+      <Project>{9AA70F88-4A83-4B3F-B494-7D37EA95766A}</Project>
+      <Name>Library.Configuration</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Io\Library.Io.csproj">
+      <Project>{74597E45-7F3C-4958-8B6A-B16DE8DE47B9}</Project>
+      <Name>Library.Io</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Net.Connection\Library.Net.Connection.csproj">
+      <Project>{38994E3C-0699-4D6C-AD02-F9F657340347}</Project>
+      <Name>Library.Net.Connection</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Net.Proxy\Library.Net.Proxy.csproj">
+      <Project>{56EB350E-089E-40BB-97CB-F2745A4251AE}</Project>
+      <Name>Library.Net.Proxy</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Net\Library.Net.csproj">
+      <Project>{7CFDE01D-4A0E-4E10-ACC2-34DB897DBE0F}</Project>
+      <Name>Library.Net</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Security\Library.Security.csproj">
+      <Project>{D314C626-A6FC-4FD5-BE3C-9D36C2738418}</Project>
+      <Name>Library.Security</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library\Library.csproj">
+      <Project>{63EADC1F-9A8A-4945-A562-DA666D0BCB7B}</Project>
+      <Name>Library</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Properties\Library.Net.Rosa.License" />
+    <None Include="Properties\Library.Net.Rosa.readme" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>call "$(SolutionDir)Increment.bat" "$(ProjectPath)" "$(ProjectDir)Properties\AssemblyInfo.cs"</PreBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

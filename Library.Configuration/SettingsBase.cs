@@ -20,6 +20,7 @@ namespace Library.Configuration
     {
         public SettingsContext()
         {
+
         }
 
         public T Value { get; set; }
