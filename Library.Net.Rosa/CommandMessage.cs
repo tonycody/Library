@@ -124,18 +124,17 @@ namespace Library.Net.Rosa
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Command != other.Command)
-                || (this.Content.Offset != other.Content.Offset)
-                || (this.Content.Count != other.Content.Count)
-                || ((this.Content.Array == null) != (other.Content.Array == null)))
+            if (this.Command != other.Command
+                || this.Content.Offset != other.Content.Offset
+                || this.Content.Count != other.Content.Count
+                || (this.Content.Array == null) != (other.Content.Array == null))
             {
                 return false;
             }
 
             if (this.Content.Array != null && other.Content.Array != null)
             {
-                if (!Collection.Equals(this.Content.Array, this.Content.Offset,
-                    other.Content.Array, other.Content.Offset, this.Content.Count)) return false;
+                if (!Collection.Equals(this.Content.Array, this.Content.Offset, other.Content.Array, other.Content.Offset, this.Content.Count)) return false;
             }
 
             return true;

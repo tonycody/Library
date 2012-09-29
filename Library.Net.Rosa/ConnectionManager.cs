@@ -26,23 +26,18 @@ namespace Library.Net.Rosa
 
     public class ConnectionManager : ManagerBase, IThisLock
     {
-        private enum SerializeId : byte
-        {
-            Alive = 0,
-            Messages = 1,
-        }
-
         private ConnectionBase _connection;
         private ProtocolVersion _protocolVersion;
         private ProtocolVersion _myProtocolVersion;
         private ProtocolVersion _otherProtocolVersion;
         private BufferManager _bufferManager;
 
-        private DateTime _sendUpdateTime;
+        private DateTime _lastSendTime;
+
         private bool _onClose = false;
 
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 3, 0);
-        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 6, 0);
+        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 3, 0);
 
         private object _thisLock = new object();
         private bool _disposed = false;
@@ -56,6 +51,24 @@ namespace Library.Net.Rosa
             _bufferManager = bufferManager;
 
             _myProtocolVersion = ProtocolVersion.Version1;
+        }
+
+        public DateTime LastSendTime
+        {
+            get
+            {
+                using (DeadlockMonitor.Lock(this.ThisLock))
+                {
+                    return _lastSendTime;
+                }
+            }
+            set
+            {
+                using (DeadlockMonitor.Lock(this.ThisLock))
+                {
+                    _lastSendTime = value;
+                }
+            }
         }
 
         public ProtocolVersion ProtocolVersion
@@ -157,10 +170,9 @@ namespace Library.Net.Rosa
 
                     if (_protocolVersion == ProtocolVersion.Version1)
                     {
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _lastSendTime = DateTime.UtcNow;
 
                         ThreadPool.QueueUserWorkItem(new WaitCallback(this.Pull));
-                        ThreadPool.QueueUserWorkItem(new WaitCallback(this.AliveTimer));
                     }
                     else
                     {
@@ -194,61 +206,6 @@ namespace Library.Net.Rosa
             }
         }
 
-        private void AliveTimer(object state)
-        {
-            Thread.CurrentThread.Name = "AliveTimer";
-
-            try
-            {
-                for (; ; )
-                {
-                    if (_disposed)
-                        throw new ObjectDisposedException(this.GetType().FullName);
-
-                    while ((DateTime.UtcNow - _sendUpdateTime) < _sendTimeSpan)
-                    {
-                        Thread.Sleep(new TimeSpan(0, 0, 1));
-                    }
-
-                    this.Alive();
-                }
-            }
-            catch (Exception)
-            {
-                this.OnClose(new EventArgs());
-            }
-        }
-
-        private void Alive()
-        {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                try
-                {
-                    using (Stream stream = new BufferStream(_bufferManager))
-                    {
-                        stream.WriteByte((byte)SerializeId.Alive);
-                        stream.Flush();
-                        stream.Seek(0, SeekOrigin.Begin);
-
-                        _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
-                    }
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
         private void Pull(object state)
         {
             Thread.CurrentThread.Name = "Pull";
@@ -271,18 +228,11 @@ namespace Library.Net.Rosa
 
                             using (Stream stream2 = new RangeStream(stream, 1, stream.Length - 1, true))
                             {
-                                if (type == (byte)SerializeId.Alive)
+                                var message = CommandsMessage.Import(stream2, _bufferManager);
+                                this.OnPullMessagesEvent(new MessagesEventArgs()
                                 {
-
-                                }
-                                else if (type == (byte)SerializeId.Messages)
-                                {
-                                    var message = CommandsMessage.Import(stream2, _bufferManager);
-                                    this.OnPullMessagesEvent(new MessagesEventArgs()
-                                    {
-                                        Messages = message.CommandMessages
-                                    });
-                                }
+                                    Messages = message.CommandMessages
+                                });
                             }
                         }
                     }
@@ -332,16 +282,13 @@ namespace Library.Net.Rosa
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Messages);
-                    stream.Flush();
-
                     var message = new CommandsMessage();
                     message.CommandMessages.AddRange(messages);
 
                     stream = new AddStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _lastSendTime = DateTime.UtcNow;
                 }
                 catch (ConnectionException)
                 {
@@ -509,14 +456,8 @@ namespace Library.Net.Rosa
     [Serializable]
     public class ConnectionManagerException : ManagerException
     {
-        public ConnectionManagerException() : base()
-        {
-        }
-        public ConnectionManagerException(string message) : base(message)
-        {
-        }
-        public ConnectionManagerException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+        public ConnectionManagerException() : base() { }
+        public ConnectionManagerException(string message) : base(message) { }
+        public ConnectionManagerException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

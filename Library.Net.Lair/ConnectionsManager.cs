@@ -977,13 +977,9 @@ namespace Library.Net.Lair
                             var list = _pushChannelsRequestList
                                 .OrderBy(n => _random.Next()).ToList();
 
-                            for (int i = 0, j = 0; j < 128 && i < list.Count; i++)
+                            for (int i = 0; i < 128 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushChannelsRequest.Contains(list[i])))
-                                {
-                                    pushChannelsRequestList.Add(list[i]);
-                                    j++;
-                                }
+                                pushChannelsRequestList.Add(list[i]);
                             }
                         }
                     }
@@ -994,13 +990,9 @@ namespace Library.Net.Lair
                             var messageManager = _messagesManager[node];
                             var list = messageManager.PullChannelsRequest.OrderBy(n => _random.Next()).ToList();
 
-                            for (int i = 0, j = 0; j < 128 && i < list.Count; i++)
+                            for (int i = 0; i < 128 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushChannelsRequest.Contains(list[i])))
-                                {
-                                    pushChannelsRequestList.Add(list[i]);
-                                    j++;
-                                }
+                                pushChannelsRequestList.Add(list[i]);
                             }
                         }
                     }
@@ -1008,12 +1000,12 @@ namespace Library.Net.Lair
                     {
                         LockedDictionary<Node, LockedHashSet<Channel>> pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
 
-                        Parallel.ForEach(pushChannelsRequestList, new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushChannelsRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
                         {
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 3));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
@@ -1038,7 +1030,7 @@ namespace Library.Net.Lair
                             {
                                 _pushChannelsRequestDictionary.Clear();
 
-                                foreach (var item in pushChannelsRequestDictionary.OrderBy(n => _random.Next()))
+                                foreach (var item in pushChannelsRequestDictionary)
                                 {
                                     _pushChannelsRequestDictionary.Add(item.Key, item.Value);
                                 }
@@ -1180,33 +1172,33 @@ namespace Library.Net.Lair
                             {
                                 if (_settings.Messages.ContainsKey(channel))
                                 {
-                                    foreach (var m in _settings.Messages[channel])
+                                    foreach (var m in _settings.Messages[channel].OrderBy(n => _random.Next()))
                                     {
                                         if (!messageManager.PushMessages.Contains(m.GetHash(_hashAlgorithm)))
                                         {
                                             messages.Add(m);
+
+                                            break;
                                         }
                                     }
                                 }
                             }
-
-                            messages.IntersectWith(messages.OrderBy(n => _random.Next()).Take(1024));
 
                             lock (_settings.Filters.ThisLock)
                             {
                                 if (_settings.Filters.ContainsKey(channel))
                                 {
-                                    foreach (var f in _settings.Filters[channel])
+                                    foreach (var f in _settings.Filters[channel].OrderBy(n => _random.Next()))
                                     {
                                         if (!messageManager.PushFilters.Contains(f.GetHash(_hashAlgorithm)))
                                         {
                                             filters.Add(f);
+
+                                            break;
                                         }
                                     }
                                 }
                             }
-
-                            filters.IntersectWith(filters.OrderBy(n => _random.Next()).Take(1024));
 
                             if (messages.Count != 0)
                             {

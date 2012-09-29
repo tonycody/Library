@@ -871,7 +871,7 @@ namespace Library.Net.Amoeba
                         LockedDictionary<Node, LockedHashSet<Key>> pushBlocksRequestDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
                         //foreach (var item in pushBlocksLinkList)
-                        Parallel.ForEach(pushBlocksLinkList, new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushBlocksLinkList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
                         {
                             try
                             {
@@ -903,7 +903,7 @@ namespace Library.Net.Amoeba
                             {
                                 _pushBlocksLinkDictionary.Clear();
 
-                                foreach (var item in pushBlocksLinkDictionary.OrderBy(n => _random.Next()))
+                                foreach (var item in pushBlocksLinkDictionary)
                                 {
                                     _pushBlocksLinkDictionary.Add(item.Key, item.Value);
                                 }
@@ -911,7 +911,7 @@ namespace Library.Net.Amoeba
                         }
 
                         //foreach (var item in pushBlocksRequestList)
-                        Parallel.ForEach(pushBlocksRequestList, new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushBlocksRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
                         {
                             try
                             {
@@ -956,7 +956,7 @@ namespace Library.Net.Amoeba
                             {
                                 _pushBlocksRequestDictionary.Clear();
 
-                                foreach (var item in pushBlocksRequestDictionary.OrderBy(n => _random.Next()))
+                                foreach (var item in pushBlocksRequestDictionary)
                                 {
                                     _pushBlocksRequestDictionary.Add(item.Key, item.Value);
                                 }
@@ -1001,7 +1001,7 @@ namespace Library.Net.Amoeba
                         LockedDictionary<Node, LockedHashSet<Key>> pushBlocksDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
                         //foreach (var item in pushBlocksList)
-                        Parallel.ForEach(pushBlocksList, new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushBlocksList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
                         {
                             try
                             {
@@ -1050,7 +1050,7 @@ namespace Library.Net.Amoeba
                             {
                                 _pushBlocksDictionary.Clear();
 
-                                foreach (var item in pushBlocksDictionary.OrderBy(n => _random.Next()))
+                                foreach (var item in pushBlocksDictionary)
                                 {
                                     _pushBlocksDictionary.Add(item.Key, item.Value);
                                 }

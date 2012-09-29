@@ -49,16 +49,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChannelCollection.cs" />
-    <Compile Include="CirculationCollection.cs" />
     <Compile Include="CommandMessage.cs" />
     <Compile Include="ConnectionManager.cs" />
-    <Compile Include="ConnectionType.cs" />
-    <Compile Include="IdCollection.cs" />
-    <Compile Include="ProtocolVersion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SessionManager.cs" />
-    <Compile Include="UriCollection.cs" />
+    <Compile Include="ProtocolVersion.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
