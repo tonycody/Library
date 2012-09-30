@@ -267,50 +267,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public int DownloadingConnectionCountLowerLimit
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    return _connectionsManager.DownloadingConnectionCountLowerLimit;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    _connectionsManager.DownloadingConnectionCountLowerLimit = value;
-                }
-            }
-        }
-
-        public int UploadingConnectionCountLowerLimit
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    return _connectionsManager.UploadingConnectionCountLowerLimit;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    _connectionsManager.UploadingConnectionCountLowerLimit = value;
-                }
-            }
-        }
-
         public long ReceivedByteCount
         {
             get

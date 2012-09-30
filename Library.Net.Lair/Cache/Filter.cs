@@ -170,7 +170,12 @@ namespace Library.Net.Lair
                 return false;
             }
 
-            if (!Collection.Equals(this.Keys, other.Keys)) return false;
+            if (this.ProtectedKeys != null && other.ProtectedKeys != null)
+            {
+                if (this.ProtectedKeys.Count != other.ProtectedKeys.Count) return false;
+
+                for (int i = 0; i < this.ProtectedKeys.Count; i++) if (this.ProtectedKeys[i] != other.ProtectedKeys[i]) return false;
+            }
 
             return true;
         }

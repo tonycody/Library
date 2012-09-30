@@ -11,11 +11,11 @@ namespace Library.Net.Lair
 
         public bool Equals(byte[] x, byte[] y)
         {
-            if ((x == null) != (y == null)) return false;
+            if (x.Length != y.Length) return false;
 
-            if (x != null && y != null)
+            for (int i = 0; i < x.Length; i++)
             {
-                if (!Collection.Equals(x, y))
+                if (x[i] != y[i])
                 {
                     return false;
                 }

@@ -125,8 +125,11 @@ namespace Library.Net.Lair
 
             if (this.Id != null && other.Id != null)
             {
-                if (!Collection.Equals(this.Id, other.Id)) return false;
+                if (this.Id.Length != other.Id.Length) return false;
+
+                for (int i = 0; i < this.Id.Length; i++) if (this.Id[i] != other.Id[i]) return false;
             }
+
             return true;
         }
 

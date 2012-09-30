@@ -146,7 +146,12 @@ namespace Library.Net.Lair
                 for (int i = 0; i < this.Id.Length; i++) if (this.Id[i] != other.Id[i]) return false;
             }
 
-            if (!Collection.Equals(this.Uris, other.Uris)) return false;
+            if (this.Uris != null && other.Uris != null)
+            {
+                if (this.Uris.Count != other.Uris.Count) return false;
+
+                for (int i = 0; i < this.Uris.Count; i++) if (this.Uris[i] != other.Uris[i]) return false;
+            }
 
             return true;
         }

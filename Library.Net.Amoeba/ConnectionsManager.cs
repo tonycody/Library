@@ -84,6 +84,9 @@ namespace Library.Net.Amoeba
         private readonly int _maxLinkCount = 8192;
         private readonly int _maxRequestCount = 8192;
 
+        private readonly int _downloadingConnectionCountLowerLimit = 3;
+        private readonly int _uploadingConnectionCountLowerLimit = 3;
+
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _clientManager = clientManager;
@@ -166,50 +169,6 @@ namespace Library.Net.Amoeba
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     _settings.ConnectionCountLimit = value;
-                }
-            }
-        }
-
-        public int UploadingConnectionCountLowerLimit
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    return _settings.UploadingConnectionCountLowerLimit;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    _settings.UploadingConnectionCountLowerLimit = value;
-                }
-            }
-        }
-
-        public int DownloadingConnectionCountLowerLimit
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    return _settings.DownloadingConnectionCountLowerLimit;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    _settings.DownloadingConnectionCountLowerLimit = value;
                 }
             }
         }
@@ -786,7 +745,7 @@ namespace Library.Net.Amoeba
                     _cacheManager.CheckSeeds();
                 }
 
-                if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
+                if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushDownloadStopwatch.Restart();
 
@@ -965,7 +924,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
+                if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushUploadStopwatch.Restart();
 
@@ -1131,7 +1090,7 @@ namespace Library.Net.Amoeba
                         updateTime.Restart();
 
                         // PushBlocksLink
-                        if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
+                        if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                         {
                             KeyCollection tempList = null;
                             int count = (int)((2048 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
@@ -1173,7 +1132,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlocksRequest
-                        if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit)
+                        if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
                             KeyCollection tempList = null;
                             int count = (int)((2048 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
@@ -1220,7 +1179,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
+                    if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                     {
                         // PushBlock (Upload)
                         if ((_random.Next(0, 100) + 1) <= (int)(100 * this.ResponseTimePriority(connectionManager.Node)))
@@ -1793,42 +1752,6 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         this["ConnectionCountLimit"] = value;
-                    }
-                }
-            }
-
-            public int UploadingConnectionCountLowerLimit
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        return (int)this["UploadingConnectionCountLowerLimit"];
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        this["UploadingConnectionCountLowerLimit"] = value;
-                    }
-                }
-            }
-
-            public int DownloadingConnectionCountLowerLimit
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        return (int)this["DownloadingConnectionCountLowerLimit"];
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        this["DownloadingConnectionCountLowerLimit"] = value;
                     }
                 }
             }

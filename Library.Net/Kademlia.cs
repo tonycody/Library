@@ -339,7 +339,7 @@ namespace Library.Net
             lock (this.ThisLock)
             {
                 int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
-                if (i == 0)                    return;
+                if (i == 0) return;
 
                 if (_nodesList[i - 1] != null)
                 {
@@ -410,7 +410,7 @@ namespace Library.Net
         {
             if (item == null) throw new ArgumentNullException("item");
             if (item.Id == null) throw new ArgumentNullException("item.Id");
-            
+
             lock (this.ThisLock)
             {
                 for (int i = _nodesList.Length - 1; i >= 0; i--)
@@ -495,17 +495,17 @@ namespace Library.Net
             }
         }
 
-        private class BytesEqualityComparer : IEqualityComparer<byte[]>
+        sealed class BytesEqualityComparer : IEqualityComparer<byte[]>
         {
             #region IEqualityComparer<byte[]>
 
             public bool Equals(byte[] x, byte[] y)
             {
-                if ((x == null) != (y == null)) return false;
+                if (x.Length != y.Length) return false;
 
-                if (x != null && y != null)
+                for (int i = 0; i < x.Length; i++)
                 {
-                    if (!Collection.Equals(x, y))
+                    if (x[i] != y[i])
                     {
                         return false;
                     }

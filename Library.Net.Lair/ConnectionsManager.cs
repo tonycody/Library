@@ -83,6 +83,9 @@ namespace Library.Net.Lair
         private readonly int _maxNodeCount = 128;
         private readonly int _maxRequestCount = 128;
 
+        private readonly int _downloadingConnectionCountLowerLimit = 3;
+        private readonly int _uploadingConnectionCountLowerLimit = 3;
+
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, BufferManager bufferManager)
         {
             _clientManager = clientManager;
@@ -160,50 +163,6 @@ namespace Library.Net.Lair
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     _settings.ConnectionCountLimit = value;
-                }
-            }
-        }
-
-        public int UploadingConnectionCountLowerLimit
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    return _settings.UploadingConnectionCountLowerLimit;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    _settings.UploadingConnectionCountLowerLimit = value;
-                }
-            }
-        }
-
-        public int DownloadingConnectionCountLowerLimit
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    return _settings.DownloadingConnectionCountLowerLimit;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    _settings.DownloadingConnectionCountLowerLimit = value;
                 }
             }
         }
@@ -940,7 +899,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit && uploadStopwatch.Elapsed.TotalSeconds > 60)
+                if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit && uploadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     uploadStopwatch.Restart();
 
@@ -965,7 +924,7 @@ namespace Library.Net.Lair
                     });
                 }
 
-                if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
+                if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushStopwatch.Restart();
 
@@ -1005,7 +964,7 @@ namespace Library.Net.Lair
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Id, 3));
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
@@ -1111,7 +1070,7 @@ namespace Library.Net.Lair
                         updateTime.Restart();
 
                         // PushChannelsRequest
-                        if (_connectionManagers.Count >= this.DownloadingConnectionCountLowerLimit)
+                        if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
                             ChannelCollection tempList = null;
                             int count = (int)(128 * this.ResponseTimePriority(connectionManager.Node));
@@ -1156,7 +1115,7 @@ namespace Library.Net.Lair
                     }
 
                     // Upload
-                    if (_connectionManagers.Count >= this.UploadingConnectionCountLowerLimit)
+                    if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                     {
                         List<Channel> channels = new List<Channel>();
                         channels.AddRange(messageManager.PullChannelsRequest);
@@ -1680,8 +1639,6 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
-                    new Library.Configuration.SettingsContext<int>() { Name = "UploadingConnectionCountLowerLimit", Value = 3 },
-                    new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 3 },
                     new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Message>>>() { Name = "Messages", Value = new LockedDictionary<Channel, LockedHashSet<Message>>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Filter>>>() { Name = "Filters", Value = new LockedDictionary<Channel, LockedHashSet<Filter>>() },
                 })
@@ -1752,42 +1709,6 @@ namespace Library.Net.Lair
                 }
             }
 
-            public int UploadingConnectionCountLowerLimit
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        return (int)this["UploadingConnectionCountLowerLimit"];
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        this["UploadingConnectionCountLowerLimit"] = value;
-                    }
-                }
-            }
-
-            public int DownloadingConnectionCountLowerLimit
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        return (int)this["DownloadingConnectionCountLowerLimit"];
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        this["DownloadingConnectionCountLowerLimit"] = value;
-                    }
-                }
-            }
-
             public LockedDictionary<Channel, LockedHashSet<Message>> Messages
             {
                 get
@@ -1817,41 +1738,6 @@ namespace Library.Net.Lair
                 get
                 {
                     return _thisLock;
-                }
-            }
-
-            #endregion
-        }
-
-        private class BytesEqualityComparer : IEqualityComparer<byte[]>
-        {
-            #region IEqualityComparer<byte[]>
-
-            public bool Equals(byte[] x, byte[] y)
-            {
-                if ((x == null) != (y == null)) return false;
-
-                if (x != null && y != null)
-                {
-                    if (!Collection.Equals(x, y))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            public int GetHashCode(byte[] obj)
-            {
-                if (obj != null && obj.Length != 0)
-                {
-                    if (obj.Length >= 2) return BitConverter.ToUInt16(obj, 0);
-                    else return obj[0];
-                }
-                else
-                {
-                    return 0;
                 }
             }
 

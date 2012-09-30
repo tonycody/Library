@@ -125,7 +125,9 @@ namespace Library.Net.Lair
 
             if (this.Hash != null && other.Hash != null)
             {
-                if (!Collection.Equals(this.Hash, other.Hash)) return false;
+                if (this.Hash.Length != other.Hash.Length) return false;
+
+                for (int i = 0; i < this.Hash.Length; i++) if (this.Hash[i] != other.Hash[i]) return false;
             }
 
             return true;

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Library.Io;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace Library.UnitTest
 {
@@ -14,11 +15,68 @@ namespace Library.UnitTest
             Assert.IsTrue(Collection.Equals(new byte[] { 0, 1, 2, 3, 4 }, new byte[] { 0, 1, 2, 3, 4 }), "Equals #1");
             Assert.IsTrue(Collection.Equals(new byte[] { 0, 1, 2, 3, 4 }, 1, new byte[] { 0, 0, 0, 0, 1, 2, 3, 4 }, 4, 4), "Equals #2");
 
+            Assert.IsTrue(Collection.Equals(new int[] { 0, 1, 2, 3, 4 }, new int[] { 0, 1, 2, 3, 4 }), "Equals #1");
+            Assert.IsTrue(Collection.Equals(new int[] { 0, 1, 2, 3, 4 }, 1, new int[] { 0, 0, 0, 0, 1, 2, 3, 4 }, 4, 4), "Equals #2");
+
+            Assert.IsTrue(Collection.Equals(new byte[] { 0, 1, 2, 3, 4 }, 1, new byte[] { 0, 0, 0, 0, 1, 2, 3, 4 }, 4, 4, new ByteEqualityComparer()), "Equals #1");
+
             Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 0 }) == 0, "Compare #1");
             Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0 }, new byte[] { 0, 0, 0 }) > 0, "Compare #2");
             Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 10 }) < 0, "Compare #3");
             Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0, 0, 0 }, new byte[] { 10 }) > 0, "Compare #4");
             Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, new byte[] { 0, 0, 10 }) > 0, "Compare #5");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, 1, new byte[] { 0, 0, 0 }, 1, 2) == 0, "Compare #6");
+            Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0 }, 0, new byte[] { 0, 0, 0 }, 0, 1) > 0, "Compare #7");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, 2, new byte[] { 0, 0, 10 }, 2, 1) < 0, "Compare #8");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0, 0, 0 }, 0, new byte[] { 10 }, 0, 5) > 0, "Compare #9");
+            Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 10 }, 0, 3) > 0, "Compare #10");
+
+            Assert.IsTrue(Collection.Compare(new int[] { 0, 0, 0 }, new int[] { 0, 0, 0 }) == 0, "Compare #1");
+            Assert.IsTrue(Collection.Compare(new int[] { 1, 0, 0 }, new int[] { 0, 0, 0 }) > 0, "Compare #2");
+            Assert.IsTrue(Collection.Compare(new int[] { 0, 0, 0 }, new int[] { 0, 0, 10 }) < 0, "Compare #3");
+            Assert.IsTrue(Collection.Compare(new int[] { 0, 0, 0, 0, 0 }, new int[] { 10 }) > 0, "Compare #4");
+            Assert.IsTrue(Collection.Compare(new int[] { 1, 0, 0, 0 }, new int[] { 0, 0, 10 }) > 0, "Compare #5");
+            Assert.IsTrue(Collection.Compare(new int[] { 0, 0, 0 }, 1, new int[] { 0, 0, 0 }, 1, 2) == 0, "Compare #6");
+            Assert.IsTrue(Collection.Compare(new int[] { 1, 0, 0 }, 0, new int[] { 0, 0, 0 }, 0, 1) > 0, "Compare #7");
+            Assert.IsTrue(Collection.Compare(new int[] { 0, 0, 0 }, 2, new int[] { 0, 0, 10 }, 2, 1) < 0, "Compare #8");
+            Assert.IsTrue(Collection.Compare(new int[] { 0, 0, 0, 0, 0 }, 0, new int[] { 10 }, 0, 5) > 0, "Compare #9");
+            Assert.IsTrue(Collection.Compare(new int[] { 1, 0, 0, 0 }, 0, new int[] { 0, 0, 10 }, 0, 3) > 0, "Compare #10");
+
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 0 }, new ByteComparer()) == 0, "Compare #1");
+            Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0 }, new byte[] { 0, 0, 0 }, new ByteComparer()) > 0, "Compare #2");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 10 }, new ByteComparer()) < 0, "Compare #3");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0, 0, 0 }, new byte[] { 10 }, new ByteComparer()) > 0, "Compare #4");
+            Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, new byte[] { 0, 0, 10 }, new ByteComparer()) > 0, "Compare #5");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, 1, new byte[] { 0, 0, 0 }, 1, 2, new ByteComparer()) == 0, "Compare #6");
+            Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0 }, 0, new byte[] { 0, 0, 0 }, 0, 1, new ByteComparer()) > 0, "Compare #7");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, 2, new byte[] { 0, 0, 10 }, 2, 1, new ByteComparer()) < 0, "Compare #8");
+            Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0, 0, 0 }, 0, new byte[] { 10 }, 0, 10, new ByteComparer()) > 0, "Compare #9");
+            Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 10 }, 0, 3, new ByteComparer()) > 0, "Compare #10");
+        }
+
+        sealed class ByteEqualityComparer : IEqualityComparer<byte>
+        {
+            #region IEqualityComparer<byte>
+
+            public bool Equals(byte x, byte y)
+            {
+                return x.Equals(y);
+            }
+
+            public int GetHashCode(byte obj)
+            {
+                return (int)obj;
+            }
+
+            #endregion
+        }
+
+        sealed class ByteComparer : IComparer<byte>
+        {
+            public int Compare(byte x, byte y)
+            {
+                return x - y;
+            }
         }
 
         [Test]
