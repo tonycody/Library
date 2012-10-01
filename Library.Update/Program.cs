@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace Library.Update
 {
@@ -14,7 +15,7 @@ namespace Library.Update
         [STAThread]
         static void Main(string[] args)
         {
-            if (args.Length != 4) return;
+            if (args.Length != 5) return;
 
             try
             {
@@ -31,11 +32,39 @@ namespace Library.Update
                     }
                 }
 
-                if (Directory.Exists(args[2]))
-                    Directory.Delete(args[2], true);
+                for (int i = 0; i < 100; i++)
+                {
+                    try
+                    {
+                        if (Directory.Exists(args[2]))
+                            Directory.Delete(args[2], true);
 
-                Program.CopyDirectory(args[1], args[2]);
+                        Program.CopyDirectory(args[1], args[2]);
+
+                        break;
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    Thread.Sleep(1000);
+                }
+
                 Directory.Delete(args[1], true);
+
+                if (args[4] != "")
+                {
+                    try
+                    {
+                        if (File.Exists(args[4]))
+                            File.Delete(args[4]);
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
 
                 if (args[3] != "")
                 {

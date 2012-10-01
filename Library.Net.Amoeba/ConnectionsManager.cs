@@ -388,7 +388,10 @@ namespace Library.Net.Amoeba
                 {
                     if (_connectionsNodes.Contains(item))
                     {
-                        returnNodes.Add(item);
+                        if (!returnNodes.Contains(item))
+                        {
+                            returnNodes.Add(item);
+                        }
                     }
                     else
                     {
@@ -399,7 +402,13 @@ namespace Library.Net.Amoeba
                             return _responseTimeDic[x].CompareTo(_responseTimeDic[y]);
                         }));
 
-                        returnNodes.AddRange(list.Where(n => !returnNodes.Contains(n)));
+                        foreach (var node in list)
+                        {
+                            if (!returnNodes.Contains(node))
+                            {
+                                returnNodes.Add(node);
+                            }
+                        }
                     }
 
                     if (returnNodes.Count >= count) break;
