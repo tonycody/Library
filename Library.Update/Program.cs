@@ -19,14 +19,19 @@ namespace Library.Update
 
             try
             {
-                if (args[0] != "")
+                var pid = int.Parse(args[0]);
+                var source = args[1];
+                var target = args[2];
+                var runPath = args[3];
+                var zipPath = args[4];
+
                 {
                     try
                     {
-                        Process process = Process.GetProcessById(int.Parse(args[0]));
+                        Process process = Process.GetProcessById(pid);
                         process.WaitForExit();
                     }
-                    catch
+                    catch (Exception)
                     {
 
                     }
@@ -36,10 +41,11 @@ namespace Library.Update
                 {
                     try
                     {
-                        if (Directory.Exists(args[2]))
-                            Directory.Delete(args[2], true);
+                        var temp = GetUniqueDirectoryPath(target);
 
-                        Program.CopyDirectory(args[1], args[2]);
+                        Directory.Move(target, temp);
+                        Program.CopyDirectory(source, target);
+                        Directory.Delete(temp, true);
 
                         break;
                     }
@@ -51,26 +57,29 @@ namespace Library.Update
                     Thread.Sleep(1000);
                 }
 
-                Directory.Delete(args[1], true);
+                Directory.Delete(source, true);
 
-                if (args[4] != "")
+                for (int i = 0; i < 100; i++)
                 {
                     try
                     {
-                        if (File.Exists(args[4]))
-                            File.Delete(args[4]);
+                        if (File.Exists(zipPath))
+                            File.Delete(zipPath);
+
+                        break;
                     }
                     catch (Exception)
                     {
 
                     }
+
+                    Thread.Sleep(1000);
                 }
 
-                if (args[3] != "")
                 {
                     ProcessStartInfo startInfo = new ProcessStartInfo();
-                    startInfo.FileName = args[3];
-                    startInfo.WorkingDirectory = Path.GetDirectoryName(args[3]);
+                    startInfo.FileName = runPath;
+                    startInfo.WorkingDirectory = Path.GetDirectoryName(runPath);
 
                     Process.Start(startInfo);
                 }
@@ -97,6 +106,28 @@ namespace Library.Update
             foreach (string dir in Directory.GetDirectories(sourceDirectoryPath))
             {
                 CopyDirectory(dir, Path.Combine(destDirectoryPath, Path.GetFileName(dir)));
+            }
+        }
+
+        private static string GetUniqueDirectoryPath(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                return path;
+            }
+
+            for (int index = 1; ; index++)
+            {
+                string text = string.Format(
+                    @"{0}\{1} ({2})",
+                    Path.GetDirectoryName(path),
+                    Path.GetFileName(path),
+                    index);
+
+                if (!Directory.Exists(text))
+                {
+                    return text;
+                }
             }
         }
     }
