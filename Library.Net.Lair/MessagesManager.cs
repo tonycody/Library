@@ -125,8 +125,8 @@ namespace Library.Net.Lair
             _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0), new BytesEqualityComparer());
             _pushFilters = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0), new BytesEqualityComparer());
 
-            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3);
-            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3);
+            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
         }
 
         public int Id

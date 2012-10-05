@@ -498,7 +498,7 @@ namespace Library.Net.Lair
                 //    this.RemoveConnectionManager(oldConnectionManager);
                 //}
 
-                if (_connectionManagers.Count >= this.ConnectionCountLimit)
+                if (_connectionManagers.Count > this.ConnectionCountLimit)
                 {
                     // PushNodes
                     try
@@ -740,7 +740,6 @@ namespace Library.Net.Lair
             Stopwatch removeStopwatch = new Stopwatch();
             removeStopwatch.Start();
             Stopwatch refreshStopwatch = new Stopwatch();
-            refreshStopwatch.Start();
 
             Random random = new Random();
 
@@ -749,7 +748,7 @@ namespace Library.Net.Lair
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
-                if (refreshStopwatch.Elapsed.Minutes >= 60)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 60)
                 {
                     refreshStopwatch.Restart();
 
@@ -792,7 +791,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (removeStopwatch.Elapsed.Minutes >= 3)
+                if (removeStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     removeStopwatch.Restart();
 
@@ -1242,7 +1241,7 @@ namespace Library.Net.Lair
 
             if (e.Channels == null) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull ChannelsRequest ({0})", e.Channels.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull ChannelsRequest {0} ({1})", String.Join(", ", e.Channels), e.Channels.Count()));
 
             foreach (var c in e.Channels.Take(_maxRequestCount))
             {

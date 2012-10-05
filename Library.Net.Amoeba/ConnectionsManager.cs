@@ -500,7 +500,7 @@ namespace Library.Net.Amoeba
                 //    this.RemoveConnectionManager(oldConnectionManager);
                 //}
 
-                if (_connectionManagers.Count >= this.ConnectionCountLimit)
+                if (_connectionManagers.Count > this.ConnectionCountLimit)
                 {
                     // PushNodes
                     try
