@@ -91,6 +91,27 @@ namespace Library.Net.Amoeba
             throw new ClientManagerException();
         }
 
+        public bool CheckUri(string uri)
+        {
+            if (uri == null) return false;
+
+            ConnectionFilter connectionFilter = null;
+
+            lock (this.ThisLock)
+            {
+                foreach (var filter in this.Filters)
+                {
+                    if (filter.UriCondition.IsMatch(uri))
+                    {
+                        connectionFilter = filter;
+                        break;
+                    }
+                }
+            }
+
+            return !(connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None);
+        }
+
         public ConnectionBase CreateConnection(string uri)
         {
             Socket socket = null;

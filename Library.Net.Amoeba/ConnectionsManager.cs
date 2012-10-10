@@ -26,7 +26,7 @@ namespace Library.Net.Amoeba
         private Settings _settings;
 
         private Kademlia<Node> _routeTable;
-        private Random _random = new Random();
+        private static Random _random = new Random();
 
         private byte[] _mySessionId;
 
@@ -638,7 +638,10 @@ namespace Library.Net.Amoeba
 
                     try
                     {
-                        foreach (var uri in node.Uris.Take(5).ToArray())
+                        HashSet<string> uris = new HashSet<string>();
+                        uris.UnionWith(node.Uris.Take(12).Where(n => _clientManager.CheckUri(n)));
+
+                        foreach (var uri in uris)
                         {
                             if (this.State == ManagerState.Stop) return;
 
@@ -678,7 +681,7 @@ namespace Library.Net.Amoeba
                                 if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
                                 _nodesStatus[node]++;
 
-                                if (_nodesStatus[node] >= 10)
+                                if (_nodesStatus[node] >= 3)
                                 {
                                     _nodesStatus.Remove(node);
                                     _removeNodes.Add(node);
@@ -1043,6 +1046,7 @@ namespace Library.Net.Amoeba
 
                 Stopwatch nodeUpdateTime = new Stopwatch();
                 Stopwatch updateTime = new Stopwatch();
+                updateTime.Start();
                 Stopwatch checkTime = new Stopwatch();
                 checkTime.Start();
 
@@ -1094,7 +1098,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (!updateTime.IsRunning || updateTime.Elapsed.TotalSeconds > 60)
+                    if (updateTime.Elapsed.TotalSeconds > 60)
                     {
                         updateTime.Restart();
 
@@ -1326,7 +1330,7 @@ namespace Library.Net.Amoeba
 
             foreach (var node in e.Nodes.Take(_maxNodeCount))
             {
-                if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
+                if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
 
                 _routeTable.Add(node);
                 _pullNodeCount++;
@@ -1489,7 +1493,7 @@ namespace Library.Net.Amoeba
 
                 foreach (var node in nodes)
                 {
-                    if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
+                    if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
 
                     _routeTable.Live(node);
                 }

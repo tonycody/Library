@@ -27,7 +27,7 @@ namespace Library.Net.Lair
         private Settings _settings;
 
         private Kademlia<Node> _routeTable;
-        private Random _random = new Random();
+        private static Random _random = new Random();
 
         private byte[] _mySessionId;
 
@@ -636,7 +636,10 @@ namespace Library.Net.Lair
 
                     try
                     {
-                        foreach (var uri in node.Uris.Take(5).ToArray())
+                        HashSet<string> uris = new HashSet<string>();
+                        uris.UnionWith(node.Uris.Take(12).Where(n => _clientManager.CheckUri(n)));
+
+                        foreach (var uri in uris)
                         {
                             if (this.State == ManagerState.Stop) return;
 
@@ -676,7 +679,7 @@ namespace Library.Net.Lair
                                 if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
                                 _nodesStatus[node]++;
 
-                                if (_nodesStatus[node] >= 10)
+                                if (_nodesStatus[node] >= 3)
                                 {
                                     _nodesStatus.Remove(node);
                                     _removeNodes.Add(node);
@@ -741,8 +744,6 @@ namespace Library.Net.Lair
             removeStopwatch.Start();
             Stopwatch refreshStopwatch = new Stopwatch();
 
-            Random random = new Random();
-
             for (; ; )
             {
                 Thread.Sleep(1000);
@@ -779,7 +780,7 @@ namespace Library.Net.Lair
 
                                 foreach (var f in list.ToArray())
                                 {
-                                    if ((now - f.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                                    if ((now - f.CreationTime) > new TimeSpan(6, 0, 0, 0))
                                     {
                                         list.Remove(f);
                                     }
@@ -791,7 +792,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (removeStopwatch.Elapsed.TotalMinutes >= 3)
+                if (removeStopwatch.Elapsed.TotalSeconds >= 30)
                 {
                     removeStopwatch.Restart();
 
@@ -804,7 +805,7 @@ namespace Library.Net.Lair
 
                             this.OnUnlockChannelsEvent(ref unlockChannels);
 
-                            var removeChannels = unlockChannels.OrderBy(n => random.Next()).Take(channels.Count - 128);
+                            var removeChannels = unlockChannels.Take(channels.Count - 128);
 
                             lock (this.ThisLock)
                             {
@@ -858,7 +859,7 @@ namespace Library.Net.Lair
                                     var list = _settings.Messages[c];
                                     var unlockMessages = unlockMessagesDic[c];
 
-                                    foreach (var m in unlockMessages.OrderBy(n => random.Next()).Take(list.Count - 256))
+                                    foreach (var m in unlockMessages.Take(list.Count - 256))
                                     {
                                         list.Remove(m);
                                     }
@@ -905,7 +906,7 @@ namespace Library.Net.Lair
                                     var list = _settings.Filters[c];
                                     var unlockFilters = unlockFiltersDic[c];
 
-                                    foreach (var m in unlockFilters.OrderBy(n => random.Next()).Take(list.Count - 32))
+                                    foreach (var m in unlockFilters.Take(list.Count - 32))
                                     {
                                         list.Remove(m);
                                     }
@@ -1030,6 +1031,7 @@ namespace Library.Net.Lair
 
                 Stopwatch nodeUpdateTime = new Stopwatch();
                 Stopwatch updateTime = new Stopwatch();
+                updateTime.Start();
                 Stopwatch checkTime = new Stopwatch();
                 checkTime.Start();
 
@@ -1081,7 +1083,7 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (!updateTime.IsRunning || updateTime.Elapsed.TotalSeconds > 60)
+                    if (updateTime.Elapsed.TotalSeconds > 60)
                     {
                         updateTime.Restart();
 
@@ -1130,22 +1132,19 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    // Upload
+                    // Upload (Message)
                     if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                     {
                         List<Channel> channels = new List<Channel>();
                         channels.AddRange(messageManager.PullChannelsRequest);
 
-                        var channel = channels.OrderBy(n => _random.Next()).FirstOrDefault();
+                        HashSet<Message> messages = new HashSet<Message>();
 
-                        if (channel != null)
+                        lock (this.ThisLock)
                         {
-                            HashSet<Message> messages = new HashSet<Message>();
-                            HashSet<Filter> filters = new HashSet<Filter>();
-
-                            lock (this.ThisLock)
+                            lock (_settings.ThisLock)
                             {
-                                lock (_settings.ThisLock)
+                                foreach (var channel in channels.OrderBy(n => _random.Next()))
                                 {
                                     if (_settings.Messages.ContainsKey(channel))
                                     {
@@ -1161,10 +1160,34 @@ namespace Library.Net.Lair
                                     }
                                 }
                             }
+                        }
 
-                            lock (this.ThisLock)
+                        if (messages.Count != 0)
+                        {
+                            var message = messages.First();
+                            connectionManager.PushMessage(message);
+
+                            Debug.WriteLine(string.Format("ConnectionManager: Push Message ({0})", message.Channel.Name));
+                            _pushMessageCount++;
+
+                            messageManager.PushMessages.Add(message.GetHash(_hashAlgorithm));
+                            messageManager.Priority--;
+                        }
+                    }
+
+                    // Upload (Filter)
+                    if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
+                    {
+                        List<Channel> channels = new List<Channel>();
+                        channels.AddRange(messageManager.PullChannelsRequest);
+
+                        HashSet<Filter> filters = new HashSet<Filter>();
+
+                        lock (this.ThisLock)
+                        {
+                            lock (_settings.ThisLock)
                             {
-                                lock (_settings.ThisLock)
+                                foreach (var channel in channels.OrderBy(n => _random.Next()))
                                 {
                                     if (_settings.Filters.ContainsKey(channel))
                                     {
@@ -1180,30 +1203,18 @@ namespace Library.Net.Lair
                                     }
                                 }
                             }
+                        }
 
-                            if (messages.Count != 0)
-                            {
-                                var message = messages.First();
-                                connectionManager.PushMessage(message);
+                        if (filters.Count != 0)
+                        {
+                            var filter = filters.First();
+                            connectionManager.PushFilter(filter);
 
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Message ({0})", channel.Name));
-                                _pushMessageCount++;
+                            Debug.WriteLine(string.Format("ConnectionManager: Push Filter ({0})", filter.Channel.Name));
+                            _pushFilterCount++;
 
-                                messageManager.PushMessages.Add(message.GetHash(_hashAlgorithm));
-                                messageManager.Priority--;
-                            }
-
-                            if (filters.Count != 0)
-                            {
-                                var filter = filters.First();
-                                connectionManager.PushFilter(filter);
-
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Filter ({0})", channel.Name));
-                                _pushFilterCount++;
-
-                                messageManager.PushFilters.Add(filter.GetHash(_hashAlgorithm));
-                                messageManager.Priority--;
-                            }
+                            messageManager.PushFilters.Add(filter.GetHash(_hashAlgorithm));
+                            messageManager.Priority--;
                         }
                     }
                 }
@@ -1231,7 +1242,7 @@ namespace Library.Net.Lair
 
             foreach (var node in e.Nodes.Take(_maxNodeCount))
             {
-                if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
+                if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
 
                 _routeTable.Add(node);
                 _pullNodeCount++;
@@ -1308,7 +1319,7 @@ namespace Library.Net.Lair
             var now = DateTime.UtcNow;
 
             if (e.Filter == null || e.Filter.Channel.Id == null || string.IsNullOrWhiteSpace(e.Filter.Channel.Name)
-                || (now - e.Filter.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                || (now - e.Filter.CreationTime) > new TimeSpan(6, 0, 0, 0)
                 || (e.Filter.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || !e.Filter.VerifyCertificate()) return;
 
@@ -1406,7 +1417,7 @@ namespace Library.Net.Lair
 
                 foreach (var node in nodes)
                 {
-                    if (node == null || node.Id == null || node.Uris.Count == 0 || _removeNodes.Contains(node)) continue;
+                    if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
 
                     _routeTable.Live(node);
                 }
@@ -1645,7 +1656,7 @@ namespace Library.Net.Lair
 
                 foreach (var node in _settings.OtherNodes)
                 {
-                    if (node == null || node.Id == null || node.Uris.Count == 0) return;
+                    if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0) continue;
 
                     _routeTable.Add(node);
                 }
