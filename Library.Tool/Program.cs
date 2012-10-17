@@ -18,7 +18,56 @@ namespace Library.Tool
         {
             try
             {
-                if (args.Length >= 3 && args[0] == "increment")
+                if (args.Length >= 4 && args[0] == "define")
+                {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    var path = args[2];
+
+                    if (args[1] == "on")
+                    {
+                        stringBuilder.AppendLine("#define " + args[3]);
+                    }
+
+                    using (FileStream inStream = new FileStream(path, FileMode.Open))
+                    using (StreamReader reader = new StreamReader(inStream))
+                    {
+                        bool f = false;
+                        string line;
+
+                        while (null != (line = reader.ReadLine()))
+                        {
+                            if (!f && line.StartsWith("using"))
+                            {
+                                f = true;
+
+                                var temp = stringBuilder.ToString().Trim('\r', '\n');
+                                stringBuilder.Clear();
+                                stringBuilder.Append(temp);
+                                stringBuilder.AppendLine();
+                                stringBuilder.AppendLine();
+                            }
+
+                            if (!f && line == ("#define " + args[3]))
+                            {
+
+                            }
+                            else
+                            {
+                                stringBuilder.AppendLine(line);
+                            }
+                        }
+                    }
+
+                    using (FileStream outStream = new FileStream(path + ".tmp", FileMode.Create))
+                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
+                    {
+                        writer.Write(stringBuilder.ToString().TrimStart('\r', '\n'));
+                    }
+
+                    File.Delete(path);
+                    File.Move(path + ".tmp", path);
+                }
+                else if (args.Length >= 3 && args[0] == "increment")
                 {
                     string baseDirectory = Path.GetDirectoryName(args[1]);
                     List<string> filePaths = new List<string>();
@@ -61,7 +110,7 @@ namespace Library.Tool
                     byte[] hash = Program.GetHash(filePaths);
                     bool rewrite = false;
 
-                    using (var readerStream = new StreamReader(args[2], new UTF8Encoding(true)))
+                    using (var readerStream = new StreamReader(args[2]))
                     using (var writerStream = new StreamWriter(args[2] + "~", false, new UTF8Encoding(true)))
                     {
                         for (; ; )
@@ -124,8 +173,6 @@ namespace Library.Tool
                     {
                         File.Delete(args[2] + "~");
                     }
-
-                    return;
                 }
                 else if (args.Length >= 2 && args[0] == "settings")
                 {
@@ -200,7 +247,7 @@ namespace Library.Tool
                     using (FileStream inStream = new FileStream(settingsPath, FileMode.Open))
                     using (StreamReader reader = new StreamReader(inStream))
                     using (FileStream outStream = new FileStream(settingsPath + ".tmp", FileMode.Create))
-                    using (StreamWriter writer = new StreamWriter(outStream))
+                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
                     {
                         bool isRegion = false;
                         bool isRewrite = false;
@@ -239,8 +286,6 @@ namespace Library.Tool
 
                     File.Delete(settingsPath);
                     File.Move(settingsPath + ".tmp", settingsPath);
-
-                    return;
                 }
                 else if (args.Length >= 3 && args[0] == "languages")
                 {
@@ -291,7 +336,7 @@ namespace Library.Tool
                     using (FileStream inStream = new FileStream(languageManagerPath, FileMode.Open))
                     using (StreamReader reader = new StreamReader(inStream))
                     using (FileStream outStream = new FileStream(languageManagerPath + ".tmp", FileMode.Create))
-                    using (StreamWriter writer = new StreamWriter(outStream))
+                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
                     {
                         bool isRegion = false;
                         bool isRewrite = false;
@@ -332,8 +377,6 @@ namespace Library.Tool
                     File.Move(languageManagerPath + ".tmp", languageManagerPath);
 
                     Program.LanguageSetting(languageXmlPath);
-
-                    return;
                 }
                 else if (args.Length >= 3 && args[0] == "hgmove")
                 {

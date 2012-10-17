@@ -11,6 +11,8 @@
     <RootNamespace>Library.Tool</RootNamespace>
     <AssemblyName>Library.Tool</AssemblyName>
     <FileAlignment>512</FileAlignment>
+    <ReleaseVersion>
+    </ReleaseVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>

@@ -293,7 +293,7 @@ namespace Library.Net.Connection
                 {
                     try
                     {
-                        _socket.Dispose();
+                        _socket.Close();
                     }
                     catch (Exception)
                     {

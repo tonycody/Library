@@ -391,6 +391,7 @@ namespace Library.Net.Upnp
         {
             if (_services == null) throw new UpnpClientException();
 
+#if !MONO
             foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
                 .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up))
             {
@@ -411,8 +412,21 @@ namespace Library.Net.Upnp
                     return true;
                 }
             }
+#else
+            string hostname = Dns.GetHostName();
 
-            return true;
+            foreach (var ipAddress in Dns.GetHostAddresses(hostname))
+            {
+                if (ipAddress.AddressFamily != AddressFamily.InterNetwork) continue;
+
+                if (OpenPort(protocol, ipAddress.ToString(), externalPort, internalPort, description, timeout))
+                {
+                    return true;
+                }
+            }
+#endif
+
+            return false;
         }
 
         public bool OpenPort(UpnpProtocolType protocol, string machineIp, int externalPort, int internalPort, string description, TimeSpan timeout)

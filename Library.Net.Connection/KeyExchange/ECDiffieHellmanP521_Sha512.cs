@@ -15,6 +15,7 @@ namespace Library.Net.Connection
         /// <param name="privateKey">作成された秘密鍵</param>
         public static void CreateKeys(out byte[] publicKey, out byte[] privateKey)
         {
+#if !MONO
             CngKeyCreationParameters ckcp = new CngKeyCreationParameters();
             ckcp.ExportPolicy = CngExportPolicies.AllowPlaintextExport;
             ckcp.KeyUsage = CngKeyUsages.KeyAgreement;
@@ -25,16 +26,23 @@ namespace Library.Net.Connection
                 publicKey = Encoding.ASCII.GetBytes(ecdh.ToXmlString(ECKeyXmlFormat.Rfc4050));
                 privateKey = ecdh.Key.Export(CngKeyBlobFormat.Pkcs8PrivateBlob);
             }
+#else
+            throw new NotSupportedException();
+#endif
         }
 
         public static byte[] DeriveKeyMaterial(byte[] privateKey, byte[] otherPublicKey)
         {
+#if !MONO
             using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
             using (ECDiffieHellmanCng ecdh = new ECDiffieHellmanCng(ck))
             {
                 ecdh.HashAlgorithm = CngAlgorithm.Sha512;
                 return ecdh.DeriveKeyMaterial(ECDiffieHellmanCngPublicKey.FromXmlString(Encoding.ASCII.GetString(otherPublicKey)));
             }
+#else
+            throw new NotSupportedException();
+#endif
         }
     }
 }
