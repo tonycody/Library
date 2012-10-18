@@ -46,6 +46,7 @@ namespace Library.Net.Amoeba
         public ConnectionBase AcceptConnection(out string uri)
         {
             uri = null;
+            ConnectionBase connection = null;
 
             lock (this.ThisLock)
             {
@@ -53,7 +54,6 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    ConnectionBase connection = null;
 
                     for (int i = 0; i < _listeners.Count; i++)
                     {
@@ -78,25 +78,32 @@ namespace Library.Net.Amoeba
                             break;
                         }
                     }
-
-                    if (connection != null)
-                    {
-                        var secureConnection = new SecureServerConnection(connection, null, _bufferManager);
-                        secureConnection.Connect(new TimeSpan(0, 1, 0));
-
-                        var compressConnection = new CompressConnection(secureConnection, ServerManager.MaxReceiveCount, _bufferManager);
-                        compressConnection.Connect(new TimeSpan(0, 1, 0));
-
-                        return compressConnection;
-                    }
                 }
                 catch (Exception)
                 {
 
                 }
-
-                return null;
             }
+
+            if (connection != null)
+            {
+                try
+                {
+                    var secureConnection = new SecureServerConnection(connection, null, _bufferManager);
+                    secureConnection.Connect(new TimeSpan(0, 1, 0));
+
+                    var compressConnection = new CompressConnection(secureConnection, ServerManager.MaxReceiveCount, _bufferManager);
+                    compressConnection.Connect(new TimeSpan(0, 1, 0));
+
+                    return compressConnection;
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+
+            return null;
         }
 
         private void WatchThread()
