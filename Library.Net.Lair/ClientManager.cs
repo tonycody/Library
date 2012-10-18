@@ -290,7 +290,10 @@ namespace Library.Net.Lair
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);
                 secureConnection.Connect(new TimeSpan(0, 1, 0));
 
-                return new CompressConnection(secureConnection, ClientManager.MaxReceiveCount, _bufferManager);
+                var compressConnection = new CompressConnection(secureConnection, ClientManager.MaxReceiveCount, _bufferManager);
+                compressConnection.Connect(new TimeSpan(0, 1, 0));
+
+                return compressConnection;
             }
             catch (Exception)
             {

@@ -84,7 +84,10 @@ namespace Library.Net.Amoeba
                         var secureConnection = new SecureServerConnection(connection, null, _bufferManager);
                         secureConnection.Connect(new TimeSpan(0, 1, 0));
 
-                        return new CompressConnection(secureConnection, ServerManager.MaxReceiveCount, _bufferManager);
+                        var compressConnection = new CompressConnection(secureConnection, ServerManager.MaxReceiveCount, _bufferManager);
+                        compressConnection.Connect(new TimeSpan(0, 1, 0));
+
+                        return compressConnection;
                     }
                 }
                 catch (Exception)

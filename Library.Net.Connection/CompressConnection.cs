@@ -201,7 +201,6 @@ namespace Library.Net.Connection
                             NetworkConverter.ToSizeString(stream.Length - deflateBufferStream.Length));
 #endif
                         deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                        stream.Dispose();
                         dataStream.Dispose();
 
                         return deflateBufferStream;
