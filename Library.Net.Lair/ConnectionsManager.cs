@@ -1254,7 +1254,7 @@ namespace Library.Net.Lair
                 {
                     _messagesManager[connectionManager.Node].SurroundingNodes.Clear();
                     _messagesManager[connectionManager.Node].SurroundingNodes
-                        .UnionWith(e.Nodes.Take(_maxNodeCount).Where(n => n != null && n.Id != null));
+                        .UnionWith(e.Nodes.OrderBy(n => _random.Next()).Take(12).Where(n => n != null && n.Id != null));
                 }
             }
         }

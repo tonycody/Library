@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Xml;
 using System.Windows.Forms;
+using Library.Security;
 
 namespace Library.Tool
 {
@@ -18,7 +19,36 @@ namespace Library.Tool
         {
             try
             {
-                if (args.Length >= 4 && args[0] == "define")
+                if (args.Length >= 2 && args[0] == "DigitalSignature")
+                {
+                    var path = args[2];
+                    var signPath = args[1];
+
+                    DigitalSignature digitalSignature;
+
+                    using (FileStream inStream = new FileStream(signPath, FileMode.Open))
+                    {
+                        digitalSignature = DigitalSignatureConverter.FromSignatureStream(inStream);
+                    }
+
+                    using (FileStream inStream = new FileStream(path, FileMode.Open))
+                    using (FileStream outStream = new FileStream(path + ".certificate", FileMode.Create))
+                    {
+                        var certificate = DigitalSignature.CreateCertificate(digitalSignature, inStream);
+
+                        using (var certificateStream = DigitalSignatureConverter.ToCertificateStream(certificate))
+                        {
+                            var buffer = new byte[1024];
+                            int i = -1;
+
+                            while ((i = certificateStream.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                outStream.Write(buffer, 0, i);
+                            }
+                        }
+                    }
+                }
+                else if (args.Length >= 4 && args[0] == "define")
                 {
                     StringBuilder stringBuilder = new StringBuilder();
                     var path = args[2];

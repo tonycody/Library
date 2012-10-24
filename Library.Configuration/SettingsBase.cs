@@ -88,61 +88,97 @@ namespace Library.Configuration
 
             foreach (var configPath in Directory.GetFiles(directoryPath))
             {
-                var context = _contextList.FirstOrDefault(n => n.Name == Path.GetFileNameWithoutExtension(configPath));
-                if (context == null)
-                {
-                    continue;
-                }
+                if (!configPath.EndsWith(".gz")) continue;
 
-                if (Path.GetExtension(configPath) == ".gz")
+                var context = _contextList.FirstOrDefault(n => n.Name == Path.GetFileNameWithoutExtension(configPath));
+                if (context == null) continue;
+
+                try
                 {
                     using (FileStream stream = new FileStream(configPath, FileMode.Open))
                     using (GZipStream decompressStream = new GZipStream(stream, CompressionMode.Decompress))
                     {
-                        try
+                        using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
                         {
-                            using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
-                            {
-                                var ds = new DataContractSerializer(context.Type);
-                                context.Value = ds.ReadObject(textDictionaryReader);
-                            }
-                        }
-                        catch (Exception)
-                        {
-
+                            var ds = new DataContractSerializer(context.Type);
+                            context.Value = ds.ReadObject(textDictionaryReader);
                         }
                     }
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+
+            foreach (var configPath in Directory.GetFiles(directoryPath))
+            {
+                if (!configPath.EndsWith(".gz.bak")) continue;
+
+                var context = _contextList.FirstOrDefault(n => n.Value == null && n.Name == Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(configPath)));
+                if (context == null) continue;
+
+                try
+                {
+                    using (FileStream stream = new FileStream(configPath, FileMode.Open))
+                    using (GZipStream decompressStream = new GZipStream(stream, CompressionMode.Decompress))
+                    {
+                        using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
+                        {
+                            var ds = new DataContractSerializer(context.Type);
+                            context.Value = ds.ReadObject(textDictionaryReader);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+
                 }
             }
         }
 
         public virtual void Save(string directoryPath)
         {
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
+            if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
 
             foreach (var value in _contextList)
             {
-                string uniquePath = null;
-
-                using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, value.Name + ".temp")))
+                try
                 {
-                    uniquePath = stream.Name;
+                    string uniquePath = null;
 
-                    using (GZipStream compressStream = new GZipStream(stream, CompressionMode.Compress))
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(compressStream, new UTF8Encoding(false)))
+                    using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, value.Name + ".temp")))
                     {
-                        var ds = new DataContractSerializer(value.Type);
-                        textDictionaryWriter.WriteStartDocument();
-                        ds.WriteObject(textDictionaryWriter, value.Value);
-                    }
-                }
+                        uniquePath = stream.Name;
 
-                string newPath = Path.Combine(directoryPath, value.Name + ".gz");
-                File.Delete(newPath);
-                File.Move(uniquePath, newPath);
+                        using (GZipStream compressStream = new GZipStream(stream, CompressionMode.Compress))
+                        using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(compressStream, new UTF8Encoding(false)))
+                        {
+                            var ds = new DataContractSerializer(value.Type);
+                            textDictionaryWriter.WriteStartDocument();
+                            ds.WriteObject(textDictionaryWriter, value.Value);
+                        }
+                    }
+
+                    string newPath = Path.Combine(directoryPath, value.Name + ".gz");
+                    string bakPath = Path.Combine(directoryPath, value.Name + ".gz.bak");
+
+                    if (File.Exists(newPath))
+                    {
+                        if (File.Exists(bakPath))
+                        {
+                            File.Delete(bakPath);
+                        }
+
+                        File.Move(newPath, bakPath);
+                    }
+
+                    File.Move(uniquePath, newPath);
+                }
+                catch (Exception)
+                {
+
+                }
             }
         }
 

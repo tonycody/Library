@@ -90,8 +90,16 @@ namespace Library.Io
             }
             set
             {
-                if (_disposed)
-                    throw new ObjectDisposedException(this.GetType().FullName);
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                if (_writerBlockBuffer != null)
+                {
+                    this.Flush();
+
+                    _writerBufferPosition = 0;
+
+                    _stream.Position = value;
+                }
 
                 if (_readerBuffer != null)
                 {
@@ -103,8 +111,7 @@ namespace Library.Io
 
                         if (_readerBufferPosition >= _readerBufferLength)
                         {
-                            if (!_stream.CanSeek)
-                                throw new NotSupportedException();
+                            if (!_stream.CanSeek) throw new NotSupportedException();
 
                             _readerBufferPosition = 0;
                             _readerBufferLength = 0;
@@ -130,11 +137,6 @@ namespace Library.Io
                     }
                 }
 
-                if (_writerBlockBuffer != null)
-                {
-                    this.Flush();
-                }
-
                 _position = value;
             }
         }
@@ -145,7 +147,7 @@ namespace Library.Io
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _stream.Length;
+                return Math.Max(_stream.Length, _position);
             }
         }
 

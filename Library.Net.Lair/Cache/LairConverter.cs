@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -9,7 +10,6 @@ using System.Text.RegularExpressions;
 using Library.Io;
 using Library.Net.Lair;
 using Library.Security;
-using System.Diagnostics;
 
 namespace Library.Net.Lair
 {
@@ -260,34 +260,6 @@ namespace Library.Net.Lair
                 {
                     return LairConverter.FromStream<Node>(stream);
                 }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Stream ToSignatureStream(DigitalSignature item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                return LairConverter.ToStream<DigitalSignature>(item);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static DigitalSignature FromSignatureStream(Stream stream)
-        {
-            if (stream == null) throw new ArgumentNullException("stream");
-
-            try
-            {
-                return LairConverter.FromStream<DigitalSignature>(stream);
             }
             catch (Exception)
             {

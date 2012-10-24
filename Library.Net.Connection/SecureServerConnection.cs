@@ -44,6 +44,7 @@ namespace Library.Net.Connection
         private object _receiveLock = new object();
         private object _thisLock = new object();
 
+        private volatile bool _connect = false;
         private bool _disposed = false;
 
         public SecureServerConnection(ConnectionBase connection, DigitalSignature digitalSignature, BufferManager bufferManager)
@@ -414,6 +415,8 @@ namespace Library.Net.Connection
                 {
                     throw new ConnectionException(ex.Message, ex);
                 }
+
+                _connect = true;
             }
         }
 
@@ -441,6 +444,7 @@ namespace Library.Net.Connection
         public override Stream Receive(TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_connect) throw new ConnectionException();
 
             lock (_receiveLock)
             {
@@ -528,6 +532,7 @@ namespace Library.Net.Connection
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (stream == null) throw new ArgumentNullException("stream");
             if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
+            if (!_connect) throw new ConnectionException();
 
             lock (_sendLock)
             {

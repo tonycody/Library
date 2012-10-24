@@ -26,11 +26,12 @@ namespace Library.Net.Connection
         private CompressAlgorithm _myCompressAlgorithm;
         private CompressAlgorithm _otherCompressAlgorithm;
 
-        private bool _disposed = false;
-
         private object _sendLock = new object();
         private object _receiveLock = new object();
         private object _thisLock = new object();
+
+        private volatile bool _connect = false;
+        private bool _disposed = false;
 
         public CompressConnection(ConnectionBase connection, int maxReceiveCount, BufferManager bufferManager)
         {
@@ -109,6 +110,8 @@ namespace Library.Net.Connection
                 {
                     throw new ConnectionException(ex.Message, ex);
                 }
+
+                _connect = true;
             }
         }
 
@@ -138,6 +141,7 @@ namespace Library.Net.Connection
         public override System.IO.Stream Receive(TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_connect) throw new ConnectionException();
 
             lock (_receiveLock)
             {
@@ -170,7 +174,7 @@ namespace Library.Net.Connection
                             {
                                 decompressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
-                                using (DeflateStream deflateStream = new DeflateStream(stream, CompressionMode.Decompress, true))
+                                using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {
                                     int i = -1;
 
@@ -232,6 +236,7 @@ namespace Library.Net.Connection
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (stream == null) throw new ArgumentNullException("stream");
             if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
+            if (!_connect) throw new ConnectionException();
 
             lock (_sendLock)
             {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -8,12 +7,13 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Library.Io;
-using Library.Net.Amoeba;
+using Library.Net.Lair;
 using Library.Security;
+using System.Diagnostics;
 
-namespace Library.Net.Amoeba
+namespace Library.Security
 {
-    public static class AmoebaConverter
+    public static class DigitalSignatureConverter
     {
         private enum CompressionAlgorithm
         {
@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
         private static BufferManager _bufferManager = new BufferManager();
         private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
-        static AmoebaConverter()
+        static DigitalSignatureConverter()
         {
 
         }
@@ -81,7 +81,7 @@ namespace Library.Net.Amoeba
 #if DEBUG
                 if (list[0].Value.Length != stream.Length)
                 {
-                    Debug.WriteLine("AmoebaConverter ToStream : {0}→{1} {2}",
+                    Debug.WriteLine("LairConverter ToStream : {0}→{1} {2}",
                         NetworkConverter.ToSizeString(stream.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
@@ -164,7 +164,7 @@ namespace Library.Net.Amoeba
                             }
 
 #if DEBUG
-                            Debug.WriteLine("AmoebaConverter FromStream : {0}→{1} {2}",
+                            Debug.WriteLine("LairConverter FromStream : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));
@@ -232,16 +232,13 @@ namespace Library.Net.Amoeba
             return new MemoryStream(NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + patting));
         }
 
-        public static string ToNodeString(Node item)
+        public static Stream ToSignatureStream(DigitalSignature item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
             try
             {
-                using (Stream stream = AmoebaConverter.ToStream<Node>(item))
-                {
-                    return "Node@" + AmoebaConverter.ToBase64String(stream);
-                }
+                return DigitalSignatureConverter.ToStream<DigitalSignature>(item);
             }
             catch (Exception)
             {
@@ -249,80 +246,41 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public static Node FromNodeString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = AmoebaConverter.FromBase64String(item.Remove(0, 5)))
-                {
-                    return AmoebaConverter.FromStream<Node>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToSeedString(Seed item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                using (Stream stream = AmoebaConverter.ToStream<Seed>(item))
-                {
-                    return "Seed@" + AmoebaConverter.ToBase64String(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Seed FromSeedString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Seed@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = AmoebaConverter.FromBase64String(item.Remove(0, 5)))
-                {
-                    return AmoebaConverter.FromStream<Seed>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Stream ToBoxStream(Box item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                return AmoebaConverter.ToStream<Box>(item);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Box FromBoxStream(Stream stream)
+        public static DigitalSignature FromSignatureStream(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException("stream");
 
             try
             {
-                return AmoebaConverter.FromStream<Box>(stream);
+                return DigitalSignatureConverter.FromStream<DigitalSignature>(stream);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Stream ToCertificateStream(Certificate item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+
+            try
+            {
+                return DigitalSignatureConverter.ToStream<Certificate>(item);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Certificate FromCertificateStream(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+
+            try
+            {
+                return DigitalSignatureConverter.FromStream<Certificate>(stream);
             }
             catch (Exception)
             {

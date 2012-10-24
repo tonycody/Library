@@ -1,16 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using Library.Collections;
 using Library.Net;
 using Library.Net.Amoeba;
 using Library.Security;
 using NUnit.Framework;
-using Library.Collections;
-using System.Collections;
 
 namespace Library.UnitTest
 {
@@ -292,8 +292,8 @@ namespace Library.UnitTest
             {
                 DigitalSignature sigunature = new DigitalSignature("123", a);
 
-                var streamSigunature = AmoebaConverter.ToSignatureStream(sigunature);
-                var sigunature2 = AmoebaConverter.FromSignatureStream(streamSigunature);
+                var streamSigunature = DigitalSignatureConverter.ToSignatureStream(sigunature);
+                var sigunature2 = DigitalSignatureConverter.FromSignatureStream(streamSigunature);
 
                 Assert.AreEqual(sigunature, sigunature2, "AmoebaConverter #4");
             }

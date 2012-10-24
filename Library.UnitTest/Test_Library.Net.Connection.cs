@@ -156,22 +156,28 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            using (var tcpClient = new CompressConnection(new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
-            using (var tcpServer = new CompressConnection(new TcpConnection(server, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
+            using (var compressClient = new CompressConnection(new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
+            using (var compressServer = new CompressConnection(new TcpConnection(server, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
             {
+                var compressClientConnect = compressClient.BeginConnect(new TimeSpan(0, 0, 20), null, null);
+                var compressServerConnect = compressServer.BeginConnect(new TimeSpan(0, 0, 20), null, null);
+
+                compressClient.EndClose(compressClientConnect);
+                compressServer.EndClose(compressServerConnect);
+                
                 using (MemoryStream stream = new MemoryStream())
                 {
                     var buffer = new byte[1024 * 8];
-                    new Random().NextBytes(buffer);
+                    //new Random().NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Seek(0, SeekOrigin.Begin);
 
-                    var secureClientSend = tcpClient.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
-                    var secureServerReceive = tcpServer.BeginReceive(new TimeSpan(0, 0, 20), null, null);
+                    var secureClientSend = compressClient.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
+                    var secureServerReceive = compressServer.BeginReceive(new TimeSpan(0, 0, 20), null, null);
 
-                    tcpClient.EndSend(secureClientSend);
-                    var returnStream = tcpServer.EndReceive(secureServerReceive);
+                    compressClient.EndSend(secureClientSend);
+                    var returnStream = compressServer.EndReceive(secureServerReceive);
 
                     var buff2 = new byte[(int)returnStream.Length];
                     returnStream.Read(buff2, 0, buff2.Length);
@@ -182,16 +188,16 @@ namespace Library.UnitTest
                 using (MemoryStream stream = new MemoryStream())
                 {
                     var buffer = new byte[1024 * 8];
-                    new Random().NextBytes(buffer);
+                    //new Random().NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Seek(0, SeekOrigin.Begin);
 
-                    var secureServerSend = tcpServer.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
-                    var secureClientReceive = tcpClient.BeginReceive(new TimeSpan(0, 0, 20), null, null);
+                    var secureServerSend = compressServer.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
+                    var secureClientReceive = compressClient.BeginReceive(new TimeSpan(0, 0, 20), null, null);
 
-                    tcpServer.EndSend(secureServerSend);
-                    var returnStream = tcpClient.EndReceive(secureClientReceive);
+                    compressServer.EndSend(secureServerSend);
+                    var returnStream = compressClient.EndReceive(secureClientReceive);
 
                     var buff2 = new byte[(int)returnStream.Length];
                     returnStream.Read(buff2, 0, buff2.Length);

@@ -74,6 +74,7 @@
     <Compile Include="Test_Library.Configuration.cs" />
     <Compile Include="Test_Library.Correction.cs" />
     <Compile Include="Test_Library.Net.Connection.cs" />
+    <Compile Include="Test_Library.Net.Lair.cs" />
     <Compile Include="Test_Library.Net.Upnp.cs" />
     <Compile Include="Test_Library.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -90,6 +91,10 @@
     <ProjectReference Include="..\Library.Net.Amoeba\Library.Net.Amoeba.csproj">
       <Project>{82230C99-6599-4130-AAC9-FC926ABC0724}</Project>
       <Name>Library.Net.Amoeba</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Net.Lair\Library.Net.Lair.csproj">
+      <Project>{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}</Project>
+      <Name>Library.Net.Lair</Name>
     </ProjectReference>
     <ProjectReference Include="..\Library.Net\Library.Net.csproj">
       <Project>{7CFDE01D-4A0E-4E10-ACC2-34DB897DBE0F}</Project>

@@ -2,6 +2,7 @@
 using System.IO;
 using Library.Io;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace Library.UnitTest
 {
@@ -15,13 +16,15 @@ namespace Library.UnitTest
             {
                 Random rand = new Random();
 
-                for (int i = 0; i < 10; i++)
+                //for (int i = 0; i < 10; i++)
+                var p = Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
                 {
                     ////using (MemoryStream stream = new MemoryStream())
                     using (BufferStream stream = new BufferStream(manager))
                     {
-                        byte[] buffer = manager.TakeBuffer(rand.Next(128, 1024 * 10)); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
+                        byte[] buffer = manager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
                         long seek = rand.Next(64, buffer.Length);
+                        //long seek = 0;
 
                         rand.NextBytes(buffer);
 
@@ -39,7 +42,45 @@ namespace Library.UnitTest
                         manager.ReturnBuffer(buffer);
                         manager.ReturnBuffer(buff2);
                     }
-                }
+                });
+            }
+        }
+
+        [Test]
+        public void Test_CacheStream()
+        {
+            using (BufferManager manager = new BufferManager())
+            {
+                Random rand = new Random();
+
+                //for (int i = 0; i < 10; i++)
+                Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
+                {
+                    ////using (MemoryStream stream = new MemoryStream())
+                    using (BufferStream bufferStream = new BufferStream(manager))
+                    using (CacheStream stream = new CacheStream(bufferStream, 1024, manager))
+                    {
+                        byte[] buffer = manager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
+                        long seek = rand.Next(64, buffer.Length);
+                        //long seek = 0;
+
+                        rand.NextBytes(buffer);
+
+                        stream.Write(buffer, 0, buffer.Length);
+                        stream.Position = seek;
+
+                        byte[] buff2 = manager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
+                        stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
+
+                        if (!Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
+                        {
+                            Assert.IsTrue(Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
+                        }
+
+                        manager.ReturnBuffer(buffer);
+                        manager.ReturnBuffer(buff2);
+                    }
+                });
             }
         }
 

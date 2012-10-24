@@ -21,6 +21,12 @@ namespace Library.Security
             PrivateKey = 3,
         }
 
+        private enum FileSerializeId : byte
+        {
+            Name = 0,
+            Stream = 1,
+        }
+
         private string _nickname;
         private DigitalSignatureAlgorithm _digitalSignatureAlgorithm;
         private byte[] _publicKey;
@@ -239,9 +245,87 @@ namespace Library.Security
             return new Certificate(digitalSignature, stream);
         }
 
+        public static Certificate CreateCertificate(DigitalSignature digitalSignature, FileStream stream, BufferManager bufferManager)
+        {
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                {
+                    writer.Write(stream.Name);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)FileSerializeId.Name);
+
+                streams.Add(bufferStream);
+            }
+
+            {
+                Stream exportStream = new RangeStream(stream, true);
+
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)FileSerializeId.Stream);
+
+                streams.Add(new AddStream(bufferStream, exportStream));
+            }
+
+            using (var addStream = new AddStream(streams))
+            {
+                return new Certificate(digitalSignature, addStream);
+            }
+        }
+
         public static bool VerifyCertificate(Certificate certificate, Stream stream)
         {
             return certificate.Verify(stream);
+        }
+
+        public static bool VerifyCertificate(Certificate certificate, FileStream stream, BufferManager bufferManager)
+        {
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                {
+                    writer.Write(stream.Name);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)FileSerializeId.Name);
+
+                streams.Add(bufferStream);
+            }
+
+            {
+                Stream exportStream = new RangeStream(stream, true);
+
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)FileSerializeId.Stream);
+
+                streams.Add(new AddStream(bufferStream, exportStream));
+            }
+
+            using (var addStream = new AddStream(streams))
+            {
+                return certificate.Verify(stream);
+            }
         }
 
         [DataMember(Name = "Nickname")]
