@@ -19,7 +19,7 @@ namespace Library.Tool
         {
             try
             {
-                if (args.Length >= 2 && args[0] == "DigitalSignature")
+                if (args.Length >= 2 && args[0] == "DigitalSignature_Create")
                 {
                     var path = args[2];
                     var signPath = args[1];
@@ -34,7 +34,7 @@ namespace Library.Tool
                     using (FileStream inStream = new FileStream(path, FileMode.Open))
                     using (FileStream outStream = new FileStream(path + ".certificate", FileMode.Create))
                     {
-                        var certificate = DigitalSignature.CreateCertificate(digitalSignature, inStream);
+                        var certificate = DigitalSignature.CreateFileCertificate(digitalSignature, inStream, new BufferManager());
 
                         using (var certificateStream = DigitalSignatureConverter.ToCertificateStream(certificate))
                         {
@@ -46,6 +46,23 @@ namespace Library.Tool
                                 outStream.Write(buffer, 0, i);
                             }
                         }
+                    }
+                }
+                else if (args.Length >= 2 && args[0] == "DigitalSignature_Verify")
+                {
+                    var path = args[2];
+                    var signPath = args[1];
+
+                    Certificate certificate;
+
+                    using (FileStream inStream = new FileStream(signPath, FileMode.Open))
+                    {
+                        certificate = DigitalSignatureConverter.FromCertificateStream(inStream);
+                    }
+
+                    using (FileStream inStream = new FileStream(path, FileMode.Open))
+                    {
+                        MessageBox.Show(DigitalSignature.VerifyFileCertificate(certificate, inStream, new BufferManager()).ToString());
                     }
                 }
                 else if (args.Length >= 4 && args[0] == "define")

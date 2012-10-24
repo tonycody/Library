@@ -7,6 +7,7 @@ using System.Text;
 using System.Xml;
 using Library;
 using Library.Io;
+using System.Diagnostics;
 
 namespace Library.Security
 {
@@ -245,7 +246,7 @@ namespace Library.Security
             return new Certificate(digitalSignature, stream);
         }
 
-        public static Certificate CreateCertificate(DigitalSignature digitalSignature, FileStream stream, BufferManager bufferManager)
+        public static Certificate CreateFileCertificate(DigitalSignature digitalSignature, FileStream stream, BufferManager bufferManager)
         {
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
@@ -258,7 +259,7 @@ namespace Library.Security
                 using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
                 using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
                 {
-                    writer.Write(stream.Name);
+                    writer.Write(Path.GetFileName(stream.Name));
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -289,7 +290,7 @@ namespace Library.Security
             return certificate.Verify(stream);
         }
 
-        public static bool VerifyCertificate(Certificate certificate, FileStream stream, BufferManager bufferManager)
+        public static bool VerifyFileCertificate(Certificate certificate, FileStream stream, BufferManager bufferManager)
         {
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
@@ -302,7 +303,7 @@ namespace Library.Security
                 using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
                 using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
                 {
-                    writer.Write(stream.Name);
+                    writer.Write(Path.GetFileName(stream.Name));
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -324,7 +325,7 @@ namespace Library.Security
 
             using (var addStream = new AddStream(streams))
             {
-                return certificate.Verify(stream);
+                return certificate.Verify(addStream);
             }
         }
 
