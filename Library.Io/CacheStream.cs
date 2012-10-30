@@ -185,6 +185,7 @@ namespace Library.Io
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
+            if (count == 0) return 0;
 
             //count = Math.Min(count, (int)this.Length - (int)this.Position);
 
@@ -264,6 +265,7 @@ namespace Library.Io
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
+            if (count == 0) return;
 
             if (_writerBlockBuffer == null)
             {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -7,7 +8,6 @@ using System.Text;
 using System.Xml;
 using Library;
 using Library.Io;
-using System.Diagnostics;
 
 namespace Library.Security
 {

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Library.Io;
 using NUnit.Framework;
-using System.Threading.Tasks;
 
 namespace Library.UnitTest
 {
@@ -43,6 +43,29 @@ namespace Library.UnitTest
                         manager.ReturnBuffer(buff2);
                     }
                 });
+
+                using (MemoryStream mstream = new MemoryStream())
+                using (BufferStream stream = new BufferStream(manager))
+                {
+                    Random random = new Random();
+
+                    for (int i = 0; i < 1024 * 1024; i++)
+                    {
+                        var v = (byte)rand.Next(0, 255);
+                        mstream.WriteByte(v);
+                        stream.WriteByte(v);
+                    }
+
+                    mstream.Seek(0, SeekOrigin.Begin);
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    Assert.IsTrue(mstream.Length == stream.Length);
+
+                    for (int i = 0; i < 1024 * 1024; i++)
+                    {
+                        Assert.IsTrue(mstream.ReadByte() == stream.ReadByte());
+                    }
+                }
             }
         }
 
@@ -81,6 +104,32 @@ namespace Library.UnitTest
                         manager.ReturnBuffer(buff2);
                     }
                 });
+
+
+                using (MemoryStream mstream = new MemoryStream())
+                using (BufferStream bufferStream = new BufferStream(manager))
+                using (CacheStream stream = new CacheStream(bufferStream, 1024, manager))
+                {
+                    Random random = new Random();
+
+                    for (int i = 0; i < 1024 * 1024; i++)
+                    {
+                        var v = (byte)rand.Next(0, 255);
+                        mstream.WriteByte(v);
+                        stream.WriteByte(v);
+                    }
+
+                    mstream.Seek(0, SeekOrigin.Begin);
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    Assert.IsTrue(mstream.Length == stream.Length);
+
+                    for (int i = 0; i < 1024 * 1024; i++)
+                    {
+                        Assert.IsTrue(mstream.ReadByte() == stream.ReadByte());
+                    }
+                }
+
             }
         }
 
