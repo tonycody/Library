@@ -191,11 +191,11 @@ namespace Library.Net.Connection
                                 _bufferManager.ReturnBuffer(decompressBuffer);
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception e)
                         {
                             deflateBufferStream.Dispose();
 
-                            throw ex;
+                            throw e;
                         }
 
 #if DEBUG
@@ -275,7 +275,7 @@ namespace Library.Net.Connection
                         }
                         catch (Exception)
                         {
-
+                            throw;
                         }
                     }
 
@@ -320,28 +320,33 @@ namespace Library.Net.Connection
             }
         }
 
+        private object _disposeLock = new object();
+
         protected override void Dispose(bool disposing)
         {
-            if (_disposed) return;
-
-            if (disposing)
+            lock (_disposeLock)
             {
-                if (_connection != null)
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    try
+                    if (_connection != null)
                     {
-                        _connection.Dispose();
-                    }
-                    catch (Exception)
-                    {
+                        try
+                        {
+                            _connection.Dispose();
+                        }
+                        catch (Exception)
+                        {
 
-                    }
+                        }
 
-                    _connection = null;
+                        _connection = null;
+                    }
                 }
-            }
 
-            _disposed = true;
+                _disposed = true;
+            }
         }
 
         #region IThisLock

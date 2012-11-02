@@ -806,23 +806,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                DownloadItem item = new DownloadItem();
-
-                item.Rank = 1;
-                item.Seed = seed;
-                item.State = DownloadState.Downloading;
-                item.Priority = priority;
-
-                if (this.State == ManagerState.Start)
-                {
-                    if (item.Seed != null)
-                    {
-                        _cacheManager.Lock(item.Seed.Key);
-                    }
-                }
-
-                _settings.DownloadItems.Add(item);
-                _ids.Add(_id++, item);
+                this.Download(seed, null, priority);
             }
         }
 
@@ -832,6 +816,8 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
+                if (_settings.DownloadItems.Any(n => n.Seed == seed && n.Path == path)) return;
+
                 DownloadItem item = new DownloadItem();
 
                 item.Rank = 1;

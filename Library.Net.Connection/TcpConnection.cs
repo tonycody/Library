@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net.Sockets;
-using System.Net;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using Library.Io;
+using System.Text;
 using System.Threading;
+using Library.Io;
 
 namespace Library.Net.Connection
 {
@@ -18,11 +18,6 @@ namespace Library.Net.Connection
         private IPEndPoint _remoteEndPoint;
         private int _maxReceiveCount;
         private BufferManager _bufferManager;
-
-        private byte[] _sendBuffer;
-        private byte[] _receiveBuffer;
-        private GCHandle _sendBufferGCHandle;
-        private GCHandle _receiveBufferGCHandle;
 
         private long _receivedByteCount;
         private long _sentByteCount;
@@ -43,11 +38,6 @@ namespace Library.Net.Connection
         {
             _maxReceiveCount = maxReceiveCount;
             _bufferManager = bufferManager;
-
-            _sendBuffer = _bufferManager.TakeBuffer(1024 * 8);
-            _sendBufferGCHandle = GCHandle.Alloc(_sendBuffer);
-            _receiveBuffer = _bufferManager.TakeBuffer(1024 * 8);
-            _receiveBufferGCHandle = GCHandle.Alloc(_receiveBuffer);
         }
 
         public TcpConnection(Socket socket, int maxReceiveCount, BufferManager bufferManager)
@@ -220,18 +210,39 @@ namespace Library.Net.Connection
                         throw new ConnectionException();
                     }
 
-                    BufferStream bufferStream = new BufferStream(_bufferManager);
+                    BufferStream bufferStream = null;
 
-                    do
+                    try
                     {
-                        _socket.ReceiveTimeout = Math.Min((int)_receiveTimeSpan.TotalMilliseconds, (int)Math.Min((long)int.MaxValue, (long)TcpConnection.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds));
-                        int i = _socket.Receive(_receiveBuffer, 0, Math.Min(_receiveBuffer.Length, length), SocketFlags.None);
-                        if (i == 0) throw new ConnectionException();
+                        bufferStream = new BufferStream(_bufferManager);
+                        byte[] receiveBuffer = null;
 
-                        _receivedByteCount += i;
-                        bufferStream.Write(_receiveBuffer, 0, i);
-                        length -= i;
-                    } while (length > 0);
+                        try
+                        {
+                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+
+                            do
+                            {
+                                _socket.ReceiveTimeout = Math.Min((int)_receiveTimeSpan.TotalMilliseconds, (int)Math.Min((long)int.MaxValue, (long)TcpConnection.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds));
+                                int i = _socket.Receive(receiveBuffer, 0, Math.Min(receiveBuffer.Length, length), SocketFlags.None);
+                                if (i == 0) throw new ConnectionException();
+
+                                _receivedByteCount += i;
+                                bufferStream.Write(receiveBuffer, 0, i);
+                                length -= i;
+                            } while (length > 0);
+                        }
+                        finally
+                        {
+                            _bufferManager.ReturnBuffer(receiveBuffer);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        bufferStream.Dispose();
+
+                        throw e;
+                    }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     return bufferStream;
@@ -266,17 +277,28 @@ namespace Library.Net.Connection
                     Stream headerStream = new BufferStream(_bufferManager);
                     headerStream.Write(NetworkConverter.GetBytes((int)stream.Length), 0, 4);
 
-                    using (Stream dataStream = new AddStream(headerStream, new RangeStream(stream, true)))
-                    {
-                        int i = -1;
+                    byte[] sendBuffer = null;
 
-                        while (0 < (i = dataStream.Read(_sendBuffer, 0, _sendBuffer.Length)))
+                    try
+                    {
+                        sendBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+
+                        using (Stream dataStream = new AddStream(headerStream, new RangeStream(stream, true)))
                         {
-                            _socket.SendTimeout = Math.Min((int)_sendTimeSpan.TotalMilliseconds, (int)Math.Min((long)int.MaxValue, (long)TcpConnection.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds));
-                            _socket.Send(_sendBuffer, 0, i, SocketFlags.None);
-                            _sendUpdateTime = DateTime.UtcNow;
-                            _sentByteCount += i;
+                            int i = -1;
+
+                            while (0 < (i = dataStream.Read(sendBuffer, 0, sendBuffer.Length)))
+                            {
+                                _socket.SendTimeout = Math.Min((int)_sendTimeSpan.TotalMilliseconds, (int)Math.Min((long)int.MaxValue, (long)TcpConnection.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds));
+                                _socket.Send(sendBuffer, 0, i, SocketFlags.None);
+                                _sendUpdateTime = DateTime.UtcNow;
+                                _sentByteCount += i;
+                            }
                         }
+                    }
+                    finally
+                    {
+                        _bufferManager.ReturnBuffer(sendBuffer);
                     }
                 }
                 catch (ConnectionException e)
@@ -290,59 +312,33 @@ namespace Library.Net.Connection
             }
         }
 
+        private object _disposeLock = new object();
+
         protected override void Dispose(bool disposing)
         {
-            if (_disposed) return;
-
-            if (disposing)
+            lock (_disposeLock)
             {
-                if (_socket != null)
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    try
+                    if (_socket != null)
                     {
-                        _socket.Close();
-                    }
-                    catch (Exception)
-                    {
+                        try
+                        {
+                            _socket.Close();
+                        }
+                        catch (Exception)
+                        {
 
-                    }
+                        }
 
-                    _socket = null;
+                        _socket = null;
+                    }
                 }
 
-                if (_receiveBuffer != null)
-                {
-                    try
-                    {
-                        _bufferManager.ReturnBuffer(_receiveBuffer);
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    _receiveBuffer = null;
-                }
-
-                if (_sendBuffer != null)
-                {
-                    try
-                    {
-                        _bufferManager.ReturnBuffer(_sendBuffer);
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    _sendBuffer = null;
-                }
+                _disposed = true;
             }
-
-            if (_receiveBufferGCHandle.IsAllocated) _receiveBufferGCHandle.Free();
-            if (_sendBufferGCHandle.IsAllocated) _sendBufferGCHandle.Free();
-
-            _disposed = true;
         }
 
         #region IThisLock

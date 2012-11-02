@@ -32,11 +32,6 @@ namespace Library.Net.Connection
         private byte[] _otherHmacKey;
         private SecureVersion1.ConnectionSignature _connectionSignature;
 
-        private byte[] _sendBuffer;
-        private byte[] _receiveBuffer;
-        private GCHandle _sendBufferGCHandle;
-        private GCHandle _receiveBufferGCHandle;
-
         private long _totalReceiveSize = 0;
         private long _totalSendSize = 0;
 
@@ -74,11 +69,6 @@ namespace Library.Net.Connection
                     HashAlgorithm = SecureVersion1.HashAlgorithm.Sha512
                 };
             }
-
-            _sendBuffer = _bufferManager.TakeBuffer(1024 * 8);
-            _sendBufferGCHandle = GCHandle.Alloc(_sendBuffer);
-            _receiveBuffer = _bufferManager.TakeBuffer(1024 * 8);
-            _receiveBufferGCHandle = GCHandle.Alloc(_receiveBuffer);
         }
 
         public override long ReceivedByteCount
@@ -490,16 +480,27 @@ namespace Library.Net.Connection
 
                             if (_protocol1.CryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
                             {
-                                using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                using (CryptoStream cs = new CryptoStream(stream,
-                                    rijndael.CreateDecryptor(_otherCryptoKey.Take(32).ToArray(), _otherCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                                {
-                                    int i = -1;
+                                byte[] receiveBuffer = null;
 
-                                    while ((i = cs.Read(_receiveBuffer, 0, _receiveBuffer.Length)) > 0)
+                                try
+                                {
+                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+
+                                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                                    using (CryptoStream cs = new CryptoStream(stream,
+                                        rijndael.CreateDecryptor(_otherCryptoKey.Take(32).ToArray(), _otherCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                                     {
-                                        bufferStream.Write(_receiveBuffer, 0, i);
+                                        int i = -1;
+
+                                        while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
+                                        {
+                                            bufferStream.Write(receiveBuffer, 0, i);
+                                        }
                                     }
+                                }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(receiveBuffer);
                                 }
                             }
                             else
@@ -547,16 +548,27 @@ namespace Library.Net.Connection
 
                             if (_protocol1.CryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
                             {
-                                using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                using (CryptoStream cs = new CryptoStream(new RangeStream(stream, true),
-                                    rijndael.CreateEncryptor(_myCryptoKey.Take(32).ToArray(), _myCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                                {
-                                    int i = -1;
+                                byte[] sendBuffer = null;
 
-                                    while ((i = cs.Read(_receiveBuffer, 0, _receiveBuffer.Length)) > 0)
+                                try
+                                {
+                                    sendBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+
+                                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                                    using (CryptoStream cs = new CryptoStream(new RangeStream(stream, true),
+                                        rijndael.CreateEncryptor(_myCryptoKey.Take(32).ToArray(), _myCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                                     {
-                                        bufferStream.Write(_receiveBuffer, 0, i);
+                                        int i = -1;
+
+                                        while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                        {
+                                            bufferStream.Write(sendBuffer, 0, i);
+                                        }
                                     }
+                                }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(sendBuffer);
                                 }
                             }
                             else
@@ -610,59 +622,33 @@ namespace Library.Net.Connection
             }
         }
 
+        private object _disposeLock = new object();
+
         protected override void Dispose(bool disposing)
         {
-            if (_disposed) return;
-
-            if (disposing)
+            lock (_disposeLock)
             {
-                if (_connection != null)
+                if (_disposed) return;
+
+                if (disposing)
                 {
-                    try
+                    if (_connection != null)
                     {
-                        _connection.Dispose();
-                    }
-                    catch (Exception)
-                    {
+                        try
+                        {
+                            _connection.Dispose();
+                        }
+                        catch (Exception)
+                        {
 
-                    }
+                        }
 
-                    _connection = null;
-                }
-                
-                if (_receiveBuffer != null)
-                {
-                    try
-                    {
-                        _bufferManager.ReturnBuffer(_receiveBuffer);
+                        _connection = null;
                     }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    _receiveBuffer = null;
                 }
 
-                if (_sendBuffer != null)
-                {
-                    try
-                    {
-                        _bufferManager.ReturnBuffer(_sendBuffer);
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    _sendBuffer = null;
-                }
+                _disposed = true;
             }
-
-            if (_receiveBufferGCHandle.IsAllocated) _receiveBufferGCHandle.Free();
-            if (_sendBufferGCHandle.IsAllocated) _sendBufferGCHandle.Free();
-
-            _disposed = true;
         }
 
         #region IThisLock
