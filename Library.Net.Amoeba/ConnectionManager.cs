@@ -1214,37 +1214,32 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        private object _disposeLock = new object();
-
         protected override void Dispose(bool disposing)
         {
-            lock (_disposeLock)
+            if (_connection != null)
             {
-                if (_connection != null)
+                try
                 {
-                    try
-                    {
-                        _connection.Dispose();
-                    }
-                    catch (Exception)
-                    {
+                    _connection.Dispose();
+                }
+                catch (Exception)
+                {
 
-                    }
-
-                    _connection = null;
                 }
 
-                lock (this.ThisLock)
+                _connection = null;
+            }
+
+            lock (this.ThisLock)
+            {
+                if (!_disposed)
                 {
-                    if (!_disposed)
+                    if (disposing)
                     {
-                        if (disposing)
-                        {
 
-                        }
-
-                        _disposed = true;
                     }
+
+                    _disposed = true;
                 }
             }
         }

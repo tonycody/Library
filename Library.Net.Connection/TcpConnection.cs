@@ -312,33 +312,28 @@ namespace Library.Net.Connection
             }
         }
 
-        private object _disposeLock = new object();
-
         protected override void Dispose(bool disposing)
         {
-            lock (_disposeLock)
+            if (_disposed) return;
+
+            if (disposing)
             {
-                if (_disposed) return;
-
-                if (disposing)
+                if (_socket != null)
                 {
-                    if (_socket != null)
+                    try
                     {
-                        try
-                        {
-                            _socket.Close();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _socket = null;
+                        _socket.Close();
                     }
-                }
+                    catch (Exception)
+                    {
 
-                _disposed = true;
+                    }
+
+                    _socket = null;
+                }
             }
+
+            _disposed = true;
         }
 
         #region IThisLock
