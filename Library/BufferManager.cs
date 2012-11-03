@@ -7,7 +7,7 @@ namespace Library
 {
     public class BufferManager : ManagerBase, IThisLock
     {
-        private HashSet<byte[]> _bufferList = new HashSet<byte[]>();
+        //private HashSet<byte[]> _bufferList = new HashSet<byte[]>();
 
         private static System.ServiceModel.Channels.BufferManager _bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(1024 * 1024 * 256, 1024 * 1024 * 128);
         private object _thisLock = new object();
@@ -22,10 +22,12 @@ namespace Library
         {
             lock (this.ThisLock)
             {
-                var buffer = _bufferManager.TakeBuffer(bufferSize);
+                return _bufferManager.TakeBuffer(bufferSize);
 
-                _bufferList.Add(buffer);
-                return buffer;
+                //var buffer = _bufferManager.TakeBuffer(bufferSize);
+
+                //_bufferList.Add(buffer);
+                //return buffer;
             }
         }
 
@@ -35,10 +37,12 @@ namespace Library
             {
                 _bufferManager.ReturnBuffer(buffer);
 
-                if (!_bufferList.Remove(buffer))
-                {
-                    Log.Error("BufferManager\r\n" + Environment.StackTrace);
-                }
+                //_bufferManager.ReturnBuffer(buffer);
+
+                //if (!_bufferList.Remove(buffer))
+                //{
+                //    Log.Error("BufferManager\r\n" + Environment.StackTrace);
+                //}
             }
         }
 
