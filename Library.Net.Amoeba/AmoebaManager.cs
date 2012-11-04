@@ -585,24 +585,28 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            lock (this.ThisLock)
-            {
-                if (_disposed) return;
+            if (_disposed) return;
 
-                if (disposing)
+            if (disposing)
+            {
+                try
                 {
                     this.Stop();
+                }
+                catch (Exception)
+                {
 
-                    _uploadManager.Dispose();
-                    _downloadManager.Dispose();
-                    _connectionsManager.Dispose();
-                    _cacheManager.Dispose();
-                    _serverManager.Dispose();
-                    _clientManager.Dispose();
                 }
 
-                _disposed = true;
+                _uploadManager.Dispose();
+                _downloadManager.Dispose();
+                _connectionsManager.Dispose();
+                _cacheManager.Dispose();
+                _serverManager.Dispose();
+                _clientManager.Dispose();
             }
+
+            _disposed = true;
         }
 
         #region IThisLock

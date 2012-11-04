@@ -305,21 +305,25 @@ namespace Library.Net.Lair
 
         protected override void Dispose(bool disposing)
         {
-            lock (this.ThisLock)
-            {
-                if (_disposed) return;
+            if (_disposed) return;
 
-                if (disposing)
+            if (disposing)
+            {
+                try
                 {
                     this.Stop();
+                }
+                catch (Exception)
+                {
 
-                    _connectionsManager.Dispose();
-                    _serverManager.Dispose();
-                    _clientManager.Dispose();
                 }
 
-                _disposed = true;
+                _connectionsManager.Dispose();
+                _serverManager.Dispose();
+                _clientManager.Dispose();
             }
+
+            _disposed = true;
         }
 
         #region IThisLock メンバ

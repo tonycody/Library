@@ -11,7 +11,6 @@ namespace Library.Io
     {
         private BufferManager _bufferManager;
         private List<byte[]> _buffers = new List<byte[]>();
-        private GCHandle _buffersGcHandle;
         private long _position = 0;
         private long _length = 0;
         private int _bufferSize = 128;
@@ -20,8 +19,6 @@ namespace Library.Io
         public BufferStream(BufferManager bufferManager)
         {
             _bufferManager = bufferManager;
-
-            _buffersGcHandle = GCHandle.Alloc(_buffers);
         }
 
         public override bool CanRead
@@ -237,8 +234,6 @@ namespace Library.Io
                         _buffers = null;
                     }
                 }
-
-                if (_buffersGcHandle.IsAllocated) _buffersGcHandle.Free();
 
                 _disposed = true;
             }

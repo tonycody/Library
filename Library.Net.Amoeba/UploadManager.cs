@@ -1102,21 +1102,18 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            lock (this.ThisLock)
+            if (_disposed) return;
+
+            if (disposing)
             {
-                if (_disposed) return;
+                _uploadedKeys.Dispose();
+                _removeShare.Dispose();
 
-                if (disposing)
-                {
-                    _uploadedKeys.Dispose();
-                    _removeShare.Dispose();
-
-                    _uploadedThread.Join();
-                    _removeShareThread.Join();
-                }
-
-                _disposed = true;
+                _uploadedThread.Join();
+                _removeShareThread.Join();
             }
+
+            _disposed = true;
         }
 
         #region IThisLock

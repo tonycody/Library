@@ -16,12 +16,10 @@ namespace Library.Io
         private BufferManager _bufferManager;
 
         private byte[] _readerBuffer;
-        private System.Runtime.InteropServices.GCHandle _readerBufferGcHandle;
         private int _readerBufferPosition;
         private int _readerBufferLength;
 
         private byte[] _writerBlockBuffer;
-        private System.Runtime.InteropServices.GCHandle _writerBufferGcHandle;
         private int _writerBufferPosition;
 
         private bool _disposed = false;
@@ -192,7 +190,6 @@ namespace Library.Io
             if (_readerBuffer == null)
             {
                 _readerBuffer = _bufferManager.TakeBuffer(_bufferSize);
-                _readerBufferGcHandle = System.Runtime.InteropServices.GCHandle.Alloc(_readerBuffer);
             }
 
             if (!_isReadMode)
@@ -270,7 +267,6 @@ namespace Library.Io
             if (_writerBlockBuffer == null)
             {
                 _writerBlockBuffer = _bufferManager.TakeBuffer(_bufferSize);
-                _writerBufferGcHandle = System.Runtime.InteropServices.GCHandle.Alloc(_writerBlockBuffer);
             }
 
             if (_isReadMode)
@@ -398,9 +394,6 @@ namespace Library.Io
                         _writerBlockBuffer = null;
                     }
                 }
-
-                if (_readerBufferGcHandle.IsAllocated) _readerBufferGcHandle.Free();
-                if (_writerBufferGcHandle.IsAllocated) _writerBufferGcHandle.Free();
 
                 _disposed = true;
             }

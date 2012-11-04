@@ -276,17 +276,14 @@ namespace Library.Net.Lair
 
         protected override void Dispose(bool disposing)
         {
-            lock (this.ThisLock)
+            if (_disposed) return;
+
+            if (disposing)
             {
-                if (_disposed) return;
 
-                if (disposing)
-                {
-
-                }
-
-                _disposed = true;
             }
+
+            _disposed = true;
         }
 
         #region IThisLock

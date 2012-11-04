@@ -949,31 +949,26 @@ namespace Library.Net.Lair
 
         protected override void Dispose(bool disposing)
         {
-            if (_connection != null)
+            if (!_disposed)
             {
-                try
+                if (disposing)
                 {
-                    _connection.Dispose();
-                }
-                catch (Exception)
-                {
-
-                }
-
-                _connection = null;
-            }
-
-            lock (this.ThisLock)
-            {
-                if (!_disposed)
-                {
-                    if (disposing)
+                    if (_connection != null)
                     {
+                        try
+                        {
+                            _connection.Dispose();
+                        }
+                        catch (Exception)
+                        {
 
+                        }
+
+                        _connection = null;
                     }
-
-                    _disposed = true;
                 }
+
+                _disposed = true;
             }
         }
 

@@ -1342,29 +1342,26 @@ namespace Library.Net.Amoeba
 
         protected override void Dispose(bool disposing)
         {
-            lock (this.ThisLock)
+            if (_disposed) return;
+
+            if (disposing)
             {
-                if (_disposed) return;
-
-                if (disposing)
+                if (_fileStream != null)
                 {
-                    if (_fileStream != null)
+                    try
                     {
-                        try
-                        {
-                            _fileStream.Dispose();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _fileStream = null;
+                        _fileStream.Dispose();
                     }
-                }
+                    catch (Exception)
+                    {
 
-                _disposed = true;
+                    }
+
+                    _fileStream = null;
+                }
             }
+
+            _disposed = true;
         }
 
         private class Settings : Library.Configuration.SettingsBase, IThisLock
