@@ -215,21 +215,21 @@ namespace Library.Net.Amoeba
 
             value = match.Groups[1].Value;
 
-            string patting = "";
+            string padding = "";
 
             switch (value.Length % 4)
             {
                 case 1:
                 case 3:
-                    patting = "=";
+                    padding = "=";
                     break;
 
                 case 2:
-                    patting = "==";
+                    padding = "==";
                     break;
             }
 
-            return new MemoryStream(NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + patting));
+            return new MemoryStream(NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding));
         }
 
         public static string ToNodeString(Node item)

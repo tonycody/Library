@@ -166,7 +166,7 @@ namespace Library.Net
 
                     if (digit != 0)
                     {
-                        digit += (x.Length - (i + 1)) * 8;
+                        digit += (length - (i + 1)) * 8;
 
                         break;
                     }

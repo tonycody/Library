@@ -63,15 +63,15 @@ namespace Library.Net.Amoeba
                         {
                             var socket = _listeners[i].AcceptTcpClient().Client;
 
-                            IPEndPoint ipEndPoing = (IPEndPoint)socket.RemoteEndPoint;
+                            IPEndPoint ipEndPoint = (IPEndPoint)socket.RemoteEndPoint;
 
-                            if (ipEndPoing.AddressFamily == AddressFamily.InterNetwork)
+                            if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
                             {
-                                uri = string.Format("tcp:{0}:{1}", ipEndPoing.Address.ToString(), ipEndPoing.Port);
+                                uri = string.Format("tcp:{0}:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
                             }
-                            else if (ipEndPoing.AddressFamily == AddressFamily.InterNetworkV6)
+                            else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
                             {
-                                uri = string.Format("tcp:[{0}]:{1}", ipEndPoing.Address.ToString(), ipEndPoing.Port);
+                                uri = string.Format("tcp:[{0}]:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
                             }
 
                             connection = new TcpConnection(socket, ServerManager.MaxReceiveCount, _bufferManager);

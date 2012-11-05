@@ -290,7 +290,7 @@ namespace Library.Io
 
             if ((_writerBlockBuffer.Length - _writerBufferPosition) + _writerBlockBuffer.Length < count)
             {
-                if (_writerBlockBuffer.Length == _writerBufferPosition)
+                if (_writerBufferPosition != 0) 
                 {
                     _stream.Write(_writerBlockBuffer, 0, _writerBufferPosition);
                     _writerBufferPosition = 0;
