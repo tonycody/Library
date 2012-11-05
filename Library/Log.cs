@@ -17,6 +17,7 @@ namespace Library
     {
         private LogMessageLevel _logMessageLevel;
         private string _message;
+        private Exception _exception;
 
         public LogMessageLevel MessageLevel
         {
@@ -39,6 +40,18 @@ namespace Library
             set
             {
                 _message = value;
+            }
+        }
+
+        public Exception Exception
+        {
+            get
+            {
+                return _exception;
+            }
+            set
+            {
+                _exception = value;
             }
         }
     }
@@ -87,7 +100,7 @@ namespace Library
 
         public static void Information(Exception exception)
         {
-            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Information, Message = Log.FromException(exception) });
+            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Information, Message = Log.FromException(exception), Exception = exception });
         }
 
         public static void Warning(string value)
@@ -97,7 +110,7 @@ namespace Library
 
         public static void Warning(Exception exception)
         {
-            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Warning, Message = Log.FromException(exception) });
+            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Warning, Message = Log.FromException(exception), Exception = exception });
         }
 
         public static void Error(string value)
@@ -107,7 +120,7 @@ namespace Library
 
         public static void Error(Exception exception)
         {
-            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Error, Message = Log.FromException(exception) });
+            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Error, Message = Log.FromException(exception), Exception = exception });
         }
     }
 }

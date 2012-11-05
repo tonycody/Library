@@ -57,36 +57,45 @@ namespace Library.Net.Upnp
 
             string queryResponse = null;
 
-            try
+            foreach (var ip in new IPAddress[] { 
+                IPAddress.Parse("239.255.255.250"),
+                IPAddress.Parse("255.255.255.255"),
+            })
             {
-                string query = "M-SEARCH * HTTP/1.1\r\n" +
-                    "Host:" + "239.255.255.250" + ":1900\r\n" +
-                    "ST:upnp:rootdevice\r\n" +
-                    "Man:\"ssdp:discover\"\r\n" +
-                    "MX:3\r\n" +
-                    "\r\n" +
-                    "\r\n";
-
-                using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+                try
                 {
-                    client.ReceiveTimeout = (int)TimeoutCheck(stopwatch.Elapsed, timeout).TotalMilliseconds;
+                    string query = "M-SEARCH * HTTP/1.1\r\n" +
+                        "Host:" + "239.255.255.250" + ":1900\r\n" +
+                        "ST:upnp:rootdevice\r\n" +
+                        "Man:\"ssdp:discover\"\r\n" +
+                        "MX:3\r\n" +
+                        "\r\n" +
+                        "\r\n";
 
-                    byte[] q = Encoding.ASCII.GetBytes(query);
+                    using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+                    {
+                        client.ReceiveTimeout = (int)timeout.TotalMilliseconds / 2;
+                        if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
 
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
-                    client.SendTo(q, q.Length, SocketFlags.None, endPoint);
+                        byte[] q = Encoding.ASCII.GetBytes(query);
 
-                    IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                    EndPoint senderEP = (EndPoint)sender;
-                    byte[] data = new byte[1024];
-                    int dataLength = client.ReceiveFrom(data, ref senderEP);
+                        IPEndPoint endPoint = new IPEndPoint(ip, 1900);
+                        client.SendTo(q, q.Length, SocketFlags.None, endPoint);
 
-                    queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
+                        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
+                        EndPoint senderEP = (EndPoint)sender;
+                        byte[] data = new byte[1024];
+                        int dataLength = client.ReceiveFrom(data, ref senderEP);
+
+                        queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
+                    }
+
+                    if (queryResponse != null) break;
                 }
-            }
-            catch (Exception)
-            {
+                catch (Exception)
+                {
 
+                }
             }
 
             if (queryResponse == null || queryResponse == "") return null;
@@ -135,9 +144,9 @@ namespace Library.Net.Upnp
             string controlUrl = Regex.Match(services, "<controlURL>(.*)</controlURL>").Groups[1].Value;
             string soapBody =
                 "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                "<s:Body>" +
-                "<u:GetExternalIPAddress xmlns:u=\"" + serviceType + "\">" + "</u:GetExternalIPAddress>" +
-                "</s:Body>" +
+                " <s:Body>" +
+                "  <u:GetExternalIPAddress xmlns:u=\"" + serviceType + "\">" + "</u:GetExternalIPAddress>" +
+                " </s:Body>" +
                 "</s:Envelope>";
             byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
             string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
@@ -199,18 +208,18 @@ namespace Library.Net.Upnp
 
             string soapBody =
                 "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                "<s:Body>" +
-                "<u:AddPortMapping xmlns:u=\"" + serviceType + "\">" +
-                "<NewRemoteHost></NewRemoteHost>" +
-                "<NewExternalPort>" + externalPort + "</NewExternalPort>" +
-                "<NewProtocol>" + protocolString + "</NewProtocol>" +
-                "<NewInternalPort>" + internalPort + "</NewInternalPort>" +
-                "<NewInternalClient>" + machineIp + "</NewInternalClient>" +
-                "<NewEnabled>1</NewEnabled>" +
-                "<NewPortMappingDescription>" + description + "</NewPortMappingDescription>" +
-                "<NewLeaseDuration>0</NewLeaseDuration>" +
-                "</u:AddPortMapping>" +
-                "</s:Body>" +
+                " <s:Body>" +
+                "  <u:AddPortMapping xmlns:u=\"" + serviceType + "\">" +
+                "   <NewRemoteHost></NewRemoteHost>" +
+                "   <NewExternalPort>" + externalPort + "</NewExternalPort>" +
+                "   <NewProtocol>" + protocolString + "</NewProtocol>" +
+                "   <NewInternalPort>" + internalPort + "</NewInternalPort>" +
+                "   <NewInternalClient>" + machineIp + "</NewInternalClient>" +
+                "   <NewEnabled>1</NewEnabled>" +
+                "   <NewPortMappingDescription>" + description + "</NewPortMappingDescription>" +
+                "   <NewLeaseDuration>0</NewLeaseDuration>" +
+                "  </u:AddPortMapping>" +
+                " </s:Body>" +
                 "</s:Envelope>";
             byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
             string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
@@ -265,13 +274,13 @@ namespace Library.Net.Upnp
 
             string soapBody =
                 "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                "<s:Body>" +
-                "<u:DeletePortMapping xmlns:u=\"" + serviceType + "\">" +
-                "<NewRemoteHost></NewRemoteHost>" +
-                "<NewExternalPort>" + externalPort + "</NewExternalPort>" +
-                "<NewProtocol>" + protocolString + "</NewProtocol>" +
-                "</u:DeletePortMapping>" +
-                "</s:Body>" +
+                " <s:Body>" +
+                "  <u:DeletePortMapping xmlns:u=\"" + serviceType + "\">" +
+                "   <NewRemoteHost></NewRemoteHost>" +
+                "   <NewExternalPort>" + externalPort + "</NewExternalPort>" +
+                "   <NewProtocol>" + protocolString + "</NewProtocol>" +
+                "  </u:DeletePortMapping>" +
+                " </s:Body>" +
                 "</s:Envelope>";
             byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
             string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
@@ -315,11 +324,11 @@ namespace Library.Net.Upnp
             string controlUrl = Regex.Match(services, "<controlURL>(.*)</controlURL>").Groups[1].Value;
             string soapBody =
                 "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                "<s:Body>" +
-                "<u:GetGenericPortMappingEntry xmlns:u=\"" + serviceType + "\">" +
-                "<NewPortMappingIndex>" + index + "</NewPortMappingIndex>" +
-                "</u:GetGenericPortMappingEntry>" +
-                "</s:Body>" +
+                " <s:Body>" +
+                "  <u:GetGenericPortMappingEntry xmlns:u=\"" + serviceType + "\">" +
+                "   <NewPortMappingIndex>" + index + "</NewPortMappingIndex>" +
+                "  </u:GetGenericPortMappingEntry>" +
+                " </s:Body>" +
                 "</s:Envelope>";
             byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
             string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
