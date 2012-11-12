@@ -830,7 +830,7 @@ namespace Library.Net.Lair
                             {
                                 foreach (var item in _settings.Messages.ToArray())
                                 {
-                                    if (item.Value.Count > 256)
+                                    if (item.Value.Count > 1024)
                                     {
                                         channels.Add(item.Key);
                                     }
@@ -859,7 +859,7 @@ namespace Library.Net.Lair
                                     var list = _settings.Messages[c];
                                     var unlockMessages = unlockMessagesDic[c];
 
-                                    foreach (var m in unlockMessages.Take(list.Count - 256))
+                                    foreach (var m in unlockMessages.Take(list.Count - 1024))
                                     {
                                         list.Remove(m);
                                     }
