@@ -503,8 +503,20 @@ namespace Library.Net.Lair
                     // PushNodes
                     try
                     {
-                        var nodes = _connectionManagers.Select(n => n.Node).ToList();
-                        nodes.Remove(connectionManager.Node);
+                        List<Node> nodes = new List<Node>();
+
+                        lock (this.ThisLock)
+                        {
+                            var clist = _connectionManagers.ToList();
+                            clist.Remove(connectionManager);
+
+                            clist.Sort(new Comparison<ConnectionManager>((ConnectionManager x, ConnectionManager y) =>
+                            {
+                                return x.ResponseTime.CompareTo(y.ResponseTime);
+                            }));
+
+                            nodes.AddRange(clist.Take(12).Select(n => n.Node));
+                        }
 
                         if (nodes.Count > 0)
                         {
@@ -1071,8 +1083,20 @@ namespace Library.Net.Lair
                     {
                         nodeUpdateTime.Restart();
 
-                        var nodes = _connectionManagers.Select(n => n.Node).ToList();
-                        nodes.Remove(connectionManager.Node);
+                        List<Node> nodes = new List<Node>();
+
+                        lock (this.ThisLock)
+                        {
+                            var clist = _connectionManagers.ToList();
+                            clist.Remove(connectionManager);
+
+                            clist.Sort(new Comparison<ConnectionManager>((ConnectionManager x, ConnectionManager y) =>
+                            {
+                                return x.ResponseTime.CompareTo(y.ResponseTime);
+                            }));
+
+                            nodes.AddRange(clist.Take(12).Select(n => n.Node));
+                        }
 
                         if (nodes.Count > 0)
                         {
