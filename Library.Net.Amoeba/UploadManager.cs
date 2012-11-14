@@ -173,6 +173,8 @@ namespace Library.Net.Amoeba
                         contexts.Add(new InformationContext("Length", item.Value.Seed.Length));
                         contexts.Add(new InformationContext("State", item.Value.State));
                         contexts.Add(new InformationContext("Rank", item.Value.Rank));
+                        if (item.Value.FilePath != null) contexts.Add(new InformationContext("Path", item.Value.FilePath));
+                        
                         if (item.Value.State == UploadState.Completed || item.Value.State == UploadState.Uploading)
                             contexts.Add(new InformationContext("Seed", item.Value.Seed));
 
