@@ -82,6 +82,7 @@
     <Compile Include="Hash\Crc32_Castagnoli.cs" />
     <Compile Include="Hash\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerManager.cs" />
     <Compile Include="Cache\IHashAlgorithm.cs" />
@@ -154,7 +155,8 @@
   </Target>
   -->
   <PropertyGroup>
-    <PreBuildEvent>call "$(SolutionDir)Increment.bat" "$(ProjectPath)" "$(ProjectDir)Properties\AssemblyInfo.cs"</PreBuildEvent>
+    <PreBuildEvent>call "$(SolutionDir)Increment.bat" "$(ProjectPath)" "$(ProjectDir)Properties\AssemblyInfo.cs"
+call "$(SolutionDir)Define.bat" off "$(ProjectDir)ConnectionsManager.cs" MONO</PreBuildEvent>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>

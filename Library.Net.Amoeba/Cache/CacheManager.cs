@@ -11,6 +11,7 @@ using Library.Collections;
 using Library.Compression;
 using Library.Correction;
 using Library.Io;
+using System.Management;
 
 namespace Library.Net.Amoeba
 {
@@ -41,6 +42,8 @@ namespace Library.Net.Amoeba
         private object _thisLock = new object();
         public const int ClusterSize = 1024 * 32;
 
+        private int _threadCount = 2;
+   
         public CacheManager(string cachePath, BufferManager bufferManager)
         {
             _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
@@ -48,6 +51,15 @@ namespace Library.Net.Amoeba
             _settings = new Settings();
             _bufferManager = bufferManager;
             _spaceClusters = new HashSet<long>();
+
+#if !MONO
+            {
+                SYSTEM_INFO info = new SYSTEM_INFO();
+                NativeMethods.GetSystemInfo(ref info);
+
+                _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
+            }
+#endif
         }
 
         public IEnumerable<Seed> CacheSeeds
@@ -893,7 +905,7 @@ namespace Library.Net.Amoeba
                         parityBufferList.Add(new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength));
                     }
 
-                    ReedSolomon reedSolomon = new ReedSolomon(8, bufferList.Count, bufferList.Count + parityBufferList.Count, 8);
+                    ReedSolomon reedSolomon = new ReedSolomon(8, bufferList.Count, bufferList.Count + parityBufferList.Count, _threadCount);
                     List<int> intList = new List<int>();
 
                     for (int i = 0, length = bufferList.Count + parityBufferList.Count; i < length; i++)
@@ -901,9 +913,18 @@ namespace Library.Net.Amoeba
                         intList.Add(keys.Count + i);
                     }
 
+                    Exception exception = null;
+
                     Thread thread = new Thread(new ThreadStart(() =>
                     {
-                        reedSolomon.Encode(bufferList.ToArray(), parityBufferList.ToArray(), intList.ToArray());
+                        try
+                        {
+                            reedSolomon.Encode(bufferList.ToArray(), parityBufferList.ToArray(), intList.ToArray());
+                        }
+                        catch (Exception e)
+                        {
+                            exception = e;
+                        }
                     }));
                     thread.Start();
 
@@ -919,6 +940,8 @@ namespace Library.Net.Amoeba
                             throw new StopException();
                         }
                     }
+
+                    if (exception != null) throw exception;
 
                     for (int i = 0; i < parityBufferList.Count; i++)
                     {
@@ -983,7 +1006,7 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    ReedSolomon reedSolomon = new ReedSolomon(8, group.InformationLength, group.Keys.Count, 8);
+                    ReedSolomon reedSolomon = new ReedSolomon(8, group.InformationLength, group.Keys.Count, _threadCount);
                     List<int> intList = new List<int>();
 
                     for (int i = 0; i < group.Keys.Count; i++)
@@ -1018,9 +1041,18 @@ namespace Library.Net.Amoeba
                     if (bufferList.Count < group.InformationLength)
                         throw new BlockNotFoundException();
 
+                    Exception exception = null;
+
                     Thread thread = new Thread(new ThreadStart(() =>
                     {
-                        reedSolomon.Decode(bufferList.ToArray(), intList.ToArray());
+                        try
+                        {
+                            reedSolomon.Decode(bufferList.ToArray(), intList.ToArray());
+                        }
+                        catch (Exception e)
+                        {
+                            exception = e;
+                        }
                     }));
                     thread.Start();
 
@@ -1036,6 +1068,8 @@ namespace Library.Net.Amoeba
                             throw new StopException();
                         }
                     }
+
+                    if (exception != null) throw exception;
 
                     long length = group.Length;
 

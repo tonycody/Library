@@ -87,6 +87,8 @@ namespace Library.Net.Amoeba
         private readonly int _downloadingConnectionCountLowerLimit = 3;
         private readonly int _uploadingConnectionCountLowerLimit = 3;
 
+        private int _threadCount = 2;
+
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _clientManager = clientManager;
@@ -111,6 +113,15 @@ namespace Library.Net.Amoeba
             _relayBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
             this.UpdateSessionId();
+
+#if !MONO
+            {
+                SYSTEM_INFO info = new SYSTEM_INFO();
+                NativeMethods.GetSystemInfo(ref info);
+
+                _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
+            }
+#endif
         }
 
         public Node BaseNode
@@ -854,7 +865,7 @@ namespace Library.Net.Amoeba
                         LockedDictionary<Node, LockedHashSet<Key>> pushBlocksRequestDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
                         //foreach (var item in pushBlocksLinkList)
-                        Parallel.ForEach(pushBlocksLinkList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushBlocksLinkList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {
@@ -894,7 +905,7 @@ namespace Library.Net.Amoeba
                         }
 
                         //foreach (var item in pushBlocksRequestList)
-                        Parallel.ForEach(pushBlocksRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushBlocksRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {
@@ -984,7 +995,7 @@ namespace Library.Net.Amoeba
                         LockedDictionary<Node, LockedHashSet<Key>> pushBlocksDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
                         //foreach (var item in pushBlocksList)
-                        Parallel.ForEach(pushBlocksList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushBlocksList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {

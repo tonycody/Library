@@ -86,6 +86,8 @@ namespace Library.Net.Lair
         private readonly int _downloadingConnectionCountLowerLimit = 3;
         private readonly int _uploadingConnectionCountLowerLimit = 3;
 
+        private int _threadCount = 2;
+        
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, BufferManager bufferManager)
         {
             _clientManager = clientManager;
@@ -105,6 +107,15 @@ namespace Library.Net.Lair
             _nodesStatus = new LockedDictionary<Node, int>();
 
             this.UpdateSessionId();
+
+#if !MONO
+            {
+                SYSTEM_INFO info = new SYSTEM_INFO();
+                NativeMethods.GetSystemInfo(ref info);
+
+                _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
+            }
+#endif
         }
 
         public Node BaseNode
@@ -932,7 +943,7 @@ namespace Library.Net.Lair
                 {
                     uploadStopwatch.Restart();
 
-                    Parallel.ForEach(this.GetChannels(), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                    Parallel.ForEach(this.GetChannels(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                     {
                         try
                         {
@@ -988,7 +999,7 @@ namespace Library.Net.Lair
                     {
                         LockedDictionary<Node, LockedHashSet<Channel>> pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
 
-                        Parallel.ForEach(pushChannelsRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
+                        Parallel.ForEach(pushChannelsRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {

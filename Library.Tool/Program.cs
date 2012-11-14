@@ -16,7 +16,7 @@ namespace Library.Tool
     internal class Program
     {
         internal static void Main(string[] args)
-        {
+        {           
             try
             {
                 if (args.Length >= 2 && args[0] == "DigitalSignature_Create")
