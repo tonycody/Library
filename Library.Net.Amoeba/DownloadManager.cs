@@ -162,6 +162,7 @@ namespace Library.Net.Amoeba
                         contexts.Add(new InformationContext("State", item.Value.State));
                         contexts.Add(new InformationContext("Rank", item.Value.Rank));
                         if (item.Value.Path != null) contexts.Add(new InformationContext("Path", Path.Combine(item.Value.Path, DownloadManager.GetNormalizedPath(item.Value.Seed.Name))));
+                        else contexts.Add(new InformationContext("Path", DownloadManager.GetNormalizedPath(item.Value.Seed.Name)));
 
                         contexts.Add(new InformationContext("Seed", item.Value.Seed));
                   
