@@ -86,83 +86,90 @@ namespace Library.Net.Upnp
 
             for (; ; )
             {
-                TimeoutCheck(stopwatch.Elapsed, timeout);
+                for (; ; )
+                {
+                    TimeoutCheck(stopwatch.Elapsed, timeout);
 
-                string queryResponse = null;
+                    string queryResponse = null;
+
+                    try
+                    {
+                        string query = "M-SEARCH * HTTP/1.1\r\n" +
+                            "Host:" + "239.255.255.250" + ":1900\r\n" +
+                            "ST:upnp:rootdevice\r\n" +
+                            "Man:\"ssdp:discover\"\r\n" +
+                            "MX:3\r\n" +
+                            "\r\n" +
+                            "\r\n";
+
+                        using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+                        {
+                            client.ReceiveTimeout = 3000;
+                            if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
+
+                            byte[] q = Encoding.ASCII.GetBytes(query);
+
+                            IPEndPoint endPoint = new IPEndPoint(ip, 1900);
+                            client.SendTo(q, q.Length, SocketFlags.None, endPoint);
+
+                            byte[] data = new byte[1024];
+                            int dataLength = client.Receive(data);
+
+                            //IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
+                            //EndPoint senderEP = (EndPoint)sender;
+                            //byte[] data = new byte[1024];
+                            //int dataLength = client.ReceiveFrom(data, ref senderEP);
+
+                            queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
+                        }
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    if (string.IsNullOrWhiteSpace(queryResponse)) continue;
+
+                    var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
+                    if (string.IsNullOrWhiteSpace(regexLocation)) continue;
+
+                    tempLocation = new Uri(regexLocation);
+
+                    break;
+                }
+
+                Debug.WriteLine("UPnP Router: " + ip.ToString());
+                Debug.WriteLine("UPnP Location: " + tempLocation.ToString());
+
+                string downloadString = null;
 
                 try
                 {
-                    string query = "M-SEARCH * HTTP/1.1\r\n" +
-                        "Host:" + "239.255.255.250" + ":1900\r\n" +
-                        "ST:upnp:rootdevice\r\n" +
-                        "Man:\"ssdp:discover\"\r\n" +
-                        "MX:3\r\n" +
-                        "\r\n" +
-                        "\r\n";
-
-                    using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+                    using (var webClient = new WebClient())
                     {
-                        client.ReceiveTimeout = 3000;
-                        if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
+                        Thread thread = new Thread(new ThreadStart(delegate()
+                        {
+                            try
+                            {
+                                downloadString = webClient.DownloadString(tempLocation);
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        }));
 
-                        byte[] q = Encoding.ASCII.GetBytes(query);
-
-                        IPEndPoint endPoint = new IPEndPoint(ip, 1900);
-                        client.SendTo(q, q.Length, SocketFlags.None, endPoint);
-
-                        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                        EndPoint senderEP = (EndPoint)sender;
-                        byte[] data = new byte[1024];
-                        int dataLength = client.ReceiveFrom(data, ref senderEP);
-
-                        queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
+                        thread.Start();
+                        thread.Join(3000);
                     }
                 }
                 catch (Exception)
                 {
-
+                    continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(queryResponse)) continue;
-
-                var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
-                if (string.IsNullOrWhiteSpace(regexLocation)) continue;
-
-                tempLocation = new Uri(regexLocation);
-
-                break;
+                location = tempLocation;
+                return downloadString;
             }
-
-            Debug.WriteLine("UPnP Router: " + ip.ToString());
-
-            string downloadString = null;
-
-            try
-            {
-                using (var webClient = new WebClient())
-                {
-                    Thread thread = new Thread(new ThreadStart(delegate()
-                    {
-                        try
-                        {
-                            downloadString = webClient.DownloadString(tempLocation);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }));
-
-                    thread.Start();
-                    thread.Join(TimeoutCheck(stopwatch.Elapsed, timeout));
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-
-            location = tempLocation;
-            return downloadString;
         }
 
         private static string GetExternalIpAddressFromService(string services, string serviceType, string gatewayIp, int gatewayPort)
