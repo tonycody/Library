@@ -32,7 +32,14 @@ namespace Library.Net.Amoeba
         private volatile HashSet<Key> _shareIndexHashSet = null;
         private int _id = 0;
 
+        private volatile ManualResetEvent _resetEvent = new ManualResetEvent(false);
+        private long _freeSpace = 0;
+        private long _usingSpace = 0;
+        private long _lockSpace = 0;
+
         private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
+
+        private Thread _watchThread = null;
 
         internal SetKeyEventHandler SetKeyEvent;
         internal RemoveShareEventHandler RemoveShareEvent;
@@ -52,6 +59,14 @@ namespace Library.Net.Amoeba
             _bufferManager = bufferManager;
             _spaceClusters = new HashSet<long>();
 
+            _watchThread = new Thread(new ThreadStart(this.Watch));
+            _watchThread.Priority = ThreadPriority.Lowest;
+            _watchThread.IsBackground = true;
+            _watchThread.Name = "WatchThread";
+            _watchThread.Start();
+
+            _resetEvent.Reset();
+
 #if !MONO
             {
                 SYSTEM_INFO info = new SYSTEM_INFO();
@@ -60,6 +75,53 @@ namespace Library.Net.Amoeba
                 _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
             }
 #endif
+        }
+
+        private void Watch()
+        {
+            try
+            {
+                for (; ; )
+                {
+                    _resetEvent.WaitOne(1000 * 60, false);
+                    _resetEvent.Reset();
+
+                    var usingHeaders = new HashSet<Key>();
+                    usingHeaders.UnionWith(_lockedKeys.Keys);
+
+                    foreach (var info in _settings.SeedInformation)
+                    {
+                        usingHeaders.Add(info.Seed.Key);
+
+                        foreach (var index in info.Indexs)
+                        {
+                            foreach (var group in index.Groups)
+                            {
+                                usingHeaders.UnionWith(group.Keys.Take(group.InformationLength));
+                            }
+                        }
+                    }
+
+                    long size = 0;
+
+                    foreach (var item in usingHeaders)
+                    {
+                        Clusters clusters = null;
+
+                        _settings.ClustersIndex.TryGetValue(item, out clusters);
+
+                        if (clusters != null) size += clusters.Indexs.Length * CacheManager.ClusterSize;
+                    }
+
+                    _lockSpace = size;
+                    _freeSpace = this.Size - size;
+                    _usingSpace = _fileStream.Length;
+                }
+            }
+            catch (Exception)
+            {
+
+            }
         }
 
         public IEnumerable<Seed> CacheSeeds
@@ -100,6 +162,9 @@ namespace Library.Net.Amoeba
 
                     contexts.Add(new InformationContext("SeedCount", _settings.SeedInformation.Count));
                     contexts.Add(new InformationContext("ShareCount", _settings.ShareIndex.Count));
+                    contexts.Add(new InformationContext("UsingSpace", _usingSpace));
+                    contexts.Add(new InformationContext("LockSpace", _lockSpace));
+                    contexts.Add(new InformationContext("FreeSpace", _freeSpace));
 
                     return new Information(contexts);
                 }
@@ -1326,6 +1391,8 @@ namespace Library.Net.Amoeba
 
                 _shareIndexLink = null;
                 _shareIndexHashSet = null;
+
+                _resetEvent.Set();
             }
         }
 
