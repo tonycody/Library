@@ -179,13 +179,24 @@ namespace Library.Net.Amoeba
                 {
                     List<Information> list = new List<Information>();
 
-                    foreach (var id in _ids)
+                    var tlist = _ids.ToList();
+
+                    tlist.Sort(new Comparison<KeyValuePair<int, string>>((KeyValuePair<int, string> x, KeyValuePair<int, string> y) =>
+                    {
+                        return x.Key.CompareTo(y.Key);
+                    }));
+
+                    int index = 0;
+
+                    foreach (var id in tlist)
                     {
                         List<InformationContext> contexts = new List<InformationContext>();
 
-                        var item = _settings.ShareIndex[id.Value];
+                        contexts.Add(new InformationContext("Index", index++));
                         contexts.Add(new InformationContext("Id", id.Key));
                         contexts.Add(new InformationContext("Path", id.Value));
+
+                        var item = _settings.ShareIndex[id.Value];
                         contexts.Add(new InformationContext("BlockCount", item.KeyAndCluster.Count));
 
                         list.Add(new Information(contexts));
@@ -580,6 +591,8 @@ namespace Library.Net.Amoeba
                 long count = (size + (long)CacheManager.ClusterSize - 1) / (long)CacheManager.ClusterSize;
                 _settings.Size = count * CacheManager.ClusterSize;
                 _fileStream.SetLength(Math.Min(_settings.Size, _fileStream.Length));
+
+                _spaceClusters.Clear();
             }
         }
 

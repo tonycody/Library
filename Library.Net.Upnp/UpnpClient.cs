@@ -79,6 +79,22 @@ namespace Library.Net.Upnp
         {
             location = null;
 
+            List<string> querys = new List<string>();
+
+            querys.Add("M-SEARCH * HTTP/1.1\r\n" +
+                    "Host: 239.255.255.250:1900\r\n" +
+                    "Man: \"ssdp:discover\"\r\n" +
+                    "MX: 3\r\n" +
+                    "ST: urn:schemas-upnp-org:service:WANIPConnection:1\r\n" +
+                    "\r\n");
+
+            querys.Add("M-SEARCH * HTTP/1.1\r\n" +
+                    "Host: 239.255.255.250:1900\r\n" +
+                    "Man: \"ssdp:discover\"\r\n" +
+                    "MX: 3\r\n" +
+                    "ST: urn:schemas-upnp-org:service:WANPPPConnection:1\r\n" +
+                    "\r\n");
+
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
@@ -94,31 +110,21 @@ namespace Library.Net.Upnp
 
                     try
                     {
-                        string query = "M-SEARCH * HTTP/1.1\r\n" +
-                            "Host:" + "239.255.255.250" + ":1900\r\n" +
-                            "ST:upnp:rootdevice\r\n" +
-                            "Man:\"ssdp:discover\"\r\n" +
-                            "MX:3\r\n" +
-                            "\r\n" +
-                            "\r\n";
-
                         using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
                         {
-                            client.ReceiveTimeout = 3000;
+                            client.ReceiveTimeout = 5000;
                             if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
 
-                            byte[] q = Encoding.ASCII.GetBytes(query);
+                            foreach (var query in querys)
+                            {
+                                byte[] q = Encoding.ASCII.GetBytes(query);
 
-                            IPEndPoint endPoint = new IPEndPoint(ip, 1900);
-                            client.SendTo(q, q.Length, SocketFlags.None, endPoint);
+                                IPEndPoint endPoint = new IPEndPoint(ip, 1900);
+                                client.SendTo(q, q.Length, SocketFlags.None, endPoint);
+                            }
 
                             byte[] data = new byte[1024];
                             int dataLength = client.Receive(data);
-
-                            //IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                            //EndPoint senderEP = (EndPoint)sender;
-                            //byte[] data = new byte[1024];
-                            //int dataLength = client.ReceiveFrom(data, ref senderEP);
 
                             queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
                         }

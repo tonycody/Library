@@ -151,10 +151,20 @@ namespace Library.Net.Amoeba
                 {
                     List<Information> list = new List<Information>();
 
-                    foreach (var item in _ids)
+                    var tlist = _ids.ToList();
+
+                    tlist.Sort(new Comparison<KeyValuePair<int, DownloadItem>>((KeyValuePair<int, DownloadItem> x, KeyValuePair<int, DownloadItem> y) =>
+                    {
+                        return x.Key.CompareTo(y.Key);
+                    }));
+
+                    int index = 0;
+
+                    foreach (var item in tlist)
                     {
                         List<InformationContext> contexts = new List<InformationContext>();
 
+                        contexts.Add(new InformationContext("Index", index++));
                         contexts.Add(new InformationContext("Id", item.Key));
                         contexts.Add(new InformationContext("Priority", item.Value.Priority));
                         contexts.Add(new InformationContext("Name", DownloadManager.GetNormalizedPath(item.Value.Seed.Name)));
@@ -165,7 +175,7 @@ namespace Library.Net.Amoeba
                         else contexts.Add(new InformationContext("Path", DownloadManager.GetNormalizedPath(item.Value.Seed.Name)));
 
                         contexts.Add(new InformationContext("Seed", item.Value.Seed));
-                  
+
                         if (item.Value.Rank == 1) contexts.Add(new InformationContext("BlockCount", 1));
                         else contexts.Add(new InformationContext("BlockCount", item.Value.Index.Groups.Sum(n => n.Keys.Count)));
 

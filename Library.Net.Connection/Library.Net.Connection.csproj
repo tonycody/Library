@@ -123,7 +123,7 @@
   -->
   <PropertyGroup>
     <PreBuildEvent>call "$(SolutionDir)Increment.bat" "$(ProjectPath)" "$(ProjectDir)Properties\AssemblyInfo.cs"
-call "$(SolutionDir)Define.bat" off "$(ProjectDir)KeyExchange\ECDiffieHellmanP521_Sha512.cs" MONO</PreBuildEvent>
+</PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>

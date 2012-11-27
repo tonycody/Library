@@ -156,7 +156,7 @@
   -->
   <PropertyGroup>
     <PreBuildEvent>call "$(SolutionDir)Increment.bat" "$(ProjectPath)" "$(ProjectDir)Properties\AssemblyInfo.cs"
-call "$(SolutionDir)Define.bat" off "$(ProjectDir)ConnectionsManager.cs" MONO</PreBuildEvent>
+</PreBuildEvent>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>

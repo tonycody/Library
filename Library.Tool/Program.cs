@@ -561,7 +561,7 @@ namespace Library.Tool
                             {
                                 if (xml.LocalName == "Translate")
                                 {
-                                    dic.Add(xml.GetAttribute("Key"), xml.GetAttribute("Value"));
+                                    dic[xml.GetAttribute("Key")] = xml.GetAttribute("Value");
                                 }
                             }
                         }
