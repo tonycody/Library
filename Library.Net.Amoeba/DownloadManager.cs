@@ -151,20 +151,10 @@ namespace Library.Net.Amoeba
                 {
                     List<Information> list = new List<Information>();
 
-                    var tlist = _ids.ToList();
-
-                    tlist.Sort(new Comparison<KeyValuePair<int, DownloadItem>>((KeyValuePair<int, DownloadItem> x, KeyValuePair<int, DownloadItem> y) =>
-                    {
-                        return x.Key.CompareTo(y.Key);
-                    }));
-
-                    int index = 0;
-
-                    foreach (var item in tlist)
+                    foreach (var item in _ids)
                     {
                         List<InformationContext> contexts = new List<InformationContext>();
 
-                        contexts.Add(new InformationContext("Index", index++));
                         contexts.Add(new InformationContext("Id", item.Key));
                         contexts.Add(new InformationContext("Priority", item.Value.Priority));
                         contexts.Add(new InformationContext("Name", DownloadManager.GetNormalizedPath(item.Value.Seed.Name)));
@@ -339,6 +329,7 @@ namespace Library.Net.Amoeba
                             if (_settings.DownloadItems.Count > 0)
                             {
                                 var items = _settings.DownloadItems.Where(n => n.State == DownloadState.Downloading || n.State == DownloadState.Decoding)
+                                    .Where(n => n.Priority != 1)
                                     .ToList();
 
                                 if (compRound == 0 && compList.Count == 0)

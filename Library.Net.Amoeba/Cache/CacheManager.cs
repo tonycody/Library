@@ -179,25 +179,15 @@ namespace Library.Net.Amoeba
                 {
                     List<Information> list = new List<Information>();
 
-                    var tlist = _ids.ToList();
-
-                    tlist.Sort(new Comparison<KeyValuePair<int, string>>((KeyValuePair<int, string> x, KeyValuePair<int, string> y) =>
-                    {
-                        return x.Key.CompareTo(y.Key);
-                    }));
-
-                    int index = 0;
-
-                    foreach (var id in tlist)
+                    foreach (var item in _ids)
                     {
                         List<InformationContext> contexts = new List<InformationContext>();
 
-                        contexts.Add(new InformationContext("Index", index++));
-                        contexts.Add(new InformationContext("Id", id.Key));
-                        contexts.Add(new InformationContext("Path", id.Value));
+                        contexts.Add(new InformationContext("Id", item.Key));
+                        contexts.Add(new InformationContext("Path", item.Value));
 
-                        var item = _settings.ShareIndex[id.Value];
-                        contexts.Add(new InformationContext("BlockCount", item.KeyAndCluster.Count));
+                        var shareIndex = _settings.ShareIndex[item.Value];
+                        contexts.Add(new InformationContext("BlockCount", shareIndex.KeyAndCluster.Count));
 
                         list.Add(new Information(contexts));
                     }

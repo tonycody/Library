@@ -163,20 +163,10 @@ namespace Library.Net.Amoeba
                 {
                     List<Information> list = new List<Information>();
 
-                    var tlist = _ids.ToList();
-
-                    tlist.Sort(new Comparison<KeyValuePair<int, UploadItem>>((KeyValuePair<int, UploadItem> x, KeyValuePair<int, UploadItem> y) =>
-                    {
-                        return x.Key.CompareTo(y.Key);
-                    }));
-
-                    int index = 0;
-
-                    foreach (var item in tlist)
+                    foreach (var item in _ids)
                     {
                         List<InformationContext> contexts = new List<InformationContext>();
 
-                        contexts.Add(new InformationContext("Index", index++));
                         contexts.Add(new InformationContext("Id", item.Key));
                         contexts.Add(new InformationContext("Priority", item.Value.Priority));
                         contexts.Add(new InformationContext("Name", item.Value.Seed.Name));
@@ -266,6 +256,7 @@ namespace Library.Net.Amoeba
                             if (_settings.UploadItems.Count > 0)
                             {
                                 item = _settings.UploadItems.Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ComputeCorrection)
+                                    .Where(n => n.Priority != 1)
                                     .OrderBy(n => -n.Priority).FirstOrDefault();
                             }
                         }
