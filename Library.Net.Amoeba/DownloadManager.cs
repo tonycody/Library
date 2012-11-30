@@ -329,7 +329,7 @@ namespace Library.Net.Amoeba
                             if (_settings.DownloadItems.Count > 0)
                             {
                                 var items = _settings.DownloadItems.Where(n => n.State == DownloadState.Downloading || n.State == DownloadState.Decoding)
-                                    .Where(n => n.Priority != 1)
+                                    .Where(n => n.Priority != 0)
                                     .ToList();
 
                                 if (compRound == 0 && compList.Count == 0)
