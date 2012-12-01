@@ -845,17 +845,17 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        List<Channel> channels = new List<Channel>();
+                        List<KeyValuePair<Channel, int>> items = new List<KeyValuePair<Channel, int>>();
 
                         lock (this.ThisLock)
                         {
                             lock (_settings.ThisLock)
                             {
-                                foreach (var item in _settings.Messages.ToArray())
+                                foreach (var m in _settings.Messages.ToArray())
                                 {
-                                    if (item.Value.Count > 1024)
+                                    if (m.Value.Count > 1024)
                                     {
-                                        channels.Add(item.Key);
+                                        items.Add(new KeyValuePair<Channel, int>(m.Key, m.Value.Count));
                                     }
                                 }
                             }
@@ -863,26 +863,26 @@ namespace Library.Net.Lair
 
                         Dictionary<Channel, IList<Message>> unlockMessagesDic = new Dictionary<Channel, IList<Message>>();
 
-                        foreach (var c in channels)
+                        foreach (var item in items)
                         {
                             IList<Message> unlockMessages = new List<Message>();
-                            this.OnUnlockMessagesEvent(c, ref unlockMessages);
+                            this.OnUnlockMessagesEvent(item.Key, ref unlockMessages);
 
-                            unlockMessagesDic.Add(c, unlockMessages);
+                            unlockMessagesDic.Add(item.Key, unlockMessages);
                         }
 
                         lock (this.ThisLock)
                         {
                             lock (_settings.ThisLock)
                             {
-                                foreach (var c in channels)
+                                foreach (var item in items)
                                 {
-                                    if (!_settings.Messages.ContainsKey(c)) continue;
+                                    if (!_settings.Messages.ContainsKey(item.Key)) continue;
 
-                                    var list = _settings.Messages[c];
-                                    var unlockMessages = unlockMessagesDic[c];
+                                    var list = _settings.Messages[item.Key];
+                                    var unlockMessages = unlockMessagesDic[item.Key];
 
-                                    foreach (var m in unlockMessages.Take(list.Count - 1024))
+                                    foreach (var m in unlockMessages.Take(item.Value - 1024))
                                     {
                                         list.Remove(m);
                                     }
@@ -892,17 +892,17 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        List<Channel> channels = new List<Channel>();
+                        List<KeyValuePair<Channel, int>> items = new List<KeyValuePair<Channel, int>>();
 
                         lock (this.ThisLock)
                         {
                             lock (_settings.ThisLock)
                             {
-                                foreach (var item in _settings.Filters.ToArray())
+                                foreach (var f in _settings.Filters.ToArray())
                                 {
-                                    if (item.Value.Count > 32)
+                                    if (f.Value.Count > 32)
                                     {
-                                        channels.Add(item.Key);
+                                        items.Add(new KeyValuePair<Channel, int>(f.Key, f.Value.Count));
                                     }
                                 }
                             }
@@ -910,26 +910,26 @@ namespace Library.Net.Lair
 
                         Dictionary<Channel, IList<Filter>> unlockFiltersDic = new Dictionary<Channel, IList<Filter>>();
 
-                        foreach (var c in channels)
+                        foreach (var item in items)
                         {
                             IList<Filter> unlockFilters = new List<Filter>();
-                            this.OnUnlockFiltersEvent(c, ref unlockFilters);
+                            this.OnUnlockFiltersEvent(item.Key, ref unlockFilters);
 
-                            unlockFiltersDic.Add(c, unlockFilters);
+                            unlockFiltersDic.Add(item.Key, unlockFilters);
                         }
 
                         lock (this.ThisLock)
                         {
                             lock (_settings.ThisLock)
                             {
-                                foreach (var c in channels)
+                                foreach (var item in items)
                                 {
-                                    if (!_settings.Filters.ContainsKey(c)) continue;
+                                    if (!_settings.Filters.ContainsKey(item.Key)) continue;
 
-                                    var list = _settings.Filters[c];
-                                    var unlockFilters = unlockFiltersDic[c];
+                                    var list = _settings.Filters[item.Key];
+                                    var unlockFilters = unlockFiltersDic[item.Key];
 
-                                    foreach (var m in unlockFilters.Take(list.Count - 32))
+                                    foreach (var m in unlockFilters.Take(item.Value - 32))
                                     {
                                         list.Remove(m);
                                     }
