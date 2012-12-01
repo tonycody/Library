@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Linq;
 
 namespace Library.Update
 {
@@ -25,36 +26,51 @@ namespace Library.Update
                 var runPath = args[3];
                 var zipPath = args[4];
 
+                try
                 {
-                    try
-                    {
-                        Process process = Process.GetProcessById(pid);
-                        process.WaitForExit();
-                    }
-                    catch (Exception)
-                    {
+                    Process process = Process.GetProcessById(pid);
+                    process.WaitForExit();
+                }
+                catch (Exception)
+                {
 
-                    }
                 }
 
-                for (int i = 0; i < 100; i++)
                 {
-                    try
+                    var temp = GetUniqueDirectoryPath(target);
+                    Program.CopyDirectory(target, temp);
+
+                    bool flag = false;
+                    Random random = new Random();
+                    string errorInfo = "";
+
+                    for (int i = 0; i < 100; i++)
                     {
-                        var temp = GetUniqueDirectoryPath(target);
+                        try
+                        {
+                            foreach (var path in Directory.GetFiles(target, "*", SearchOption.AllDirectories).OrderBy(n => random.Next()))
+                            {
+                                errorInfo = path;
 
-                        Directory.Move(target, temp);
-                        Program.CopyDirectory(source, target);
-                        Directory.Delete(temp, true);
+                                File.Delete(path);
+                            }
 
-                        break;
+                            flag = true;
+
+                            break;
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
+                        Thread.Sleep(1000);
                     }
-                    catch (Exception)
-                    {
 
-                    }
+                    if (!flag) throw new Exception(errorInfo);
 
-                    Thread.Sleep(1000);
+                    Program.CopyDirectory(source, target);
+                    Directory.Delete(temp, true);
                 }
 
                 Directory.Delete(source, true);
