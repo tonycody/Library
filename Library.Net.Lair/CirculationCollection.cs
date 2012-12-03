@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Library.Collections;
-using System.Collections;
 
 namespace Library.Net.Lair
 {
@@ -43,17 +43,27 @@ namespace Library.Net.Lair
             _circularTime = circularTime;
         }
 
+        public T[] ToArray()
+        {
+            lock (this.ThisLock)
+            {
+                this.Circular(_circularTime);
+                
+                return _hashSet.ToArray();
+            }
+        }
+
         private void Circular(TimeSpan circularTime)
         {
             lock (this.ThisLock)
             {
                 var now = DateTime.UtcNow;
 
-                if ((now - _lastCircularTime) > new TimeSpan(0, 0, 10))
+                if ((now - _lastCircularTime) > new TimeSpan(0, 0, 30))
                 {
                     foreach (var item in _hashSet.ToArray())
                     {
-                        if (_circularDictionary.ContainsKey(item) && (now - _circularDictionary[item]) > circularTime)
+                        if ((now - _circularDictionary[item]) > circularTime)
                         {
                             _hashSet.Remove(item);
                         }
@@ -79,6 +89,8 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
+                    this.Circular(_circularTime);
+                    
                     return _hashSet.Count;
                 }
             }

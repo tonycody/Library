@@ -98,7 +98,7 @@ namespace Library.Net.Lair
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Channel);
 
-                streams.Add(new AddStream(bufferStream, exportStream));
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
@@ -148,10 +148,10 @@ namespace Library.Net.Lair
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Certificate);
 
-                streams.Add(new AddStream(bufferStream, exportStream));
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
-            return new AddStream(streams);
+            return new JoinStream(streams);
         }
 
         public override int GetHashCode()

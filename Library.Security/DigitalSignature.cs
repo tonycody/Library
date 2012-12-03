@@ -179,7 +179,7 @@ namespace Library.Security
                     streams.Add(bufferStream);
                 }
 
-                return new AddStream(streams);
+                return new JoinStream(streams);
             }
         }
 
@@ -276,12 +276,12 @@ namespace Library.Security
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 bufferStream.WriteByte((byte)FileSerializeId.Stream);
 
-                streams.Add(new AddStream(bufferStream, exportStream));
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
-            using (var addStream = new AddStream(streams))
+            using (var joinStream = new JoinStream(streams))
             {
-                return new Certificate(digitalSignature, addStream);
+                return new Certificate(digitalSignature, joinStream);
             }
         }
 
@@ -320,12 +320,12 @@ namespace Library.Security
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 bufferStream.WriteByte((byte)FileSerializeId.Stream);
 
-                streams.Add(new AddStream(bufferStream, exportStream));
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
-            using (var addStream = new AddStream(streams))
+            using (var joinStream = new JoinStream(streams))
             {
-                return certificate.Verify(addStream);
+                return certificate.Verify(joinStream);
             }
         }
 

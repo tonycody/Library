@@ -8,7 +8,7 @@ namespace Library.Collections
 {
     //public interface ISet<T> : ICollection<T>, IEnumerable<T>, IEnumerable { }
 
-    public class LockedHashSet<T> : ISet<T>, IThisLock
+    public class LockedHashSet<T> : ISet<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private HashSet<T> _hashSet;
         private int? _capacity = null;
@@ -44,6 +44,17 @@ namespace Library.Collections
         public LockedHashSet(IEnumerable<T> collection, IEqualityComparer<T> comparer)
         {
             _hashSet = new HashSet<T>(collection, comparer);
+        }
+
+        public T[] ToArray()
+        {
+            lock (this.ThisLock)
+            {
+                var array = new T[_hashSet.Count];
+                _hashSet.CopyTo(array, 0);
+
+                return array;
+            }
         }
 
         public int Capacity
@@ -257,5 +268,32 @@ namespace Library.Collections
         }
 
         #endregion
+
+        void ICollection.CopyTo(Array array, int arrayIndex)
+        {
+            lock (this.ThisLock)
+            {
+                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+            }
+        }
+
+        bool ICollection.IsSynchronized
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return true;
+                }
+            }
+        }
+
+        object ICollection.SyncRoot
+        {
+            get
+            {
+                return this.ThisLock;
+            }
+        }
     }
 }

@@ -9,14 +9,41 @@ namespace Library.Collections
     public static class IEnumerableExtensions
     {
         /// <summary>
-        /// 同期されている(スレッドセーフな)Library.Collections.Generic.LockedList&lt;T&gt;ラッパーを返します
+        /// 同期されている(スレッドセーフな)Library.Collections.LockedList&lt;T&gt;ラッパーを返します
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="list"></param>
         /// <returns></returns>
         public static LockedList<T> ToLockedList<T>(this IEnumerable<T> list)
         {
-            return new LockedList<T>(list);
+            object lockObject = null;
+
+            if (list is ICollection)
+            {
+                var collection = (ICollection)list;
+
+                if (collection.IsSynchronized)
+                {
+                    lockObject = collection.SyncRoot;
+                }
+            }
+
+            if (lockObject == null && list is IThisLock)
+            {
+                lockObject = ((IThisLock)list).ThisLock;
+            }
+
+            if (lockObject != null)
+            {
+                lock (lockObject)
+                {
+                    return new LockedList<T>(list);
+                }
+            }
+            else
+            {
+                return new LockedList<T>(list);
+            }
         }
     }
 
@@ -39,10 +66,21 @@ namespace Library.Collections
         public LockedList(IEnumerable<T> collection)
         {
             _list = new List<T>();
-            
+
             foreach (var item in collection)
             {
                 this.Add(item);
+            }
+        }
+
+        public T[] ToArray()
+        {
+            lock (this.ThisLock)
+            {
+                var array = new T[_list.Count];
+                _list.CopyTo(array, 0);
+
+                return array;
             }
         }
 

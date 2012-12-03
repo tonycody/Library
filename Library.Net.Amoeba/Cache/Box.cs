@@ -174,7 +174,7 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Seed);
 
-                    streams.Add(new AddStream(bufferStream, exportStream));
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
                 // Boxes
                 foreach (var b in this.Boxes)
@@ -185,7 +185,7 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Box);
 
-                    streams.Add(new AddStream(bufferStream, exportStream));
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
                 // Certificate
@@ -197,10 +197,10 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Certificate);
 
-                    streams.Add(new AddStream(bufferStream, exportStream));
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
-                return new AddStream(streams);
+                return new JoinStream(streams);
             }
         }
 

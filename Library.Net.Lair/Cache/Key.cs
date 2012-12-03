@@ -96,7 +96,7 @@ namespace Library.Net.Lair
                 streams.Add(bufferStream);
             }
 
-            return new AddStream(streams);
+            return new JoinStream(streams);
         }
 
         public override int GetHashCode()

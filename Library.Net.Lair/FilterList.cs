@@ -31,6 +31,17 @@ namespace Library.Net.Lair
             }
         }
 
+        public T[] ToArray()
+        {
+            lock (this.ThisLock)
+            {
+                var array = new T[_list.Count];
+                _list.CopyTo(array, 0);
+
+                return array;
+            }
+        }
+
         protected virtual bool Filter(T item)
         {
             return false;

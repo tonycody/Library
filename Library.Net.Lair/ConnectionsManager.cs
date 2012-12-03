@@ -404,7 +404,9 @@ namespace Library.Net.Lair
                     }
                     else
                     {
-                        var list = _connectionsNodes.Where(n => _messagesManager[n].SurroundingNodes.Contains(item)).ToList();
+                        var list = _connectionsNodes
+                            .Where(n => _messagesManager[n].SurroundingNodes.Contains(item))
+                            .ToList();
 
                         list.Sort(new Comparison<Node>((Node x, Node y) =>
                         {
@@ -639,12 +641,14 @@ namespace Library.Net.Lair
                     lock (this.ThisLock)
                     {
                         node = _cuttingNodes
+                            .ToArray()
                             .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
                             .FirstOrDefault();
 
                         if (node == null)
                         {
-                            node = _routeTable.ToArray()
+                            node = _routeTable
+                                .ToArray()
                                 .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
                                 .OrderBy(n => _random.Next())
                                 .FirstOrDefault();
@@ -974,7 +978,9 @@ namespace Library.Net.Lair
                     {
                         {
                             var list = _pushChannelsRequestList
-                                .OrderBy(n => _random.Next()).ToList();
+                                .ToArray()
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             for (int i = 0; i < 128 && i < list.Count; i++)
                             {
@@ -987,7 +993,10 @@ namespace Library.Net.Lair
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
-                            var list = messageManager.PullChannelsRequest.OrderBy(n => _random.Next()).ToList();
+                            var list = messageManager.PullChannelsRequest
+                                .ToArray()
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             for (int i = 0; i < 128 && i < list.Count; i++)
                             {
@@ -1072,7 +1081,9 @@ namespace Library.Net.Lair
                         if ((this.ConnectionCountLimit - _connectionManagers.Count) < (this.ConnectionCountLimit / 3)
                             && _connectionManagers.Count >= 3)
                         {
-                            List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node));
+                            List<Node> nodes = new List<Node>(_connectionManagers
+                                .ToArray()
+                                .Select(n => n.Node));
 
                             nodes.Sort(new Comparison<Node>((Node x, Node y) =>
                             {
@@ -1135,7 +1146,9 @@ namespace Library.Net.Lair
                                     if (_pushChannelsRequestDictionary.ContainsKey(connectionManager.Node))
                                     {
                                         tempList = new ChannelCollection(_pushChannelsRequestDictionary[connectionManager.Node]
-                                            .OrderBy(n => _random.Next()).Take(count));
+                                            .ToArray()
+                                            .OrderBy(n => _random.Next())
+                                            .Take(count));
 
                                         _pushChannelsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
                                         _messagesManager[connectionManager.Node].PushChannelsRequest.AddRange(tempList);
@@ -1287,9 +1300,17 @@ namespace Library.Net.Lair
             {
                 lock (_messagesManager.ThisLock)
                 {
-                    _messagesManager[connectionManager.Node].SurroundingNodes.Clear();
-                    _messagesManager[connectionManager.Node].SurroundingNodes
-                        .UnionWith(e.Nodes.OrderBy(n => _random.Next()).Take(12).Where(n => n != null && n.Id != null));
+                    lock (_messagesManager[connectionManager.Node].ThisLock)
+                    {
+                        lock (_messagesManager[connectionManager.Node].SurroundingNodes.ThisLock)
+                        {
+                            _messagesManager[connectionManager.Node].SurroundingNodes.Clear();
+                            _messagesManager[connectionManager.Node].SurroundingNodes.UnionWith(e.Nodes
+                                .Where(n => n != null && n.Id != null)
+                                .OrderBy(n => _random.Next())
+                                .Take(12));
+                        }
+                    }
                 }
             }
         }

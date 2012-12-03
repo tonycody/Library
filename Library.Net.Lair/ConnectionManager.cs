@@ -575,7 +575,7 @@ namespace Library.Net.Lair
                     var message = new NodesMessage();
                     message.Nodes.AddRange(nodes);
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -613,7 +613,7 @@ namespace Library.Net.Lair
                     var message = new ChannelsRequestMessage();
                     message.Channels.AddRange(channels);
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -648,7 +648,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.Message);
                     stream.Flush();
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -683,7 +683,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.Filter);
                     stream.Flush();
 
-                    stream = new AddStream(stream, filter.Export(_bufferManager));
+                    stream = new JoinStream(stream, filter.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -788,10 +788,10 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Node);
 
-                    streams.Add(new AddStream(bufferStream, exportStream));
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
-                return new AddStream(streams);
+                return new JoinStream(streams);
             }
 
             public override NodesMessage DeepClone()
@@ -892,10 +892,10 @@ namespace Library.Net.Lair
                         bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                         bufferStream.WriteByte((byte)SerializeId.Channel);
 
-                        streams.Add(new AddStream(bufferStream, exportStream));
+                        streams.Add(new JoinStream(bufferStream, exportStream));
                     }
 
-                    return new AddStream(streams);
+                    return new JoinStream(streams);
                 }
             }
 

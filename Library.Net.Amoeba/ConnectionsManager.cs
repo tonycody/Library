@@ -406,7 +406,9 @@ namespace Library.Net.Amoeba
                     }
                     else
                     {
-                        var list = _connectionsNodes.Where(n => _messagesManager[n].SurroundingNodes.Contains(item)).ToList();
+                        var list = _connectionsNodes
+                            .Where(n => _messagesManager[n].SurroundingNodes.Contains(item))
+                            .ToList();
 
                         list.Sort(new Comparison<Node>((Node x, Node y) =>
                         {
@@ -641,12 +643,14 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         node = _cuttingNodes
+                            .ToArray()
                             .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
                             .FirstOrDefault();
 
                         if (node == null)
                         {
-                            node = _routeTable.ToArray()
+                            node = _routeTable
+                                .ToArray()
                                 .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
                                 .OrderBy(n => _random.Next())
                                 .FirstOrDefault();
@@ -790,8 +794,11 @@ namespace Library.Net.Amoeba
 
                     {
                         {
-                            var list = _cacheManager.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next()).ToList();
+                            var list = _cacheManager
+                                .ToArray()
+                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             int count = (int)((8192) / (_connectionManagers.Count + 1));
 
@@ -806,8 +813,11 @@ namespace Library.Net.Amoeba
                         }
 
                         {
-                            var list = _downloadBlocks.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next()).ToList();
+                            var list = _downloadBlocks
+                                .ToArray()
+                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             int count = (int)((8192) / (_connectionManagers.Count + 1));
 
@@ -826,7 +836,10 @@ namespace Library.Net.Amoeba
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
-                            var list = messageManager.PullBlocksLink.OrderBy(n => _random.Next()).ToList();
+                            var list = messageManager.PullBlocksLink
+                                .ToArray()
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             int count = (int)((8192) / (_connectionManagers.Count + 1));
 
@@ -843,7 +856,10 @@ namespace Library.Net.Amoeba
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
-                            var list = messageManager.PullBlocksRequest.OrderBy(n => _random.Next()).ToList();
+                            var list = messageManager.PullBlocksRequest
+                                .ToArray()
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             if (list.Any(n => _cacheManager.Contains(n))) continue;
 
@@ -919,7 +935,9 @@ namespace Library.Net.Amoeba
                                     }
                                 }
 
-                                requestNodes = requestNodes.OrderBy(n => _random.Next()).ToList();
+                                requestNodes = requestNodes
+                                    .OrderBy(n => _random.Next())
+                                    .ToList();
 
                                 if (requestNodes.Count == 0)
                                     requestNodes.AddRange(this.GetSearchNode(item.Hash, 1));
@@ -967,8 +985,11 @@ namespace Library.Net.Amoeba
 
                     {
                         {
-                            var list = _settings.UploadBlocksRequest.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next()).ToList();
+                            var list = _settings.UploadBlocksRequest
+                                .ToArray()
+                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             int count = 8192;
 
@@ -979,8 +1000,11 @@ namespace Library.Net.Amoeba
                         }
 
                         {
-                            var list = _settings.DiffusionBlocksRequest.Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next()).ToList();
+                            var list = _settings.DiffusionBlocksRequest
+                                .ToArray()
+                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
                             int count = 8192;
 
@@ -1150,7 +1174,9 @@ namespace Library.Net.Amoeba
                                     if (_pushBlocksLinkDictionary.ContainsKey(connectionManager.Node))
                                     {
                                         tempList = new KeyCollection(_pushBlocksLinkDictionary[connectionManager.Node]
-                                            .OrderBy(n => _random.Next()).Take(count));
+                                            .ToArray()
+                                            .OrderBy(n => _random.Next())
+                                            .Take(count));
 
                                         _pushBlocksLinkDictionary[connectionManager.Node].ExceptWith(tempList);
                                         _messagesManager[connectionManager.Node].PushBlocksLink.AddRange(tempList);
@@ -1192,7 +1218,9 @@ namespace Library.Net.Amoeba
                                     if (_pushBlocksRequestDictionary.ContainsKey(connectionManager.Node))
                                     {
                                         tempList = new KeyCollection(_pushBlocksRequestDictionary[connectionManager.Node]
-                                            .OrderBy(n => _random.Next()).Take(count));
+                                            .ToArray()
+                                            .OrderBy(n => _random.Next())
+                                            .Take(count));
 
                                         _pushBlocksRequestDictionary[connectionManager.Node].ExceptWith(tempList);
                                         _messagesManager[connectionManager.Node].PushBlocksRequest.AddRange(tempList);
@@ -1241,7 +1269,9 @@ namespace Library.Net.Amoeba
                                     if (_pushBlocksDictionary.ContainsKey(connectionManager.Node))
                                     {
                                         key = _pushBlocksDictionary[connectionManager.Node]
-                                            .OrderBy(n => _random.Next()).FirstOrDefault();
+                                            .ToArray()
+                                            .OrderBy(n => _random.Next())
+                                            .FirstOrDefault();
 
                                         if (key != null)
                                         {
@@ -1296,7 +1326,9 @@ namespace Library.Net.Amoeba
                         // PushBlock
                         if ((_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
                         {
-                            foreach (var key in messageManager.PullBlocksRequest.OrderBy(n => _random.Next()).ToArray())
+                            foreach (var key in messageManager.PullBlocksRequest
+                                .ToArray()
+                                .OrderBy(n => _random.Next()))
                             {
                                 if (!_cacheManager.Contains(key)) continue;
 
@@ -1375,9 +1407,17 @@ namespace Library.Net.Amoeba
             {
                 lock (_messagesManager.ThisLock)
                 {
-                    _messagesManager[connectionManager.Node].SurroundingNodes.Clear();
-                    _messagesManager[connectionManager.Node].SurroundingNodes
-                        .UnionWith(e.Nodes.OrderBy(n => _random.Next()).Take(12).Where(n => n != null && n.Id != null));
+                    lock (_messagesManager[connectionManager.Node].ThisLock)
+                    {
+                        lock (_messagesManager[connectionManager.Node].SurroundingNodes.ThisLock)
+                        {
+                            _messagesManager[connectionManager.Node].SurroundingNodes.Clear();
+                            _messagesManager[connectionManager.Node].SurroundingNodes.UnionWith(e.Nodes
+                                .Where(n => n != null && n.Id != null)
+                                .OrderBy(n => _random.Next())
+                                .Take(12));
+                        }
+                    }
                 }
             }
         }

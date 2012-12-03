@@ -52,7 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AddStream.cs" />
+    <Compile Include="JoinStream.cs" />
     <Compile Include="BufferStream.cs" />
     <Compile Include="CacheStream.cs" />
     <Compile Include="ProgressStream.cs" />

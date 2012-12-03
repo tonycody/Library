@@ -6,14 +6,14 @@ using System.IO;
 
 namespace Library.Io
 {
-    public class AddStream : Stream
+    public class JoinStream : Stream
     {
         private List<Stream> _streams = new List<Stream>();
         private long _position;
         private long _length;
         private bool _disposed = false;
 
-        public AddStream(params Stream[] streams)
+        public JoinStream(params Stream[] streams)
         {
             foreach (var item in streams)
             {
@@ -25,7 +25,7 @@ namespace Library.Io
             _length = _streams.Sum(n => n.Length);
         }
 
-        public AddStream(IEnumerable<Stream> streams)
+        public JoinStream(IEnumerable<Stream> streams)
         {
             foreach (var item in streams)
             {

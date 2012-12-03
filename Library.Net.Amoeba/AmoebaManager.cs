@@ -480,13 +480,19 @@ namespace Library.Net.Amoeba
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _uploadManager.Stop();
-                _downloadManager.Stop();
-                
+                if (this.State == ManagerState.Start)
+                {
+                    _uploadManager.Stop();
+                    _downloadManager.Stop();
+                }
+
                 _cacheManager.Resize(size);
 
-                _uploadManager.Start();
-                _downloadManager.Start();
+                if (this.State == ManagerState.Start)
+                {
+                    _uploadManager.Start();
+                    _downloadManager.Start();
+                }
             }
         }
 

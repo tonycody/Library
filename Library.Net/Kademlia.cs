@@ -495,6 +495,17 @@ namespace Library.Net
             }
         }
 
+        public T[] ToArray()
+        {
+            lock (this.ThisLock)
+            {
+                var array = new T[this.Count];
+                this.CopyTo(array, 0);
+
+                return array;
+            }
+        }
+
         sealed class BytesEqualityComparer : IEqualityComparer<byte[]>
         {
             #region IEqualityComparer<byte[]>

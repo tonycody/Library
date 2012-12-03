@@ -96,10 +96,10 @@ namespace Library.Net.Amoeba
                 BufferStream headerStream = new BufferStream(_bufferManager);
                 headerStream.WriteByte((byte)list[0].Key);
 
-                var dataStream = new AddStream(headerStream, list[0].Value);
+                var dataStream = new JoinStream(headerStream, list[0].Value);
 
                 MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(dataStream));
-                return new AddStream(dataStream, crcStream);
+                return new JoinStream(dataStream, crcStream);
             }
             catch (Exception ex)
             {

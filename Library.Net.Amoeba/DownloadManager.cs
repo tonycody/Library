@@ -328,7 +328,8 @@ namespace Library.Net.Amoeba
                         {
                             if (_settings.DownloadItems.Count > 0)
                             {
-                                var items = _settings.DownloadItems.Where(n => n.State == DownloadState.Downloading || n.State == DownloadState.Decoding)
+                                var items = _settings.DownloadItems
+                                    .Where(n => n.State == DownloadState.Downloading || n.State == DownloadState.Decoding)
                                     .Where(n => n.Priority != 0)
                                     .ToList();
 
@@ -588,13 +589,17 @@ namespace Library.Net.Amoeba
 
                                     length = Math.Max(length, 6);
 
-                                    foreach (var key in keys.OrderBy(n => random.Next()).Take(length))
+                                    foreach (var key in keys
+                                        .OrderBy(n => random.Next())
+                                        .Take(length))
                                     {
                                         keyList.Add(key);
                                     }
                                 }
 
-                                foreach (var key in keyList.OrderBy(n => random.Next()).Take(limitCount - downloadingCount))
+                                foreach (var key in keyList
+                                    .OrderBy(n => random.Next())
+                                    .Take(limitCount - downloadingCount))
                                 {
                                     _connectionsManager.Download(key);
                                 }

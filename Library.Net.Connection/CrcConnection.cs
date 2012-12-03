@@ -145,7 +145,7 @@ namespace Library.Net.Connection
                 try
                 {
                     using (MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(stream)))
-                    using (Stream stream2 = new AddStream(new RangeStream(stream, true), crcStream))
+                    using (Stream stream2 = new JoinStream(new RangeStream(stream, true), crcStream))
                     {
                         _connection.Send(stream2, timeout);
                     }

@@ -584,7 +584,7 @@ namespace Library.Net.Amoeba
                     var message = new NodesMessage();
                     message.Nodes.AddRange(nodes);
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -622,7 +622,7 @@ namespace Library.Net.Amoeba
                     var message = new BlocksLinkMessage();
                     message.Keys.AddRange(keys);
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -660,7 +660,7 @@ namespace Library.Net.Amoeba
                     var message = new BlocksRequestMessage();
                     message.Keys.AddRange(keys);
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -699,7 +699,7 @@ namespace Library.Net.Amoeba
                     message.Key = key;
                     message.Value = value;
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -804,10 +804,10 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Node);
 
-                    streams.Add(new AddStream(bufferStream, exportStream));
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
-                return new AddStream(streams);
+                return new JoinStream(streams);
             }
 
             public override NodesMessage DeepClone()
@@ -908,10 +908,10 @@ namespace Library.Net.Amoeba
                         bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                         bufferStream.WriteByte((byte)SerializeId.Key);
 
-                        streams.Add(new AddStream(bufferStream, exportStream));
+                        streams.Add(new JoinStream(bufferStream, exportStream));
                     }
 
-                    return new AddStream(streams);
+                    return new JoinStream(streams);
                 }
             }
 
@@ -1013,10 +1013,10 @@ namespace Library.Net.Amoeba
                         bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                         bufferStream.WriteByte((byte)SerializeId.Key);
 
-                        streams.Add(new AddStream(bufferStream, exportStream));
+                        streams.Add(new JoinStream(bufferStream, exportStream));
                     }
 
-                    return new AddStream(streams);
+                    return new JoinStream(streams);
                 }
             }
 
@@ -1126,7 +1126,7 @@ namespace Library.Net.Amoeba
                         bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                         bufferStream.WriteByte((byte)SerializeId.Key);
 
-                        streams.Add(new AddStream(bufferStream, exportStream));
+                        streams.Add(new JoinStream(bufferStream, exportStream));
                     }
                     // Value
                     if (this.Value.Array != null)
@@ -1139,7 +1139,7 @@ namespace Library.Net.Amoeba
                         streams.Add(bufferStream);
                     }
 
-                    return new AddStream(streams);
+                    return new JoinStream(streams);
                 }
             }
 

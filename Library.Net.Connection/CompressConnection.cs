@@ -304,7 +304,7 @@ namespace Library.Net.Connection
                     BufferStream headerStream = new BufferStream(_bufferManager);
                     headerStream.WriteByte((byte)list[0].Key);
 
-                    using (var dataStream = new AddStream(headerStream, list[0].Value))
+                    using (var dataStream = new JoinStream(headerStream, list[0].Value))
                     {
                         _connection.Send(dataStream, timeout);
                     }

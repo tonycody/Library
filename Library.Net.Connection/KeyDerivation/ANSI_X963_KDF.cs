@@ -26,63 +26,66 @@ using System.Security.Cryptography;
 
 namespace Library.Net.Connection
 {
-	class ANSI_X963_KDF : KeyDerivation
-	{
-		HashAlgorithm _hashAlgo;
+    class ANSI_X963_KDF : KeyDerivation
+    {
+        HashAlgorithm _hashAlgo;
 
-		public ANSI_X963_KDF (HashAlgorithm hashAlgo)
-		{
-			_hashAlgo = hashAlgo;
-		}
+        public ANSI_X963_KDF(HashAlgorithm hashAlgo)
+        {
+            _hashAlgo = hashAlgo;
+        }
 
-		public override byte[] Calculate (byte[] sharedValue, int keyDataLength)
-		{
-			// SEC1 3.6.1 (p.29)
+        public override byte[] Calculate(byte[] sharedValue, int keyDataLength)
+        {
+            // SEC1 3.6.1 (p.29)
 
-			// Step.1 & Step.2: Skip
+            // Step.1 & Step.2: Skip
 
-			// Step.3:
-			byte[] counter = new byte[] {0, 0, 0, 1};
+            // Step.3:
+            byte[] counter = new byte[] { 0, 0, 0, 1 };
 
-			// Step.4 & Step.5:
-			int hashBytes = _hashAlgo.HashSize >> 3;
-			int blocks = (keyDataLength / hashBytes) + (keyDataLength % hashBytes == 0 ? 0 : 1);
-			byte[] K = new byte [blocks * hashBytes];
-			byte[] buffer = new byte[sharedValue.Length + counter.Length + (_sharedInfo == null ? 0 : _sharedInfo.Length)];
-			for (int i = 0; i < sharedValue.Length; i ++)
-				buffer[i] = sharedValue[i];
-			for (int i = 0, q = 0; i < blocks; i ++, q += hashBytes) {
-				// Copy counter
-				buffer[sharedValue.Length] = counter[0];
-				buffer[sharedValue.Length + 1] = counter[1];
-				buffer[sharedValue.Length + 2] = counter[2];
-				buffer[sharedValue.Length + 3] = counter[3];
+            // Step.4 & Step.5:
+            int hashBytes = _hashAlgo.HashSize >> 3;
+            int blocks = (keyDataLength / hashBytes) + (keyDataLength % hashBytes == 0 ? 0 : 1);
+            byte[] K = new byte[blocks * hashBytes];
+            byte[] buffer = new byte[sharedValue.Length + counter.Length + (_sharedInfo == null ? 0 : _sharedInfo.Length)];
+            for (int i = 0; i < sharedValue.Length; i++)
+                buffer[i] = sharedValue[i];
+            for (int i = 0, q = 0; i < blocks; i++, q += hashBytes)
+            {
+                // Copy counter
+                buffer[sharedValue.Length] = counter[0];
+                buffer[sharedValue.Length + 1] = counter[1];
+                buffer[sharedValue.Length + 2] = counter[2];
+                buffer[sharedValue.Length + 3] = counter[3];
 
-				// Copy shared info
-				if (_sharedInfo != null) {
-					for (int k = 0; k < _sharedInfo.Length; k ++)
-						buffer[sharedValue.Length + 4 + k] = _sharedInfo[k];
-				}
+                // Copy shared info
+                if (_sharedInfo != null)
+                {
+                    for (int k = 0; k < _sharedInfo.Length; k++)
+                        buffer[sharedValue.Length + 4 + k] = _sharedInfo[k];
+                }
 
-				// Compute hash
-				byte[] hash;
-				lock (_hashAlgo) {
-					hash = _hashAlgo.ComputeHash (buffer);
-				}
+                // Compute hash
+                byte[] hash;
+                lock (_hashAlgo)
+                {
+                    hash = _hashAlgo.ComputeHash(buffer);
+                }
 
-				// Copy hash to result
-				for (int k = 0; k < hash.Length; k ++)
-					K[q + k] = hash[k];
+                // Copy hash to result
+                for (int k = 0; k < hash.Length; k++)
+                    K[q + k] = hash[k];
 
-				// Increment counter;
-				if (++counter[3] == 0)
-					if (++counter[2] == 0)
-						if (++counter[1] == 0)
-							counter[0] ++;
-			}
+                // Increment counter;
+                if (++counter[3] == 0)
+                    if (++counter[2] == 0)
+                        if (++counter[1] == 0)
+                            counter[0]++;
+            }
 
-			// Step.6
-			return K;
-		}
-	}
+            // Step.6
+            return K;
+        }
+    }
 }

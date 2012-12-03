@@ -46,19 +46,19 @@ namespace Library.Collections
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                
                     return _capacity.Value;
                 }
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     _capacity = value;
                 }
             }
@@ -68,10 +68,10 @@ namespace Library.Collections
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _queue.Count;
                 }
             }
@@ -79,30 +79,30 @@ namespace Library.Collections
 
         public void Clear()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _queue.Clear();
             }
         }
 
         public bool Contains(T item)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _queue.Contains(item);
             }
         }
 
         public void CopyTo(T[] array, int arrayIndex)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _queue.CopyTo(array, arrayIndex);
             }
         }
@@ -111,10 +111,10 @@ namespace Library.Collections
         {
             for (; ; )
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     if (_queue.Count > 0)
                     {
                         _upperResetEvent.Set();
@@ -134,10 +134,10 @@ namespace Library.Collections
         {
             for (; ; )
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     if (_queue.Count > 0)
                     {
                         _upperResetEvent.Set();
@@ -157,10 +157,10 @@ namespace Library.Collections
         {
             if (_capacity != null && _queue.Count > _capacity.Value) _upperResetEvent.WaitOne();
 
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _queue.Enqueue(item);
 
                 _lowerResetEvent.Set();
@@ -175,10 +175,10 @@ namespace Library.Collections
                 if (!_upperResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
             }
 
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _queue.Enqueue(item);
 
                 _lowerResetEvent.Set();
@@ -190,10 +190,10 @@ namespace Library.Collections
         {
             for (; ; )
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     if (_queue.Count > 0)
                     {
                         return _queue.Peek();
@@ -212,10 +212,10 @@ namespace Library.Collections
         {
             for (; ; )
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     if (_queue.Count > 0)
                     {
                         return _queue.Peek();
@@ -232,20 +232,20 @@ namespace Library.Collections
 
         public T[] ToArray()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _queue.ToArray();
             }
         }
 
         public void TrimExcess()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _queue.TrimExcess();
             }
         }
@@ -266,10 +266,10 @@ namespace Library.Collections
 
         public IEnumerator<T> GetEnumerator()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 foreach (var item in _queue)
                 {
                     yield return item;
@@ -279,30 +279,30 @@ namespace Library.Collections
 
         public void Close()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 this.Dispose();
             }
         }
 
         void ICollection.CopyTo(Array array, int index)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 ((ICollection)_queue).CopyTo(array.OfType<T>().ToArray(), index);
             }
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return this.GetEnumerator();
             }
         }
@@ -311,10 +311,10 @@ namespace Library.Collections
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return true;
                 }
             }
@@ -324,10 +324,10 @@ namespace Library.Collections
 
         void ICollection<T>.Add(T item)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 this.Enqueue(item);
             }
         }
@@ -336,10 +336,10 @@ namespace Library.Collections
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return false;
                 }
             }
@@ -347,10 +347,10 @@ namespace Library.Collections
 
         bool ICollection<T>.Remove(T item)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 int count = _queue.Count;
                 _queue = new Queue<T>(_queue.Where(n => !n.Equals(item)));
 
@@ -372,38 +372,33 @@ namespace Library.Collections
 
         protected void Dispose(bool disposing)
         {
-            lock (this.ThisLock)
+            if (!_disposed)
             {
-                if (!_disposed)
+                if (disposing)
                 {
-                    if (disposing)
+                    if (_lowerResetEvent != null)
                     {
-                        if (_lowerResetEvent != null)
-                        {
-                            _lowerResetEvent.Set();
-                            _lowerResetEvent.Close();
-                        }
-                        if (_upperResetEvent != null)
-                        {
-                            _upperResetEvent.Set();
-                            _upperResetEvent.Close();
-                        }
+                        _lowerResetEvent.Set();
+                        _lowerResetEvent.Close();
+                    }
+
+                    if (_upperResetEvent != null)
+                    {
+                        _upperResetEvent.Set();
+                        _upperResetEvent.Close();
                     }
                 }
-
-                _disposed = true;
             }
+
+            _disposed = true;
         }
 
         #region IDisposable
 
         public void Dispose()
         {
-            lock (this.ThisLock)
-            {
-                Dispose(true);
-                GC.SuppressFinalize(this);
-            }
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         #endregion

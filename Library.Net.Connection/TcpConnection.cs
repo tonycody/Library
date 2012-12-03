@@ -283,7 +283,7 @@ namespace Library.Net.Connection
                     {
                         sendBuffer = _bufferManager.TakeBuffer(1024 * 1024);
 
-                        using (Stream dataStream = new AddStream(headerStream, new RangeStream(stream, true)))
+                        using (Stream dataStream = new JoinStream(headerStream, new RangeStream(stream, true)))
                         {
                             int i = -1;
 

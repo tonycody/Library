@@ -1409,6 +1409,32 @@ namespace Library.Net.Amoeba
 
         #endregion
 
+        public Key[] ToArray()
+        {
+            lock (this.ThisLock)
+            {
+                List<Key> list = new List<Key>();
+
+                foreach (var item in _settings.ClustersIndex.Keys)
+                {
+                    list.Add(item);
+                }
+
+                foreach (var item in _settings.ShareIndex)
+                {
+                    foreach (var item2 in item.Value.KeyAndCluster.Keys)
+                    {
+                        list.Add(item2);
+                    }
+                }
+
+                var array = new Key[list.Count];
+                list.CopyTo(array, 0);
+
+                return array;
+            }
+        }
+
         #region IEnumerable<Header>
 
         public IEnumerator<Key> GetEnumerator()

@@ -131,7 +131,7 @@ namespace Library.Net.Connection.SecureVersion1
                     streams.Add(bufferStream);
                 }
 
-                return new AddStream(streams);
+                return new JoinStream(streams);
             }
         }
 

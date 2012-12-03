@@ -25,7 +25,7 @@ namespace Library.Collections
         public LockedDictionary(IDictionary<TKey, TValue> dictionary)
         {
             _dic = new Dictionary<TKey, TValue>();
-            
+
             foreach (var item in dictionary)
             {
                 this.Add(item.Key, item.Value);
@@ -50,6 +50,39 @@ namespace Library.Collections
             foreach (var item in dictionary)
             {
                 this.Add(item.Key, item.Value);
+            }
+        }
+
+        public KeyValuePair<TKey, TValue>[] ToArray()
+        {
+            lock (this.ThisLock)
+            {
+                var array = new KeyValuePair<TKey, TValue>[_dic.Count];
+                ((IDictionary<TKey, TValue>)_dic).CopyTo(array, 0);
+
+                return array;
+            }
+        }
+
+        public LockedDictionaryCollection<TKey> Keys
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return new LockedDictionaryCollection<TKey>(_dic.Keys, this.ThisLock);
+                }
+            }
+        }
+
+        public LockedDictionaryCollection<TValue> Values
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return new LockedDictionaryCollection<TValue>(_dic.Values, this.ThisLock);
+                }
             }
         }
 
@@ -111,24 +144,24 @@ namespace Library.Collections
             }
         }
 
-        public ICollection<TKey> Keys
+        ICollection<TKey> IDictionary<TKey, TValue>.Keys
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _dic.Keys.ToArray();
+                    return this.Keys;
                 }
             }
         }
 
-        public ICollection<TValue> Values
+        ICollection<TValue> IDictionary<TKey, TValue>.Values
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _dic.Values.ToList();
+                    return this.Values;
                 }
             }
         }
@@ -301,28 +334,6 @@ namespace Library.Collections
             }
         }
 
-        ICollection<TKey> IDictionary<TKey, TValue>.Keys
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return this.Keys.ToArray();
-                }
-            }
-        }
-
-        ICollection<TValue> IDictionary<TKey, TValue>.Values
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return this.Values.ToArray();
-                }
-            }
-        }
-
         bool ICollection.IsSynchronized
         {
             get
@@ -415,5 +426,148 @@ namespace Library.Collections
         }
 
         #endregion
+
+        public class LockedDictionaryCollection<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
+        {
+            private ICollection<T> _collection;
+            private object _thisLock;
+
+            public LockedDictionaryCollection(ICollection<T> collection, object thisLock)
+            {
+                _collection = collection;
+                _thisLock = thisLock;
+            }
+
+            public T[] ToArray()
+            {
+                lock (this.ThisLock)
+                {
+                    var array = new T[_collection.Count];
+                    _collection.CopyTo(array, 0);
+
+                    return array;
+                }
+            }
+
+            public void Add(T item)
+            {
+                lock (this.ThisLock)
+                {
+                    _collection.Add(item);
+                }
+            }
+
+            public void Clear()
+            {
+                lock (this.ThisLock)
+                {
+                    _collection.Clear();
+                }
+            }
+
+            public bool Contains(T item)
+            {
+                lock (this.ThisLock)
+                {
+                    return _collection.Contains(item);
+                }
+            }
+
+            public void CopyTo(T[] array, int arrayIndex)
+            {
+                lock (this.ThisLock)
+                {
+                    _collection.CopyTo(array, arrayIndex);
+                }
+            }
+
+            public int Count
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return _collection.Count;
+                    }
+                }
+            }
+
+            public bool IsReadOnly
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            public bool Remove(T item)
+            {
+                lock (this.ThisLock)
+                {
+                    return _collection.Remove(item);
+                }
+            }
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                lock (this.ThisLock)
+                {
+                    foreach (var item in _collection)
+                    {
+                        yield return item;
+                    }
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                lock (this.ThisLock)
+                {
+                    return this.GetEnumerator();
+                }
+            }
+
+            void ICollection.CopyTo(Array array, int arrayIndex)
+            {
+                lock (this.ThisLock)
+                {
+                    this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+                }
+            }
+
+            public bool IsSynchronized
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            public object SyncRoot
+            {
+                get
+                {
+                    return this.ThisLock;
+                }
+            }
+
+            #region IThisLock
+
+            public object ThisLock
+            {
+                get
+                {
+                    return _thisLock;
+                }
+            }
+
+            #endregion
+        }
     }
 }

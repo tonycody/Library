@@ -102,7 +102,7 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Group);
 
-                    streams.Add(new AddStream(bufferStream, exportStream));
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
                 // CompressionAlgorithm
@@ -155,7 +155,7 @@ namespace Library.Net.Amoeba
                     streams.Add(bufferStream);
                 }
 
-                return new AddStream(streams);
+                return new JoinStream(streams);
             }
         }
 

@@ -255,9 +255,11 @@ namespace Library.Net.Amoeba
                         {
                             if (_settings.UploadItems.Count > 0)
                             {
-                                item = _settings.UploadItems.Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ComputeCorrection)
+                                item = _settings.UploadItems
+                                    .Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ComputeCorrection)
                                     .Where(n => n.Priority != 0)
-                                    .OrderBy(n => -n.Priority).FirstOrDefault();
+                                    .OrderBy(n => -n.Priority)
+                                    .FirstOrDefault();
                             }
                         }
                     }
