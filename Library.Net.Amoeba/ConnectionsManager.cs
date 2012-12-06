@@ -105,7 +105,7 @@ namespace Library.Net.Amoeba
 
             _creatingNodes = new LockedList<Node>();
             _cuttingNodes = new LockedHashSet<Node>();
-            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
+            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 5, 0));
             _nodesStatus = new LockedDictionary<Node, int>();
 
             _downloadBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
@@ -657,16 +657,19 @@ namespace Library.Net.Amoeba
                         }
 
                         if (node == null) continue;
-
-                        _creatingNodes.Add(node);
                     }
 
                     Thread.Sleep(1000 * 3);
 
                     try
                     {
+                        _creatingNodes.Add(node);
+
                         HashSet<string> uris = new HashSet<string>();
-                        uris.UnionWith(node.Uris.Take(12).Where(n => _clientManager.CheckUri(n)));
+                        uris.UnionWith(node.Uris
+                            .Take(12)
+                            .Where(n => _clientManager.CheckUri(n))
+                            .OrderBy(n => _random.Next()));
 
                         foreach (var uri in uris)
                         {

@@ -112,7 +112,7 @@ namespace Library.Net.Upnp
                     {
                         using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
                         {
-                            client.ReceiveTimeout = 5000;
+                            client.ReceiveTimeout = 3000;
                             if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
 
                             foreach (var query in querys)

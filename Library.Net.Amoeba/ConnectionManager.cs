@@ -830,7 +830,7 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         if (_nodes == null)
-                            _nodes = new NodeCollection();
+                            _nodes = new NodeCollection(128);
 
                         return _nodes;
                     }
@@ -935,7 +935,7 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         if (_keys == null)
-                            _keys = new KeyCollection();
+                            _keys = new KeyCollection(8192);
 
                         return _keys;
                     }
@@ -1040,7 +1040,7 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         if (_keys == null)
-                            _keys = new KeyCollection();
+                            _keys = new KeyCollection(8192);
 
                         return _keys;
                     }

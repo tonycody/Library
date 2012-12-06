@@ -219,7 +219,7 @@ namespace Library.Net.Connection
 
                         try
                         {
-                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 8);
 
                             do
                             {
@@ -281,7 +281,7 @@ namespace Library.Net.Connection
 
                     try
                     {
-                        sendBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                        sendBuffer = _bufferManager.TakeBuffer(1024 * 8);
 
                         using (Stream dataStream = new JoinStream(headerStream, new RangeStream(stream, true)))
                         {

@@ -814,7 +814,7 @@ namespace Library.Net.Lair
                     lock (this.ThisLock)
                     {
                         if (_nodes == null)
-                            _nodes = new NodeCollection();
+                            _nodes = new NodeCollection(128);
 
                         return _nodes;
                     }
@@ -919,7 +919,7 @@ namespace Library.Net.Lair
                     lock (this.ThisLock)
                     {
                         if (_channels == null)
-                            _channels = new ChannelCollection();
+                            _channels = new ChannelCollection(128);
 
                         return _channels;
                     }

@@ -103,7 +103,7 @@ namespace Library.Net.Lair
 
             _creatingNodes = new LockedList<Node>();
             _cuttingNodes = new LockedHashSet<Node>();
-            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
+            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 5, 0));
             _nodesStatus = new LockedDictionary<Node, int>();
 
             this.UpdateSessionId();
@@ -664,7 +664,10 @@ namespace Library.Net.Lair
                     try
                     {
                         HashSet<string> uris = new HashSet<string>();
-                        uris.UnionWith(node.Uris.Take(12).Where(n => _clientManager.CheckUri(n)));
+                        uris.UnionWith(node.Uris
+                            .Take(12)
+                            .Where(n => _clientManager.CheckUri(n))
+                            .OrderBy(n => _random.Next()));
 
                         foreach (var uri in uris)
                         {

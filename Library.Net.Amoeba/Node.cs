@@ -30,6 +30,7 @@ namespace Library.Net.Amoeba
         private static object _thisStaticLock = new object();
 
         public const int MaxIdLength = 64;
+        public const int MaxUrisCount = 32;
 
         public Node()
         {
@@ -236,7 +237,7 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_uris == null)
-                        _uris = new UriCollection();
+                        _uris = new UriCollection(Node.MaxUrisCount);
 
                     return _uris;
                 }

@@ -98,7 +98,7 @@ namespace Library.Net.Rosa
                     streams.Add(bufferStream);
                 }
 
-                return new AddStream(streams);
+                return new JoinStream(streams);
             }
         }
 

@@ -14,11 +14,7 @@ namespace Library.Net.Rosa
 {
     public class MessagesEventArgs : EventArgs
     {
-        public IEnumerable<CommandMessage> Messages
-        {
-            get;
-            set;
-        }
+        public IEnumerable<CommandMessage> Messages { get; set; }
     }
 
     public delegate void PullMessagesEventHandler(object sender, MessagesEventArgs e);
@@ -57,6 +53,8 @@ namespace Library.Net.Rosa
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
                     return _lastSendTime;
@@ -64,6 +62,8 @@ namespace Library.Net.Rosa
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
                     _lastSendTime = value;
@@ -75,11 +75,10 @@ namespace Library.Net.Rosa
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    if (_disposed)
-                        throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _protocolVersion;
                 }
             }
@@ -89,8 +88,7 @@ namespace Library.Net.Rosa
         {
             get
             {
-                if (_disposed)
-                    throw new ObjectDisposedException(this.GetType().FullName);
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return _connection.ReceivedByteCount;
             }
@@ -100,8 +98,7 @@ namespace Library.Net.Rosa
         {
             get
             {
-                if (_disposed)
-                    throw new ObjectDisposedException(this.GetType().FullName);
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return _connection.SentByteCount;
             }
@@ -109,8 +106,7 @@ namespace Library.Net.Rosa
 
         public void Connect()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
@@ -188,8 +184,7 @@ namespace Library.Net.Rosa
 
         public void Close()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             using (DeadlockMonitor.Lock(this.ThisLock))
             {
@@ -212,27 +207,26 @@ namespace Library.Net.Rosa
 
             try
             {
+                Stopwatch sw = new Stopwatch();
+
                 for (; ; )
                 {
-                    if (_disposed)
-                        throw new ObjectDisposedException(this.GetType().FullName);
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    sw.Restart();
 
                     if (_protocolVersion == ProtocolVersion.Version1)
                     {
                         using (Stream stream = _connection.Receive(_receiveTimeSpan))
                         {
-                            if (stream.Length == 0)
-                                continue;
+                            if (stream.Length == 0) continue;
 
                             byte type = (byte)stream.ReadByte();
 
                             using (Stream stream2 = new RangeStream(stream, 1, stream.Length - 1, true))
                             {
                                 var message = CommandsMessage.Import(stream2, _bufferManager);
-                                this.OnPullMessagesEvent(new MessagesEventArgs()
-                                {
-                                    Messages = message.CommandMessages
-                                });
+                                this.OnPullMessagesEvent(new MessagesEventArgs() { Messages = message.CommandMessages });
                             }
                         }
                     }
@@ -240,6 +234,10 @@ namespace Library.Net.Rosa
                     {
                         throw new ConnectionManagerException();
                     }
+
+                    sw.Stop();
+
+                    if (sw.ElapsedMilliseconds < 1000) Thread.Sleep(1000 - (int)sw.ElapsedMilliseconds);
                 }
             }
             catch (Exception)
@@ -261,8 +259,7 @@ namespace Library.Net.Rosa
 
         protected virtual void OnClose(EventArgs e)
         {
-            if (_onClose)
-                return;
+            if (_onClose) return;
             _onClose = true;
 
             if (this.CloseEvent != null)
@@ -273,8 +270,7 @@ namespace Library.Net.Rosa
 
         public void PushMessages(IEnumerable<CommandMessage> messages)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             if (_protocolVersion == ProtocolVersion.Version1)
             {
@@ -285,7 +281,7 @@ namespace Library.Net.Rosa
                     var message = new CommandsMessage();
                     message.CommandMessages.AddRange(messages);
 
-                    stream = new AddStream(stream, message.Export(_bufferManager));
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _lastSendTime = DateTime.UtcNow;
@@ -357,10 +353,10 @@ namespace Library.Net.Rosa
                         bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                         bufferStream.WriteByte((byte)SerializeId.CommandMessage);
 
-                        streams.Add(new AddStream(bufferStream, exportStream));
+                        streams.Add(new JoinStream(bufferStream, exportStream));
                     }
 
-                    return new AddStream(streams);
+                    return new JoinStream(streams);
                 }
             }
 
@@ -412,15 +408,10 @@ namespace Library.Net.Rosa
 
         protected override void Dispose(bool disposing)
         {
-            using (DeadlockMonitor.Lock(this.ThisLock))
+            if (!_disposed)
             {
-                if (!_disposed)
+                if (disposing)
                 {
-                    if (disposing)
-                    {
-
-                    }
-
                     if (_connection != null)
                     {
                         try
@@ -434,9 +425,9 @@ namespace Library.Net.Rosa
 
                         _connection = null;
                     }
-
-                    _disposed = true;
                 }
+
+                _disposed = true;
             }
         }
 
