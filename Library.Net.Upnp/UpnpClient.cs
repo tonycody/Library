@@ -29,35 +29,57 @@ namespace Library.Net.Upnp
         {
             lock (this.ThisLock)
             {
-                _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), new TimeSpan(0, 0, 10));
-                if (_services == null) _services = GetServicesFromDevice(out _location, IPAddress.Parse("255.255.255.255"), new TimeSpan(0, 0, 10));
-
-                if (_services == null)
+                try
                 {
-                    foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
-                        .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up))
+                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), new TimeSpan(0, 0, 10));
+                    if (_services != null) return;
+                }
+                catch (Exception)
+                {
+
+                }
+
+                try
+                {
+                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("255.255.255.255"), new TimeSpan(0, 0, 10));
+                    if (_services != null) return;
+                }
+                catch (Exception)
+                {
+
+                }
+
+#if !MONO
+                foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up))
+                {
+                    var machineIp = nic.GetIPProperties().UnicastAddresses
+                        .Select(n => n.Address)
+                        .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
+                        .FirstOrDefault();
+                    if (machineIp == null) continue;
+
+                    var gatewayIp = nic.GetIPProperties().GatewayAddresses
+                        .Select(n => n.Address)
+                        .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
+                        .FirstOrDefault();
+                    if (gatewayIp == null) continue;
+
+                    try
                     {
-                        var machineIp = nic.GetIPProperties().UnicastAddresses
-                            .Select(n => n.Address)
-                            .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
-                            .FirstOrDefault();
-                        if (machineIp == null) continue;
+                        _services = GetServicesFromDevice(out _location, gatewayIp, new TimeSpan(0, 0, 10));
+                        if (_services != null) return;
+                    }
+                    catch (Exception)
+                    {
 
-                        var gatewayIp = nic.GetIPProperties().GatewayAddresses
-                            .Select(n => n.Address)
-                            .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
-                            .FirstOrDefault();
-                        if (gatewayIp == null) continue;
-
-                        if (_services == null)
-                        {
-                            _services = GetServicesFromDevice(out _location, gatewayIp, new TimeSpan(0, 0, 10));
-                            if (_services == null) continue;
-                        }
-
-                        break;
                     }
                 }
+#else
+
+#endif
+
+                throw new TimeoutException();
             }
         }
 
@@ -102,46 +124,50 @@ namespace Library.Net.Upnp
 
             for (; ; )
             {
-                for (; ; )
+                TimeoutCheck(stopwatch.Elapsed, timeout);
+
+                string queryResponse = null;
+
+                try
                 {
-                    TimeoutCheck(stopwatch.Elapsed, timeout);
-
-                    string queryResponse = null;
-
-                    try
+                    using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
                     {
-                        using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+                        client.ReceiveTimeout = 3000;
+                        client.SendTimeout = 1000;
+
+                        if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
+
+                        foreach (var query in querys)
                         {
-                            client.ReceiveTimeout = 3000;
-                            if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
+                            byte[] q = Encoding.ASCII.GetBytes(query);
 
-                            foreach (var query in querys)
-                            {
-                                byte[] q = Encoding.ASCII.GetBytes(query);
-
-                                IPEndPoint endPoint = new IPEndPoint(ip, 1900);
-                                client.SendTo(q, q.Length, SocketFlags.None, endPoint);
-                            }
-
-                            byte[] data = new byte[1024];
-                            int dataLength = client.Receive(data);
-
-                            queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
+                            IPEndPoint endPoint = new IPEndPoint(ip, 1900);
+                            client.SendTo(q, q.Length, SocketFlags.None, endPoint);
                         }
+
+                        byte[] data = new byte[1024];
+                        int dataLength = client.Receive(data);
+
+                        queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
                     }
-                    catch (Exception)
-                    {
+                }
+                catch (Exception)
+                {
 
-                    }
+                }
 
-                    if (string.IsNullOrWhiteSpace(queryResponse)) continue;
+                if (string.IsNullOrWhiteSpace(queryResponse)) continue;
 
+                try
+                {
                     var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
                     if (string.IsNullOrWhiteSpace(regexLocation)) continue;
 
                     tempLocation = new Uri(regexLocation);
+                }
+                catch (Exception)
+                {
 
-                    break;
                 }
 
                 Debug.WriteLine("UPnP Router: " + ip.ToString());
@@ -151,27 +177,31 @@ namespace Library.Net.Upnp
 
                 try
                 {
-                    using (var webClient = new WebClient())
+                    Thread thread = new Thread(new ThreadStart(delegate()
                     {
-                        Thread thread = new Thread(new ThreadStart(delegate()
+                        try
                         {
-                            try
+                            using (var webClient = new WebClient())
                             {
                                 downloadString = webClient.DownloadString(tempLocation);
                             }
-                            catch (Exception)
-                            {
-                            }
-                        }));
+                        }
+                        catch (Exception)
+                        {
 
-                        thread.Start();
-                        thread.Join(3000);
-                    }
+                        }
+                    }));
+
+                    thread.Start();
+                    thread.Join(3000);
+                    thread.Abort();
                 }
                 catch (Exception)
                 {
                     continue;
                 }
+
+                if (downloadString == null) continue;
 
                 location = tempLocation;
                 return downloadString;
@@ -413,7 +443,6 @@ namespace Library.Net.Upnp
             return null;
         }
 
-
         public string GetExternalIpAddress(TimeSpan timeout)
         {
             if (_services == null) throw new UpnpClientException();
@@ -431,10 +460,12 @@ namespace Library.Net.Upnp
                 }
                 catch (Exception)
                 {
+
                 }
             }));
             startThread.Start();
             startThread.Join(timeout);
+            startThread.Abort();
 
             return value;
         }
@@ -498,10 +529,12 @@ namespace Library.Net.Upnp
                 }
                 catch (Exception)
                 {
+
                 }
             }));
             startThread.Start();
             startThread.Join(timeout);
+            startThread.Abort();
 
             return flag;
         }
@@ -523,10 +556,12 @@ namespace Library.Net.Upnp
                 }
                 catch (Exception)
                 {
+
                 }
             }));
             startThread.Start();
             startThread.Join(timeout);
+            startThread.Abort();
 
             return flag;
         }
@@ -548,10 +583,12 @@ namespace Library.Net.Upnp
                 }
                 catch (Exception)
                 {
+
                 }
             }));
             startThread.Start();
             startThread.Join(timeout);
+            startThread.Abort();
 
             return value;
         }

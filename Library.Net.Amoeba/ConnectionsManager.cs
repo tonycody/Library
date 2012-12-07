@@ -717,7 +717,7 @@ namespace Library.Net.Amoeba
                                     _removeNodes.Add(node);
                                     _cuttingNodes.Remove(node);
 
-                                    if (_routeTable.Count > 50)
+                                    if (_routeTable.Count > 100)
                                     {
                                         _routeTable.Remove(node);
                                     }
@@ -1520,7 +1520,7 @@ namespace Library.Net.Amoeba
             {
                 _cuttingNodes.Remove(connectionManager.Node);
 
-                if (_routeTable.Count > 50)
+                if (_routeTable.Count > 100)
                 {
                     _routeTable.Remove(connectionManager.Node);
                 }

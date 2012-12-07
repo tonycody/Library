@@ -63,7 +63,7 @@ namespace Library.Net.Lair
                         {
                             var socket = _listeners[i].AcceptTcpClient().Client;
 
-                            IPEndPoint ipEndPoint = (IPEndPoint)socket.RemoteEndPoint;
+                            IPEndPoint ipEndPoint = (IPEndPoint)socket.LocalEndPoint;
 
                             if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
                             {

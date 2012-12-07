@@ -93,7 +93,7 @@
   -->
   <PropertyGroup>
     <PreBuildEvent>call "$(SolutionDir)Increment.bat" "$(ProjectPath)" "$(ProjectDir)Properties\AssemblyInfo.cs"
-call "$(SolutionDir)Define.bat" off "$(ProjectDir)UpnpClient.cs" MONO</PreBuildEvent>
+</PreBuildEvent>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
