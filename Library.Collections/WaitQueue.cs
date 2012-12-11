@@ -14,7 +14,7 @@ namespace Library.Collections
         private volatile ManualResetEvent _lowerResetEvent = new ManualResetEvent(false);
         private volatile ManualResetEvent _upperResetEvent = new ManualResetEvent(false);
         private object _thisLock = new object();
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         public WaitQueue()
         {

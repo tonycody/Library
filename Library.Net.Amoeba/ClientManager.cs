@@ -15,7 +15,7 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
         
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         private const int MaxReceiveCount = 1024 * 1024 * 16;

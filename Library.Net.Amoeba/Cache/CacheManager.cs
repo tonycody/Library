@@ -45,7 +45,7 @@ namespace Library.Net.Amoeba
         internal RemoveShareEventHandler RemoveShareEvent;
         internal RemoveKeyEventHandler RemoveKeyEvent;
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
         public const int ClusterSize = 1024 * 32;
 
@@ -62,7 +62,7 @@ namespace Library.Net.Amoeba
             _watchThread = new Thread(new ThreadStart(this.Watch));
             _watchThread.Priority = ThreadPriority.Lowest;
             _watchThread.IsBackground = true;
-            _watchThread.Name = "WatchThread";
+            _watchThread.Name = "CacheManager_WatchThread";
             _watchThread.Start();
 
             _resetEvent.Reset();
@@ -994,6 +994,7 @@ namespace Library.Net.Amoeba
                             exception = e;
                         }
                     }));
+                    thread.Name = "CacheManager_ReedSolomon.Encode";
                     thread.Start();
 
                     while (thread.IsAlive)
@@ -1122,6 +1123,7 @@ namespace Library.Net.Amoeba
                             exception = e;
                         }
                     }));
+                    thread.Name = "CacheManager_ReedSolomon.Decode";
                     thread.Start();
 
                     while (thread.IsAlive)

@@ -12,7 +12,7 @@ namespace Library.Net.Connection
         private ConnectionBase _connection;
         private BufferManager _bufferManager;
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         private object _sendLock = new object();
         private object _receiveLock = new object();
@@ -22,6 +22,14 @@ namespace Library.Net.Connection
         {
             _connection = connection;
             _bufferManager = bufferManager;
+        }
+
+        public override IEnumerable<ConnectionBase> GetLayers()
+        {
+            var list = new List<ConnectionBase>(_connection.GetLayers());
+            list.Add(this);
+
+            return list;
         }
 
         public override long ReceivedByteCount

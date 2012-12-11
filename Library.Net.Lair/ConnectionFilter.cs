@@ -80,9 +80,9 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.UriCondition != other.UriCondition)
-                || (this.ConnectionType != other.ConnectionType)
-                || (this.ProxyUri != other.ProxyUri))
+            if (this.UriCondition != other.UriCondition
+                || this.ConnectionType != other.ConnectionType
+                || this.ProxyUri != other.ProxyUri)
             {
                 return false;
             }
@@ -241,7 +241,7 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Value != other.Value))
+            if (this.Value != other.Value)
             {
                 return false;
             }

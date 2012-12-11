@@ -81,8 +81,10 @@ namespace Library.Net.Lair
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 12, 0);
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 6, 0);
 
+        private System.Threading.Timer _aliveTimer;
+        
         private object _thisLock = new object();
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         public event PullNodesEventHandler PullNodesEvent;
 
@@ -125,6 +127,19 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _otherNode;
+                }
+            }
+        }
+
+        public ConnectionBase Connection
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _connection;
                 }
             }
         }
@@ -260,7 +275,7 @@ namespace Library.Net.Lair
                         _sendUpdateTime = DateTime.UtcNow;
 
                         ThreadPool.QueueUserWorkItem(new WaitCallback(this.Pull));
-                        ThreadPool.QueueUserWorkItem(new WaitCallback(this.AliveTimer));
+                        _aliveTimer = new Timer(new TimerCallback(this.AliveTimer), null, 1000 * 60, 1000 * 60);
 
                         _pingTime = DateTime.UtcNow;
                         _pingHash = new byte[64];
@@ -298,27 +313,38 @@ namespace Library.Net.Lair
             }
         }
 
+        private bool _aliveSending = false;
+
         private void AliveTimer(object state)
         {
-            Thread.CurrentThread.Name = "AliveTimer";
-
             try
             {
-                for (; ; )
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                if (_aliveSending) return;
+                _aliveSending = true;
+
+                Thread.CurrentThread.Name = "ConnectionManager_AliveTimer";
+
+                try
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    while ((DateTime.UtcNow - _sendUpdateTime) < _aliveTimeSpan)
+                    if ((DateTime.UtcNow - _sendUpdateTime) > _aliveTimeSpan)
                     {
-                        Thread.Sleep(new TimeSpan(0, 0, 1));
+                        this.Alive();
                     }
-
-                    this.Alive();
+                }
+                catch (Exception)
+                {
+                    this.OnClose(new EventArgs());
+                }
+                finally
+                {
+                    _aliveSending = false;
                 }
             }
             catch (Exception)
             {
-                this.OnClose(new EventArgs());
+
             }
         }
 
@@ -424,7 +450,7 @@ namespace Library.Net.Lair
 
         private void Pull(object state)
         {
-            Thread.CurrentThread.Name = "Pull";
+            Thread.CurrentThread.Name = "ConnectionManager_Pull";
 
             try
             {
@@ -955,6 +981,15 @@ namespace Library.Net.Lair
                 {
                     if (_connection != null)
                     {
+                        try
+                        {
+                            _aliveTimer.Dispose();
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
                         try
                         {
                             _connection.Dispose();

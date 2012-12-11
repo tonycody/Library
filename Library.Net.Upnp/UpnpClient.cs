@@ -23,7 +23,7 @@ namespace Library.Net.Upnp
         private Uri _location;
 
         private object _thisLock = new object();
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         public void Connect(TimeSpan timeout)
         {
@@ -191,7 +191,6 @@ namespace Library.Net.Upnp
 
                         }
                     }));
-
                     thread.Start();
                     thread.Join(3000);
                     thread.Abort();

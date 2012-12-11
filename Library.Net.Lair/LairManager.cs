@@ -21,7 +21,7 @@ namespace Library.Net.Lair
         public event UnlockMessagesEventHandler UnlockMessagesEvent;
         public event UnlockFiltersEventHandler UnlockFiltersEvent;
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         public LairManager(BufferManager bufferManager)
@@ -131,6 +131,28 @@ namespace Library.Net.Lair
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     _connectionsManager.ConnectionCountLimit = value;
+                }
+            }
+        }
+
+        public long BandWidthLimit
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    return _connectionsManager.BandWidthLimit;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    _connectionsManager.BandWidthLimit = value;
                 }
             }
         }

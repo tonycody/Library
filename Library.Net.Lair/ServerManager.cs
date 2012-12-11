@@ -20,7 +20,7 @@ namespace Library.Net.Lair
 
         private ManagerState _state = ManagerState.Stop;
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         private const int MaxReceiveCount = 1024 * 1024 * 16;
@@ -183,7 +183,7 @@ namespace Library.Net.Lair
 
                 _watchThread = new Thread(this.WatchThread);
                 _watchThread.Priority = ThreadPriority.Lowest;
-                _watchThread.Name = "WatchThread";
+                _watchThread.Name = "ServerManager_WatchThread";
                 _watchThread.Start();
             }
         }

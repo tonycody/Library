@@ -19,7 +19,7 @@ namespace Library.Net.Amoeba
         private LockedList<Key> _keyList = new LockedList<Key>();
         private long _length;
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         public CacheManagerStreamWriter(out IList<Key> keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
         {

@@ -38,7 +38,7 @@ namespace Library.Net.Amoeba
         private LockedDictionary<Node, LockedHashSet<Key>> _pushBlocksDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
         private LockedList<Node> _creatingNodes;
-        private LockedHashSet<Node> _cuttingNodes;
+        private CirculationCollection<Node> _cuttingNodes;
         private CirculationCollection<Node> _removeNodes;
         private LockedDictionary<Node, int> _nodesStatus;
 
@@ -56,6 +56,8 @@ namespace Library.Net.Amoeba
 
         private Dictionary<Node, string> _nodeToUri = new Dictionary<Node, string>();
 
+        private BandwidthLimit _bandwidthLimit = new BandwidthLimit();
+        
         private long _receivedByteCount = 0;
         private long _sentByteCount = 0;
 
@@ -77,7 +79,7 @@ namespace Library.Net.Amoeba
 
         internal UploadedEventHandler UploadedEvent;
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         private readonly int _maxNodeCount = 128;
@@ -104,7 +106,7 @@ namespace Library.Net.Amoeba
             _messagesManager = new MessagesManager();
 
             _creatingNodes = new LockedList<Node>();
-            _cuttingNodes = new LockedHashSet<Node>();
+            _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
             _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 5, 0));
             _nodesStatus = new LockedDictionary<Node, int>();
 
@@ -180,6 +182,30 @@ namespace Library.Net.Amoeba
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     _settings.ConnectionCountLimit = value;
+                }
+            }
+        }
+
+        public long BandWidthLimit
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    return _settings.BandwidthLimit;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    _settings.BandwidthLimit = value;
+                    _bandwidthLimit.In = value;
+                    _bandwidthLimit.Out = value;
                 }
             }
         }
@@ -570,6 +596,13 @@ namespace Library.Net.Amoeba
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 
+                var limit = connectionManager.Connection.GetLayers().OfType<IBandwidthLimit>().FirstOrDefault();
+
+                if (limit != null)
+                {
+                    limit.BandwidthLimit = _bandwidthLimit;
+                }
+
                 _nodeToUri.Add(connectionManager.Node, uri);
                 _connectionManagers.Add(connectionManager);
 
@@ -626,109 +659,115 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Stop) return;
                 Thread.Sleep(1000);
 
-                if (_serverManager.ListenUris.Count > 0
-                    && _connectionManagers.Count > (this.ConnectionCountLimit / 3))
-                {
-                    continue;
-                }
-                else if (_connectionManagers.Count > this.ConnectionCountLimit)
-                {
-                    continue;
-                }
+                Node node = null;
 
-                if (_routeTable.Count > 0)
+                lock (this.ThisLock)
                 {
-                    Node node = null;
+                    node = _cuttingNodes
+                        .ToArray()
+                        .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
+                        .OrderBy(n => _random.Next())
+                        .FirstOrDefault();
 
-                    lock (this.ThisLock)
+                    if (node == null)
                     {
-                        node = _cuttingNodes
+                        node = _routeTable
                             .ToArray()
                             .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
+                            .OrderBy(n => _random.Next())
                             .FirstOrDefault();
-
-                        if (node == null)
-                        {
-                            node = _routeTable
-                                .ToArray()
-                                .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
-                                .OrderBy(n => _random.Next())
-                                .FirstOrDefault();
-                        }
-
-                        if (node == null) continue;
                     }
 
-                    Thread.Sleep(1000 * 3);
+                    if (node == null) continue;
 
-                    try
+                    _creatingNodes.Add(node);
+                }
+
+                try
+                {
+                    HashSet<string> uris = new HashSet<string>();
+                    uris.UnionWith(node.Uris
+                        .Take(12)
+                        .Where(n => _clientManager.CheckUri(n))
+                        .OrderBy(n => _random.Next()));
+
+                    if (uris.Count == 0)
                     {
-                        _creatingNodes.Add(node);
+                        _nodesStatus.Remove(node);
+                        _removeNodes.Remove(node);
+                        _cuttingNodes.Remove(node);
+                        _routeTable.Remove(node);
 
-                        HashSet<string> uris = new HashSet<string>();
-                        uris.UnionWith(node.Uris
-                            .Take(12)
-                            .Where(n => _clientManager.CheckUri(n))
-                            .OrderBy(n => _random.Next()));
+                        continue;
+                    }
 
-                        foreach (var uri in uris)
+                    if (_serverManager.ListenUris.Count > 0
+                        && _connectionManagers.Count > (this.ConnectionCountLimit / 3))
+                    {
+                        continue;
+                    }
+                    else if (_connectionManagers.Count > this.ConnectionCountLimit)
+                    {
+                        continue;
+                    }
+
+                    foreach (var uri in uris)
+                    {
+                        if (this.State == ManagerState.Stop) return;
+
+                        var connection = _clientManager.CreateConnection(uri);
+
+                        if (connection != null)
                         {
-                            if (this.State == ManagerState.Stop) return;
+                            var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, _bufferManager);
 
-                            var connection = _clientManager.CreateConnection(uri);
-
-                            if (connection != null)
+                            try
                             {
-                                var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, _bufferManager);
+                                connectionManager.Connect();
+                                if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
 
-                                try
+                                _nodesStatus.Remove(node);
+                                _cuttingNodes.Remove(node);
+
+                                if (node != connectionManager.Node)
                                 {
-                                    connectionManager.Connect();
-                                    if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
-
-                                    _nodesStatus.Remove(node);
-                                    _cuttingNodes.Remove(node);
-
-                                    if (node != connectionManager.Node)
-                                    {
-                                        _removeNodes.Add(node);
-                                        _routeTable.Remove(node);
-                                    }
-
-                                    if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
-
-                                    _createConnectionCount++;
-
-                                    this.AddConnectionManager(connectionManager, uri);
-                                }
-                                catch (Exception)
-                                {
-                                    connectionManager.Dispose();
-                                }
-                            }
-                            else
-                            {
-                                if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
-                                _nodesStatus[node]++;
-
-                                if (_nodesStatus[node] >= 3)
-                                {
-                                    _nodesStatus.Remove(node);
                                     _removeNodes.Add(node);
-                                    _cuttingNodes.Remove(node);
+                                    _routeTable.Remove(node);
+                                }
 
-                                    if (_routeTable.Count > 100)
-                                    {
-                                        _routeTable.Remove(node);
-                                    }
+                                _routeTable.Live(connectionManager.Node);
+
+                                _createConnectionCount++;
+
+                                this.AddConnectionManager(connectionManager, uri);
+                            }
+                            catch (Exception)
+                            {
+                                connectionManager.Dispose();
+                            }
+                        }
+                        else
+                        {
+                            if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
+                            _nodesStatus[node]++;
+
+                            if (_nodesStatus[node] >= 3)
+                            {
+                                _nodesStatus.Remove(node);
+                                _removeNodes.Add(node);
+                                _cuttingNodes.Remove(node);
+
+                                if (_routeTable.Count > 100)
+                                {
+                                    _routeTable.Remove(node);
                                 }
                             }
                         }
                     }
-                    finally
-                    {
-                        _creatingNodes.Remove(node);
-                    }
+                }
+                finally
+                {
+                    _creatingNodes.Remove(node);
                 }
             }
         }
@@ -752,7 +791,8 @@ namespace Library.Net.Amoeba
                         connectionManager.Connect();
                         if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
 
-                        if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
+                        if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
+                            _routeTable.Add(connectionManager.Node);
 
                         _acceptConnectionCount++;
 
@@ -1084,7 +1124,7 @@ namespace Library.Net.Amoeba
 
         private void ConnectionManagerThread(object state)
         {
-            Thread.CurrentThread.Name = "ConnectionManagerThread";
+            Thread.CurrentThread.Name = "ConnectionsManager__ConnectionManagerThread";
             Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
 
             var connectionManager = state as ConnectionManager;
@@ -1400,7 +1440,7 @@ namespace Library.Net.Amoeba
 
             foreach (var node in e.Nodes.Take(_maxNodeCount))
             {
-                if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
+                if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n)) || _removeNodes.Contains(node)) continue;
 
                 _routeTable.Add(node);
                 _pullNodeCount++;
@@ -1505,8 +1545,6 @@ namespace Library.Net.Amoeba
                     _bufferManager.ReturnBuffer(e.Value.Array);
                 }
             }
-
-            if (connectionManager.Node.Uris.Count != 0) _routeTable.Live(connectionManager.Node);
         }
 
         private void connectionManager_PullCancelEvent(object sender, EventArgs e)
@@ -1542,7 +1580,8 @@ namespace Library.Net.Amoeba
             {
                 if (!_removeNodes.Contains(connectionManager.Node))
                 {
-                    _cuttingNodes.Add(connectionManager.Node);
+                    if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
+                        _cuttingNodes.Add(connectionManager.Node);
                 }
 
                 this.RemoveConnectionManager(connectionManager);
@@ -1665,26 +1704,26 @@ namespace Library.Net.Amoeba
                 _serverManager.Start();
 
                 _createClientConnection1Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection1Thread.Name = "CreateClientConnection1Thread";
+                _createClientConnection1Thread.Name = "ConnectionsManager_CreateClientConnection1Thread";
                 _createClientConnection1Thread.Start();
                 _createClientConnection2Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection2Thread.Name = "CreateClientConnection2Thread";
+                _createClientConnection2Thread.Name = "ConnectionsManager_CreateClientConnection2Thread";
                 _createClientConnection2Thread.Start();
                 _createClientConnection3Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection3Thread.Name = "CreateClientConnection3Thread";
+                _createClientConnection3Thread.Name = "ConnectionsManager_CreateClientConnection3Thread";
                 _createClientConnection3Thread.Start();
                 _createServerConnection1Thread = new Thread(this.CreateServerConnectionThread);
-                _createServerConnection1Thread.Name = "CreateServerConnection1Thread";
+                _createServerConnection1Thread.Name = "ConnectionsManager_CreateServerConnection1Thread";
                 _createServerConnection1Thread.Start();
                 _createServerConnection2Thread = new Thread(this.CreateServerConnectionThread);
-                _createServerConnection2Thread.Name = "CreateServerConnection2Thread";
+                _createServerConnection2Thread.Name = "ConnectionsManager_CreateServerConnection2Thread";
                 _createServerConnection2Thread.Start();
                 _createServerConnection3Thread = new Thread(this.CreateServerConnectionThread);
-                _createServerConnection3Thread.Name = "CreateServerConnection3Thread";
+                _createServerConnection3Thread.Name = "ConnectionsManager_CreateServerConnection3Thread";
                 _createServerConnection3Thread.Start();
                 _connectionsManagerThread = new Thread(this.ConnectionsManagerThread);
                 _connectionsManagerThread.Priority = ThreadPriority.Lowest;
-                _connectionsManagerThread.Name = "ConnectionsManagerThread";
+                _connectionsManagerThread.Name = "ConnectionsManager_ConnectionsManagerThread";
                 _connectionsManagerThread.Start();
             }
         }
@@ -1777,6 +1816,7 @@ namespace Library.Net.Amoeba
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "UploadingConnectionCountLowerLimit", Value = 3 },
                     new Library.Configuration.SettingsContext<int>() { Name = "DownloadingConnectionCountLowerLimit", Value = 3 },
+                    new Library.Configuration.SettingsContext<long>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
                 })
@@ -1843,6 +1883,24 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         this["ConnectionCountLimit"] = value;
+                    }
+                }
+            }
+
+            public long BandwidthLimit
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return (long)this["BandwidthLimit"];
+                    }
+                }
+                set
+                {
+                    lock (this.ThisLock)
+                    {
+                        this["BandwidthLimit"] = value;
                     }
                 }
             }

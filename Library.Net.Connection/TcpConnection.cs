@@ -12,12 +12,14 @@ using Library.Io;
 
 namespace Library.Net.Connection
 {
-    public class TcpConnection : ConnectionBase, IThisLock
+    public class TcpConnection : ConnectionBase, IBandwidthLimit, IThisLock
     {
         private Socket _socket;
         private IPEndPoint _remoteEndPoint;
         private int _maxReceiveCount;
         private BufferManager _bufferManager;
+
+        private BandwidthLimit _bandwidthLimit = null;
 
         private long _receivedByteCount;
         private long _sentByteCount;
@@ -27,17 +29,22 @@ namespace Library.Net.Connection
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 6, 0);
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 3, 0);
 
+        private System.Threading.Timer _aliveTimer;
+
         private object _sendLock = new object();
         private object _receiveLock = new object();
         private object _thisLock = new object();
 
         private volatile bool _connect = false;
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         private TcpConnection(int maxReceiveCount, BufferManager bufferManager)
         {
             _maxReceiveCount = maxReceiveCount;
             _bufferManager = bufferManager;
+
+            _aliveTimer = new Timer(new TimerCallback(this.AliveTimer), null, 1000 * 60, 1000 * 60);
+            _sendUpdateTime = DateTime.UtcNow;
         }
 
         public TcpConnection(Socket socket, int maxReceiveCount, BufferManager bufferManager)
@@ -60,6 +67,29 @@ namespace Library.Net.Connection
             _socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             //_socket.ReceiveBufferSize = 1024 * 1024;
             //_socket.SendBufferSize = 1024 * 1024;
+        }
+
+        public BandwidthLimit BandwidthLimit
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _bandwidthLimit;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _bandwidthLimit = value;
+                }
+            }
+        }
+
+        public override IEnumerable<ConnectionBase> GetLayers()
+        {
+            return new ConnectionBase[] { this };
         }
 
         public override long ReceivedByteCount
@@ -101,9 +131,6 @@ namespace Library.Net.Connection
                     }
 
                     _socket.EndConnect(asyncResult);
-
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(this.AliveTimer));
-                    _sendUpdateTime = DateTime.UtcNow;
                 }
                 catch (ConnectionException ex)
                 {
@@ -118,22 +145,34 @@ namespace Library.Net.Connection
             }
         }
 
+        private bool _aliveSending = false;
+
         private void AliveTimer(object state)
         {
-            Thread.CurrentThread.Name = "AliveTimer";
-
             try
             {
-                for (; ; )
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_connect) return;
+
+                if (_aliveSending) return;
+                _aliveSending = true;
+
+                Thread.CurrentThread.Name = "TcpConnection_AliveTimer";
+
+                try
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                    while ((DateTime.UtcNow - _sendUpdateTime) < _aliveTimeSpan)
+                    if ((DateTime.UtcNow - _sendUpdateTime) > _aliveTimeSpan)
                     {
-                        Thread.Sleep(1000 * 1);
+                        this.Alive();
                     }
+                }
+                catch (Exception)
+                {
 
-                    this.Alive();
+                }
+                finally
+                {
+                    _aliveSending = false;
                 }
             }
             catch (Exception)
@@ -223,8 +262,16 @@ namespace Library.Net.Connection
 
                             do
                             {
+                                int receiveLength = Math.Min(receiveBuffer.Length, length);
+
+                                if (_bandwidthLimit != null)
+                                {
+                                    receiveLength = _bandwidthLimit.GetInBandwidth(this, receiveLength);
+                                    if (receiveLength < 0) throw new ConnectionException();
+                                }
+
                                 _socket.ReceiveTimeout = Math.Min((int)_receiveTimeSpan.TotalMilliseconds, (int)Math.Min((long)int.MaxValue, (long)TcpConnection.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds));
-                                int i = _socket.Receive(receiveBuffer, 0, Math.Min(receiveBuffer.Length, length), SocketFlags.None);
+                                int i = _socket.Receive(receiveBuffer, 0, receiveLength, SocketFlags.None);
                                 if (i == 0) throw new ConnectionException();
 
                                 _receivedByteCount += i;
@@ -287,8 +334,19 @@ namespace Library.Net.Connection
                         {
                             int i = -1;
 
-                            while (0 < (i = dataStream.Read(sendBuffer, 0, sendBuffer.Length)))
+                            for (; ; )
                             {
+                                int sendLength = (int)Math.Min(dataStream.Length - dataStream.Position, sendBuffer.Length);
+                                if (sendLength <= 0) break;
+
+                                if (_bandwidthLimit != null)
+                                {
+                                    sendLength = _bandwidthLimit.GetOutBandwidth(this, sendLength);
+                                    if (sendLength < 0) throw new ConnectionException();
+                                }
+
+                                if ((i = dataStream.Read(sendBuffer, 0, sendLength)) < 0) break;
+
                                 _socket.SendTimeout = Math.Min((int)_sendTimeSpan.TotalMilliseconds, (int)Math.Min((long)int.MaxValue, (long)TcpConnection.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds));
                                 _socket.Send(sendBuffer, 0, i, SocketFlags.None);
                                 _sendUpdateTime = DateTime.UtcNow;
@@ -322,6 +380,15 @@ namespace Library.Net.Connection
                 {
                     try
                     {
+                        _aliveTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    try
+                    {
                         _socket.Close();
                     }
                     catch (Exception)
@@ -330,6 +397,11 @@ namespace Library.Net.Connection
                     }
 
                     _socket = null;
+
+                    if (_bandwidthLimit != null)
+                    {
+                        _bandwidthLimit.Leave(this);
+                    }
                 }
             }
 

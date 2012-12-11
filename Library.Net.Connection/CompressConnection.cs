@@ -31,7 +31,7 @@ namespace Library.Net.Connection
         private object _thisLock = new object();
 
         private volatile bool _connect = false;
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         public CompressConnection(ConnectionBase connection, int maxReceiveCount, BufferManager bufferManager)
         {
@@ -40,6 +40,14 @@ namespace Library.Net.Connection
             _bufferManager = bufferManager;
 
             _myCompressAlgorithm = CompressAlgorithm.Deflate;
+        }
+
+        public override IEnumerable<ConnectionBase> GetLayers()
+        {
+            var list = new List<ConnectionBase>(_connection.GetLayers());
+            list.Add(this);
+
+            return list;
         }
 
         public override long ReceivedByteCount

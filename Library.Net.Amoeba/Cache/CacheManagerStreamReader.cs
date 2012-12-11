@@ -21,7 +21,7 @@ namespace Library.Net.Amoeba
         private long _position = 0;
         private long _length = 0;
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         public CacheManagerStreamReader(KeyCollection keys, CacheManager cacheManager, BufferManager bufferManager)
         {

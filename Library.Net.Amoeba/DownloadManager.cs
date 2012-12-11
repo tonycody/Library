@@ -35,7 +35,7 @@ namespace Library.Net.Amoeba
         private WaitQueue<Key> _setKeys = new WaitQueue<Key>();
         private WaitQueue<Key> _removeKeys = new WaitQueue<Key>();
 
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         public DownloadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
@@ -926,6 +926,7 @@ namespace Library.Net.Amoeba
 
                 _downloadManagerThread = new Thread(this.DownloadManagerThread);
                 _downloadManagerThread.Priority = ThreadPriority.Lowest;
+                _downloadManagerThread.Name = "DownloadManager_DownloadManagerThread";
                 _downloadManagerThread.Start();
 
                 foreach (var item in _settings.DownloadItems)

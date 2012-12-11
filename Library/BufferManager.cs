@@ -11,7 +11,7 @@ namespace Library
 
         private static System.ServiceModel.Channels.BufferManager _bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(1024 * 1024 * 256, 1024 * 1024 * 128);
         private object _thisLock = new object();
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
 
         public BufferManager()
         {

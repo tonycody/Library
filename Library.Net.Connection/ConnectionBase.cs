@@ -23,6 +23,8 @@ namespace Library.Net.Connection
             }
         }
 
+        public abstract IEnumerable<ConnectionBase> GetLayers();
+
         public abstract long ReceivedByteCount { get; }
 
         public abstract long SentByteCount { get; }

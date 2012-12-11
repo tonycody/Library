@@ -34,7 +34,7 @@ namespace Library.Net.Amoeba
         private WaitQueue<Key> _uploadedKeys = new WaitQueue<Key>();
         private WaitQueue<string> _removeShare = new WaitQueue<string>();
         
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         public UploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
@@ -949,6 +949,7 @@ namespace Library.Net.Amoeba
 
                 _uploadManagerThread = new Thread(this.UploadManagerThread);
                 _uploadManagerThread.Priority = ThreadPriority.Lowest;
+                _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
                 _uploadManagerThread.Start();
 
                 foreach (var item in _settings.UploadItems)

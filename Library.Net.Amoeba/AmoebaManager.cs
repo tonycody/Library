@@ -23,7 +23,7 @@ namespace Library.Net.Amoeba
 
         private ManagerState _state = ManagerState.Stop;
        
-        private bool _disposed = false;
+        private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         public AmoebaManager(string cachePath, BufferManager bufferManager)
@@ -263,6 +263,28 @@ namespace Library.Net.Amoeba
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                     _connectionsManager.ConnectionCountLimit = value;
+                }
+            }
+        }
+
+        public long BandWidthLimit
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    return _connectionsManager.BandWidthLimit;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                    _connectionsManager.BandWidthLimit = value;
                 }
             }
         }
