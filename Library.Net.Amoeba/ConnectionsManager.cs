@@ -1784,6 +1784,9 @@ namespace Library.Net.Amoeba
                 }
 
                 _cacheManager.CheckSeeds();
+
+                _bandwidthLimit.In = _settings.BandwidthLimit;
+                _bandwidthLimit.Out = _settings.BandwidthLimit;
             }
         }
 
