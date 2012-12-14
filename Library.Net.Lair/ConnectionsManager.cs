@@ -78,7 +78,7 @@ namespace Library.Net.Lair
         public event UnlockChannelsEventHandler UnlockChannelsEvent;
         public event UnlockMessagesEventHandler UnlockMessagesEvent;
         public event UnlockFiltersEventHandler UnlockFiltersEvent;
-        
+
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
@@ -89,7 +89,7 @@ namespace Library.Net.Lair
         private readonly int _uploadingConnectionCountLowerLimit = 3;
 
         private int _threadCount = 2;
-        
+
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, BufferManager bufferManager)
         {
             _clientManager = clientManager;
@@ -1082,16 +1082,13 @@ namespace Library.Net.Lair
                             }
                         });
 
-                        lock (this.ThisLock)
+                        lock (_pushChannelsRequestDictionary.ThisLock)
                         {
-                            lock (_pushChannelsRequestDictionary.ThisLock)
-                            {
-                                _pushChannelsRequestDictionary.Clear();
+                            _pushChannelsRequestDictionary.Clear();
 
-                                foreach (var item in pushChannelsRequestDictionary)
-                                {
-                                    _pushChannelsRequestDictionary.Add(item.Key, item.Value);
-                                }
+                            foreach (var item in pushChannelsRequestDictionary)
+                            {
+                                _pushChannelsRequestDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1189,20 +1186,17 @@ namespace Library.Net.Lair
                             ChannelCollection tempList = null;
                             int count = (int)(128 * this.ResponseTimePriority(connectionManager.Node));
 
-                            lock (this.ThisLock)
+                            lock (_pushChannelsRequestDictionary.ThisLock)
                             {
-                                lock (_pushChannelsRequestDictionary.ThisLock)
+                                if (_pushChannelsRequestDictionary.ContainsKey(connectionManager.Node))
                                 {
-                                    if (_pushChannelsRequestDictionary.ContainsKey(connectionManager.Node))
-                                    {
-                                        tempList = new ChannelCollection(_pushChannelsRequestDictionary[connectionManager.Node]
-                                            .ToArray()
-                                            .OrderBy(n => _random.Next())
-                                            .Take(count));
+                                    tempList = new ChannelCollection(_pushChannelsRequestDictionary[connectionManager.Node]
+                                        .ToArray()
+                                        .OrderBy(n => _random.Next())
+                                        .Take(count));
 
-                                        _pushChannelsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
-                                        _messagesManager[connectionManager.Node].PushChannelsRequest.AddRange(tempList);
-                                    }
+                                    _pushChannelsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
+                                    _messagesManager[connectionManager.Node].PushChannelsRequest.AddRange(tempList);
                                 }
                             }
 
@@ -1413,7 +1407,7 @@ namespace Library.Net.Lair
             _messagesManager[connectionManager.Node].Priority++;
 
             _pullMessageCount++;
-                }
+        }
 
         private void connectionManager_PullFilterEvent(object sender, PullFilterEventArgs e)
         {
@@ -1650,7 +1644,7 @@ namespace Library.Net.Lair
                 }
             }
         }
-   
+
         public override ManagerState State
         {
             get

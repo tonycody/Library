@@ -22,6 +22,9 @@ namespace Library.Net.Rosa
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
+        public const int MaxCommandLength = 1024;
+        public const int MaxContentLength = 1024 * 256;
+
         public CommandMessage()
         {
 
@@ -166,7 +169,14 @@ namespace Library.Net.Rosa
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    _command = value;
+                    if (value != null && value.Length > CommandMessage.MaxCommandLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _command = value;
+                    }
                 }
             }
         }
@@ -185,7 +195,14 @@ namespace Library.Net.Rosa
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    _content = value;
+                    if (value != null && (value.Count > CommandMessage.MaxContentLength))
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _content = value;
+                    }
                 }
             }
         }

@@ -1417,23 +1417,14 @@ namespace Library.Net.Amoeba
             {
                 List<Key> list = new List<Key>();
 
-                foreach (var item in _settings.ClustersIndex.Keys)
-                {
-                    list.Add(item);
-                }
+                list.AddRange(_settings.ClustersIndex.Keys);
 
                 foreach (var item in _settings.ShareIndex)
                 {
-                    foreach (var item2 in item.Value.KeyAndCluster.Keys)
-                    {
-                        list.Add(item2);
-                    }
+                    list.AddRange(item.Value.KeyAndCluster.Keys);
                 }
 
-                var array = new Key[list.Count];
-                list.CopyTo(array, 0);
-
-                return array;
+                return list.ToArray();
             }
         }
 

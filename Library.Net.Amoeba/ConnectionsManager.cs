@@ -57,7 +57,7 @@ namespace Library.Net.Amoeba
         private Dictionary<Node, string> _nodeToUri = new Dictionary<Node, string>();
 
         private BandwidthLimit _bandwidthLimit = new BandwidthLimit();
-        
+
         private long _receivedByteCount = 0;
         private long _sentByteCount = 0;
 
@@ -827,7 +827,7 @@ namespace Library.Net.Amoeba
                     _cacheManager.CheckSeeds();
                 }
 
-                if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
+                if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 180)
                 {
                     pushDownloadStopwatch.Restart();
 
@@ -843,7 +843,7 @@ namespace Library.Net.Amoeba
                                 .OrderBy(n => _random.Next())
                                 .ToList();
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -862,7 +862,7 @@ namespace Library.Net.Amoeba
                                 .OrderBy(n => _random.Next())
                                 .ToList();
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -884,7 +884,7 @@ namespace Library.Net.Amoeba
                                 .OrderBy(n => _random.Next())
                                 .ToList();
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -906,7 +906,7 @@ namespace Library.Net.Amoeba
 
                             if (list.Any(n => _cacheManager.Contains(n))) continue;
 
-                            int count = (int)((8192) / (_connectionManagers.Count + 1));
+                            int count = (int)((2048) / (_connectionManagers.Count + 1));
 
                             for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
@@ -950,16 +950,13 @@ namespace Library.Net.Amoeba
                             }
                         });
 
-                        lock (this.ThisLock)
+                        lock (_pushBlocksLinkDictionary.ThisLock)
                         {
-                            lock (_pushBlocksLinkDictionary.ThisLock)
-                            {
-                                _pushBlocksLinkDictionary.Clear();
+                            _pushBlocksLinkDictionary.Clear();
 
-                                foreach (var item in pushBlocksLinkDictionary)
-                                {
-                                    _pushBlocksLinkDictionary.Add(item.Key, item.Value);
-                                }
+                            foreach (var item in pushBlocksLinkDictionary)
+                            {
+                                _pushBlocksLinkDictionary.Add(item.Key, item.Value);
                             }
                         }
 
@@ -1005,22 +1002,19 @@ namespace Library.Net.Amoeba
                             }
                         });
 
-                        lock (this.ThisLock)
+                        lock (_pushBlocksRequestDictionary.ThisLock)
                         {
-                            lock (_pushBlocksRequestDictionary.ThisLock)
-                            {
-                                _pushBlocksRequestDictionary.Clear();
+                            _pushBlocksRequestDictionary.Clear();
 
-                                foreach (var item in pushBlocksRequestDictionary)
-                                {
-                                    _pushBlocksRequestDictionary.Add(item.Key, item.Value);
-                                }
+                            foreach (var item in pushBlocksRequestDictionary)
+                            {
+                                _pushBlocksRequestDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
                 }
 
-                if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
+                if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 180)
                 {
                     pushUploadStopwatch.Restart();
 
@@ -1034,7 +1028,7 @@ namespace Library.Net.Amoeba
                                 .OrderBy(n => _random.Next())
                                 .ToList();
 
-                            int count = 8192;
+                            int count = 1024;
 
                             for (int i = 0; i < count && i < list.Count; i++)
                             {
@@ -1049,7 +1043,7 @@ namespace Library.Net.Amoeba
                                 .OrderBy(n => _random.Next())
                                 .ToList();
 
-                            int count = 8192;
+                            int count = 1024;
 
                             for (int i = 0; i < count && i < list.Count; i++)
                             {
@@ -1105,16 +1099,13 @@ namespace Library.Net.Amoeba
                             }
                         });
 
-                        lock (this.ThisLock)
+                        lock (_pushBlocksDictionary.ThisLock)
                         {
-                            lock (_pushBlocksDictionary.ThisLock)
-                            {
-                                _pushBlocksDictionary.Clear();
+                            _pushBlocksDictionary.Clear();
 
-                                foreach (var item in pushBlocksDictionary)
-                                {
-                                    _pushBlocksDictionary.Add(item.Key, item.Value);
-                                }
+                            foreach (var item in pushBlocksDictionary)
+                            {
+                                _pushBlocksDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1210,20 +1201,17 @@ namespace Library.Net.Amoeba
                             KeyCollection tempList = null;
                             int count = (int)((2048 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
 
-                            lock (this.ThisLock)
+                            lock (_pushBlocksLinkDictionary.ThisLock)
                             {
-                                lock (_pushBlocksLinkDictionary.ThisLock)
+                                if (_pushBlocksLinkDictionary.ContainsKey(connectionManager.Node))
                                 {
-                                    if (_pushBlocksLinkDictionary.ContainsKey(connectionManager.Node))
-                                    {
-                                        tempList = new KeyCollection(_pushBlocksLinkDictionary[connectionManager.Node]
-                                            .ToArray()
-                                            .OrderBy(n => _random.Next())
-                                            .Take(count));
+                                    tempList = new KeyCollection(_pushBlocksLinkDictionary[connectionManager.Node]
+                                        .ToArray()
+                                        .OrderBy(n => _random.Next())
+                                        .Take(count));
 
-                                        _pushBlocksLinkDictionary[connectionManager.Node].ExceptWith(tempList);
-                                        _messagesManager[connectionManager.Node].PushBlocksLink.AddRange(tempList);
-                                    }
+                                    _pushBlocksLinkDictionary[connectionManager.Node].ExceptWith(tempList);
+                                    _messagesManager[connectionManager.Node].PushBlocksLink.AddRange(tempList);
                                 }
                             }
 
@@ -1254,20 +1242,17 @@ namespace Library.Net.Amoeba
                             KeyCollection tempList = null;
                             int count = (int)((2048 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
 
-                            lock (this.ThisLock)
+                            lock (_pushBlocksRequestDictionary.ThisLock)
                             {
-                                lock (_pushBlocksRequestDictionary.ThisLock)
+                                if (_pushBlocksRequestDictionary.ContainsKey(connectionManager.Node))
                                 {
-                                    if (_pushBlocksRequestDictionary.ContainsKey(connectionManager.Node))
-                                    {
-                                        tempList = new KeyCollection(_pushBlocksRequestDictionary[connectionManager.Node]
-                                            .ToArray()
-                                            .OrderBy(n => _random.Next())
-                                            .Take(count));
+                                    tempList = new KeyCollection(_pushBlocksRequestDictionary[connectionManager.Node]
+                                        .ToArray()
+                                        .OrderBy(n => _random.Next())
+                                        .Take(count));
 
-                                        _pushBlocksRequestDictionary[connectionManager.Node].ExceptWith(tempList);
-                                        _messagesManager[connectionManager.Node].PushBlocksRequest.AddRange(tempList);
-                                    }
+                                    _pushBlocksRequestDictionary[connectionManager.Node].ExceptWith(tempList);
+                                    _messagesManager[connectionManager.Node].PushBlocksRequest.AddRange(tempList);
                                 }
                             }
 
@@ -1305,22 +1290,19 @@ namespace Library.Net.Amoeba
                         {
                             Key key = null;
 
-                            lock (this.ThisLock)
+                            lock (_pushBlocksDictionary.ThisLock)
                             {
-                                lock (_pushBlocksDictionary.ThisLock)
+                                if (_pushBlocksDictionary.ContainsKey(connectionManager.Node))
                                 {
-                                    if (_pushBlocksDictionary.ContainsKey(connectionManager.Node))
-                                    {
-                                        key = _pushBlocksDictionary[connectionManager.Node]
-                                            .ToArray()
-                                            .OrderBy(n => _random.Next())
-                                            .FirstOrDefault();
+                                    key = _pushBlocksDictionary[connectionManager.Node]
+                                        .ToArray()
+                                        .OrderBy(n => _random.Next())
+                                        .FirstOrDefault();
 
-                                        if (key != null)
-                                        {
-                                            _pushBlocksDictionary[connectionManager.Node].Remove(key);
-                                            _messagesManager[connectionManager.Node].PushBlocks.Add(key);
-                                        }
+                                    if (key != null)
+                                    {
+                                        _pushBlocksDictionary[connectionManager.Node].Remove(key);
+                                        _messagesManager[connectionManager.Node].PushBlocks.Add(key);
                                     }
                                 }
                             }
@@ -1382,13 +1364,13 @@ namespace Library.Net.Amoeba
                                     buffer = _cacheManager[key];
 
                                     connectionManager.PushBlock(key, buffer);
-                                  
+
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
                                     _pushBlockCount++;
 
                                     messageManager.PullBlocksRequest.Remove(key);
                                     messageManager.PushBlocks.Add(key);
-                                   
+
                                     messageManager.Priority--;
 
                                     // Infomation
