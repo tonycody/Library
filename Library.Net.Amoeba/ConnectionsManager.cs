@@ -701,12 +701,11 @@ namespace Library.Net.Amoeba
                         continue;
                     }
 
-                    if (_serverManager.ListenUris.Count > 0
-                        && _connectionManagers.Count > (this.ConnectionCountLimit / 3))
-                    {
-                        continue;
-                    }
-                    else if (_connectionManagers.Count > this.ConnectionCountLimit)
+                    var connectionCount = _connectionManagers
+                        .Where(n => n.Type == ConnectionManagerType.Client)
+                        .Count();
+
+                    if (connectionCount > ((this.ConnectionCountLimit / 3) * 1))
                     {
                         continue;
                     }
@@ -719,7 +718,7 @@ namespace Library.Net.Amoeba
 
                         if (connection != null)
                         {
-                            var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, _bufferManager);
+                            var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, ConnectionManagerType.Client, _bufferManager);
 
                             try
                             {
@@ -779,12 +778,21 @@ namespace Library.Net.Amoeba
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
+                var connectionCount = _connectionManagers
+                    .Where(n => n.Type == ConnectionManagerType.Server)
+                    .Count();
+
+                if (connectionCount > ((this.ConnectionCountLimit / 3) * 2))
+                {
+                    continue;
+                }
+
                 string uri;
                 var connection = _serverManager.AcceptConnection(out uri);
 
                 if (connection != null)
                 {
-                    var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, _bufferManager);
+                    var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, ConnectionManagerType.Server, _bufferManager);
 
                     try
                     {
@@ -805,7 +813,7 @@ namespace Library.Net.Amoeba
                 }
             }
         }
-
+    
         private void ConnectionsManagerThread()
         {
             Stopwatch seedRemoveStopwatch = new Stopwatch();
@@ -827,7 +835,11 @@ namespace Library.Net.Amoeba
                     _cacheManager.CheckSeeds();
                 }
 
-                if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 180)
+                var connectionCount = _connectionManagers
+                    .Where(n => n.Type == ConnectionManagerType.Client)
+                    .Count();
+
+                if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 180)
                 {
                     pushDownloadStopwatch.Restart();
 
@@ -1014,7 +1026,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 180)
+                if (connectionCount >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 180)
                 {
                     pushUploadStopwatch.Restart();
 
@@ -1137,6 +1149,10 @@ namespace Library.Net.Amoeba
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
 
+                    var connectionCount = _connectionManagers
+                        .Where(n => n.Type == ConnectionManagerType.Client)
+                        .Count();
+
                     // Check
                     if (checkTime.Elapsed.TotalSeconds > 180)
                     {
@@ -1237,7 +1253,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlocksRequest
-                        if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
+                        if (connectionCount >= _downloadingConnectionCountLowerLimit)
                         {
                             KeyCollection tempList = null;
                             int count = (int)((2048 / _connectionManagers.Count) * this.ResponseTimePriority(connectionManager.Node));
@@ -1283,7 +1299,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
+                    if (connectionCount >= _uploadingConnectionCountLowerLimit)
                     {
                         // PushBlock (Upload)
                         if ((_random.Next(0, 100) + 1) <= (int)(100 * this.ResponseTimePriority(connectionManager.Node)))

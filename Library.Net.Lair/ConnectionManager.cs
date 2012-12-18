@@ -44,6 +44,12 @@ namespace Library.Net.Lair
 
     delegate void CloseEventHandler(object sender, EventArgs e);
 
+    enum ConnectionManagerType
+    {
+        Client,
+        Server,
+    }
+
     class ConnectionManager : ManagerBase, IThisLock
     {
         private enum SerializeId : byte
@@ -71,6 +77,8 @@ namespace Library.Net.Lair
         private Node _otherNode;
         private BufferManager _bufferManager;
 
+        private ConnectionManagerType _type;
+        
         private DateTime _sendUpdateTime;
         private DateTime _pingTime = DateTime.UtcNow;
         private byte[] _pingHash;
@@ -96,13 +104,14 @@ namespace Library.Net.Lair
 
         public event CloseEventHandler CloseEvent;
 
-        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, BufferManager bufferManager)
+        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectionManagerType type, BufferManager bufferManager)
         {
             _connection = connection;
             _myProtocolVersion = ProtocolVersion.Version1;
             _baseNode = baseNode;
             _mySessionId = mySessionId;
             _bufferManager = bufferManager;
+            _type = type;
         }
 
         public byte[] SesstionId
@@ -127,6 +136,19 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _otherNode;
+                }
+            }
+        }
+
+        public ConnectionManagerType Type
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _type;
                 }
             }
         }

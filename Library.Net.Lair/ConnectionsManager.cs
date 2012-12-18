@@ -699,12 +699,11 @@ namespace Library.Net.Lair
                         continue;
                     }
 
-                    if (_serverManager.ListenUris.Count > 0
-                        && _connectionManagers.Count > (this.ConnectionCountLimit / 3))
-                    {
-                        continue;
-                    }
-                    else if (_connectionManagers.Count > this.ConnectionCountLimit)
+                    var connectionCount = _connectionManagers
+                        .Where(n => n.Type == ConnectionManagerType.Client)
+                        .Count();
+
+                    if (connectionCount > ((this.ConnectionCountLimit / 3) * 1))
                     {
                         continue;
                     }
@@ -717,7 +716,7 @@ namespace Library.Net.Lair
 
                         if (connection != null)
                         {
-                            var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, _bufferManager);
+                            var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, ConnectionManagerType.Client, _bufferManager);
 
                             try
                             {
@@ -777,12 +776,21 @@ namespace Library.Net.Lair
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
+                var connectionCount = _connectionManagers
+                    .Where(n => n.Type == ConnectionManagerType.Server)
+                    .Count();
+
+                if (connectionCount > ((this.ConnectionCountLimit / 3) * 2))
+                {
+                    continue;
+                }
+
                 string uri;
                 var connection = _serverManager.AcceptConnection(out uri);
 
                 if (connection != null)
                 {
-                    var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, _bufferManager);
+                    var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, ConnectionManagerType.Server, _bufferManager);
 
                     try
                     {
@@ -818,6 +826,10 @@ namespace Library.Net.Lair
             {
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
+
+                var connectionCount = _connectionManagers
+                    .Where(n => n.Type == ConnectionManagerType.Client)
+                    .Count();
 
                 if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 60)
                 {
@@ -993,7 +1005,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit && uploadStopwatch.Elapsed.TotalSeconds > 60)
+                if (connectionCount >= _uploadingConnectionCountLowerLimit && uploadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     uploadStopwatch.Restart();
 
@@ -1018,7 +1030,7 @@ namespace Library.Net.Lair
                     });
                 }
 
-                if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
+                if (connectionCount >= _downloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushStopwatch.Restart();
 
@@ -1119,6 +1131,10 @@ namespace Library.Net.Lair
                     Thread.Sleep(1000);
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
+
+                    var connectionCount = _connectionManagers
+                        .Where(n => n.Type == ConnectionManagerType.Client)
+                        .Count();
 
                     // Check
                     if (checkTime.Elapsed.TotalSeconds > 180)
@@ -1225,7 +1241,7 @@ namespace Library.Net.Lair
                     }
 
                     // Upload (Message)
-                    if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
+                    if (connectionCount >= _uploadingConnectionCountLowerLimit)
                     {
                         List<Channel> channels = new List<Channel>();
                         channels.AddRange(messageManager.PullChannelsRequest);
@@ -1268,7 +1284,7 @@ namespace Library.Net.Lair
                     }
 
                     // Upload (Filter)
-                    if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
+                    if (connectionCount >= _uploadingConnectionCountLowerLimit)
                     {
                         List<Channel> channels = new List<Channel>();
                         channels.AddRange(messageManager.PullChannelsRequest);

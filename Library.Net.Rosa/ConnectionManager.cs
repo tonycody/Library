@@ -380,7 +380,7 @@ namespace Library.Net.Rosa
                     using (DeadlockMonitor.Lock(this.ThisLock))
                     {
                         if (_commandMessages == null)
-                            _commandMessages = new List<CommandMessage>();
+                            _commandMessages = new List<CommandMessage>(256);
 
                         return _commandMessages;
                     }

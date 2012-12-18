@@ -138,35 +138,35 @@ namespace Library
 
             try
             {
-                if (value.ToLower().Contains("y"))
+                if (value.ToLower().Contains("yb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
                 }
-                else if (value.ToLower().Contains("z"))
+                else if (value.ToLower().Contains("zb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
                 }
-                else if (value.ToLower().Contains("e"))
+                else if (value.ToLower().Contains("eb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
                 }
-                else if (value.ToLower().Contains("p"))
+                else if (value.ToLower().Contains("pb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024 * 1024;
                 }
-                else if (value.ToLower().Contains("t"))
+                else if (value.ToLower().Contains("tb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024 * 1024;
                 }
-                else if (value.ToLower().Contains("g"))
+                else if (value.ToLower().Contains("gb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024 * 1024 * 1024;
                 }
-                else if (value.ToLower().Contains("m"))
+                else if (value.ToLower().Contains("mb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024 * 1024;
                 }
-                else if (value.ToLower().Contains("k"))
+                else if (value.ToLower().Contains("kb"))
                 {
                     return f * decimal.Parse(builder.ToString()) * 1024;
                 }
