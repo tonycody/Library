@@ -336,5 +336,36 @@ namespace Library.Net.Lair
                 return null;
             }
         }
+
+        public static Stream ToMessagesStream(IEnumerable<Message> collection)
+        {
+            if (collection == null) throw new ArgumentNullException("collection");
+
+            try
+            {
+                var items = new ItemCollection<Message>();
+                items.Items.AddRange(collection);
+
+                return LairConverter.ToStream<ItemCollection<Message>>(items);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static IEnumerable<Message> FromMessagesStream(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+
+            try
+            {
+                return LairConverter.FromStream<ItemCollection<Message>>(stream).Items;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
     }
 }
