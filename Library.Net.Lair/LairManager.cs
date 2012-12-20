@@ -28,7 +28,7 @@ namespace Library.Net.Lair
         {
             _bufferManager = bufferManager;
             _clientManager = new ClientManager(_bufferManager);
-            _serverManager = new ServerManager(_bufferManager);
+            _serverManager = new ServerManager(_bufferManager, uri => BaseNode.Uris.Add(uri));
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _bufferManager);
 
             _connectionsManager.UnlockChannelsEvent += (object sender, ref IList<Channel> channels) =>

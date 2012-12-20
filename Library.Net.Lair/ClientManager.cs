@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Library.Net.Connection;
 using Library.Net.Proxy;
+using Library.Net.Proxy.Sam;
 
 namespace Library.Net.Lair
 {
@@ -17,6 +18,9 @@ namespace Library.Net.Lair
         
         private volatile bool _disposed = false;
         private object _thisLock = new object();
+
+        private SamV3Session _samMasterSession;
+        private object _samMasterLock = new object();
 
         private const int MaxReceiveCount = 1024 * 1024 * 16;
         
@@ -258,13 +262,18 @@ namespace Library.Net.Lair
                                 {
                                     proxyPort = 80;
                                 }
+                                else if (connectionFilter.ConnectionType == ConnectionType.SamV3Bridge)
+                                {
+                                    proxyPort = 7656;
+                                }
                             }
                         }
                     }
 
                     if (proxyHost == null) return null;
 
-                    socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
+                    if (connectionFilter.ConnectionType != ConnectionType.SamV3Bridge)
+                        socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
                     ProxyClientBase proxy = null;
 
                     if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
@@ -283,8 +292,94 @@ namespace Library.Net.Lair
                     {
                         proxy = new HttpProxyClient(socket, host, port);
                     }
+                    else if (connectionFilter.ConnectionType == ConnectionType.SamV3Bridge)
+                    {
+                        SamV3Connector connector = null;
+                        try
+                        {
+                            SamV3Session session;
+                            lock (_samMasterLock)
+                            {
+                                if (_disposed)
+                                    throw new ObjectDisposedException("");
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
+                                session = _samMasterSession;
+
+                                if (session == null)
+                                {
+                                    try
+                                    {
+                                        socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
+
+                                        string caption = "Lair";
+                                        string[] options = new string[]
+                                        {
+                                            "inbound.nickname=" + caption,
+                                            "outbound.nickname=" + caption
+                                        };
+                                        string optionsString = string.Join(" ", options);
+
+                                        session = new SamV3Session(proxyHost, proxyPort, null, socket);
+                                        socket = null;
+                                        session.Handshake();
+                                        session.Create(null, optionsString);
+
+                                        _samMasterSession = session;
+                                    }
+                                    catch (Exception)
+                                    {
+                                        if (session != null)
+                                            session.Dispose();
+                                        if (socket != null)
+                                            socket.Close();
+                                        throw;
+                                    }
+                                }
+                            }
+                            connector = new SamV3Connector(session);
+                            connector.Handshake();
+                            connector.Connect(host);
+                        }
+                        catch (SamBridgeErrorException ex)
+                        {
+                            bool isLog = true;
+                            if (connector != null)
+                                connector.Dispose();
+                            string result = ex.Reply.UniqueValue("RESULT", string.Empty).Value;
+                            if (result == SamBridgeErrorMessage.INVALID_ID)
+                            {
+                                lock (_samMasterLock)
+                                {
+                                    if (_samMasterSession != null)
+                                    {
+                                        _samMasterSession.Dispose();
+                                        _samMasterSession = null;
+                                    }
+                                }
+                                isLog = false;
+                            }
+                            else if (result == SamBridgeErrorMessage.CANT_REACH_PEER
+                                    || result == SamBridgeErrorMessage.PEER_NOT_FOUND)
+                            {
+                                isLog = false;
+                            }
+                            if (isLog)
+                                Log.Error(ex);
+                            throw;
+                        }
+                        catch (SamException ex)
+                        {
+                            Log.Error(ex);
+                            if (connector != null)
+                                connector.Dispose();
+                            throw;
+                        }
+
+                        connection = new TcpConnection(connector.BridgeSocket, ClientManager.MaxReceiveCount, _bufferManager);
+                    }
+
+                    if (connection == null)
+                        connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
                 }
 
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);
@@ -382,6 +477,18 @@ namespace Library.Net.Lair
                 }
 
                 _disposed = true;
+
+                if (disposing)
+                {
+                    lock (_samMasterLock)
+                    {
+                        if (_samMasterSession != null)
+                        {
+                            _samMasterSession.Dispose();
+                            _samMasterSession = null;
+                        }
+                    }
+                }
             }
         }
 

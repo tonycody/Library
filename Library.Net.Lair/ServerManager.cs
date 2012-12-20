@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Library.Net.Connection;
+using Library.Net.Proxy.Sam;
 using System.Threading;
 
 namespace Library.Net.Lair
@@ -14,7 +15,7 @@ namespace Library.Net.Lair
         private BufferManager _bufferManager;
         private Settings _settings;
 
-        private List<TcpListener> _listeners = new List<TcpListener>();
+        private List<object> _listeners = new List<object>();
         private List<string> _urisHistory = new List<string>();
         private volatile Thread _watchThread = null;
 
@@ -25,9 +26,13 @@ namespace Library.Net.Lair
 
         private const int MaxReceiveCount = 1024 * 1024 * 16;
 
-        public ServerManager(BufferManager bufferManager)
+        public delegate void NewBaseNodeEventHandler(string uri);
+        NewBaseNodeEventHandler _newBaseNodeEvent;
+
+        public ServerManager(BufferManager bufferManager, NewBaseNodeEventHandler newBaseNodeEvent)
         {
             _bufferManager = bufferManager;
+            _newBaseNodeEvent = newBaseNodeEvent;
 
             _settings = new Settings();
         }
@@ -59,23 +64,59 @@ namespace Library.Net.Lair
                     {
                         if (_listeners[i] == null) continue;
 
-                        if (_listeners[i].Pending())
+                        if (_listeners[i] is TcpListener)
                         {
-                            var socket = _listeners[i].AcceptTcpClient().Client;
-
-                            IPEndPoint ipEndPoint = (IPEndPoint)socket.LocalEndPoint;
-
-                            if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
+                            TcpListener listener = (TcpListener)_listeners[i];
+                            if (listener.Pending())
                             {
-                                uri = string.Format("tcp:{0}:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
-                            }
-                            else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
-                            {
-                                uri = string.Format("tcp:[{0}]:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
-                            }
+                                var socket = listener.AcceptTcpClient().Client;
 
-                            connection = new TcpConnection(socket, ServerManager.MaxReceiveCount, _bufferManager);
-                            break;
+                                IPEndPoint ipEndPoint = (IPEndPoint)socket.RemoteEndPoint;
+
+                                if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
+                                {
+                                    uri = string.Format("tcp:{0}:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
+                                }
+                                else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
+                                {
+                                    uri = string.Format("tcp:[{0}]:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
+                                }
+
+                                connection = new TcpConnection(socket, ServerManager.MaxReceiveCount, _bufferManager);
+                                break;
+                            }
+                        }
+                        else if (_listeners[i] is SamListener)
+                        {
+                            SamListener listener = (SamListener)_listeners[i];
+                            try
+                            {
+                                listener.Update();
+                            }
+                            catch (SamException)
+                            {
+                                continue;
+                            }
+                            if (listener.Pending())
+                            {
+                                SamV3StatefulAcceptor acceptor = listener.Dequeue();
+                                try
+                                {
+                                    acceptor.AcceptComplete();
+                                }
+                                catch (SamException ex)
+                                {
+                                    Log.Error(ex);
+                                    acceptor.Dispose();
+                                    continue;
+                                }
+                                Socket socket = acceptor.BridgeSocket;
+                                string base64Address = acceptor.DestinationBase64;
+                                string base32Address = I2PEncoding.Base32Address.FromDestinationBase64(base64Address);
+                                uri = "i2p:" + base32Address;
+                                connection = new TcpConnection(socket, ServerManager.MaxReceiveCount, _bufferManager);
+                                break;
+                            }
                         }
                     }
                 }
@@ -121,7 +162,16 @@ namespace Library.Net.Lair
                         {
                             for (int i = 0; i < _listeners.Count; i++)
                             {
-                                _listeners[i].Stop();
+                                if (_listeners[i] is TcpListener)
+                                {
+                                    TcpListener listener = (TcpListener)_listeners[i];
+                                    listener.Stop();
+                                }
+                                else if (_listeners[i] is SamListener)
+                                {
+                                    SamListener listener = (SamListener)_listeners[i];
+                                    listener.Dispose();
+                                }
                             }
 
                             _listeners.Clear();
@@ -147,6 +197,44 @@ namespace Library.Net.Lair
                                     catch (Exception)
                                     {
 
+                                    }
+                                }
+                                else if (match.Groups[1].Value == "samv3accept")
+                                {
+                                    SamListener listener = null;
+                                    try
+                                    {
+                                        string caption = "Lair";
+                                        string[] options = new string[]
+                                        {
+                                            "inbound.nickname=" + caption,
+                                            "outbound.nickname=" + caption
+                                        };
+                                        string optionsString = string.Join(" ", options);
+
+                                        listener = new SamListener(match.Groups[2].Value, int.Parse(match.Groups[3].Value), optionsString);
+                                        _listeners.Add(listener);
+                                        try
+                                        {
+                                            string base64Address = listener.Session.DestinationBase64;
+                                            string base32Address = I2PEncoding.Base32Address.FromDestinationBase64(base64Address);
+                                            Log.Information("New I2P BaseNode generated." + "\n" +
+                                                    "i2p:" + base64Address + "\n" +
+                                                    "i2p:" + base32Address);
+                                            _newBaseNodeEvent("i2p:" + base32Address);
+                                        }
+                                        catch (Exception)
+                                        {
+                                        }
+                                    }
+                                    catch (SamException ex)
+                                    {
+                                        Log.Error(ex);
+                                        if (listener != null)
+                                            listener.Dispose();
+                                    }
+                                    catch (Exception)
+                                    {
                                     }
                                 }
                             }

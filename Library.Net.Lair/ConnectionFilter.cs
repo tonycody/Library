@@ -29,6 +29,9 @@ namespace Library.Net.Lair
 
         [EnumMember(Value = "HttpProxy")]
         HttpProxy = 5,
+
+        [EnumMember(Value = "SamV3Bridge")]
+        SamV3Bridge = 6,
     }
 
     [DataContract(Name = "ConnectionFilter", Namespace = "http://Library/Net/Lair")]
