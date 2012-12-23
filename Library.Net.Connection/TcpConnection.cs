@@ -192,6 +192,7 @@ namespace Library.Net.Connection
                 _socket.SendTimeout = (int)_sendTimeSpan.TotalMilliseconds;
                 _socket.Send(buffer, 0, buffer.Length, SocketFlags.None);
                 _sendUpdateTime = DateTime.UtcNow;
+                _sentByteCount += 4;
             }
         }
 

@@ -14,12 +14,7 @@ namespace Library.Net.Lair
 
         protected override bool Filter(string item)
         {
-            const int i2pDestinationMaximumLength = 616;
-            const int i2pWithSchemeMaximumLength = 4 + i2pDestinationMaximumLength;
-
-            if (item == null
-                || (item.Length > 256 && !item.StartsWith("i2p:"))
-                || item.Length > i2pWithSchemeMaximumLength) return true;
+            if (item == null || item.Length > 256) return true;
 
             return false;
         }
