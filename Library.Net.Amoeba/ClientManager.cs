@@ -288,10 +288,30 @@ namespace Library.Net.Amoeba
                 }
 
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);
-                secureConnection.Connect(new TimeSpan(0, 1, 0));
+
+                try
+                {
+                    secureConnection.Connect(new TimeSpan(0, 30, 0));
+                }
+                catch (Exception)
+                {
+                    secureConnection.Dispose();
+
+                    throw;
+                }
 
                 var compressConnection = new CompressConnection(secureConnection, ClientManager.MaxReceiveCount, _bufferManager);
-                compressConnection.Connect(new TimeSpan(0, 1, 0));
+
+                try
+                {
+                    compressConnection.Connect(new TimeSpan(0, 10, 0));
+                }
+                catch (Exception)
+                {
+                    compressConnection.Dispose();
+
+                    throw;
+                }
 
                 return compressConnection;
             }

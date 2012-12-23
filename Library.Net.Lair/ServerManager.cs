@@ -48,12 +48,11 @@ namespace Library.Net.Lair
             uri = null;
             ConnectionBase connection = null;
 
-            lock (this.ThisLock)
+            try
             {
-                if (this.State == ManagerState.Stop) return null;
-
-                try
+                lock (this.ThisLock)
                 {
+                    if (this.State == ManagerState.Stop) return null;
 
                     for (int i = 0; i < _listeners.Count; i++)
                     {
@@ -79,28 +78,40 @@ namespace Library.Net.Lair
                         }
                     }
                 }
-                catch (Exception)
-                {
 
-                }
-            }
+                if (connection == null) return null;
 
-            if (connection != null)
-            {
+                var secureConnection = new SecureServerConnection(connection, null, _bufferManager);
+
                 try
                 {
-                    var secureConnection = new SecureServerConnection(connection, null, _bufferManager);
-                    secureConnection.Connect(new TimeSpan(0, 1, 0));
-
-                    var compressConnection = new CompressConnection(secureConnection, ServerManager.MaxReceiveCount, _bufferManager);
-                    compressConnection.Connect(new TimeSpan(0, 1, 0));
-
-                    return compressConnection;
+                    secureConnection.Connect(new TimeSpan(0, 30, 0));
                 }
                 catch (Exception)
                 {
+                    secureConnection.Dispose();
 
+                    throw;
                 }
+
+                var compressConnection = new CompressConnection(secureConnection, ServerManager.MaxReceiveCount, _bufferManager);
+
+                try
+                {
+                    compressConnection.Connect(new TimeSpan(0, 10, 0));
+                }
+                catch (Exception)
+                {
+                    compressConnection.Dispose();
+
+                    throw;
+                }
+
+                return compressConnection;
+            }
+            catch (Exception)
+            {
+                if (connection != null) connection.Dispose();
             }
 
             return null;
