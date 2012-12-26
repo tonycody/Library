@@ -814,13 +814,13 @@ namespace Library.Net.Lair
 
         private void ConnectionsManagerThread()
         {
-            Stopwatch uploadStopwatch = new Stopwatch();
-            uploadStopwatch.Start();
-            Stopwatch pushStopwatch = new Stopwatch();
-            pushStopwatch.Start();
+            Stopwatch refreshStopwatch = new Stopwatch();
             Stopwatch removeStopwatch = new Stopwatch();
             removeStopwatch.Start();
-            Stopwatch refreshStopwatch = new Stopwatch();
+            Stopwatch pushUploadStopwatch = new Stopwatch();
+            pushUploadStopwatch.Start();
+            Stopwatch pushDownloadStopwatch = new Stopwatch();
+            pushDownloadStopwatch.Start();
 
             for (; ; )
             {
@@ -874,7 +874,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (removeStopwatch.Elapsed.TotalSeconds >= 30)
+                if (removeStopwatch.Elapsed.TotalMinutes >= 5)
                 {
                     removeStopwatch.Restart();
 
@@ -1005,9 +1005,9 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (connectionCount >= _uploadingConnectionCountLowerLimit && uploadStopwatch.Elapsed.TotalSeconds > 60)
+                if (connectionCount >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
                 {
-                    uploadStopwatch.Restart();
+                    pushUploadStopwatch.Restart();
 
                     Parallel.ForEach(this.GetChannels(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                     {
@@ -1030,9 +1030,9 @@ namespace Library.Net.Lair
                     });
                 }
 
-                if (connectionCount >= _downloadingConnectionCountLowerLimit && pushStopwatch.Elapsed.TotalSeconds > 60)
+                if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
                 {
-                    pushStopwatch.Restart();
+                    pushDownloadStopwatch.Restart();
 
                     HashSet<Channel> pushChannelsRequestList = new HashSet<Channel>();
                     List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node));

@@ -813,7 +813,7 @@ namespace Library.Net.Amoeba
                 }
             }
         }
-    
+
         private void ConnectionsManagerThread()
         {
             Stopwatch seedRemoveStopwatch = new Stopwatch();
@@ -839,7 +839,7 @@ namespace Library.Net.Amoeba
                     .Where(n => n.Type == ConnectionManagerType.Client)
                     .Count();
 
-                if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 180)
+                if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushDownloadStopwatch.Restart();
 
@@ -1026,7 +1026,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                if (connectionCount >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 180)
+                if (connectionCount >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushUploadStopwatch.Restart();
 
