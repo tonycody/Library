@@ -874,7 +874,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (removeStopwatch.Elapsed.TotalMinutes >= 5)
+                if (removeStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     removeStopwatch.Restart();
 
@@ -1141,25 +1141,32 @@ namespace Library.Net.Lair
                     {
                         checkTime.Restart();
 
-                        if ((this.ConnectionCountLimit - _connectionManagers.Count) < (this.ConnectionCountLimit / 3)
-                            && _connectionManagers.Count >= 3)
+                        //if (connectionCount >= 2)
+                        //{
+                        //    List<Node> nodes = new List<Node>(_connectionManagers
+                        //        .ToArray()
+                        //        .Select(n => n.Node));
+
+                        //    nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                        //    {
+                        //        return _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
+                        //    }));
+
+                        //    if (nodes.IndexOf(connectionManager.Node) < 3)
+                        //    {
+                        //        connectionManager.PushCancel();
+
+                        //        Debug.WriteLine("ConnectionManager: Push Cancel");
+                        //        return;
+                        //    }
+                        //}
+
+                        if (Math.Abs(messageManager.Priority) > 2048)
                         {
-                            List<Node> nodes = new List<Node>(_connectionManagers
-                                .ToArray()
-                                .Select(n => n.Node));
+                            connectionManager.PushCancel();
 
-                            nodes.Sort(new Comparison<Node>((Node x, Node y) =>
-                            {
-                                return _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
-                            }));
-
-                            if (nodes.IndexOf(connectionManager.Node) < 3)
-                            {
-                                connectionManager.PushCancel();
-
-                                Debug.WriteLine("ConnectionManager: Push Cancel");
-                                return;
-                            }
+                            Debug.WriteLine("ConnectionManager: Push Cancel");
+                            return;
                         }
                     }
 

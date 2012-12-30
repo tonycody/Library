@@ -333,7 +333,17 @@ namespace Library.Net.Amoeba
 
                 nodes.Sort(new Comparison<Node>((Node x, Node y) =>
                 {
-                    return _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
+                    int c = _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
+                    if (c != 0) return c;
+
+                    var tx = _connectionManagers.FirstOrDefault(n => n.Node == x);
+                    var ty = _connectionManagers.FirstOrDefault(n => n.Node == y);
+
+                    if (tx == null && ty == null) return 0;
+                    else if (tx == null) return -1;
+                    else if (ty == null) return 1;
+
+                    return ty.ResponseTime.CompareTo(tx.ResponseTime);
                 }));
 
                 int i = 1;
@@ -1153,28 +1163,36 @@ namespace Library.Net.Amoeba
                         .Where(n => n.Type == ConnectionManagerType.Client)
                         .Count();
 
-                    // Check
                     if (checkTime.Elapsed.TotalSeconds > 180)
                     {
                         checkTime.Restart();
 
-                        if ((this.ConnectionCountLimit - _connectionManagers.Count) < (this.ConnectionCountLimit / 3)
-                            && _connectionManagers.Count >= 3)
+                        //if (connectionCount >= 2)
+                        //{
+                        //    List<Node> nodes = new List<Node>(_connectionManagers
+                        //        .ToArray()
+                        //        .Select(n => n.Node));
+
+                        //    nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                        //    {
+                        //        return _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
+                        //    }));
+
+                        //    if (nodes.IndexOf(connectionManager.Node) < 3)
+                        //    {
+                        //        connectionManager.PushCancel();
+
+                        //        Debug.WriteLine("ConnectionManager: Push Cancel");
+                        //        return;
+                        //    }
+                        //}
+
+                        if (Math.Abs(messageManager.Priority) > 32)
                         {
-                            List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node));
+                            connectionManager.PushCancel();
 
-                            nodes.Sort(new Comparison<Node>((Node x, Node y) =>
-                            {
-                                return _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
-                            }));
-
-                            if (nodes.IndexOf(connectionManager.Node) < 3)
-                            {
-                                connectionManager.PushCancel();
-
-                                Debug.WriteLine("ConnectionManager: Push Cancel");
-                                return;
-                            }
+                            Debug.WriteLine("ConnectionManager: Push Cancel");
+                            return;
                         }
                     }
 
@@ -1365,7 +1383,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlock
-                        if ((_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
+                        if (messageManager.Priority >= 16 || (_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
                         {
                             foreach (var key in messageManager.PullBlocksRequest
                                 .ToArray()
