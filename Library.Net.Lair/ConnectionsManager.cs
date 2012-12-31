@@ -565,7 +565,7 @@ namespace Library.Net.Lair
                             _pushNodeCount += nodes.Count;
                         }
                     }
-                    catch (ConnectionManagerException)
+                    catch (Exception)
                     {
 
                     }
@@ -573,15 +573,16 @@ namespace Library.Net.Lair
                     try
                     {
                         connectionManager.PushCancel();
+
+                        Debug.WriteLine("ConnectionManager: Push Cancel");
                     }
-                    catch (ConnectionManagerException)
+                    catch (Exception)
                     {
 
                     }
 
                     connectionManager.Dispose();
 
-                    Debug.WriteLine("ConnectionManager: Push Cancel");
                     return;
                 }
 
@@ -814,6 +815,8 @@ namespace Library.Net.Lair
 
         private void ConnectionsManagerThread()
         {
+            Stopwatch connectionCheckStopwatch = new Stopwatch();
+            connectionCheckStopwatch.Start();
             Stopwatch refreshStopwatch = new Stopwatch();
             Stopwatch removeStopwatch = new Stopwatch();
             removeStopwatch.Start();
@@ -830,6 +833,53 @@ namespace Library.Net.Lair
                 var connectionCount = _connectionManagers
                     .Where(n => n.Type == ConnectionManagerType.Client)
                     .Count();
+
+                if (connectionCount > ((this.ConnectionCountLimit / 3) * 1) && connectionCheckStopwatch.Elapsed.TotalSeconds > 180)
+                {
+                    connectionCheckStopwatch.Restart();
+
+                    List<Node> nodes = new List<Node>(_connectionManagers
+                        .ToArray()
+                        .Select(n => n.Node));
+
+                    if (nodes.Count != 0)
+                    {
+                        nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                        {
+                            var tx = _connectionManagers.FirstOrDefault(n => n.Node == x);
+                            var ty = _connectionManagers.FirstOrDefault(n => n.Node == y);
+
+                            if (tx == null && ty == null) return 0;
+                            else if (tx == null) return -1;
+                            else if (ty == null) return 1;
+
+                            return ty.ResponseTime.CompareTo(tx.ResponseTime);
+                        }));
+
+                        for (int i = 0; i < nodes.Count; i++)
+                        {
+                            var connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodes[i]);
+
+                            if (connectionManager != null)
+                            {
+                                try
+                                {
+                                    connectionManager.PushCancel();
+
+                                    Debug.WriteLine("ConnectionManager: Push Cancel");
+                                }
+                                catch (Exception)
+                                {
+
+                                }
+
+                                this.RemoveConnectionManager(connectionManager);
+
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 60)
                 {
@@ -1137,31 +1187,11 @@ namespace Library.Net.Lair
                         .Count();
 
                     // Check
-                    if (checkTime.Elapsed.TotalSeconds > 180)
+                    if (checkTime.Elapsed.TotalSeconds > 60)
                     {
                         checkTime.Restart();
 
-                        //if (connectionCount >= 2)
-                        //{
-                        //    List<Node> nodes = new List<Node>(_connectionManagers
-                        //        .ToArray()
-                        //        .Select(n => n.Node));
-
-                        //    nodes.Sort(new Comparison<Node>((Node x, Node y) =>
-                        //    {
-                        //        return _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
-                        //    }));
-
-                        //    if (nodes.IndexOf(connectionManager.Node) < 3)
-                        //    {
-                        //        connectionManager.PushCancel();
-
-                        //        Debug.WriteLine("ConnectionManager: Push Cancel");
-                        //        return;
-                        //    }
-                        //}
-
-                        if (Math.Abs(messageManager.Priority) > 2048)
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 6, 0))
                         {
                             connectionManager.PushCancel();
 
@@ -1427,6 +1457,7 @@ namespace Library.Net.Lair
             }
 
             _messagesManager[connectionManager.Node].PushMessages.Add(e.Message.GetHash(_hashAlgorithm));
+            _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
             _messagesManager[connectionManager.Node].Priority++;
 
             _pullMessageCount++;
@@ -1477,6 +1508,7 @@ namespace Library.Net.Lair
             }
 
             _messagesManager[connectionManager.Node].PushFilters.Add(e.Filter.GetHash(_hashAlgorithm));
+            _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
             _messagesManager[connectionManager.Node].Priority++;
 
             _pullFilterCount++;

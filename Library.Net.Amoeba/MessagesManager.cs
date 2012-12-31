@@ -110,9 +110,10 @@ namespace Library.Net.Amoeba
         private long _receivedByteCount;
         private long _sentByteCount;
 
+        private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
         private CirculationCollection<Key> _pushBlocks;
-        
+
         private CirculationCollection<Key> _pushBlocksLink;
         private CirculationCollection<Key> _pushBlocksRequest;
         
@@ -214,6 +215,24 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     _sentByteCount = value;
+                }
+            }
+        }
+
+        public DateTime LastPullTime
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _lastPullTime;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _lastPullTime = value;
                 }
             }
         }

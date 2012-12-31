@@ -108,6 +108,7 @@ namespace Library.Net.Lair
         private long _receivedByteCount;
         private long _sentByteCount;
 
+        private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
         private CirculationCollection<byte[]> _pushMessages;
         private CirculationCollection<byte[]> _pushFilters;
@@ -212,6 +213,24 @@ namespace Library.Net.Lair
             }
         }
 
+        public DateTime LastPullTime
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _lastPullTime;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _lastPullTime = value;
+                }
+            }
+        }
+        
         public LockedHashSet<Node> SurroundingNodes
         {
             get
