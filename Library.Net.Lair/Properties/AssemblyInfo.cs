@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Library.Net.Lair")]
-[assembly: AssemblyCopyright("Copyright © Lyrise 2009-2012")]
+[assembly: AssemblyCopyright("Copyright © Lyrise 2009-2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
