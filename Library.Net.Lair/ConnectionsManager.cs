@@ -834,7 +834,7 @@ namespace Library.Net.Lair
                     .Where(n => n.Type == ConnectionManagerType.Client)
                     .Count();
 
-                if (connectionCount > ((this.ConnectionCountLimit / 3) * 1) && connectionCheckStopwatch.Elapsed.TotalSeconds > 180)
+                if (connectionCount > ((this.ConnectionCountLimit / 3) * 1) && connectionCheckStopwatch.Elapsed.TotalMinutes > 12)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -1191,7 +1191,7 @@ namespace Library.Net.Lair
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 6, 0))
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 12, 0))
                         {
                             connectionManager.PushCancel();
 

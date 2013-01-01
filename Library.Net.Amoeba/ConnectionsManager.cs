@@ -827,8 +827,6 @@ namespace Library.Net.Amoeba
 
         private void ConnectionsManagerThread()
         {
-            Stopwatch connectionCheckStopwatch = new Stopwatch();
-            connectionCheckStopwatch.Start();
             Stopwatch seedRemoveStopwatch = new Stopwatch();
             seedRemoveStopwatch.Start();
             Stopwatch pushDownloadStopwatch = new Stopwatch();
@@ -851,53 +849,6 @@ namespace Library.Net.Amoeba
                 var connectionCount = _connectionManagers
                     .Where(n => n.Type == ConnectionManagerType.Client)
                     .Count();
-
-                if (connectionCount > ((this.ConnectionCountLimit / 3) * 1) && connectionCheckStopwatch.Elapsed.TotalSeconds > 180)
-                {
-                    connectionCheckStopwatch.Restart();
-
-                    List<Node> nodes = new List<Node>(_connectionManagers
-                        .ToArray()
-                        .Select(n => n.Node));
-
-                    if (nodes.Count != 0)
-                    {
-                        nodes.Sort(new Comparison<Node>((Node x, Node y) =>
-                        {
-                            var tx = _connectionManagers.FirstOrDefault(n => n.Node == x);
-                            var ty = _connectionManagers.FirstOrDefault(n => n.Node == y);
-
-                            if (tx == null && ty == null) return 0;
-                            else if (tx == null) return -1;
-                            else if (ty == null) return 1;
-
-                            return ty.ResponseTime.CompareTo(tx.ResponseTime);
-                        }));
-
-                        for (int i = 0; i < nodes.Count; i++)
-                        {
-                            var connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodes[i]);
-
-                            if (connectionManager != null)
-                            {
-                                try
-                                {
-                                    connectionManager.PushCancel();
-
-                                    Debug.WriteLine("ConnectionManager: Push Cancel");
-                                }
-                                catch (Exception)
-                                {
-
-                                }
-
-                                this.RemoveConnectionManager(connectionManager);
-
-                                break;
-                            }
-                        }
-                    }
-                }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
                 {
@@ -1210,15 +1161,7 @@ namespace Library.Net.Amoeba
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 6, 0))
-                        {
-                            connectionManager.PushCancel();
-
-                            Debug.WriteLine("ConnectionManager: Push Cancel");
-                            return;
-                        }
-
-                        if (Math.Abs(messageManager.Priority) > 32)
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 12, 0))
                         {
                             connectionManager.PushCancel();
 
@@ -1412,7 +1355,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlock
-                        if (messageManager.Priority >= 16 || (_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
+                        if (messageManager.Priority >= -16 && (_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
                         {
                             foreach (var key in messageManager.PullBlocksRequest
                                 .ToArray()
