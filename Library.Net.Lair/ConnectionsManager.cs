@@ -535,53 +535,85 @@ namespace Library.Net.Lair
                 //    this.RemoveConnectionManager(oldConnectionManager);
                 //}
 
-                if (_connectionManagers.Count > this.ConnectionCountLimit)
                 {
-                    // PushNodes
-                    try
+                    bool flag = false;
+
+                    if (connectionManager.Type == ConnectionManagerType.Server)
                     {
-                        List<Node> nodes = new List<Node>();
+                        var connectionCount = 0;
 
                         lock (this.ThisLock)
                         {
-                            var clist = _connectionManagers.ToList();
-                            clist.Remove(connectionManager);
-
-                            clist.Sort(new Comparison<ConnectionManager>((ConnectionManager x, ConnectionManager y) =>
-                            {
-                                return x.ResponseTime.CompareTo(y.ResponseTime);
-                            }));
-
-                            nodes.AddRange(clist.Take(12).Select(n => n.Node));
+                            connectionCount = _connectionManagers
+                                .Where(n => n.Type == ConnectionManagerType.Server)
+                                .Count();
                         }
 
-                        if (nodes.Count > 0)
+                        if (connectionCount > ((this.ConnectionCountLimit / 3) * 2))
                         {
-                            connectionManager.PushNodes(nodes);
-
-                            Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
-                            _pushNodeCount += nodes.Count;
+                            flag = true;
                         }
                     }
-                    catch (Exception)
-                    {
 
+                    if (_connectionManagers.Count > this.ConnectionCountLimit)
+                    {
+                        flag = true;
                     }
 
-                    try
+                    if (flag)
                     {
-                        connectionManager.PushCancel();
+                        ThreadPool.QueueUserWorkItem(new WaitCallback((object state) =>
+                        {
+                            // PushNodes
+                            try
+                            {
+                                List<Node> nodes = new List<Node>();
 
-                        Debug.WriteLine("ConnectionManager: Push Cancel");
+                                lock (this.ThisLock)
+                                {
+                                    var clist = _connectionManagers.ToList();
+                                    clist.Remove(connectionManager);
+
+                                    clist.Sort(new Comparison<ConnectionManager>((ConnectionManager x, ConnectionManager y) =>
+                                    {
+                                        return x.ResponseTime.CompareTo(y.ResponseTime);
+                                    }));
+
+                                    nodes.AddRange(clist
+                                        .Select(n => n.Node)
+                                        .Where(n => n.Uris.Count > 0)
+                                        .Take(12));
+                                }
+
+                                if (nodes.Count > 0)
+                                {
+                                    connectionManager.PushNodes(nodes);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
+                                    _pushNodeCount += nodes.Count;
+                                }
+                            }
+                            catch (Exception)
+                            {
+
+                            }
+
+                            try
+                            {
+                                connectionManager.PushCancel();
+
+                                Debug.WriteLine("ConnectionManager: Push Cancel");
+                            }
+                            catch (Exception)
+                            {
+
+                            }
+
+                            connectionManager.Dispose();
+                        }));
+
+                        return;
                     }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    connectionManager.Dispose();
-
-                    return;
                 }
 
                 Debug.WriteLine("ConnectionManager: Connect");
@@ -698,9 +730,14 @@ namespace Library.Net.Lair
                         continue;
                     }
 
-                    var connectionCount = _connectionManagers
-                        .Where(n => n.Type == ConnectionManagerType.Client)
-                        .Count();
+                    var connectionCount = 0;
+
+                    lock (this.ThisLock)
+                    {
+                        connectionCount = _connectionManagers
+                            .Where(n => n.Type == ConnectionManagerType.Client)
+                            .Count();
+                    }
 
                     if (connectionCount > ((this.ConnectionCountLimit / 3) * 1))
                     {
@@ -775,15 +812,6 @@ namespace Library.Net.Lair
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
-                var connectionCount = _connectionManagers
-                    .Where(n => n.Type == ConnectionManagerType.Server)
-                    .Count();
-
-                if (connectionCount > ((this.ConnectionCountLimit / 3) * 2))
-                {
-                    continue;
-                }
-
                 string uri;
                 var connection = _serverManager.AcceptConnection(out uri);
 
@@ -829,9 +857,14 @@ namespace Library.Net.Lair
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
 
-                var connectionCount = _connectionManagers
-                    .Where(n => n.Type == ConnectionManagerType.Client)
-                    .Count();
+                var connectionCount = 0;
+
+                lock (this.ThisLock)
+                {
+                    connectionCount = _connectionManagers
+                        .Where(n => n.Type == ConnectionManagerType.Client)
+                        .Count();
+                }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
                     && connectionCheckStopwatch.Elapsed.TotalMinutes > 12)
@@ -840,11 +873,14 @@ namespace Library.Net.Lair
 
                     List<KeyValuePair<Node, TimeSpan>> nodes = new List<KeyValuePair<Node, TimeSpan>>();
 
-                    foreach (var connectionManager in _connectionManagers)
+                    lock (this.ThisLock)
                     {
-                        if (_messagesManager[connectionManager.Node].Priority > 0) continue;
+                        foreach (var connectionManager in _connectionManagers)
+                        {
+                            if (_messagesManager[connectionManager.Node].Priority > 0) continue;
 
-                        nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
+                            nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
+                        }
                     }
 
                     nodes.Sort(new Comparison<KeyValuePair<Node, TimeSpan>>((KeyValuePair<Node, TimeSpan> x, KeyValuePair<Node, TimeSpan> y) =>
@@ -856,7 +892,12 @@ namespace Library.Net.Lair
                     {
                         for (int i = 0; i < nodes.Count; i++)
                         {
-                            var connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodes[i].Key);
+                            ConnectionManager connectionManager = null;
+
+                            lock (this.ThisLock)
+                            {
+                                connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodes[i].Key);
+                            }
 
                             if (connectionManager != null)
                             {
@@ -1084,7 +1125,12 @@ namespace Library.Net.Lair
                     pushDownloadStopwatch.Restart();
 
                     HashSet<Channel> pushChannelsRequestList = new HashSet<Channel>();
-                    List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node));
+                    List<Node> nodes = new List<Node>();
+
+                    lock (this.ThisLock)
+                    {
+                        nodes.AddRange(_connectionManagers.Select(n => n.Node));
+                    }
 
                     {
                         {
@@ -1181,9 +1227,14 @@ namespace Library.Net.Lair
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
 
-                    var connectionCount = _connectionManagers
-                        .Where(n => n.Type == ConnectionManagerType.Client)
-                        .Count();
+                    var connectionCount = 0;
+
+                    lock (this.ThisLock)
+                    {
+                        connectionCount = _connectionManagers
+                            .Where(n => n.Type == ConnectionManagerType.Client)
+                            .Count();
+                    }
 
                     // Check
                     if (checkTime.Elapsed.TotalSeconds > 60)
@@ -1217,7 +1268,10 @@ namespace Library.Net.Lair
                                 return x.ResponseTime.CompareTo(y.ResponseTime);
                             }));
 
-                            nodes.AddRange(clist.Take(12).Select(n => n.Node));
+                            nodes.AddRange(clist
+                                .Select(n => n.Node)
+                                .Where(n => n.Uris.Count > 0)
+                                .Take(12));
                         }
 
                         if (nodes.Count > 0)
