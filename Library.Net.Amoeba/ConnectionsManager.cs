@@ -327,29 +327,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node));
-
-                if (nodes.Count <= 1) return 0.5;
-
-                nodes.Sort(new Comparison<Node>((Node x, Node y) =>
-                {
-                    int c = _messagesManager[x].Priority.CompareTo(_messagesManager[y].Priority);
-                    if (c != 0) return c;
-
-                    var tx = _connectionManagers.FirstOrDefault(n => n.Node == x);
-                    var ty = _connectionManagers.FirstOrDefault(n => n.Node == y);
-
-                    if (tx == null && ty == null) return 0;
-                    else if (tx == null) return -1;
-                    else if (ty == null) return 1;
-
-                    return ty.ResponseTime.CompareTo(tx.ResponseTime);
-                }));
-
-                int i = 1;
-                while (i < nodes.Count && nodes[i] != node) i++;
-
-                return ((double)i / (double)nodes.Count);
+                return (_messagesManager[node].Priority + 16) / 32;
             }
         }
 
@@ -357,24 +335,22 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                List<Node> nodes = new List<Node>(_connectionManagers.Select(n => n.Node));
+                List<KeyValuePair<Node, TimeSpan>> nodes = new List<KeyValuePair<Node, TimeSpan>>();
+
+                foreach (var connectionManager in _connectionManagers)
+                {
+                    nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
+                }
 
                 if (nodes.Count <= 1) return 0.5;
 
-                nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                nodes.Sort(new Comparison<KeyValuePair<Node, TimeSpan>>((KeyValuePair<Node, TimeSpan> x, KeyValuePair<Node, TimeSpan> y) =>
                 {
-                    var tx = _connectionManagers.FirstOrDefault(n => n.Node == x);
-                    var ty = _connectionManagers.FirstOrDefault(n => n.Node == y);
-
-                    if (tx == null && ty == null) return 0;
-                    else if (tx == null) return -1;
-                    else if (ty == null) return 1;
-
-                    return ty.ResponseTime.CompareTo(tx.ResponseTime);
+                    return y.Value.CompareTo(x.Value);
                 }));
 
                 int i = 1;
-                while (i < nodes.Count && nodes[i] != node) i++;
+                while (i < nodes.Count && nodes[i].Key != node) i++;
 
                 return ((double)i / (double)nodes.Count);
             }
@@ -809,6 +785,7 @@ namespace Library.Net.Amoeba
                     {
                         connectionManager.Connect();
                         if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
+                        if (_removeNodes.Contains(connectionManager.Node)) throw new ArgumentException();
 
                         if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
                             _routeTable.Add(connectionManager.Node);
@@ -827,6 +804,8 @@ namespace Library.Net.Amoeba
 
         private void ConnectionsManagerThread()
         {
+            Stopwatch connectionCheckStopwatch = new Stopwatch();
+            connectionCheckStopwatch.Start();
             Stopwatch seedRemoveStopwatch = new Stopwatch();
             seedRemoveStopwatch.Start();
             Stopwatch pushDownloadStopwatch = new Stopwatch();
@@ -850,6 +829,56 @@ namespace Library.Net.Amoeba
                     .Where(n => n.Type == ConnectionManagerType.Client)
                     .Count();
 
+                if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes > 3)
+                {
+                    connectionCheckStopwatch.Restart();
+
+                    List<KeyValuePair<Node, TimeSpan>> nodes = new List<KeyValuePair<Node, TimeSpan>>();
+
+                    foreach (var connectionManager in _connectionManagers)
+                    {
+                        if (_messagesManager[connectionManager.Node].Priority > -12) continue;
+
+                        nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
+                    }
+
+                    nodes.Sort(new Comparison<KeyValuePair<Node, TimeSpan>>((KeyValuePair<Node, TimeSpan> x, KeyValuePair<Node, TimeSpan> y) =>
+                    {
+                        int c = _messagesManager[x.Key].Priority.CompareTo(_messagesManager[y.Key].Priority);
+                        if (c != 0) return c;
+
+                        return y.Value.CompareTo(x.Value);
+                    }));
+
+                    if (nodes.Count != 0)
+                    {
+                        for (int i = 0; i < nodes.Count; i++)
+                        {
+                            var connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodes[i].Key);
+
+                            if (connectionManager != null)
+                            {
+                                try
+                                {
+                                    _removeNodes.Add(connectionManager.Node);
+                                    connectionManager.PushCancel();
+
+                                    Debug.WriteLine("ConnectionManager: Push Cancel");
+                                }
+                                catch (Exception)
+                                {
+
+                                }
+
+                                this.RemoveConnectionManager(connectionManager);
+
+                                break;
+                            }
+                        }
+                    }
+                }
+                
                 if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushDownloadStopwatch.Restart();
@@ -1130,7 +1159,7 @@ namespace Library.Net.Amoeba
 
         private void ConnectionManagerThread(object state)
         {
-            Thread.CurrentThread.Name = "ConnectionsManager__ConnectionManagerThread";
+            Thread.CurrentThread.Name = "ConnectionsManager_ConnectionManagerThread";
             Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
 
             var connectionManager = state as ConnectionManager;
@@ -1140,11 +1169,11 @@ namespace Library.Net.Amoeba
             {
                 var messageManager = _messagesManager[connectionManager.Node];
 
+                Stopwatch checkTime = new Stopwatch();
+                checkTime.Start();
                 Stopwatch nodeUpdateTime = new Stopwatch();
                 Stopwatch updateTime = new Stopwatch();
                 updateTime.Start();
-                Stopwatch checkTime = new Stopwatch();
-                checkTime.Start();
 
                 for (; ; )
                 {
@@ -1161,8 +1190,9 @@ namespace Library.Net.Amoeba
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 12, 0))
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 30, 0))
                         {
+                            _removeNodes.Add(connectionManager.Node);
                             connectionManager.PushCancel();
 
                             Debug.WriteLine("ConnectionManager: Push Cancel");
@@ -1215,7 +1245,7 @@ namespace Library.Net.Amoeba
                                     tempList = new KeyCollection(_pushBlocksLinkDictionary[connectionManager.Node]
                                         .ToArray()
                                         .OrderBy(n => _random.Next())
-                                        .Take(8192));
+                                        .Take(2048));
 
                                     _pushBlocksLinkDictionary[connectionManager.Node].ExceptWith(tempList);
                                     _messagesManager[connectionManager.Node].PushBlocksLink.AddRange(tempList);
@@ -1255,7 +1285,7 @@ namespace Library.Net.Amoeba
                                     tempList = new KeyCollection(_pushBlocksRequestDictionary[connectionManager.Node]
                                         .ToArray()
                                         .OrderBy(n => _random.Next())
-                                        .Take(8192));
+                                        .Take(2048));
 
                                     _pushBlocksRequestDictionary[connectionManager.Node].ExceptWith(tempList);
                                     _messagesManager[connectionManager.Node].PushBlocksRequest.AddRange(tempList);
@@ -1355,7 +1385,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlock
-                        if (messageManager.Priority >= -16 && (_random.Next(0, 100) + 1) <= (int)(100 * this.BlockPriority(connectionManager.Node)))
+                        if (messageManager.Priority > -16 && (_random.Next(0, 360) + 1) <= Math.Max(1, (int)(360 * Math.Pow(this.BlockPriority(connectionManager.Node), 2))))
                         {
                             foreach (var key in messageManager.PullBlocksRequest
                                 .ToArray()

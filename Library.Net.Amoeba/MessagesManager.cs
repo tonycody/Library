@@ -116,10 +116,10 @@ namespace Library.Net.Amoeba
 
         private CirculationCollection<Key> _pushBlocksLink;
         private CirculationCollection<Key> _pushBlocksRequest;
-        
+
         private CirculationCollection<Key> _pullBlocksLink;
         private CirculationCollection<Key> _pullBlocksRequest;
-        
+
         private object _thisLock = new object();
 
         public MessageManager(int id)
@@ -135,7 +135,7 @@ namespace Library.Net.Amoeba
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
         }
-    
+
         public int Id
         {
             get
