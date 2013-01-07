@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Library.Collections;
+using System.Threading;
 
 namespace Library.Net.Lair
 {
+    delegate IEnumerable<Node> GetLockNodesEventHandler(object sender);
+
     sealed class MessagesManager : IThisLock
     {
         private LockedDictionary<Node, MessageManager> _messageManagerDictionary = new LockedDictionary<Node, MessageManager>();
@@ -14,43 +17,63 @@ namespace Library.Net.Lair
         private DateTime _lastCircularTime = DateTime.MinValue;
         private object _thisLock = new object();
 
+        public GetLockNodesEventHandler GetLockNodesEvent;
+
         private void Circular()
         {
-            lock (this.ThisLock)
+            ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
             {
-                var now = DateTime.UtcNow;
+                List<Node> lockedNodes = new List<Node>();
 
-                if ((now - _lastCircularTime) > new TimeSpan(0, 1, 0))
+                if (this.GetLockNodesEvent != null)
                 {
-                    if (_messageManagerDictionary.Count > 128)
+                    foreach (var node in this.GetLockNodesEvent(this))
                     {
-                        var nodes = _messageManagerDictionary.Keys.ToList();
-
-                        nodes.Sort(new Comparison<Node>((Node x, Node y) =>
-                        {
-                            return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
-                        }));
-
-                        foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
-                        {
-                            _messageManagerDictionary.Remove(node);
-                            _updateTimeDictionary.Remove(node);
-                        }
+                        lockedNodes.Add(node);
                     }
-
-                    foreach (var node in _messageManagerDictionary.Keys.ToArray())
-                    {
-                        _messageManagerDictionary[node].PushMessages.TrimExcess();
-                        _messageManagerDictionary[node].PushFilters.TrimExcess();
-
-                        _messageManagerDictionary[node].PushChannelsRequest.TrimExcess();
-
-                        _messageManagerDictionary[node].PullChannelsRequest.TrimExcess();
-                    }
-
-                    _lastCircularTime = now;
                 }
-            }
+
+                lock (this.ThisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if ((now - _lastCircularTime) > new TimeSpan(0, 1, 0))
+                    {
+                        if (_messageManagerDictionary.Count > 128)
+                        {
+                            var nodes = _messageManagerDictionary.Keys.ToList();
+
+                            foreach (var node in lockedNodes)
+                            {
+                                nodes.Remove(node);
+                            }
+
+                            nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                            {
+                                return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
+                            }));
+
+                            foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
+                            {
+                                _messageManagerDictionary.Remove(node);
+                                _updateTimeDictionary.Remove(node);
+                            }
+                        }
+
+                        foreach (var node in _messageManagerDictionary.Keys.ToArray())
+                        {
+                            _messageManagerDictionary[node].PushMessages.TrimExcess();
+                            _messageManagerDictionary[node].PushFilters.TrimExcess();
+
+                            _messageManagerDictionary[node].PushChannelsRequest.TrimExcess();
+
+                            _messageManagerDictionary[node].PullChannelsRequest.TrimExcess();
+                        }
+
+                        _lastCircularTime = now;
+                    }
+                }
+            }));
         }
 
         public MessageManager this[Node node]

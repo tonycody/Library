@@ -98,14 +98,21 @@ namespace Library.Net.Lair
 
             _settings = new Settings();
 
-            _routeTable = new Kademlia<Node>(512, 30);
+            _routeTable = new Kademlia<Node>(512, 20);
 
             _connectionManagers = new LockedList<ConnectionManager>();
             _messagesManager = new MessagesManager();
+            _messagesManager.GetLockNodesEvent = (object sender) =>
+            {
+                lock (this.ThisLock)
+                {
+                    return _connectionManagers.Select(n => n.Node).ToArray();
+                }
+            };
 
             _creatingNodes = new LockedList<Node>();
-            _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
-            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 5, 0));
+            _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
+            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
             _nodesStatus = new LockedDictionary<Node, int>();
 
             this.UpdateSessionId();
@@ -669,8 +676,6 @@ namespace Library.Net.Lair
                             _connectionManagers.Remove(connectionManager);
 
                             connectionManager.Dispose();
-
-                            _removeNodes.Add(connectionManager.Node);
                         }
                     }
                     catch (Exception)
@@ -722,7 +727,11 @@ namespace Library.Net.Lair
 
                     if (uris.Count == 0)
                     {
-                        _nodesStatus.Remove(node);
+                        lock (this.ThisLock)
+                        {
+                            _nodesStatus.Remove(node);
+                        }
+
                         _removeNodes.Remove(node);
                         _cuttingNodes.Remove(node);
                         _routeTable.Remove(node);
@@ -759,7 +768,11 @@ namespace Library.Net.Lair
                                 connectionManager.Connect();
                                 if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
 
-                                _nodesStatus.Remove(node);
+                                lock (this.ThisLock)
+                                {
+                                    _nodesStatus.Remove(node);
+                                }
+
                                 _cuttingNodes.Remove(node);
 
                                 if (node != connectionManager.Node)
@@ -781,10 +794,20 @@ namespace Library.Net.Lair
                         }
                         else
                         {
-                            if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
-                            _nodesStatus[node]++;
+                            bool flag = false;
 
-                            if (_nodesStatus[node] >= 3)
+                            lock (this.ThisLock)
+                            {
+                                if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
+                                _nodesStatus[node]++;
+
+                                if (_nodesStatus[node] >= 3)
+                                {
+                                    flag = true;
+                                }
+                            }
+
+                            if (flag)
                             {
                                 _nodesStatus.Remove(node);
                                 _removeNodes.Add(node);
@@ -828,6 +851,16 @@ namespace Library.Net.Lair
                         if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
                             _routeTable.Add(connectionManager.Node);
 
+                        lock (this.ThisLock)
+                        {
+                            _nodesStatus.Remove(connectionManager.Node);
+                        }
+
+                        _cuttingNodes.Remove(connectionManager.Node);
+
+                        if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
+                            _routeTable.Add(connectionManager.Node);
+
                         _acceptConnectionCount++;
 
                         this.AddConnectionManager(connectionManager, uri);
@@ -867,7 +900,7 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes > 12)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes > 30)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -877,14 +910,15 @@ namespace Library.Net.Lair
                     {
                         foreach (var connectionManager in _connectionManagers)
                         {
-                            if (_messagesManager[connectionManager.Node].Priority > 0) continue;
-
                             nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
                         }
                     }
 
                     nodes.Sort(new Comparison<KeyValuePair<Node, TimeSpan>>((KeyValuePair<Node, TimeSpan> x, KeyValuePair<Node, TimeSpan> y) =>
                     {
+                        int c = _messagesManager[x.Key].LastPullTime.CompareTo(_messagesManager[y.Key].LastPullTime);
+                        if (c != 0) return c;
+
                         return y.Value.CompareTo(x.Value);
                     }));
 
@@ -903,7 +937,14 @@ namespace Library.Net.Lair
                             {
                                 try
                                 {
+                                    lock (this.ThisLock)
+                                    {
+                                        _nodesStatus.Remove(connectionManager.Node);
+                                    }
+
                                     _removeNodes.Add(connectionManager.Node);
+                                    _routeTable.Remove(connectionManager.Node);
+
                                     connectionManager.PushCancel();
 
                                     Debug.WriteLine("ConnectionManager: Push Cancel");
@@ -968,131 +1009,134 @@ namespace Library.Net.Lair
                 {
                     removeStopwatch.Restart();
 
-                    try
+                    ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
                     {
+                        try
                         {
-                            var channels = this.GetChannels().ToList();
-
-                            if (channels.Count > 128)
                             {
-                                IList<Channel> unlockChannels = new List<Channel>();
+                                var channels = this.GetChannels().ToList();
 
-                                this.OnUnlockChannelsEvent(ref unlockChannels);
+                                if (channels.Count > 128)
+                                {
+                                    IList<Channel> unlockChannels = new List<Channel>();
 
-                                var removeChannels = unlockChannels.Take(channels.Count - 128);
+                                    this.OnUnlockChannelsEvent(ref unlockChannels);
+
+                                    var removeChannels = unlockChannels.Take(channels.Count - 128);
+
+                                    lock (this.ThisLock)
+                                    {
+                                        lock (_settings.ThisLock)
+                                        {
+                                            foreach (var channel in removeChannels)
+                                            {
+                                                _settings.Messages.Remove(channel);
+                                                _settings.Filters.Remove(channel);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            {
+                                List<KeyValuePair<Channel, int>> items = new List<KeyValuePair<Channel, int>>();
 
                                 lock (this.ThisLock)
                                 {
                                     lock (_settings.ThisLock)
                                     {
-                                        foreach (var channel in removeChannels)
+                                        foreach (var m in _settings.Messages.ToArray())
                                         {
-                                            _settings.Messages.Remove(channel);
-                                            _settings.Filters.Remove(channel);
+                                            if (m.Value.Count > 1024)
+                                            {
+                                                items.Add(new KeyValuePair<Channel, int>(m.Key, m.Value.Count));
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Dictionary<Channel, IList<Message>> unlockMessagesDic = new Dictionary<Channel, IList<Message>>();
+
+                                foreach (var item in items)
+                                {
+                                    IList<Message> unlockMessages = new List<Message>();
+                                    this.OnUnlockMessagesEvent(item.Key, ref unlockMessages);
+
+                                    unlockMessagesDic.Add(item.Key, unlockMessages);
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var item in items)
+                                        {
+                                            if (!_settings.Messages.ContainsKey(item.Key)) continue;
+
+                                            var list = _settings.Messages[item.Key];
+                                            var unlockMessages = unlockMessagesDic[item.Key];
+
+                                            foreach (var m in unlockMessages.Take(item.Value - 1024))
+                                            {
+                                                list.Remove(m);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            {
+                                List<KeyValuePair<Channel, int>> items = new List<KeyValuePair<Channel, int>>();
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var f in _settings.Filters.ToArray())
+                                        {
+                                            if (f.Value.Count > 32)
+                                            {
+                                                items.Add(new KeyValuePair<Channel, int>(f.Key, f.Value.Count));
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Dictionary<Channel, IList<Filter>> unlockFiltersDic = new Dictionary<Channel, IList<Filter>>();
+
+                                foreach (var item in items)
+                                {
+                                    IList<Filter> unlockFilters = new List<Filter>();
+                                    this.OnUnlockFiltersEvent(item.Key, ref unlockFilters);
+
+                                    unlockFiltersDic.Add(item.Key, unlockFilters);
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var item in items)
+                                        {
+                                            if (!_settings.Filters.ContainsKey(item.Key)) continue;
+
+                                            var list = _settings.Filters[item.Key];
+                                            var unlockFilters = unlockFiltersDic[item.Key];
+
+                                            foreach (var m in unlockFilters.Take(item.Value - 32))
+                                            {
+                                                list.Remove(m);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-
+                        catch (Exception)
                         {
-                            List<KeyValuePair<Channel, int>> items = new List<KeyValuePair<Channel, int>>();
 
-                            lock (this.ThisLock)
-                            {
-                                lock (_settings.ThisLock)
-                                {
-                                    foreach (var m in _settings.Messages.ToArray())
-                                    {
-                                        if (m.Value.Count > 1024)
-                                        {
-                                            items.Add(new KeyValuePair<Channel, int>(m.Key, m.Value.Count));
-                                        }
-                                    }
-                                }
-                            }
-
-                            Dictionary<Channel, IList<Message>> unlockMessagesDic = new Dictionary<Channel, IList<Message>>();
-
-                            foreach (var item in items)
-                            {
-                                IList<Message> unlockMessages = new List<Message>();
-                                this.OnUnlockMessagesEvent(item.Key, ref unlockMessages);
-
-                                unlockMessagesDic.Add(item.Key, unlockMessages);
-                            }
-
-                            lock (this.ThisLock)
-                            {
-                                lock (_settings.ThisLock)
-                                {
-                                    foreach (var item in items)
-                                    {
-                                        if (!_settings.Messages.ContainsKey(item.Key)) continue;
-
-                                        var list = _settings.Messages[item.Key];
-                                        var unlockMessages = unlockMessagesDic[item.Key];
-
-                                        foreach (var m in unlockMessages.Take(item.Value - 1024))
-                                        {
-                                            list.Remove(m);
-                                        }
-                                    }
-                                }
-                            }
                         }
-
-                        {
-                            List<KeyValuePair<Channel, int>> items = new List<KeyValuePair<Channel, int>>();
-
-                            lock (this.ThisLock)
-                            {
-                                lock (_settings.ThisLock)
-                                {
-                                    foreach (var f in _settings.Filters.ToArray())
-                                    {
-                                        if (f.Value.Count > 32)
-                                        {
-                                            items.Add(new KeyValuePair<Channel, int>(f.Key, f.Value.Count));
-                                        }
-                                    }
-                                }
-                            }
-
-                            Dictionary<Channel, IList<Filter>> unlockFiltersDic = new Dictionary<Channel, IList<Filter>>();
-
-                            foreach (var item in items)
-                            {
-                                IList<Filter> unlockFilters = new List<Filter>();
-                                this.OnUnlockFiltersEvent(item.Key, ref unlockFilters);
-
-                                unlockFiltersDic.Add(item.Key, unlockFilters);
-                            }
-
-                            lock (this.ThisLock)
-                            {
-                                lock (_settings.ThisLock)
-                                {
-                                    foreach (var item in items)
-                                    {
-                                        if (!_settings.Filters.ContainsKey(item.Key)) continue;
-
-                                        var list = _settings.Filters[item.Key];
-                                        var unlockFilters = unlockFiltersDic[item.Key];
-
-                                        foreach (var m in unlockFilters.Take(item.Value - 32))
-                                        {
-                                            list.Remove(m);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception)
-                    {
-
-                    }
+                    }));
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
@@ -1241,9 +1285,16 @@ namespace Library.Net.Lair
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 30, 0))
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(1, 0, 0))
                         {
+                            lock (this.ThisLock)
+                            {
+                                _nodesStatus.Remove(connectionManager.Node);
+                            }
+
                             _removeNodes.Add(connectionManager.Node);
+                            _routeTable.Remove(connectionManager.Node);
+
                             connectionManager.PushCancel();
 
                             Debug.WriteLine("ConnectionManager: Push Cancel");
@@ -1577,7 +1628,7 @@ namespace Library.Net.Lair
 
             try
             {
-                _cuttingNodes.Remove(connectionManager.Node);
+                _removeNodes.Add(connectionManager.Node);
 
                 if (_routeTable.Count > 100)
                 {
@@ -1601,7 +1652,8 @@ namespace Library.Net.Lair
             {
                 if (!_removeNodes.Contains(connectionManager.Node))
                 {
-                    _cuttingNodes.Add(connectionManager.Node);
+                    if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
+                        _cuttingNodes.Add(connectionManager.Node);
                 }
 
                 this.RemoveConnectionManager(connectionManager);

@@ -100,14 +100,21 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings();
 
-            _routeTable = new Kademlia<Node>(512, 30);
+            _routeTable = new Kademlia<Node>(512, 20);
 
             _connectionManagers = new LockedList<ConnectionManager>();
             _messagesManager = new MessagesManager();
+            _messagesManager.GetLockNodesEvent = (object sender) =>
+            {
+                lock (this.ThisLock)
+                {
+                    return _connectionManagers.Select(n => n.Node).ToArray();
+                }
+            };
 
             _creatingNodes = new LockedList<Node>();
-            _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
-            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 5, 0));
+            _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
+            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
             _nodesStatus = new LockedDictionary<Node, int>();
 
             _downloadBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
@@ -327,7 +334,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                return (_messagesManager[node].Priority + 16) / 32;
+                return _messagesManager[node].Priority + 128;
             }
         }
 
@@ -659,8 +666,6 @@ namespace Library.Net.Amoeba
                             _connectionManagers.Remove(connectionManager);
 
                             connectionManager.Dispose();
-
-                            _removeNodes.Add(connectionManager.Node);
                         }
                     }
                     catch (Exception)
@@ -712,10 +717,13 @@ namespace Library.Net.Amoeba
 
                     if (uris.Count == 0)
                     {
-                        _nodesStatus.Remove(node);
-                        _removeNodes.Remove(node);
-                        _cuttingNodes.Remove(node);
-                        _routeTable.Remove(node);
+                        lock (this.ThisLock)
+                        {
+                            _nodesStatus.Remove(node);
+                            _removeNodes.Remove(node);
+                            _cuttingNodes.Remove(node);
+                            _routeTable.Remove(node);
+                        }
 
                         continue;
                     }
@@ -749,13 +757,16 @@ namespace Library.Net.Amoeba
                                 connectionManager.Connect();
                                 if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
 
-                                _nodesStatus.Remove(node);
-                                _cuttingNodes.Remove(node);
-
-                                if (node != connectionManager.Node)
+                                lock (this.ThisLock)
                                 {
-                                    _removeNodes.Add(node);
-                                    _routeTable.Remove(node);
+                                    _nodesStatus.Remove(node);
+                                    _cuttingNodes.Remove(node);
+
+                                    if (node != connectionManager.Node)
+                                    {
+                                        _removeNodes.Add(node);
+                                        _routeTable.Remove(node);
+                                    }
                                 }
 
                                 _routeTable.Live(connectionManager.Node);
@@ -771,10 +782,20 @@ namespace Library.Net.Amoeba
                         }
                         else
                         {
-                            if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
-                            _nodesStatus[node]++;
+                            bool flag = false;
 
-                            if (_nodesStatus[node] >= 3)
+                            lock (this.ThisLock)
+                            {
+                                if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
+                                _nodesStatus[node]++;
+
+                                if (_nodesStatus[node] >= 3)
+                                {
+                                    flag = true;
+                                }
+                            }
+
+                            if (flag)
                             {
                                 _nodesStatus.Remove(node);
                                 _removeNodes.Add(node);
@@ -815,6 +836,13 @@ namespace Library.Net.Amoeba
                         if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
                         if (_removeNodes.Contains(connectionManager.Node)) throw new ArgumentException();
 
+                        lock (this.ThisLock)
+                        {
+                            _nodesStatus.Remove(connectionManager.Node);
+                        }
+                        
+                        _cuttingNodes.Remove(connectionManager.Node);
+                        
                         if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
                             _routeTable.Add(connectionManager.Node);
 
@@ -863,7 +891,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes > 3)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes > 30)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -873,15 +901,13 @@ namespace Library.Net.Amoeba
                     {
                         foreach (var connectionManager in _connectionManagers)
                         {
-                            if (_messagesManager[connectionManager.Node].Priority > -12) continue;
-
                             nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
                         }
                     }
 
                     nodes.Sort(new Comparison<KeyValuePair<Node, TimeSpan>>((KeyValuePair<Node, TimeSpan> x, KeyValuePair<Node, TimeSpan> y) =>
                     {
-                        int c = _messagesManager[x.Key].Priority.CompareTo(_messagesManager[y.Key].Priority);
+                        int c = _messagesManager[x.Key].LastPullTime.CompareTo(_messagesManager[y.Key].LastPullTime);
                         if (c != 0) return c;
 
                         return y.Value.CompareTo(x.Value);
@@ -902,7 +928,13 @@ namespace Library.Net.Amoeba
                             {
                                 try
                                 {
-                                    _removeNodes.Add(connectionManager.Node);
+                                    lock (this.ThisLock)
+                                    {
+                                        _nodesStatus.Remove(connectionManager.Node);
+                                        _removeNodes.Add(connectionManager.Node);
+                                        _routeTable.Remove(connectionManager.Node);
+                                    }
+
                                     connectionManager.PushCancel();
 
                                     Debug.WriteLine("ConnectionManager: Push Cancel");
@@ -1241,9 +1273,15 @@ namespace Library.Net.Amoeba
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 30, 0))
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(3, 0, 0))
                         {
-                            _removeNodes.Add(connectionManager.Node);
+                            lock (this.ThisLock)
+                            {
+                                _nodesStatus.Remove(connectionManager.Node);
+                                _removeNodes.Add(connectionManager.Node);
+                                _routeTable.Remove(connectionManager.Node);
+                            }
+
                             connectionManager.PushCancel();
 
                             Debug.WriteLine("ConnectionManager: Push Cancel");
@@ -1439,7 +1477,7 @@ namespace Library.Net.Amoeba
                         }
 
                         // PushBlock
-                        if (messageManager.Priority > -16 && (_random.Next(0, 360) + 1) <= Math.Max(1, (int)(360 * Math.Pow(this.BlockPriority(connectionManager.Node), 2))))
+                        if (messageManager.Priority > -128 && (_random.Next(0, 256 + 1) <= this.BlockPriority(connectionManager.Node)))
                         {
                             foreach (var key in messageManager.PullBlocksRequest
                                 .ToArray()
@@ -1629,7 +1667,7 @@ namespace Library.Net.Amoeba
 
             try
             {
-                _cuttingNodes.Remove(connectionManager.Node);
+                _removeNodes.Add(connectionManager.Node);
 
                 if (_routeTable.Count > 100)
                 {
