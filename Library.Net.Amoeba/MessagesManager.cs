@@ -14,67 +14,79 @@ namespace Library.Net.Amoeba
         private LockedDictionary<Node, MessageManager> _messageManagerDictionary = new LockedDictionary<Node, MessageManager>();
         private LockedDictionary<Node, DateTime> _updateTimeDictionary = new LockedDictionary<Node, DateTime>();
         private int _id = 0;
-        private DateTime _lastCircularTime = DateTime.MinValue;
+        private DateTime _lastCircularTime = DateTime.UtcNow;
         private object _thisLock = new object();
 
         public GetLockNodesEventHandler GetLockNodesEvent;
 
         private void Circular()
         {
-            ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
+            lock (this.ThisLock)
             {
-                List<Node> lockedNodes = new List<Node>();
+                bool flag = false;
+                var now = DateTime.UtcNow;
 
-                if (this.GetLockNodesEvent != null)
+                if ((now - _lastCircularTime) > new TimeSpan(0, 1, 0))
                 {
-                    foreach (var node in this.GetLockNodesEvent(this))
+                    if (_messageManagerDictionary.Count > 128)
                     {
-                        lockedNodes.Add(node);
+                        flag = true;
                     }
+
+                    foreach (var node in _messageManagerDictionary.Keys.ToArray())
+                    {
+                        _messageManagerDictionary[node].PushBlocks.TrimExcess();
+
+                        _messageManagerDictionary[node].PullBlocksLink.TrimExcess();
+                        _messageManagerDictionary[node].PullBlocksRequest.TrimExcess();
+
+                        _messageManagerDictionary[node].PushBlocksLink.TrimExcess();
+                        _messageManagerDictionary[node].PushBlocksRequest.TrimExcess();
+                    }
+
+                    _lastCircularTime = now;
                 }
 
-                lock (this.ThisLock)
+                if (flag)
                 {
-                    var now = DateTime.UtcNow;
-
-                    if ((now - _lastCircularTime) > new TimeSpan(0, 1, 0))
+                    ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
                     {
-                        if (_messageManagerDictionary.Count > 128)
+                        List<Node> lockedNodes = new List<Node>();
+
+                        if (this.GetLockNodesEvent != null)
                         {
-                            var nodes = _messageManagerDictionary.Keys.ToList();
-
-                            foreach (var node in lockedNodes)
+                            foreach (var node in this.GetLockNodesEvent(this))
                             {
-                                nodes.Remove(node);
-                            }
-
-                            nodes.Sort(new Comparison<Node>((Node x, Node y) =>
-                            {
-                                return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
-                            }));
-
-                            foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
-                            {
-                                _messageManagerDictionary.Remove(node);
-                                _updateTimeDictionary.Remove(node);
+                                lockedNodes.Add(node);
                             }
                         }
 
-                        foreach (var node in _messageManagerDictionary.Keys.ToArray())
+                        lock (this.ThisLock)
                         {
-                            _messageManagerDictionary[node].PushBlocks.TrimExcess();
+                            if (_messageManagerDictionary.Count > 128)
+                            {
+                                var nodes = _messageManagerDictionary.Keys.ToList();
 
-                            _messageManagerDictionary[node].PullBlocksLink.TrimExcess();
-                            _messageManagerDictionary[node].PullBlocksRequest.TrimExcess();
+                                foreach (var node in lockedNodes)
+                                {
+                                    nodes.Remove(node);
+                                }
 
-                            _messageManagerDictionary[node].PushBlocksLink.TrimExcess();
-                            _messageManagerDictionary[node].PushBlocksRequest.TrimExcess();
+                                nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                                {
+                                    return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
+                                }));
+
+                                foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
+                                {
+                                    _messageManagerDictionary.Remove(node);
+                                    _updateTimeDictionary.Remove(node);
+                                }
+                            }
                         }
-
-                        _lastCircularTime = now;
-                    }
+                    }));
                 }
-            }));
+            }
         }
 
         public MessageManager this[Node node]
