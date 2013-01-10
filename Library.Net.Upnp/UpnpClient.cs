@@ -177,23 +177,10 @@ namespace Library.Net.Upnp
 
                 try
                 {
-                    Thread thread = new Thread(new ThreadStart(delegate()
+                    using (var webClient = new WebClient())
                     {
-                        try
-                        {
-                            using (var webClient = new WebClient())
-                            {
-                                downloadString = webClient.DownloadString(tempLocation);
-                            }
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                    }));
-                    thread.Start();
-                    thread.Join(3000);
-                    thread.Abort();
+                        downloadString = webClient.DownloadString(tempLocation);
+                    }
                 }
                 catch (Exception)
                 {
@@ -448,23 +435,29 @@ namespace Library.Net.Upnp
 
             string value = null;
 
-            Thread startThread = new Thread(new ThreadStart(delegate()
+            try
             {
-                try
+                Thread startThread = new Thread(new ThreadStart(delegate()
                 {
-                    if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port)))
-                        return;
-                    if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port)))
-                        return;
-                }
-                catch (Exception)
-                {
+                    try
+                    {
+                        if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port)))
+                            return;
+                        if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port)))
+                            return;
+                    }
+                    catch (Exception)
+                    {
 
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-            startThread.Abort();
+                    }
+                }));
+                startThread.Start();
+                startThread.Join(timeout);
+            }
+            catch (Exception)
+            {
+
+            }
 
             return value;
         }
@@ -517,23 +510,29 @@ namespace Library.Net.Upnp
 
             bool flag = false;
 
-            Thread startThread = new Thread(new ThreadStart(delegate()
+            try
             {
-                try
+                Thread startThread = new Thread(new ThreadStart(delegate()
                 {
-                    if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
-                        return;
-                    if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
-                        return;
-                }
-                catch (Exception)
-                {
+                    try
+                    {
+                        if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
+                            return;
+                        if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
+                            return;
+                    }
+                    catch (Exception)
+                    {
 
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-            startThread.Abort();
+                    }
+                }));
+                startThread.Start();
+                startThread.Join(timeout);
+            }
+            catch (Exception)
+            {
+
+            }
 
             return flag;
         }
@@ -544,23 +543,29 @@ namespace Library.Net.Upnp
 
             bool flag = false;
 
-            Thread startThread = new Thread(new ThreadStart(delegate()
+            try
             {
-                try
+                Thread startThread = new Thread(new ThreadStart(delegate()
                 {
-                    if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, externalPort))
-                        return;
-                    if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, externalPort))
-                        return;
-                }
-                catch (Exception)
-                {
+                    try
+                    {
+                        if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, externalPort))
+                            return;
+                        if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, externalPort))
+                            return;
+                    }
+                    catch (Exception)
+                    {
 
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-            startThread.Abort();
+                    }
+                }));
+                startThread.Start();
+                startThread.Join(timeout);
+            }
+            catch (Exception)
+            {
+
+            }
 
             return flag;
         }
@@ -571,23 +576,29 @@ namespace Library.Net.Upnp
 
             string value = null;
 
-            Thread startThread = new Thread(new ThreadStart(delegate()
+            try
             {
-                try
+                Thread startThread = new Thread(new ThreadStart(delegate()
                 {
-                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, index)))
-                        return;
-                    if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, index)))
-                        return;
-                }
-                catch (Exception)
-                {
+                    try
+                    {
+                        if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, index)))
+                            return;
+                        if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, index)))
+                            return;
+                    }
+                    catch (Exception)
+                    {
 
-                }
-            }));
-            startThread.Start();
-            startThread.Join(timeout);
-            startThread.Abort();
+                    }
+                }));
+                startThread.Start();
+                startThread.Join(timeout);
+            }
+            catch (Exception)
+            {
+
+            }
 
             return value;
         }

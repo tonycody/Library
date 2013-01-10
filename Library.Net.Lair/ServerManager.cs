@@ -85,7 +85,7 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    secureConnection.Connect(new TimeSpan(0, 30, 0));
+                    secureConnection.Connect(new TimeSpan(0, 0, 30));
                 }
                 catch (Exception)
                 {
@@ -98,7 +98,7 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    compressConnection.Connect(new TimeSpan(0, 10, 0));
+                    compressConnection.Connect(new TimeSpan(0, 0, 10));
                 }
                 catch (Exception)
                 {
