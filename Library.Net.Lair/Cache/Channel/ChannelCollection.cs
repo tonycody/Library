@@ -1,24 +1,23 @@
 ﻿using System.Collections.Generic;
-using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class FilterCollection : FilterList<Filter>, IEnumerable<Filter>
+    public sealed class ChannelCollection : FilterList<Channel>, IEnumerable<Channel>
     {
-        public FilterCollection() : base() { }
-        public FilterCollection(int capacity) : base(capacity) { }
-        public FilterCollection(IEnumerable<Filter> collections) : base(collections) { }
+        public ChannelCollection() : base() { }
+        public ChannelCollection(int capacity) : base(capacity) { }
+        public ChannelCollection(IEnumerable<Channel> collections) : base(collections) { }
 
-        protected override bool Filter(Filter item)
+        protected override bool Filter(Channel item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Filter>
+        #region IEnumerable<Channel>
 
-        IEnumerator<Filter> IEnumerable<Filter>.GetEnumerator()
+        IEnumerator<Channel> IEnumerable<Channel>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

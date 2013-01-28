@@ -652,14 +652,23 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
-            var list = this.ToArray();
+            List<Key> list = null;
+
+            lock (this.ThisLock)
+            {
+                list = new List<Key>(_settings.ClustersIndex.Keys.Randomize());
+            }
 
             int badBlockCount = 0;
             int checkedBlockCount = 0;
-            int blockCount = list.Length;
+            int blockCount = list.Count;
             bool isStop = false;
+
+            getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+
+            if (isStop) return;
 
             foreach (var item in list)
             {
@@ -685,8 +694,62 @@ namespace Library.Net.Amoeba
                 if (checkedBlockCount % 8 == 0)
                     getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
 
-                if (isStop)
-                    return;
+                if (isStop) return;
+            }
+
+            getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+
+            this.CheckSpace();
+        }
+
+        public void CheckExternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        {
+            List<Key> list = null;
+
+            lock (this.ThisLock)
+            {
+                list = new List<Key>();
+
+                foreach (var item in _settings.ShareIndex.Randomize())
+                {
+                    list.AddRange(item.Value.KeyAndCluster.Keys);
+                }
+            }
+
+            int badBlockCount = 0;
+            int checkedBlockCount = 0;
+            int blockCount = list.Count;
+            bool isStop = false;
+
+            getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+
+            if (isStop) return;
+
+            foreach (var item in list)
+            {
+                checkedBlockCount++;
+                ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                try
+                {
+                    buffer = this[item];
+                }
+                catch (Exception)
+                {
+                    badBlockCount++;
+                }
+                finally
+                {
+                    if (buffer.Array != null)
+                    {
+                        _bufferManager.ReturnBuffer(buffer.Array);
+                    }
+                }
+
+                if (checkedBlockCount % 8 == 0)
+                    getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+
+                if (isStop) return;
             }
 
             getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);

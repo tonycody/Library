@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Library.Security;
 
 namespace Library.Net.Lair
 {
-    interface IMessage<TChannel>
+    interface IFilter<TChannel, TKey> : IComputeHash
         where TChannel : IChannel
+        where TKey : IKey
     {
         TChannel Channel { get; }
         DateTime CreationTime { get; }
-        string Content { get; }
+        IEnumerable<TKey> Anchors { get; }
     }
 }

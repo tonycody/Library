@@ -10,36 +10,34 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Message", Namespace = "http://Library/Net/Lair")]
-    public sealed class Message : ReadOnlyCertificateItemBase<Message>, IMessage<Channel>
+    [DataContract(Name = "Filter", Namespace = "http://Library/Net/Lair")]
+    public sealed class Filter : ReadOnlyCertificateItemBase<Filter>, IFilter<Channel, Key>
     {
         private enum SerializeId : byte
         {
             Channel = 0,
             CreationTime = 1,
-            Content = 2,
+            Anchor = 2,
 
             Certificate = 3,
         }
 
         private Channel _channel = null;
         private DateTime _creationTime = DateTime.MinValue;
-        private string _content = null;
+        private KeyCollection _anchors = null;
 
         private Certificate _certificate;
 
-        public const int MaxContentLength = 1024 * 2;
+        public const int MaxAnchorsCount = 1024;
 
-        public Message(Channel channel, string content, DigitalSignature digitalSignature)
+        public Filter(Channel channel, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
         {
             if (channel == null) throw new ArgumentNullException("channel");
-            if (channel.Name == null) throw new ArgumentNullException("channel.Name");
-            if (channel.Id == null) throw new ArgumentNullException("channel.Id");
-            if (string.IsNullOrWhiteSpace(content)) throw new ArgumentNullException("content");
+            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
 
             this.Channel = channel;
             this.CreationTime = DateTime.UtcNow;
-            this.Content = content;
+            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
 
             this.CreateCertificate(digitalSignature);
         }
@@ -68,12 +66,9 @@ namespace Library.Net.Lair
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                     }
-                    else if (id == (byte)SerializeId.Content)
+                    else if (id == (byte)SerializeId.Anchor)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.Content = reader.ReadToEnd();
-                        }
+                        this.ProtectedAnchors.Add(Key.Import(rangeStream, bufferManager));
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -119,24 +114,16 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Content
-            if (this.Content != null)
+            // Anchors
+            foreach (var a in this.Anchors)
             {
+                Stream exportStream = a.Export(bufferManager);
+
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Anchor);
 
-                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
-                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
-                {
-                    writer.Write(this.Content);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Content);
-
-                streams.Add(bufferStream);
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
             // Certificate
@@ -156,18 +143,17 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (_content == null) return 0;
-            else return _content.GetHashCode();
+            return _creationTime.GetHashCode();
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Message)) return false;
+            if ((object)obj == null || !(obj is Filter)) return false;
 
-            return this.Equals((Message)obj);
+            return this.Equals((Filter)obj);
         }
 
-        public override bool Equals(Message other)
+        public override bool Equals(Filter other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -175,11 +161,17 @@ namespace Library.Net.Lair
 
             if (this.Channel != other.Channel
                 || this.CreationTime != other.CreationTime
-                || this.Content != other.Content
 
                 || this.Certificate != other.Certificate)
             {
                 return false;
+            }
+
+            if (this.ProtectedAnchors != null && other.ProtectedAnchors != null)
+            {
+                if (this.ProtectedAnchors.Count != other.ProtectedAnchors.Count) return false;
+
+                for (int i = 0; i < this.ProtectedAnchors.Count; i++) if (this.ProtectedAnchors[i] != other.ProtectedAnchors[i]) return false;
             }
 
             return true;
@@ -187,15 +179,15 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            return this.Content;
+            return this.Channel.Name;
         }
 
-        public override Message DeepClone()
+        public override Filter DeepClone()
         {
             using (var bufferManager = new BufferManager())
             using (var stream = this.Export(bufferManager))
             {
-                return Message.Import(stream, bufferManager);
+                return Filter.Import(stream, bufferManager);
             }
         }
 
@@ -255,7 +247,7 @@ namespace Library.Net.Lair
             return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
-        #region IMessage<Channel>
+        #region IFilter<Channel>
 
         [DataMember(Name = "Channel")]
         public Channel Channel
@@ -284,23 +276,23 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Content")]
-        public string Content
+        public IEnumerable<Key> Anchors
         {
             get
             {
-                return _content;
+                return this.ProtectedAnchors;
             }
-            private set
+        }
+
+        [DataMember(Name = "Anchors")]
+        private KeyCollection ProtectedAnchors
+        {
+            get
             {
-                if (value != null && value.Length > Message.MaxContentLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _content = value;
-                }
+                if (_anchors == null)
+                    _anchors = new KeyCollection(Filter.MaxAnchorsCount);
+
+                return _anchors;
             }
         }
 

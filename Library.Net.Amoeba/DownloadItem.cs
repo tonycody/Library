@@ -14,14 +14,17 @@ namespace Library.Net.Amoeba
         [EnumMember(Value = "Downloading")]
         Downloading = 0,
 
+        [EnumMember(Value = "ParityDecoding")]
+        ParityDecoding = 1,
+
         [EnumMember(Value = "Decoding")]
-        Decoding = 1,
+        Decoding = 2,
 
         [EnumMember(Value = "Completed")]
-        Completed = 2,
+        Completed = 3,
 
         [EnumMember(Value = "Error")]
-        Error = 3,
+        Error = 4,
     }
 
     [DataContract(Name = "DownloadItem", Namespace = "http://Library/Net/Amoeba")]
@@ -34,6 +37,8 @@ namespace Library.Net.Amoeba
         private Seed _seed;
         private Index _index;
         private string _path;
+        private long _decodeBytes;
+        private long _decodingBytes;
         private IndexCollection _indexs;
 
         private object _thisLock;
@@ -149,6 +154,44 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     _index = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "DecodeBytes")]
+        public long DecodeBytes
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _decodeBytes;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _decodeBytes = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "DecodingBytes")]
+        public long DecodingBytes
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _decodingBytes;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _decodingBytes = value;
                 }
             }
         }

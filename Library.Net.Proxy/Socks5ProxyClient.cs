@@ -74,7 +74,7 @@ namespace Library.Net.Proxy
         /// <summary>
         /// Create a Socks5 proxy client object. 
         /// </summary>
-        public Socks5ProxyClient(string destinationHost, int destinationPort)
+        private Socks5ProxyClient(string destinationHost, int destinationPort)
         {
             if (String.IsNullOrEmpty(destinationHost))
             {
@@ -106,129 +106,21 @@ namespace Library.Net.Proxy
         }
 
         /// <summary>
-        /// Create a Socks5 proxy client object.  The default proxy port 1080 is used.
+        /// Creates a Socks5 proxy client object using the supplied TcpClient object connection.
         /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        public Socks5ProxyClient(string proxyHost, string destinationHost, int destinationPort)
+        /// <param name="tcpClient">A TcpClient connection object.</param>
+        public Socks5ProxyClient(Socket socket, string proxyUserName, string proxyPassword, string destinationHost, int destinationPort)
             : this(destinationHost, destinationPort)
         {
-            if (String.IsNullOrEmpty(proxyHost))
+            if (socket == null)
             {
-                throw new ArgumentNullException("proxyHost");
+                throw new ArgumentNullException("socket");
             }
 
-            _proxyHost = proxyHost;
-            _proxyPort = SOCKS5_DEFAULT_PORT;
-        }
-
-        /// <summary>
-        /// Create a Socks5 proxy client object.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port used to connect to proxy server.</param>
-        public Socks5ProxyClient(string proxyHost, int proxyPort, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-            else if (proxyPort <= 0 || proxyPort > 65535)
-            {
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
-        }
-
-        /// <summary>
-        /// Create a Socks5 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyUserName">Proxy authentication user name.</param>
-        /// <param name="proxyPassword">Proxy authentication password.</param>
-        public Socks5ProxyClient(string proxyHost, string proxyUserName, string proxyPassword, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-            else if (proxyUserName == null)
-            {
-                throw new ArgumentNullException("proxyUserName");
-            }
-            else if (proxyPassword == null)
-            {
-                throw new ArgumentNullException("proxyPassword");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = SOCKS5_DEFAULT_PORT;
+            _tcpClient = new TcpClient();
+            _tcpClient.Client = socket;
             _proxyUserName = proxyUserName;
             _proxyPassword = proxyPassword;
-        }
-
-        /// <summary>
-        /// Create a Socks5 proxy client object.  
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port used to connect to proxy server.</param>
-        /// <param name="proxyUserName">Proxy authentication user name.</param>
-        /// <param name="proxyPassword">Proxy authentication password.</param>
-        public Socks5ProxyClient(string proxyHost, int proxyPort, string proxyUserName, string proxyPassword, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-            else if (proxyPort <= 0 || proxyPort > 65535)
-            {
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
-            }
-            else if (proxyUserName == null)
-            {
-                throw new ArgumentNullException("proxyUserName");
-            }
-            else if (proxyPassword == null)
-            {
-                throw new ArgumentNullException("proxyPassword");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
-            _proxyUserName = proxyUserName;
-            _proxyPassword = proxyPassword;
-        }
-
-        /// <summary>
-        /// Gets or sets host name or IP address of the proxy server.
-        /// </summary>
-        public string ProxyHost
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _proxyHost;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets port used to connect to proxy server.
-        /// </summary>
-        public int ProxyPort
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _proxyPort;
-                }
-            }
         }
 
         /// <summary>

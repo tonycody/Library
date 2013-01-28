@@ -1,23 +1,23 @@
 ﻿using System.Collections.Generic;
 
-namespace Library.Net.Amoeba
+namespace Library.Net.Lair
 {
-    public sealed class SeedCollection : FilterList<Seed>, IEnumerable<Seed>
+    public sealed class MessageCollection : FilterList<Message>, IEnumerable<Message>
     {
-        public SeedCollection() : base() { }
-        public SeedCollection(int capacity) : base(capacity) { }
-        public SeedCollection(IEnumerable<Seed> collections) : base(collections) { }
+        public MessageCollection() : base() { }
+        public MessageCollection(int capacity) : base(capacity) { }
+        public MessageCollection(IEnumerable<Message> collections) : base(collections) { }
 
-        protected override bool Filter(Seed item)
+        protected override bool Filter(Message item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Seed>
+        #region IEnumerable<Message>
 
-        IEnumerator<Seed> IEnumerable<Seed>.GetEnumerator()
+        IEnumerator<Message> IEnumerable<Message>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

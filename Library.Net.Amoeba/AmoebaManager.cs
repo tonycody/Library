@@ -525,11 +525,18 @@ namespace Library.Net.Amoeba
             _cacheManager.CheckSeeds();
         }
 
-        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            _cacheManager.CheckBlocks(getProgressEvent);
+            _cacheManager.CheckInternalBlocks(getProgressEvent);
+        }
+
+        public void CheckExternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            _cacheManager.CheckExternalBlocks(getProgressEvent);
         }
 
         public override ManagerState State

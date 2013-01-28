@@ -20,6 +20,12 @@ namespace Library.Net.Lair
         public event UnlockChannelsEventHandler UnlockChannelsEvent;
         public event UnlockMessagesEventHandler UnlockMessagesEvent;
         public event UnlockFiltersEventHandler UnlockFiltersEvent;
+        public event UnlockTopicsEventHandler UnlockTopicsEvent;
+
+        public event UnlockSectionsEventHandler UnlockSectionsEvent;
+        public event UnlockLeadersEventHandler UnlockLeadersEvent;
+        public event UnlockManagersEventHandler UnlockManagersEvent;
+        public event UnlockCreatorsEventHandler UnlockCreatorsEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -52,6 +58,46 @@ namespace Library.Net.Lair
                 if (this.UnlockFiltersEvent != null)
                 {
                     this.UnlockFiltersEvent(this, channel, ref filters);
+                }
+            };
+
+            _connectionsManager.UnlockTopicsEvent += (object sender, Channel channel, ref IList<Topic> filters) =>
+            {
+                if (this.UnlockTopicsEvent != null)
+                {
+                    this.UnlockTopicsEvent(this, channel, ref filters);
+                }
+            };
+
+            _connectionsManager.UnlockSectionsEvent += (object sender, ref IList<Section> channels) =>
+            {
+                if (this.UnlockSectionsEvent != null)
+                {
+                    this.UnlockSectionsEvent(this, ref channels);
+                }
+            };
+
+            _connectionsManager.UnlockLeadersEvent += (object sender, Section section, ref IList<Leader> filters) =>
+            {
+                if (this.UnlockLeadersEvent != null)
+                {
+                    this.UnlockLeadersEvent(this, section, ref filters);
+                }
+            };
+
+            _connectionsManager.UnlockManagersEvent += (object sender, Section section, ref IList<Manager> filters) =>
+            {
+                if (this.UnlockManagersEvent != null)
+                {
+                    this.UnlockManagersEvent(this, section, ref filters);
+                }
+            };
+
+            _connectionsManager.UnlockCreatorsEvent += (object sender, Section section, ref IList<Creator> filters) =>
+            {
+                if (this.UnlockCreatorsEvent != null)
+                {
+                    this.UnlockCreatorsEvent(this, section, ref filters);
                 }
             };
         }
@@ -232,13 +278,23 @@ namespace Library.Net.Lair
             }
         }
 
-        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Filter> filetrs)
+        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Filter> filters, out IList<Topic> topics)
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _connectionsManager.GetChannelInfomation(channel, out messages, out filetrs);
+                _connectionsManager.GetChannelInfomation(channel, out messages, out filters, out topics);
+            }
+        }
+
+        public void GetSectionInfomation(Section channel, out IList<Leader> leaders, out IList<Manager> managers, out IList<Creator> creators)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _connectionsManager.GetSectionInfomation(channel, out leaders, out managers, out creators);
             }
         }
 

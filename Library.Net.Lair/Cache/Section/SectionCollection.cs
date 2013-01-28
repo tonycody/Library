@@ -1,24 +1,23 @@
 ﻿using System.Collections.Generic;
-using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class MessageCollection : FilterList<Message>, IEnumerable<Message>
+    public sealed class SectionCollection : FilterList<Section>, IEnumerable<Section>
     {
-        public MessageCollection() : base() { }
-        public MessageCollection(int capacity) : base(capacity) { }
-        public MessageCollection(IEnumerable<Message> collections) : base(collections) { }
+        public SectionCollection() : base() { }
+        public SectionCollection(int capacity) : base(capacity) { }
+        public SectionCollection(IEnumerable<Section> collections) : base(collections) { }
 
-        protected override bool Filter(Message item)
+        protected override bool Filter(Section item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Message>
+        #region IEnumerable<Section>
 
-        IEnumerator<Message> IEnumerable<Message>.GetEnumerator()
+        IEnumerator<Section> IEnumerable<Section>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

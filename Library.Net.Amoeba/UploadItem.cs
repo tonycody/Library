@@ -19,7 +19,7 @@ namespace Library.Net.Amoeba
         Encoding = 1,
 
         [EnumMember(Value = "ComputeCorrection")]
-        ComputeCorrection = 2,
+        ParityEncoding = 2,
 
         [EnumMember(Value = "Uploading")]
         Uploading = 3,

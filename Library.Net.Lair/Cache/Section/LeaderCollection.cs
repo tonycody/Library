@@ -1,24 +1,23 @@
 ﻿using System.Collections.Generic;
-using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class KeyCollection : FilterList<Key>, IEnumerable<Key>
+    public sealed class LeaderCollection : FilterList<Leader>, IEnumerable<Leader>
     {
-        public KeyCollection() : base() { }
-        public KeyCollection(int capacity) : base(capacity) { }
-        public KeyCollection(IEnumerable<Key> collections) : base(collections) { }
+        public LeaderCollection() : base() { }
+        public LeaderCollection(int capacity) : base(capacity) { }
+        public LeaderCollection(IEnumerable<Leader> collections) : base(collections) { }
 
-        protected override bool Filter(Key item)
+        protected override bool Filter(Leader item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Key>
+        #region IEnumerable<Leader>
 
-        IEnumerator<Key> IEnumerable<Key>.GetEnumerator()
+        IEnumerator<Leader> IEnumerable<Leader>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

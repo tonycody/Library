@@ -23,6 +23,7 @@ namespace Library.Net.Amoeba
         private Settings _settings;
 
         private volatile Thread _downloadManagerThread = null;
+        private volatile Thread _decodeManagerThread = null;
         private string _workDirectory = Path.GetTempPath();
         private CountCache _countCache = new CountCache();
         private Dictionary<int, DownloadItem> _ids = new Dictionary<int, DownloadItem>();
@@ -166,24 +167,30 @@ namespace Library.Net.Amoeba
 
                         contexts.Add(new InformationContext("Seed", item.Value.Seed));
 
-                        if (item.Value.Rank == 1) contexts.Add(new InformationContext("BlockCount", 1));
-                        else contexts.Add(new InformationContext("BlockCount", item.Value.Index.Groups.Sum(n => n.Keys.Count)));
-
-                        if (item.Value.Rank == 1) contexts.Add(new InformationContext("DownloadBlockCount", _cacheManager.Contains(item.Value.Seed.Key) ? 1 : 0));
-                        else
+                        if (item.Value.State == DownloadState.Downloading || item.Value.State == DownloadState.Completed || item.Value.State == DownloadState.Error)
                         {
                             if (item.Value.State == DownloadState.Downloading)
                             {
-                                contexts.Add(new InformationContext("DownloadBlockCount", item.Value.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n)))));
+                                if (item.Value.Rank == 1) contexts.Add(new InformationContext("DownloadBlockCount", _cacheManager.Contains(item.Value.Seed.Key) ? 1 : 0));
+                                else contexts.Add(new InformationContext("DownloadBlockCount", item.Value.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n)))));
                             }
-                            else
+                            else if (item.Value.State == DownloadState.Completed || item.Value.State == DownloadState.Error)
                             {
-                                contexts.Add(new InformationContext("DownloadBlockCount", item.Value.Index.Groups.Sum(n => _countCache.GetCount(n))));
+                                if (item.Value.Rank == 1) contexts.Add(new InformationContext("DownloadBlockCount", _cacheManager.Contains(item.Value.Seed.Key) ? 1 : 0));
+                                else contexts.Add(new InformationContext("DownloadBlockCount", item.Value.Index.Groups.Sum(n => _countCache.GetCount(n))));
                             }
-                        }
 
-                        if (item.Value.Rank == 1) contexts.Add(new InformationContext("ParityBlockCount", 0));
-                        else contexts.Add(new InformationContext("ParityBlockCount", item.Value.Index.Groups.Sum(n => n.Keys.Count - n.InformationLength)));
+                            if (item.Value.Rank == 1) contexts.Add(new InformationContext("BlockCount", 1));
+                            else contexts.Add(new InformationContext("BlockCount", item.Value.Index.Groups.Sum(n => n.Keys.Count)));
+
+                            if (item.Value.Rank == 1) contexts.Add(new InformationContext("ParityBlockCount", 0));
+                            else contexts.Add(new InformationContext("ParityBlockCount", item.Value.Index.Groups.Sum(n => n.Keys.Count - n.InformationLength)));
+                        }
+                        else if (item.Value.State == DownloadState.Decoding || item.Value.State == DownloadState.ParityDecoding)
+                        {
+                            contexts.Add(new InformationContext("DecodeBytes", item.Value.DecodeBytes));
+                            contexts.Add(new InformationContext("DecodingBytes", item.Value.DecodingBytes));
+                        }
 
                         list.Add(new Information(contexts));
                     }
@@ -329,7 +336,7 @@ namespace Library.Net.Amoeba
                             if (_settings.DownloadItems.Count > 0)
                             {
                                 var items = _settings.DownloadItems
-                                    .Where(n => n.State == DownloadState.Downloading || n.State == DownloadState.Decoding)
+                                    .Where(n => n.State == DownloadState.Downloading)
                                     .Where(n => n.Priority != 0)
                                     .ToList();
 
@@ -379,15 +386,135 @@ namespace Library.Net.Amoeba
                             }
                             else
                             {
+                                item.State = DownloadState.Decoding;
+                            }
+                        }
+                        else
+                        {
+                            if (!item.Index.Groups.All(n => _countCache.GetCount(n) >= n.InformationLength))
+                            {
+                                item.State = DownloadState.Downloading;
+
+                                int limitCount = (int)(1024 * (Math.Pow(item.Priority, 3) / Math.Pow(6, 3)));
+                                int downloadingCount = 0;
+
+                                List<Key> keyList = new List<Key>();
+
+                                foreach (var group in item.Index.Groups.ToArray())
+                                {
+                                    if (_countCache.GetCount(group) >= group.InformationLength) continue;
+
+                                    List<Key> keys = new List<Key>();
+
+                                    foreach (var key in _countCache.GetKeys(group, false))
+                                    {
+                                        if (_connectionsManager.DownloadWaiting(key))
+                                        {
+                                            downloadingCount++;
+                                        }
+                                        else
+                                        {
+                                            keys.Add(key);
+                                        }
+                                    }
+
+                                    if (downloadingCount > limitCount) goto End;
+
+                                    int length = group.InformationLength - (group.Keys.Count - keys.Count);
+                                    if (length <= 0) continue;
+
+                                    length = Math.Max(length, 6);
+
+                                    foreach (var key in keys
+                                        .OrderBy(n => random.Next())
+                                        .Take(length))
+                                    {
+                                        keyList.Add(key);
+                                    }
+                                }
+
+                                foreach (var key in keyList
+                                    .OrderBy(n => random.Next())
+                                    .Take(limitCount - downloadingCount))
+                                {
+                                    _connectionsManager.Download(key);
+                                }
+
+                            End: ;
+                            }
+                            else
+                            {
+                                item.State = DownloadState.ParityDecoding;
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    item.State = DownloadState.Error;
+
+                    Log.Error(e);
+                }
+            }
+        }
+
+        private void DecodeManagerThread()
+        {
+            Random random = new Random();
+
+            for (; ; )
+            {
+                Thread.Sleep(1000 * 1);
+                if (this.State == ManagerState.Stop) return;
+
+                DownloadItem item = null;
+
+                try
+                {
+                    lock (this.ThisLock)
+                    {
+                        lock (_settings.ThisLock)
+                        {
+                            if (_settings.DownloadItems.Count > 0)
+                            {
+                                item = _settings.DownloadItems
+                                    .Where(n => n.State == DownloadState.Decoding || n.State == DownloadState.ParityDecoding)
+                                    .Where(n => n.Priority != 0)
+                                    .OrderBy(n => (n.Rank != n.Seed.Rank) ? 0 : 1)
+                                    .FirstOrDefault();
+                            }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    return;
+                }
+
+                try
+                {
+                    if (item != null)
+                    {
+                        if (item.Rank == 1)
+                        {
+                            if (!_cacheManager.Contains(item.Seed.Key))
+                            {
+                                item.State = DownloadState.Downloading;
+                            }
+                            else
+                            {
+                                item.State = DownloadState.Decoding;
+
                                 if (item.Rank < item.Seed.Rank)
                                 {
-                                    item.State = DownloadState.Decoding;
-
                                     string fileName = "";
                                     bool largeFlag = false;
 
                                     try
                                     {
+                                        item.DecodingBytes = 0;
+                                        item.DecodeBytes = _cacheManager.GetLength(item.Seed.Key);
+
                                         using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
@@ -398,6 +525,8 @@ namespace Library.Net.Amoeba
                                                 isStop = true;
                                                 largeFlag = true;
                                             }
+
+                                            item.DecodingBytes = writeSize;
                                         }, 1024 * 1024, true))
                                         {
                                             fileName = stream.Name;
@@ -458,12 +587,14 @@ namespace Library.Net.Amoeba
                                 }
                                 else
                                 {
-                                    item.State = DownloadState.Decoding;
                                     string fileName = "";
                                     bool largeFlag = false;
 
                                     try
                                     {
+                                        item.DecodingBytes = 0;
+                                        item.DecodeBytes = _cacheManager.GetLength(item.Seed.Key);
+
                                         using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
@@ -474,6 +605,8 @@ namespace Library.Net.Amoeba
                                                 isStop = true;
                                                 largeFlag = true;
                                             }
+
+                                            item.DecodingBytes = writeSize;
                                         }, 1024 * 1024, true))
                                         {
                                             fileName = stream.Name;
@@ -558,57 +691,12 @@ namespace Library.Net.Amoeba
                             if (!item.Index.Groups.All(n => _countCache.GetCount(n) >= n.InformationLength))
                             {
                                 item.State = DownloadState.Downloading;
-
-                                int limitCount = (int)(1024 * (Math.Pow(item.Priority, 3) / Math.Pow(6, 3)));
-                                int downloadingCount = 0;
-
-                                List<Key> keyList = new List<Key>();
-
-                                foreach (var group in item.Index.Groups.ToArray())
-                                {
-                                    if (_countCache.GetCount(group) >= group.InformationLength) continue;
-
-                                    List<Key> keys = new List<Key>();
-
-                                    foreach (var key in _countCache.GetKeys(group, false))
-                                    {
-                                        if (_connectionsManager.DownloadWaiting(key))
-                                        {
-                                            downloadingCount++;
-                                        }
-                                        else
-                                        {
-                                            keys.Add(key);
-                                        }
-                                    }
-
-                                    if (downloadingCount > limitCount) goto End;
-
-                                    int length = group.InformationLength - (group.Keys.Count - keys.Count);
-                                    if (length <= 0) continue;
-
-                                    length = Math.Max(length, 6);
-
-                                    foreach (var key in keys
-                                        .OrderBy(n => random.Next())
-                                        .Take(length))
-                                    {
-                                        keyList.Add(key);
-                                    }
-                                }
-
-                                foreach (var key in keyList
-                                    .OrderBy(n => random.Next())
-                                    .Take(limitCount - downloadingCount))
-                                {
-                                    _connectionsManager.Download(key);
-                                }
-
-                            End: ;
                             }
                             else
                             {
-                                item.State = DownloadState.Decoding;
+                                item.State = DownloadState.ParityDecoding;
+                                item.DecodingBytes = 0;
+                                item.DecodeBytes = item.Index.Groups.Sum(n => n.Length);
 
                                 List<Key> headers = new List<Key>();
 
@@ -620,12 +708,16 @@ namespace Library.Net.Amoeba
                                         {
                                             return (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
                                         }));
+
+                                        item.DecodingBytes += group.Length;
                                     }
                                 }
                                 catch (StopException)
                                 {
                                     continue;
                                 }
+
+                                item.State = DownloadState.Decoding;
 
                                 if (item.Rank < item.Seed.Rank)
                                 {
@@ -634,6 +726,8 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
+                                        item.DecodingBytes = 0;
+
                                         using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
@@ -644,6 +738,8 @@ namespace Library.Net.Amoeba
                                                 isStop = true;
                                                 largeFlag = true;
                                             }
+
+                                            item.DecodingBytes = writeSize;
                                         }, 1024 * 1024, true))
                                         {
                                             fileName = stream.Name;
@@ -711,6 +807,8 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
+                                        item.DecodingBytes = 0;
+
                                         using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
@@ -721,6 +819,8 @@ namespace Library.Net.Amoeba
                                                 isStop = true;
                                                 largeFlag = true;
                                             }
+
+                                            item.DecodingBytes = writeSize;
                                         }, 1024 * 1024, true))
                                         {
                                             fileName = stream.Name;
@@ -804,6 +904,56 @@ namespace Library.Net.Amoeba
                 }
                 catch (Exception e)
                 {
+                    if (_cacheManager.Contains(item.Seed.Key))
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            buffer = _cacheManager[item.Seed.Key];
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+                    }
+
+                    foreach (var index in item.Indexs)
+                    {
+                        foreach (var group in index.Groups)
+                        {
+                            foreach (var key in group.Keys)
+                            {
+                                if (!_cacheManager.Contains(key)) continue;
+
+                                ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                                try
+                                {
+                                    buffer = _cacheManager[key];
+                                }
+                                catch (Exception)
+                                {
+
+                                }
+                                finally
+                                {
+                                    if (buffer.Array != null)
+                                    {
+                                        _bufferManager.ReturnBuffer(buffer.Array);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     item.State = DownloadState.Error;
 
                     Log.Error(e);
@@ -918,6 +1068,7 @@ namespace Library.Net.Amoeba
         public override void Start()
         {
             while (_downloadManagerThread != null) Thread.Sleep(1000);
+            while (_decodeManagerThread != null) Thread.Sleep(1000);
 
             lock (this.ThisLock)
             {
@@ -928,6 +1079,11 @@ namespace Library.Net.Amoeba
                 _downloadManagerThread.Priority = ThreadPriority.Lowest;
                 _downloadManagerThread.Name = "DownloadManager_DownloadManagerThread";
                 _downloadManagerThread.Start();
+
+                _decodeManagerThread = new Thread(this.DecodeManagerThread);
+                _decodeManagerThread.Priority = ThreadPriority.Lowest;
+                _decodeManagerThread.Name = "DecodeManager_DecodeManagerThread";
+                _decodeManagerThread.Start();
 
                 foreach (var item in _settings.DownloadItems)
                 {
@@ -966,6 +1122,9 @@ namespace Library.Net.Amoeba
 
             _downloadManagerThread.Join();
             _downloadManagerThread = null;
+
+            _decodeManagerThread.Join();
+            _decodeManagerThread = null;
 
             lock (this.ThisLock)
             {

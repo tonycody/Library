@@ -6,8 +6,8 @@ using System.Text;
 namespace Library.Net.Amoeba
 {
     interface IIndex<TGroup, TKey> : ICompressionAlgorithm, ICryptoAlgorithm
-        where TKey : IKey
         where TGroup : IGroup<TKey>
+        where TKey : IKey
     {
         IList<TGroup> Groups { get; }
     }

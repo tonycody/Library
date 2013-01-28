@@ -25,6 +25,8 @@ namespace Library.Security
         private byte[] _signature = null;
         private int _hashCode = 0;
 
+        private string _toString = null;
+
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
@@ -232,6 +234,17 @@ namespace Library.Security
             }
         }
 
+        public override string ToString()
+        {
+            lock (this.ThisLock)
+            {
+                if (_toString == null)
+                    _toString = MessageConverter.ToSignatureString(this);
+
+                return _toString;
+            }
+        }
+
         internal bool Verify(Stream stream)
         {
             if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
@@ -354,7 +367,6 @@ namespace Library.Security
                     return _signature;
                 }
             }
-
             private set
             {
                 lock (this.ThisLock)
@@ -379,7 +391,8 @@ namespace Library.Security
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) _thisLock = new object();
+                    if (_thisLock == null)
+                        _thisLock = new object();
 
                     return _thisLock;
                 }

@@ -18,7 +18,7 @@ namespace Library.Net.Lair
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        private const int MaxReceiveCount = 1024 * 1024 * 16;
+        private const int MaxReceiveCount = 1024 * 1024 * 1;
         
         public ClientManager(BufferManager bufferManager)
         {

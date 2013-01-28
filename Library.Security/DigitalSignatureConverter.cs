@@ -22,7 +22,6 @@ namespace Library.Security
         }
 
         private static BufferManager _bufferManager = new BufferManager();
-        private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         static DigitalSignatureConverter()
         {
@@ -185,51 +184,6 @@ namespace Library.Security
             {
                 throw new ArgumentException(e.Message, e);
             }
-        }
-
-        private static string ToBase64String(Stream stream)
-        {
-            byte[] buffer = null;
-
-            try
-            {
-                buffer = _bufferManager.TakeBuffer((int)stream.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-                stream.Read(buffer, 0, (int)stream.Length);
-
-                return NetworkConverter.ToBase64String(buffer, 0, (int)stream.Length).Replace('+', '-').Replace('/', '_').TrimEnd('=');
-            }
-            finally
-            {
-                if (buffer != null)
-                {
-                    _bufferManager.ReturnBuffer(buffer);
-                }
-            }
-        }
-
-        private static Stream FromBase64String(string value)
-        {
-            var match = _base64Regex.Match(value);
-            if (!match.Success) throw new ArgumentException();
-
-            value = match.Groups[1].Value;
-
-            string padding = "";
-
-            switch (value.Length % 4)
-            {
-                case 1:
-                case 3:
-                    padding = "=";
-                    break;
-
-                case 2:
-                    padding = "==";
-                    break;
-            }
-
-            return new MemoryStream(NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding));
         }
 
         public static Stream ToSignatureStream(DigitalSignature item)

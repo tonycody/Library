@@ -34,11 +34,42 @@ namespace Library.Net.Lair
         public Filter Filter { get; set; }
     }
 
+    class PullTopicEventArgs : EventArgs
+    {
+        public Topic Topic { get; set; }
+    }
+
+    class PullSectionsRequestEventArgs : EventArgs
+    {
+        public IEnumerable<Section> Sections { get; set; }
+    }
+
+    class PullLeaderEventArgs : EventArgs
+    {
+        public Leader Leader { get; set; }
+    }
+
+    class PullManagerEventArgs : EventArgs
+    {
+        public Manager Manager { get; set; }
+    }
+
+    class PullCreatorEventArgs : EventArgs
+    {
+        public Creator Creator { get; set; }
+    }
+
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
 
     delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
     delegate void PullMessageEventHandler(object sender, PullMessageEventArgs e);
     delegate void PullFilterEventHandler(object sender, PullFilterEventArgs e);
+    delegate void PullTopicEventHandler(object sender, PullTopicEventArgs e);
+
+    delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
+    delegate void PullLeaderEventHandler(object sender, PullLeaderEventArgs e);
+    delegate void PullManagerEventHandler(object sender, PullManagerEventArgs e);
+    delegate void PullCreatorEventHandler(object sender, PullCreatorEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
 
@@ -65,6 +96,12 @@ namespace Library.Net.Lair
             ChannelsRequest = 5,
             Message = 6,
             Filter = 7,
+            Topic = 8,
+
+            SectionsRequest = 9,
+            Leader = 10,
+            Manager = 11,
+            Creator = 12,
         }
 
         private byte[] _mySessionId;
@@ -78,7 +115,7 @@ namespace Library.Net.Lair
         private BufferManager _bufferManager;
 
         private ConnectionManagerType _type;
-        
+
         private DateTime _sendUpdateTime;
         private DateTime _pingTime = DateTime.UtcNow;
         private byte[] _pingHash;
@@ -90,7 +127,7 @@ namespace Library.Net.Lair
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 6, 0);
 
         private System.Threading.Timer _aliveTimer;
-        
+
         private object _thisLock = new object();
         private volatile bool _disposed = false;
 
@@ -99,6 +136,12 @@ namespace Library.Net.Lair
         public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
         public event PullMessageEventHandler PullMessageEvent;
         public event PullFilterEventHandler PullFilterEvent;
+        public event PullTopicEventHandler PullTopicEvent;
+
+        public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
+        public event PullLeaderEventHandler PullLeaderEvent;
+        public event PullManagerEventHandler PullManagerEvent;
+        public event PullCreatorEventHandler PullCreatorEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
 
@@ -538,6 +581,31 @@ namespace Library.Net.Lair
                                     var filter = Filter.Import(stream2, _bufferManager);
                                     this.OnPullFilter(new PullFilterEventArgs() { Filter = filter });
                                 }
+                                else if (type == (byte)SerializeId.Topic)
+                                {
+                                    var filter = Topic.Import(stream2, _bufferManager);
+                                    this.OnPullTopic(new PullTopicEventArgs() { Topic = filter });
+                                }
+                                else if (type == (byte)SerializeId.SectionsRequest)
+                                {
+                                    var message = SectionsRequestMessage.Import(stream2, _bufferManager);
+                                    this.OnPullSectionsRequest(new PullSectionsRequestEventArgs() { Sections = message.Sections });
+                                }
+                                else if (type == (byte)SerializeId.Leader)
+                                {
+                                    var filter = Leader.Import(stream2, _bufferManager);
+                                    this.OnPullLeader(new PullLeaderEventArgs() { Leader = filter });
+                                }
+                                else if (type == (byte)SerializeId.Manager)
+                                {
+                                    var filter = Manager.Import(stream2, _bufferManager);
+                                    this.OnPullManager(new PullManagerEventArgs() { Manager = filter });
+                                }
+                                else if (type == (byte)SerializeId.Creator)
+                                {
+                                    var filter = Creator.Import(stream2, _bufferManager);
+                                    this.OnPullCreator(new PullCreatorEventArgs() { Creator = filter });
+                                }
                             }
                         }
                     }
@@ -585,6 +653,46 @@ namespace Library.Net.Lair
             if (this.PullFilterEvent != null)
             {
                 this.PullFilterEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullTopic(PullTopicEventArgs e)
+        {
+            if (this.PullTopicEvent != null)
+            {
+                this.PullTopicEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullSectionsRequest(PullSectionsRequestEventArgs e)
+        {
+            if (this.PullSectionsRequestEvent != null)
+            {
+                this.PullSectionsRequestEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullLeader(PullLeaderEventArgs e)
+        {
+            if (this.PullLeaderEvent != null)
+            {
+                this.PullLeaderEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullManager(PullManagerEventArgs e)
+        {
+            if (this.PullManagerEvent != null)
+            {
+                this.PullManagerEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullCreator(PullCreatorEventArgs e)
+        {
+            if (this.PullCreatorEvent != null)
+            {
+                this.PullCreatorEvent(this, e);
             }
         }
 
@@ -729,6 +837,184 @@ namespace Library.Net.Lair
                 try
                 {
                     stream.WriteByte((byte)SerializeId.Filter);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, filter.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushTopic(Topic filter)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Topic);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, filter.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushSectionsRequest(IEnumerable<Section> channels)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.SectionsRequest);
+                    stream.Flush();
+
+                    var message = new SectionsRequestMessage();
+                    message.Sections.AddRange(channels);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushLeader(Leader filter)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Leader);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, filter.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushManager(Manager filter)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Manager);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, filter.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushCreator(Creator filter)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Creator);
                     stream.Flush();
 
                     stream = new JoinStream(stream, filter.Export(_bufferManager));
@@ -968,6 +1254,111 @@ namespace Library.Net.Lair
                     {
                         if (_channels == null)
                             _channels = new ChannelCollection(128);
+
+                        return _channels;
+                    }
+                }
+            }
+
+            #region IThisLock
+
+            public object ThisLock
+            {
+                get
+                {
+                    lock (_thisStaticLock)
+                    {
+                        if (_thisLock == null)
+                            _thisLock = new object();
+
+                        return _thisLock;
+                    }
+                }
+            }
+
+            #endregion
+        }
+
+        [DataContract(Name = "SectionsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class SectionsRequestMessage : ItemBase<SectionsRequestMessage>, IThisLock
+        {
+            private enum SerializeId : byte
+            {
+                Section = 0,
+            }
+
+            private SectionCollection _channels;
+            private object _thisLock;
+            private static object _thisStaticLock = new object();
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    Encoding encoding = new UTF8Encoding(false);
+                    byte[] lengthBuffer = new byte[4];
+
+                    for (; ; )
+                    {
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+                        byte id = (byte)stream.ReadByte();
+
+                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        {
+                            if (id == (byte)SerializeId.Section)
+                            {
+                                this.Sections.Add(Section.Import(rangeStream, bufferManager));
+                            }
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    List<Stream> streams = new List<Stream>();
+                    Encoding encoding = new UTF8Encoding(false);
+
+                    // Sections
+                    foreach (var c in this.Sections)
+                    {
+                        Stream exportStream = c.Export(bufferManager);
+
+                        BufferStream bufferStream = new BufferStream(bufferManager);
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Section);
+
+                        streams.Add(new JoinStream(bufferStream, exportStream));
+                    }
+
+                    return new JoinStream(streams);
+                }
+            }
+
+            public override SectionsRequestMessage DeepClone()
+            {
+                lock (this.ThisLock)
+                {
+                    using (var bufferManager = new BufferManager())
+                    using (var stream = this.Export(bufferManager))
+                    {
+                        return SectionsRequestMessage.Import(stream, bufferManager);
+                    }
+                }
+            }
+
+            [DataMember(Name = "Sections")]
+            public SectionCollection Sections
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_channels == null)
+                            _channels = new SectionCollection(128);
 
                         return _channels;
                     }

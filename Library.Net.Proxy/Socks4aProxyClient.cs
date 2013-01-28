@@ -16,53 +16,16 @@ namespace Library.Net.Proxy
     /// </remarks>
     public class Socks4aProxyClient : Socks4ProxyClient
     {
-        /// <summary>
-        /// Creates a Socks4 proxy client object using the supplied TcpClient object connection.
-        /// </summary>
-        /// <param name="tcpClient">An open TcpClient object with an established connection.</param>
         public Socks4aProxyClient(Socket socket, string destinationHost, int destinationPort)
             : base(socket, destinationHost, destinationPort)
         {
+
         }
 
-        /// <summary>
-        /// Create a Socks4a proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyUserId">Proxy user identification information for an IDENTD server.</param>
-        public Socks4aProxyClient(string proxyHost, string proxyUserId, string destinationHost, int destinationPort)
-            : base(proxyHost, proxyUserId, destinationHost, destinationPort)
+        public Socks4aProxyClient(Socket socket, string proxyUserId, string destinationHost, int destinationPort)
+            : base(socket, proxyUserId, destinationHost, destinationPort)
         {
-        }
 
-        /// <summary>
-        /// Create a Socks4a proxy client object.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port used to connect to proxy server.</param>
-        /// <param name="proxyUserId">Proxy user identification information.</param>
-        public Socks4aProxyClient(string proxyHost, int proxyPort, string proxyUserId, string destinationHost, int destinationPort)
-            : base(proxyHost, proxyPort, proxyUserId, destinationHost, destinationPort)
-        {
-        }
-
-        /// <summary>
-        /// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        public Socks4aProxyClient(string proxyHost, string destinationHost, int destinationPort)
-            : base(proxyHost, destinationHost, destinationPort)
-        {
-        }
-
-        /// <summary>
-        /// Create a Socks4a proxy client object.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port used to connect to proxy server.</param>
-        public Socks4aProxyClient(string proxyHost, int proxyPort, string destinationHost, int destinationPort)
-            : base(proxyHost, proxyPort, destinationHost, destinationPort)
-        {
         }
 
         /// <summary>

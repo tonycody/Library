@@ -69,9 +69,6 @@ namespace Library.Net.Proxy
         /// </summary>
         protected const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_DIFFERENT_IDENTD = 93;
 
-        /// <summary>
-        /// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
         private Socks4ProxyClient(string destinationHost, int destinationPort)
         {
             if (String.IsNullOrEmpty(destinationHost))
@@ -87,10 +84,6 @@ namespace Library.Net.Proxy
             _destinationPort = destinationPort;
         }
 
-        /// <summary>
-        /// Creates a Socks4 proxy client object using the supplied TcpClient object connection.
-        /// </summary>
-        /// <param name="tcpClient">A TcpClient connection object.</param>
         public Socks4ProxyClient(Socket socket, string destinationHost, int destinationPort)
             : this(destinationHost, destinationPort)
         {
@@ -103,118 +96,17 @@ namespace Library.Net.Proxy
             _tcpClient.Client = socket;
         }
 
-        /// <summary>
-        /// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyUserId">Proxy user identification information.</param>
-        public Socks4ProxyClient(string proxyHost, string proxyUserId, string destinationHost, int destinationPort)
+        public Socks4ProxyClient(Socket socket, string proxyUserId, string destinationHost, int destinationPort)
             : this(destinationHost, destinationPort)
         {
-            if (String.IsNullOrEmpty(proxyHost))
+            if (socket == null)
             {
-                throw new ArgumentNullException("proxyHost");
-            }
-            else if (proxyUserId == null)
-            {
-                throw new ArgumentNullException("proxyUserId");
+                throw new ArgumentNullException("socket");
             }
 
-            _proxyHost = proxyHost;
-            _proxyPort = SOCKS_PROXY_DEFAULT_PORT;
+            _tcpClient = new TcpClient();
+            _tcpClient.Client = socket;
             _proxyUserId = proxyUserId;
-        }
-
-        /// <summary>
-        /// Create a Socks4 proxy client object.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port used to connect to proxy server.</param>
-        /// <param name="proxyUserId">Proxy user identification information.</param>
-        public Socks4ProxyClient(string proxyHost, int proxyPort, string proxyUserId, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-            else if (proxyPort <= 0 || proxyPort > 65535)
-            {
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
-            }
-            else if (proxyUserId == null)
-            {
-                throw new ArgumentNullException("proxyUserId");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
-            _proxyUserId = proxyUserId;
-        }
-
-        /// <summary>
-        /// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        public Socks4ProxyClient(string proxyHost, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = SOCKS_PROXY_DEFAULT_PORT;
-        }
-
-        /// <summary>
-        /// Create a Socks4 proxy client object.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port used to connect to proxy server.</param>
-        public Socks4ProxyClient(string proxyHost, int proxyPort, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-            else if (proxyPort <= 0 || proxyPort > 65535)
-            {
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
-        }
-
-        /// <summary>
-        /// Gets or sets host name or IP address of the proxy server.
-        /// </summary>
-        public string ProxyHost
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _proxyHost;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets port used to connect to proxy server.
-        /// </summary>
-        public int ProxyPort
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _proxyPort;
-                }
-            }
         }
 
         /// <summary>

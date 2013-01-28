@@ -34,6 +34,8 @@ namespace Library.Security
         private byte[] _privateKey;
         private int _hashCode = 0;
 
+        private string _toString = null;
+
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
@@ -238,6 +240,17 @@ namespace Library.Security
                 {
                     return DigitalSignature.Import(stream, bufferManager);
                 }
+            }
+        }
+
+        public override string ToString()
+        {
+            lock (this.ThisLock)
+            {
+                if (_toString == null)
+                    _toString = MessageConverter.ToSignatureString(this);
+
+                return _toString;
             }
         }
 
@@ -459,7 +472,8 @@ namespace Library.Security
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) _thisLock = new object();
+                    if (_thisLock == null) 
+                        _thisLock = new object();
 
                     return _thisLock;
                 }

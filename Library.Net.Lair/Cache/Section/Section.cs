@@ -7,8 +7,8 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Channel", Namespace = "http://Library/Net/Lair")]
-    public sealed class Channel : ItemBase<Channel>, IChannel
+    [DataContract(Name = "Section", Namespace = "http://Library/Net/Lair")]
+    public sealed class Section : ItemBase<Section>, ISection
     {
         private enum SerializeId : byte
         {
@@ -24,8 +24,11 @@ namespace Library.Net.Lair
         public const int MaxIdLength = 64;
         public const int MaxNameLength = 256;
 
-        public Channel(byte[] id, string name)
+        public Section(byte[] id, string name)
         {
+            if (id == null) throw new ArgumentNullException("id");
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException("name");
+
             this.Id = id;
             this.Name = name;
         }
@@ -106,12 +109,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Channel)) return false;
+            if ((object)obj == null || !(obj is Section)) return false;
 
-            return this.Equals((Channel)obj);
+            return this.Equals((Section)obj);
         }
 
-        public override bool Equals(Channel other)
+        public override bool Equals(Section other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -138,16 +141,16 @@ namespace Library.Net.Lair
             return this.Name;
         }
 
-        public override Channel DeepClone()
+        public override Section DeepClone()
         {
             using (var bufferManager = new BufferManager())
             using (var stream = this.Export(bufferManager))
             {
-                return Channel.Import(stream, bufferManager);
+                return Section.Import(stream, bufferManager);
             }
         }
 
-        #region IChannel
+        #region ISection
 
         [DataMember(Name = "Id")]
         public byte[] Id
@@ -158,7 +161,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && (value.Length > Channel.MaxIdLength))
+                if (value != null && (value.Length > Section.MaxIdLength))
                 {
                     throw new ArgumentException();
                 }
@@ -196,7 +199,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > Channel.MaxNameLength)
+                if (value != null && value.Length > Section.MaxNameLength)
                 {
                     throw new ArgumentException();
                 }

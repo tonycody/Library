@@ -37,6 +37,8 @@ namespace Library.Net.Lair
         private UriCondition _uriCondition;
         private ConnectionType _connectionType;
         private string _proxyUri;
+        private string _option;
+
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
@@ -80,9 +82,10 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.UriCondition != other.UriCondition
-                || this.ConnectionType != other.ConnectionType
-                || this.ProxyUri != other.ProxyUri)
+            if ((this.UriCondition != other.UriCondition)
+                || (this.ConnectionType != other.ConnectionType)
+                || (this.ProxyUri != other.ProxyUri)
+                || (this.Option != other.Option))
             {
                 return false;
             }
@@ -147,6 +150,25 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "Option")]
+        public string Option
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _option;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _option = value;
+                }
+            }
+        }
+
         #region IDeepClone<ConnectionFilter>
 
         public ConnectionFilter DeepClone()
@@ -182,7 +204,7 @@ namespace Library.Net.Lair
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) 
+                    if (_thisLock == null)
                         _thisLock = new object();
 
                     return _thisLock;

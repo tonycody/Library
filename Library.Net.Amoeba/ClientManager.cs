@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
@@ -14,12 +15,12 @@ namespace Library.Net.Amoeba
         private BufferManager _bufferManager;
 
         private Settings _settings;
-        
+
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         private const int MaxReceiveCount = 1024 * 1024 * 16;
-        
+
         public ClientManager(BufferManager bufferManager)
         {
             _bufferManager = bufferManager;
@@ -35,6 +36,107 @@ namespace Library.Net.Amoeba
                 {
                     return _settings.ConnectionFilters;
                 }
+            }
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> DecodeCommand(string option)
+        {
+            try
+            {
+                Dictionary<string, string> pair = new Dictionary<string, string>();
+                List<char> kl = new List<char>();
+                List<char> vl = new List<char>();
+                bool keyFlag = true;
+                bool wordFlag = false;
+
+                for (int i = 0; i < option.Length; i++)
+                {
+                    char w1;
+                    char? w2 = null;
+
+                    w1 = option[i];
+                    if (option.Length > i + 1) w2 = option[i + 1];
+
+                    if (keyFlag)
+                    {
+                        if (w1 == '=')
+                        {
+                            keyFlag = false;
+                        }
+                        else
+                        {
+                            kl.Add(w1);
+                        }
+                    }
+                    else
+                    {
+                        if (w1 == '\\' && w2.HasValue)
+                        {
+                            if (w2.Value == '\"' || w2.Value == '\\')
+                            {
+                                vl.Add(w2.Value);
+                                i++;
+                            }
+                        }
+                        else
+                        {
+                            if (wordFlag)
+                            {
+                                if (w1 == '\"')
+                                {
+                                    wordFlag = false;
+                                }
+                                else
+                                {
+                                    vl.Add(w1);
+                                }
+                            }
+                            else
+                            {
+                                if (w1 == '\"')
+                                {
+                                    wordFlag = true;
+                                }
+                                else if (w1 == ' ')
+                                {
+                                    var key = new string(kl.ToArray());
+                                    var value = new string(vl.ToArray());
+
+                                    if (!string.IsNullOrWhiteSpace(key))
+                                    {
+                                        pair[key.Trim()] = value;
+                                    }
+
+                                    kl.Clear();
+                                    vl.Clear();
+
+                                    keyFlag = true;
+                                }
+                                else
+                                {
+                                    vl.Add(w1);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!keyFlag)
+                {
+                    var key = new string(kl.ToArray());
+                    var value = new string(vl.ToArray());
+
+                    if (!string.IsNullOrWhiteSpace(key))
+                    {
+                        pair[key.Trim()] = value;
+                    }
+                }
+
+                return pair;
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 
@@ -165,6 +267,13 @@ namespace Library.Net.Amoeba
 
                 if (host == null) return null;
 
+                IList<KeyValuePair<string, string>> options = null;
+
+                if (!string.IsNullOrWhiteSpace(connectionFilter.Option))
+                {
+                    options = ClientManager.DecodeCommand(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
+                }
+
                 if (connectionFilter.ConnectionType == ConnectionType.Tcp)
                 {
 #if !DEBUG
@@ -269,15 +378,22 @@ namespace Library.Net.Amoeba
 
                     if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
                     {
-                        proxy = new Socks4ProxyClient(socket, host, port);
+                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+
+                        proxy = new Socks4ProxyClient(socket, user, host, port);
                     }
                     else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
                     {
-                        proxy = new Socks4aProxyClient(socket, host, port);
+                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+
+                        proxy = new Socks4aProxyClient(socket, user, host, port);
                     }
                     else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
                     {
-                        proxy = new Socks5ProxyClient(socket, host, port);
+                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                        var pass = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("pass")).Select(n => n.Value).FirstOrDefault() : null;
+
+                        proxy = new Socks5ProxyClient(socket, user, pass, host, port);
                     }
                     else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
                     {

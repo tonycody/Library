@@ -4,8 +4,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
-using Library.Net.Connection;
 using System.Threading;
+using Library.Net.Connection;
 
 namespace Library.Net.Lair
 {
@@ -23,7 +23,7 @@ namespace Library.Net.Lair
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        private const int MaxReceiveCount = 1024 * 1024 * 16;
+        private const int MaxReceiveCount = 1024 * 1024 * 1;
 
         public ServerManager(BufferManager bufferManager)
         {

@@ -145,11 +145,19 @@ namespace Library.Net.Lair
 
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
+
         private CirculationCollection<byte[]> _pushMessages;
         private CirculationCollection<byte[]> _pushFilters;
+        private CirculationCollection<byte[]> _pushTopics;
+        private CirculationCollection<byte[]> _pushLeaders;
+        private CirculationCollection<byte[]> _pushManagers;
+        private CirculationCollection<byte[]> _pushCreators;
 
         private CirculationCollection<Channel> _pushChannelsRequest;
         private CirculationCollection<Channel> _pullChannelsRequest;
+
+        private CirculationCollection<Section> _pushSectionsRequest;
+        private CirculationCollection<Section> _pullSectionsRequest;
 
         private object _thisLock = new object();
 
@@ -158,11 +166,20 @@ namespace Library.Net.Lair
             _id = id;
 
             _surroundingNodes = new LockedHashSet<Node>(128);
+
             _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
             _pushFilters = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushTopics = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+
+            _pushLeaders = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushManagers = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushCreators = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
 
             _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
             _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+
+            _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
         }
 
         public int Id
@@ -265,7 +282,7 @@ namespace Library.Net.Lair
                 }
             }
         }
-        
+
         public LockedHashSet<Node> SurroundingNodes
         {
             get
@@ -299,6 +316,50 @@ namespace Library.Net.Lair
             }
         }
 
+        public CirculationCollection<byte[]> PushTopics
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushTopics;
+                }
+            }
+        }
+
+        public CirculationCollection<byte[]> PushLeaders
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushLeaders;
+                }
+            }
+        }
+
+        public CirculationCollection<byte[]> PushManagers
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushManagers;
+                }
+            }
+        }
+
+        public CirculationCollection<byte[]> PushCreators
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushCreators;
+                }
+            }
+        }
+
         public CirculationCollection<Channel> PushChannelsRequest
         {
             get
@@ -317,6 +378,28 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _pullChannelsRequest;
+                }
+            }
+        }
+
+        public CirculationCollection<Section> PushSectionsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushSectionsRequest;
+                }
+            }
+        }
+
+        public CirculationCollection<Section> PullSectionsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pullSectionsRequest;
                 }
             }
         }

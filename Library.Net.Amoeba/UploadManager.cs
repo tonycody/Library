@@ -183,7 +183,7 @@ namespace Library.Net.Amoeba
                             contexts.Add(new InformationContext("BlockCount", item.Value.UploadKeys.Count + item.Value.UploadedKeys.Count));
                             contexts.Add(new InformationContext("UploadBlockCount", item.Value.UploadedKeys.Count));
                         }
-                        else if (item.Value.State == UploadState.Encoding || item.Value.State == UploadState.ComputeHash || item.Value.State == UploadState.ComputeCorrection)
+                        else if (item.Value.State == UploadState.Encoding || item.Value.State == UploadState.ComputeHash || item.Value.State == UploadState.ParityEncoding)
                         {
                             contexts.Add(new InformationContext("EncodeBytes", item.Value.EncodeBytes));
                             contexts.Add(new InformationContext("EncodingBytes", item.Value.EncodingBytes));
@@ -256,7 +256,7 @@ namespace Library.Net.Amoeba
                             if (_settings.UploadItems.Count > 0)
                             {
                                 item = _settings.UploadItems
-                                    .Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ComputeCorrection)
+                                    .Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ParityEncoding)
                                     .Where(n => n.Priority != 0)
                                     .OrderBy(n => -n.Priority)
                                     .FirstOrDefault();
@@ -376,7 +376,7 @@ namespace Library.Net.Amoeba
                             }
                             else if (item.Keys.Count > 0)
                             {
-                                item.State = UploadState.ComputeCorrection;
+                                item.State = UploadState.ParityEncoding;
 
                                 item.EncodeBytes = item.Groups.Sum(n =>
                                 {
@@ -620,7 +620,7 @@ namespace Library.Net.Amoeba
                             }
                             else if (item.Keys.Count > 0)
                             {
-                                item.State = UploadState.ComputeCorrection;
+                                item.State = UploadState.ParityEncoding;
 
                                 item.EncodeBytes = item.Groups.Sum(n =>
                                 {

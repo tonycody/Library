@@ -71,7 +71,7 @@ namespace Library.Net.Proxy
         /// <summary>
         /// Constructor.
         /// </summary>
-        public HttpProxyClient(string destinationHost, int destinationPort)
+        private HttpProxyClient(string destinationHost, int destinationPort)
         {
             if (String.IsNullOrEmpty(destinationHost))
             {
@@ -100,71 +100,6 @@ namespace Library.Net.Proxy
 
             _tcpClient = new TcpClient();
             _tcpClient.Client = socket;
-        }
-
-        /// <summary>
-        /// Constructor.  The default HTTP proxy port 8080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy.</param>
-        public HttpProxyClient(string proxyHost, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = HTTP_PROXY_DEFAULT_PORT;
-        }
-
-        /// <summary>
-        /// Constructor.  
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port number for the proxy server.</param>
-        public HttpProxyClient(string proxyHost, int proxyPort, string destinationHost, int destinationPort)
-            : this(destinationHost, destinationPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-            {
-                throw new ArgumentNullException("proxyHost");
-            }
-            else if (proxyPort <= 0 || proxyPort > 65535)
-            {
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
-            }
-
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
-        }
-
-        /// <summary>
-        /// Gets or sets host name or IP address of the proxy server.
-        /// </summary>
-        public string ProxyHost
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _proxyHost;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets port number for the proxy server.
-        /// </summary>
-        public int ProxyPort
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _proxyPort;
-                }
-            }
         }
 
         /// <summary>

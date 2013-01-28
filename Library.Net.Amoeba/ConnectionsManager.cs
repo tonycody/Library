@@ -858,6 +858,13 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private class NodeSortItem
+        {
+            public Node Node { get; set; }
+            public TimeSpan ResponseTime { get; set; }
+            public DateTime LastPullTime { get; set; }
+        }
+
         private void ConnectionsManagerThread()
         {
             Stopwatch connectionCheckStopwatch = new Stopwatch();
@@ -895,33 +902,38 @@ namespace Library.Net.Amoeba
                 {
                     connectionCheckStopwatch.Restart();
 
-                    List<KeyValuePair<Node, TimeSpan>> nodes = new List<KeyValuePair<Node, TimeSpan>>();
+                    var nodeSortItems = new List<NodeSortItem>();
 
                     lock (this.ThisLock)
                     {
                         foreach (var connectionManager in _connectionManagers)
                         {
-                            nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
+                            nodeSortItems.Add(new NodeSortItem()
+                            {
+                                Node = connectionManager.Node,
+                                ResponseTime = connectionManager.ResponseTime,
+                                LastPullTime = _messagesManager[connectionManager.Node].LastPullTime,
+                            });
                         }
                     }
 
-                    nodes.Sort(new Comparison<KeyValuePair<Node, TimeSpan>>((KeyValuePair<Node, TimeSpan> x, KeyValuePair<Node, TimeSpan> y) =>
+                    nodeSortItems.Sort(new Comparison<NodeSortItem>((NodeSortItem x, NodeSortItem y) =>
                     {
-                        int c = _messagesManager[x.Key].LastPullTime.CompareTo(_messagesManager[y.Key].LastPullTime);
+                        int c = x.LastPullTime.CompareTo(y.LastPullTime);
                         if (c != 0) return c;
 
-                        return y.Value.CompareTo(x.Value);
+                        return y.ResponseTime.CompareTo(x.ResponseTime);
                     }));
 
-                    if (nodes.Count != 0)
+                    if (nodeSortItems.Count != 0)
                     {
-                        for (int i = 0; i < nodes.Count; i++)
+                        for (int i = 0; i < nodeSortItems.Count; i++)
                         {
                             ConnectionManager connectionManager = null;
 
                             lock (this.ThisLock)
                             {
-                                connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodes[i].Key);
+                                connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodeSortItems[i].Node);
                             }
 
                             if (connectionManager != null)
@@ -931,9 +943,10 @@ namespace Library.Net.Amoeba
                                     lock (this.ThisLock)
                                     {
                                         _nodesStatus.Remove(connectionManager.Node);
-                                        _removeNodes.Add(connectionManager.Node);
-                                        _routeTable.Remove(connectionManager.Node);
                                     }
+
+                                    _removeNodes.Add(connectionManager.Node);
+                                    _routeTable.Remove(connectionManager.Node);
 
                                     connectionManager.PushCancel();
 
