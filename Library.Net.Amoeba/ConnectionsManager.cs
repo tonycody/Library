@@ -619,6 +619,8 @@ namespace Library.Net.Amoeba
                 connectionManager.PullBlocksLinkEvent += new PullBlocksLinkEventHandler(connectionManager_BlocksLinkEvent);
                 connectionManager.PullBlocksRequestEvent += new PullBlocksRequestEventHandler(connectionManager_BlocksRequestEvent);
                 connectionManager.PullBlockEvent += new PullBlockEventHandler(connectionManager_BlockEvent);
+                connectionManager.PullSeedsRequestEvent += new PullSeedsRequestEventHandler(connectionManager_SeedsRequestEvent);
+                connectionManager.PullSeedEvent += new PullSeedEventHandler(connectionManager_SeedEvent);
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 

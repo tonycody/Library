@@ -230,7 +230,7 @@ namespace Library.Net.Amoeba
                 || this.Comment != other.Comment
 
                 || this.Certificate != other.Certificate
-             
+
                 || (this.Seeds == null) != (other.Seeds == null)
                 || (this.Boxes == null) != (other.Boxes == null))
             {
@@ -313,7 +313,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IDirectory<Keyword>
+        #region IBox
 
         [DataMember(Name = "Name")]
         public string Name
@@ -428,7 +428,8 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) _thisLock = new object();
+                    if (_thisLock == null)
+                        _thisLock = new object();
 
                     return _thisLock;
                 }

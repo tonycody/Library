@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -9,7 +10,6 @@ using System.Text.RegularExpressions;
 using Library.Io;
 using Library.Net.Lair;
 using Library.Security;
-using System.Diagnostics;
 
 namespace Library.Security
 {
@@ -22,11 +22,7 @@ namespace Library.Security
         }
 
         private static BufferManager _bufferManager = new BufferManager();
-
-        static DigitalSignatureConverter()
-        {
-
-        }
+        private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
@@ -186,7 +182,52 @@ namespace Library.Security
             }
         }
 
-        public static Stream ToSignatureStream(DigitalSignature item)
+        private static string ToBase64String(Stream stream)
+        {
+            byte[] buffer = null;
+
+            try
+            {
+                buffer = _bufferManager.TakeBuffer((int)stream.Length);
+                stream.Seek(0, SeekOrigin.Begin);
+                stream.Read(buffer, 0, (int)stream.Length);
+
+                return NetworkConverter.ToBase64String(buffer, 0, (int)stream.Length).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+            }
+            finally
+            {
+                if (buffer != null)
+                {
+                    _bufferManager.ReturnBuffer(buffer);
+                }
+            }
+        }
+
+        private static Stream FromBase64String(string value)
+        {
+            var match = _base64Regex.Match(value);
+            if (!match.Success) throw new ArgumentException();
+
+            value = match.Groups[1].Value;
+
+            string padding = "";
+
+            switch (value.Length % 4)
+            {
+                case 1:
+                case 3:
+                    padding = "=";
+                    break;
+
+                case 2:
+                    padding = "==";
+                    break;
+            }
+
+            return new MemoryStream(NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding));
+        }
+
+        public static Stream ToDigitalSignatureStream(DigitalSignature item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
@@ -200,7 +241,7 @@ namespace Library.Security
             }
         }
 
-        public static DigitalSignature FromSignatureStream(Stream stream)
+        public static DigitalSignature FromDigitalSignatureStream(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException("stream");
 
@@ -235,6 +276,134 @@ namespace Library.Security
             try
             {
                 return DigitalSignatureConverter.FromStream<Certificate>(stream);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static string GetSignature(DigitalSignature digitalSignature)
+        {
+            if (digitalSignature == null || digitalSignature.Nickname == null || digitalSignature.PublicKey == null) return null;
+
+            try
+            {
+                if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512
+                    || digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        var nicknameBuffer = new UTF8Encoding(false).GetBytes(digitalSignature.Nickname);
+
+                        memoryStream.Write(nicknameBuffer, 0, nicknameBuffer.Length);
+                        memoryStream.Write(digitalSignature.PublicKey, 0, digitalSignature.PublicKey.Length);
+                        memoryStream.Seek(0, SeekOrigin.Begin);
+
+                        return digitalSignature.Nickname.Replace("@", "_") + "@" + Convert.ToBase64String(Sha512.ComputeHash(memoryStream).ToArray())
+                            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        public static string GetSignature(Certificate certificate)
+        {
+            if (certificate == null || certificate.Nickname == null || certificate.PublicKey == null) return null;
+
+            try
+            {
+                if (certificate.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512
+                    || certificate.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        var nicknameBuffer = new UTF8Encoding(false).GetBytes(certificate.Nickname);
+
+                        memoryStream.Write(nicknameBuffer, 0, nicknameBuffer.Length);
+                        memoryStream.Write(certificate.PublicKey, 0, certificate.PublicKey.Length);
+                        memoryStream.Seek(0, SeekOrigin.Begin);
+
+                        return certificate.Nickname.Replace("@", "_") + "@" + Convert.ToBase64String(Sha512.ComputeHash(memoryStream).ToArray())
+                            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        public static bool HasSignature(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+
+            if (item.Count(n => n == '@') != 1) return false;
+
+            try
+            {
+                var match = _base64Regex.Match(item.Split('@')[1]);
+                if (!match.Success) return false;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public static string GetSignatureNickname(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (item.Count(n => n == '@') == 1) throw new ArgumentException("item");
+
+            try
+            {
+                return item.Split('@')[0];
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static byte[] GetSignatureHash(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (item.Count(n => n == '@') == 1) throw new ArgumentException("item");
+
+            try
+            {
+                var match = _base64Regex.Match(item.Split('@')[1]);
+                if (!match.Success) throw new ArgumentException();
+
+                var value = match.Groups[1].Value;
+
+                string padding = "";
+
+                switch (value.Length % 4)
+                {
+                    case 1:
+                    case 3:
+                        padding = "=";
+                        break;
+
+                    case 2:
+                        padding = "==";
+                        break;
+                }
+
+                return NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding);
             }
             catch (Exception)
             {

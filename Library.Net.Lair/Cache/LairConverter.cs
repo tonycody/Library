@@ -24,11 +24,6 @@ namespace Library.Net.Lair
         private static BufferManager _bufferManager = new BufferManager();
         private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
-        static LairConverter()
-        {
-
-        }
-
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
         {

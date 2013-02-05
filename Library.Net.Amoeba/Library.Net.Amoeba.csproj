@@ -60,11 +60,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BytesEqualityComparer.cs" />
     <Compile Include="Cache\AmoebaConverter.cs" />
     <Compile Include="AmoebaManager.cs" />
     <Compile Include="Cache\Box.cs" />
     <Compile Include="Cache\BoxCollection.cs" />
     <Compile Include="Cache\IBox.cs" />
+    <Compile Include="Cache\IComputeHash.cs" />
     <Compile Include="Cache\IKeywords.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="FilterList.cs" />
@@ -105,6 +107,7 @@
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
+    <Compile Include="SignatureCollection.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />

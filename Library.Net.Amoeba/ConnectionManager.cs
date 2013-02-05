@@ -35,11 +35,24 @@ namespace Library.Net.Amoeba
         public ArraySegment<byte> Value { get; set; }
     }
 
+    class PullSeedsRequestEventArgs : EventArgs
+    {
+        public SignatureCollection Signatures { get; set; }
+    }
+
+    class PullSeedEventArgs : EventArgs
+    {
+        public Seed Seed { get; set; }
+    }
+
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
 
     delegate void PullBlocksLinkEventHandler(object sender, PullBlocksLinkEventArgs e);
     delegate void PullBlocksRequestEventHandler(object sender, PullBlocksRequestEventArgs e);
     delegate void PullBlockEventHandler(object sender, PullBlockEventArgs e);
+
+    delegate void PullSeedsRequestEventHandler(object sender, PullSeedsRequestEventArgs e);
+    delegate void PullSeedEventHandler(object sender, PullSeedEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
 
@@ -66,6 +79,9 @@ namespace Library.Net.Amoeba
             BlocksLink = 5,
             BlocksRequest = 6,
             Block = 7,
+
+            SeedsRequest = 8,
+            Seed = 9,
         }
 
         private byte[] _mySessionId;
@@ -100,6 +116,9 @@ namespace Library.Net.Amoeba
         public event PullBlocksLinkEventHandler PullBlocksLinkEvent;
         public event PullBlocksRequestEventHandler PullBlocksRequestEvent;
         public event PullBlockEventHandler PullBlockEvent;
+
+        public event PullSeedsRequestEventHandler PullSeedsRequestEvent;
+        public event PullSeedEventHandler PullSeedEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
 
@@ -543,6 +562,16 @@ namespace Library.Net.Amoeba
                                     var message = BlockMessage.Import(stream2, _bufferManager);
                                     this.OnPullBlock(new PullBlockEventArgs() { Key = message.Key, Value = message.Value });
                                 }
+                                else if (type == (byte)SerializeId.SeedsRequest)
+                                {
+                                    var message = SeedsRequestMessage.Import(stream2, _bufferManager);
+                                    this.OnPullSeedsRequest(new PullSeedsRequestEventArgs() { Signatures = message.Signatures });
+                                }
+                                else if (type == (byte)SerializeId.Seed)
+                                {
+                                    var seed = Seed.Import(stream2, _bufferManager);
+                                    this.OnPullSeed(new PullSeedEventArgs() { Seed = seed });
+                                }
                             }
                         }
                     }
@@ -594,6 +623,22 @@ namespace Library.Net.Amoeba
             if (this.PullBlockEvent != null)
             {
                 this.PullBlockEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullSeedsRequest(PullSeedsRequestEventArgs e)
+        {
+            if (this.PullSeedsRequestEvent != null)
+            {
+                this.PullSeedsRequestEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullSeed(PullSeedEventArgs e)
+        {
+            if (this.PullSeedEvent != null)
+            {
+                this.PullSeedEvent(this, e);
             }
         }
 
@@ -748,6 +793,79 @@ namespace Library.Net.Amoeba
                     message.Value = value;
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushSeedsRequest(SignatureCollection signatures)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.SeedsRequest);
+                    stream.Flush();
+
+                    var message = new SeedsRequestMessage();
+                    message.Signatures.AddRange(signatures);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushSeed(Seed seed)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Seed);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, seed.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -1237,6 +1355,122 @@ namespace Library.Net.Amoeba
                     lock (this.ThisLock)
                     {
                         _value = value;
+                    }
+                }
+            }
+
+            #region IThisLock
+
+            public object ThisLock
+            {
+                get
+                {
+                    lock (_thisStaticLock)
+                    {
+                        if (_thisLock == null)
+                            _thisLock = new object();
+
+                        return _thisLock;
+                    }
+                }
+            }
+
+            #endregion
+        }
+
+        [DataContract(Name = "SeedsRequestMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
+        private class SeedsRequestMessage : ItemBase<SeedsRequestMessage>, IThisLock
+        {
+            private enum SerializeId : byte
+            {
+                Signature = 0,
+            }
+
+            private SignatureCollection _signatures;
+            private object _thisLock;
+            private static object _thisStaticLock = new object();
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    Encoding encoding = new UTF8Encoding(false);
+                    byte[] lengthBuffer = new byte[4];
+
+                    for (; ; )
+                    {
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+                        byte id = (byte)stream.ReadByte();
+
+                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        {
+                            if (id == (byte)SerializeId.Signature)
+                            {
+                                using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                                {
+                                    this.Signatures.Add(reader.ReadToEnd());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    List<Stream> streams = new List<Stream>();
+                    Encoding encoding = new UTF8Encoding(false);
+
+                    // Signatures
+                    foreach (var s in this.Signatures)
+                    {
+                        BufferStream bufferStream = new BufferStream(bufferManager);
+                        bufferStream.SetLength(5);
+                        bufferStream.Seek(5, SeekOrigin.Begin);
+
+                        using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                        using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                        {
+                            writer.Write(s);
+                        }
+
+                        bufferStream.Seek(0, SeekOrigin.Begin);
+                        bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Signature);
+
+                        streams.Add(bufferStream);
+                    }
+
+                    return new JoinStream(streams);
+                }
+            }
+
+            public override SeedsRequestMessage DeepClone()
+            {
+                lock (this.ThisLock)
+                {
+                    using (var bufferManager = new BufferManager())
+                    using (var stream = this.Export(bufferManager))
+                    {
+                        return SeedsRequestMessage.Import(stream, bufferManager);
+                    }
+                }
+            }
+
+            [DataMember(Name = "Signatures")]
+            public SignatureCollection Signatures
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_signatures == null)
+                            _signatures = new SignatureCollection(128);
+
+                        return _signatures;
                     }
                 }
             }

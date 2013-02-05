@@ -53,12 +53,12 @@ namespace Library.Net.Amoeba
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
+        public const int MaxNameLength = 256;
+        public const int MaxCommentLength = 1024;
+
         public const int MaxKeywordsLength = 3;
 
         public const int MaxCryptoKeyLength = 64;
-
-        public const int MaxNameLength = 256;
-        public const int MaxCommentLength = 1024;
 
         public Seed()
         {

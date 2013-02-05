@@ -248,7 +248,7 @@ namespace Library.Security
             lock (this.ThisLock)
             {
                 if (_toString == null)
-                    _toString = MessageConverter.ToSignatureString(this);
+                    _toString = DigitalSignatureConverter.GetSignature(this);
 
                 return _toString;
             }
@@ -472,7 +472,7 @@ namespace Library.Security
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) 
+                    if (_thisLock == null)
                         _thisLock = new object();
 
                     return _thisLock;

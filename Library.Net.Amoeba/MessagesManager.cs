@@ -148,6 +148,7 @@ namespace Library.Net.Amoeba
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
         private CirculationCollection<Key> _pushBlocks;
+        private CirculationCollection<byte[]> _pushSeeds;
 
         private CirculationCollection<Key> _pushBlocksLink;
         private CirculationCollection<Key> _pushBlocksRequest;
@@ -163,12 +164,16 @@ namespace Library.Net.Amoeba
 
             _surroundingNodes = new LockedHashSet<Node>(128);
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushSeeds = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
             _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
 
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
+
+            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
         }
 
         public int Id

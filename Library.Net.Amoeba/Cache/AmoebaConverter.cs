@@ -24,11 +24,6 @@ namespace Library.Net.Amoeba
         private static BufferManager _bufferManager = new BufferManager();
         private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
-        static AmoebaConverter()
-        {
-
-        }
-
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
         {

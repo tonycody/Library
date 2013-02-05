@@ -583,8 +583,8 @@ namespace Library.Net.Lair
                                 }
                                 else if (type == (byte)SerializeId.Topic)
                                 {
-                                    var filter = Topic.Import(stream2, _bufferManager);
-                                    this.OnPullTopic(new PullTopicEventArgs() { Topic = filter });
+                                    var topic = Topic.Import(stream2, _bufferManager);
+                                    this.OnPullTopic(new PullTopicEventArgs() { Topic = topic });
                                 }
                                 else if (type == (byte)SerializeId.SectionsRequest)
                                 {
@@ -593,18 +593,18 @@ namespace Library.Net.Lair
                                 }
                                 else if (type == (byte)SerializeId.Leader)
                                 {
-                                    var filter = Leader.Import(stream2, _bufferManager);
-                                    this.OnPullLeader(new PullLeaderEventArgs() { Leader = filter });
+                                    var leader = Leader.Import(stream2, _bufferManager);
+                                    this.OnPullLeader(new PullLeaderEventArgs() { Leader = leader });
                                 }
                                 else if (type == (byte)SerializeId.Manager)
                                 {
-                                    var filter = Manager.Import(stream2, _bufferManager);
-                                    this.OnPullManager(new PullManagerEventArgs() { Manager = filter });
+                                    var manager = Manager.Import(stream2, _bufferManager);
+                                    this.OnPullManager(new PullManagerEventArgs() { Manager = manager });
                                 }
                                 else if (type == (byte)SerializeId.Creator)
                                 {
-                                    var filter = Creator.Import(stream2, _bufferManager);
-                                    this.OnPullCreator(new PullCreatorEventArgs() { Creator = filter });
+                                    var creator = Creator.Import(stream2, _bufferManager);
+                                    this.OnPullCreator(new PullCreatorEventArgs() { Creator = creator });
                                 }
                             }
                         }

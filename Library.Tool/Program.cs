@@ -28,7 +28,7 @@ namespace Library.Tool
 
                     using (FileStream inStream = new FileStream(signPath, FileMode.Open))
                     {
-                        digitalSignature = DigitalSignatureConverter.FromSignatureStream(inStream);
+                        digitalSignature = DigitalSignatureConverter.FromDigitalSignatureStream(inStream);
                     }
 
                     using (FileStream inStream = new FileStream(path, FileMode.Open))

@@ -58,7 +58,7 @@
     <Compile Include="CertificateItemBase.cs" />
     <Compile Include="DigitalSignatureConverter.cs" />
     <Compile Include="Hash\Crc32_Castagnoli.cs" />
-    <Compile Include="MessageConverter.cs" />
+    <Compile Include="Hash\Sha512.cs" />
     <Compile Include="ReadOnlyCertificateItemBase.cs" />
     <Compile Include="DigitalSignature.cs" />
     <Compile Include="DigitalSignatureAlgorithm.cs" />
