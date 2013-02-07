@@ -149,6 +149,7 @@ namespace Library.Net.Lair
         private CirculationCollection<byte[]> _pushMessages;
         private CirculationCollection<byte[]> _pushFilters;
         private CirculationCollection<byte[]> _pushTopics;
+
         private CirculationCollection<byte[]> _pushLeaders;
         private CirculationCollection<byte[]> _pushManagers;
         private CirculationCollection<byte[]> _pushCreators;

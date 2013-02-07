@@ -11,6 +11,7 @@ using System.Xml;
 using Library.Collections;
 using Library.Net;
 using Library.Net.Connection;
+using Library.Security;
 
 namespace Library.Net.Lair
 {
@@ -1070,17 +1071,17 @@ namespace Library.Net.Lair
 
                             foreach (var c in _settings.Filters.Keys.ToArray())
                             {
-                                var list = _settings.Filters[c];
+                                var dic = _settings.Filters[c];
 
-                                foreach (var f in list.ToArray())
+                                foreach (var item in dic.ToArray())
                                 {
-                                    if ((now - f.CreationTime) > new TimeSpan(6, 0, 0, 0))
+                                    if ((now - item.Value.CreationTime) > new TimeSpan(64, 0, 0, 0))
                                     {
-                                        list.Remove(f);
+                                        dic.Remove(item.Key);
                                     }
                                 }
 
-                                if (list.Count == 0) _settings.Filters.Remove(c);
+                                if (dic.Count == 0) _settings.Filters.Remove(c);
                             }
                         }
                     }
@@ -1206,7 +1207,7 @@ namespace Library.Net.Lair
 
                                             foreach (var m in unlockFilters.Take(item.Value - 32))
                                             {
-                                                list.Remove(m);
+                                                list.Remove(m.Certificate.ToString());
                                             }
                                         }
                                     }
@@ -1658,7 +1659,7 @@ namespace Library.Net.Lair
                                         {
                                             if (_settings.Filters.ContainsKey(channel))
                                             {
-                                                foreach (var f in _settings.Filters[channel].OrderBy(n => _random.Next()))
+                                                foreach (var f in _settings.Filters[channel].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushFilters.Contains(f.GetHash(_hashAlgorithm)))
                                                     {
@@ -1701,7 +1702,7 @@ namespace Library.Net.Lair
                                         {
                                             if (_settings.Topics.ContainsKey(channel))
                                             {
-                                                foreach (var t in _settings.Topics[channel].OrderBy(n => _random.Next()))
+                                                foreach (var t in _settings.Topics[channel].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushTopics.Contains(t.GetHash(_hashAlgorithm)))
                                                     {
@@ -1744,7 +1745,7 @@ namespace Library.Net.Lair
                                         {
                                             if (_settings.Leaders.ContainsKey(channel))
                                             {
-                                                foreach (var l in _settings.Leaders[channel].OrderBy(n => _random.Next()))
+                                                foreach (var l in _settings.Leaders[channel].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushLeaders.Contains(l.GetHash(_hashAlgorithm)))
                                                     {
@@ -1787,7 +1788,7 @@ namespace Library.Net.Lair
                                         {
                                             if (_settings.Managers.ContainsKey(channel))
                                             {
-                                                foreach (var m in _settings.Managers[channel].OrderBy(n => _random.Next()))
+                                                foreach (var m in _settings.Managers[channel].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushManagers.Contains(m.GetHash(_hashAlgorithm)))
                                                     {
@@ -1830,7 +1831,7 @@ namespace Library.Net.Lair
                                         {
                                             if (_settings.Creators.ContainsKey(channel))
                                             {
-                                                foreach (var c in _settings.Creators[channel].OrderBy(n => _random.Next()))
+                                                foreach (var c in _settings.Creators[channel].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushCreators.Contains(c.GetHash(_hashAlgorithm)))
                                                     {
@@ -1971,35 +1972,29 @@ namespace Library.Net.Lair
                 || (e.Filter.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || e.Filter.Certificate == null || !e.Filter.VerifyCertificate()) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Filter ({0})", e.Filter.Channel.Name));
+            var signature = e.Filter.Certificate.ToString();
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Filter {0} ({1})", signature, e.Filter.Channel.Name));
 
             lock (this.ThisLock)
             {
                 lock (_settings.ThisLock)
                 {
-                    if (!_settings.Filters.ContainsKey(e.Filter.Channel))
-                        _settings.Filters[e.Filter.Channel] = new LockedHashSet<Filter>();
+                    LockedDictionary<string, Filter> dic = null;
 
-                    _settings.Filters[e.Filter.Channel].Add(e.Filter);
-
-                    var dic = new Dictionary<string, Filter>();
-
-                    foreach (var f2 in _settings.Filters[e.Filter.Channel])
+                    if (!_settings.Filters.TryGetValue(e.Filter.Channel, out dic))
                     {
-                        if (!dic.ContainsKey(f2.Certificate.ToString()))
-                        {
-                            dic[f2.Certificate.ToString()] = f2;
-                        }
-                        else
-                        {
-                            var f3 = dic[f2.Certificate.ToString()];
-
-                            if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                        }
+                        dic = new LockedDictionary<string, Filter>();
+                        _settings.Filters[e.Filter.Channel] = dic;
                     }
 
-                    _settings.Filters[e.Filter.Channel].Clear();
-                    _settings.Filters[e.Filter.Channel].UnionWith(dic.Values);
+                    Filter tempFilter = null;
+
+                    if (!dic.TryGetValue(signature, out tempFilter)
+                        || e.Filter.CreationTime > tempFilter.CreationTime)
+                    {
+                        dic[signature] = e.Filter;
+                    }
                 }
             }
 
@@ -2018,39 +2013,32 @@ namespace Library.Net.Lair
             var now = DateTime.UtcNow;
 
             if (e.Topic == null || e.Topic.Channel == null || e.Topic.Channel.Id == null || string.IsNullOrWhiteSpace(e.Topic.Channel.Name)
-                || (now - e.Topic.CreationTime) > new TimeSpan(64, 0, 0, 0)
                 || (e.Topic.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || e.Topic.Certificate == null || !e.Topic.VerifyCertificate()) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Topic ({0})", e.Topic.Channel.Name));
+            var signature = e.Topic.Certificate.ToString();
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Topic {0} ({1})", signature, e.Topic.Channel.Name));
 
             lock (this.ThisLock)
             {
                 lock (_settings.ThisLock)
                 {
-                    if (!_settings.Topics.ContainsKey(e.Topic.Channel))
-                        _settings.Topics[e.Topic.Channel] = new LockedHashSet<Topic>();
+                    LockedDictionary<string, Topic> dic = null;
 
-                    _settings.Topics[e.Topic.Channel].Add(e.Topic);
-
-                    var dic = new Dictionary<string, Topic>();
-
-                    foreach (var f2 in _settings.Topics[e.Topic.Channel])
+                    if (!_settings.Topics.TryGetValue(e.Topic.Channel, out dic))
                     {
-                        if (!dic.ContainsKey(f2.Certificate.ToString()))
-                        {
-                            dic[f2.Certificate.ToString()] = f2;
-                        }
-                        else
-                        {
-                            var f3 = dic[f2.Certificate.ToString()];
-
-                            if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                        }
+                        dic = new LockedDictionary<string, Topic>();
+                        _settings.Topics[e.Topic.Channel] = dic;
                     }
 
-                    _settings.Topics[e.Topic.Channel].Clear();
-                    _settings.Topics[e.Topic.Channel].UnionWith(dic.Values);
+                    Topic tempTopic = null;
+
+                    if (!dic.TryGetValue(signature, out tempTopic)
+                        || e.Topic.CreationTime > tempTopic.CreationTime)
+                    {
+                        dic[signature] = e.Topic;
+                    }
                 }
             }
 
@@ -2087,39 +2075,32 @@ namespace Library.Net.Lair
             var now = DateTime.UtcNow;
 
             if (e.Leader == null || e.Leader.Section == null || e.Leader.Section.Id == null || string.IsNullOrWhiteSpace(e.Leader.Section.Name)
-                || (now - e.Leader.CreationTime) > new TimeSpan(64, 0, 0, 0)
                 || (e.Leader.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || e.Leader.Certificate == null || !e.Leader.VerifyCertificate()) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Leader ({0})", e.Leader.Section.Name));
+            var signature = e.Leader.Certificate.ToString();
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Leader {0} ({1})", signature, e.Leader.Section.Name));
 
             lock (this.ThisLock)
             {
                 lock (_settings.ThisLock)
                 {
-                    if (!_settings.Leaders.ContainsKey(e.Leader.Section))
-                        _settings.Leaders[e.Leader.Section] = new LockedHashSet<Leader>();
+                    LockedDictionary<string, Leader> dic = null;
 
-                    _settings.Leaders[e.Leader.Section].Add(e.Leader);
-
-                    var dic = new Dictionary<string, Leader>();
-
-                    foreach (var f2 in _settings.Leaders[e.Leader.Section])
+                    if (!_settings.Leaders.TryGetValue(e.Leader.Section, out dic))
                     {
-                        if (!dic.ContainsKey(f2.Certificate.ToString()))
-                        {
-                            dic[f2.Certificate.ToString()] = f2;
-                        }
-                        else
-                        {
-                            var f3 = dic[f2.Certificate.ToString()];
-
-                            if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                        }
+                        dic = new LockedDictionary<string, Leader>();
+                        _settings.Leaders[e.Leader.Section] = dic;
                     }
 
-                    _settings.Leaders[e.Leader.Section].Clear();
-                    _settings.Leaders[e.Leader.Section].UnionWith(dic.Values);
+                    Leader tempLeader = null;
+
+                    if (!dic.TryGetValue(signature, out tempLeader)
+                        || e.Leader.CreationTime > tempLeader.CreationTime)
+                    {
+                        dic[signature] = e.Leader;
+                    }
                 }
             }
 
@@ -2138,39 +2119,32 @@ namespace Library.Net.Lair
             var now = DateTime.UtcNow;
 
             if (e.Manager == null || e.Manager.Section == null || e.Manager.Section.Id == null || string.IsNullOrWhiteSpace(e.Manager.Section.Name)
-                || (now - e.Manager.CreationTime) > new TimeSpan(64, 0, 0, 0)
                 || (e.Manager.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || e.Manager.Certificate == null || !e.Manager.VerifyCertificate()) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Manager ({0})", e.Manager.Section.Name));
+            var signature = e.Manager.Certificate.ToString();
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Manager {0} ({1})", signature, e.Manager.Section.Name));
 
             lock (this.ThisLock)
             {
                 lock (_settings.ThisLock)
                 {
-                    if (!_settings.Managers.ContainsKey(e.Manager.Section))
-                        _settings.Managers[e.Manager.Section] = new LockedHashSet<Manager>();
+                    LockedDictionary<string, Manager> dic = null;
 
-                    _settings.Managers[e.Manager.Section].Add(e.Manager);
-
-                    var dic = new Dictionary<string, Manager>();
-
-                    foreach (var f2 in _settings.Managers[e.Manager.Section])
+                    if (!_settings.Managers.TryGetValue(e.Manager.Section, out dic))
                     {
-                        if (!dic.ContainsKey(f2.Certificate.ToString()))
-                        {
-                            dic[f2.Certificate.ToString()] = f2;
-                        }
-                        else
-                        {
-                            var f3 = dic[f2.Certificate.ToString()];
-
-                            if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                        }
+                        dic = new LockedDictionary<string, Manager>();
+                        _settings.Managers[e.Manager.Section] = dic;
                     }
 
-                    _settings.Managers[e.Manager.Section].Clear();
-                    _settings.Managers[e.Manager.Section].UnionWith(dic.Values);
+                    Manager tempManager = null;
+
+                    if (!dic.TryGetValue(signature, out tempManager)
+                        || e.Manager.CreationTime > tempManager.CreationTime)
+                    {
+                        dic[signature] = e.Manager;
+                    }
                 }
             }
 
@@ -2189,39 +2163,32 @@ namespace Library.Net.Lair
             var now = DateTime.UtcNow;
 
             if (e.Creator == null || e.Creator.Section == null || e.Creator.Section.Id == null || string.IsNullOrWhiteSpace(e.Creator.Section.Name)
-                || (now - e.Creator.CreationTime) > new TimeSpan(64, 0, 0, 0)
                 || (e.Creator.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || e.Creator.Certificate == null || !e.Creator.VerifyCertificate()) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Creator ({0})", e.Creator.Section.Name));
+            var signature = e.Creator.Certificate.ToString();
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Creator {0} ({1})", signature, e.Creator.Section.Name));
 
             lock (this.ThisLock)
             {
                 lock (_settings.ThisLock)
                 {
-                    if (!_settings.Creators.ContainsKey(e.Creator.Section))
-                        _settings.Creators[e.Creator.Section] = new LockedHashSet<Creator>();
+                    LockedDictionary<string, Creator> dic = null;
 
-                    _settings.Creators[e.Creator.Section].Add(e.Creator);
-
-                    var dic = new Dictionary<string, Creator>();
-
-                    foreach (var f2 in _settings.Creators[e.Creator.Section])
+                    if (!_settings.Creators.TryGetValue(e.Creator.Section, out dic))
                     {
-                        if (!dic.ContainsKey(f2.Certificate.ToString()))
-                        {
-                            dic[f2.Certificate.ToString()] = f2;
-                        }
-                        else
-                        {
-                            var f3 = dic[f2.Certificate.ToString()];
-
-                            if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                        }
+                        dic = new LockedDictionary<string, Creator>();
+                        _settings.Creators[e.Creator.Section] = dic;
                     }
 
-                    _settings.Creators[e.Creator.Section].Clear();
-                    _settings.Creators[e.Creator.Section].UnionWith(dic.Values);
+                    Creator tempCreator = null;
+
+                    if (!dic.TryGetValue(signature, out tempCreator)
+                        || e.Creator.CreationTime > tempCreator.CreationTime)
+                    {
+                        dic[signature] = e.Creator;
+                    }
                 }
             }
 
@@ -2316,13 +2283,13 @@ namespace Library.Net.Lair
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                var tc = new HashSet<Section>();
+                var ts = new HashSet<Section>();
 
-                tc.UnionWith(_settings.Leaders.Keys);
-                tc.UnionWith(_settings.Managers.Keys);
-                tc.UnionWith(_settings.Creators.Keys);
+                ts.UnionWith(_settings.Leaders.Keys);
+                ts.UnionWith(_settings.Managers.Keys);
+                ts.UnionWith(_settings.Creators.Keys);
 
-                return tc;
+                return ts;
             }
         }
 
@@ -2355,7 +2322,7 @@ namespace Library.Net.Lair
                     {
                         if (_settings.Filters.ContainsKey(channel))
                         {
-                            tf.AddRange(_settings.Filters[channel]);
+                            tf.AddRange(_settings.Filters[channel].Values);
                         }
                     }
                 }
@@ -2366,7 +2333,7 @@ namespace Library.Net.Lair
                     {
                         if (_settings.Topics.ContainsKey(channel))
                         {
-                            tt.AddRange(_settings.Topics[channel]);
+                            tt.AddRange(_settings.Topics[channel].Values);
                         }
                     }
                 }
@@ -2415,35 +2382,29 @@ namespace Library.Net.Lair
                 if (filter == null || filter.Channel == null || filter.Channel.Id == null || string.IsNullOrWhiteSpace(filter.Channel.Name)
                     || (now - filter.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || (filter.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || !filter.VerifyCertificate()) return;
+                    || filter.Certificate == null || !filter.VerifyCertificate()) return;
+          
+                var signature = filter.Certificate.ToString();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (!_settings.Filters.ContainsKey(filter.Channel))
-                            _settings.Filters[filter.Channel] = new LockedHashSet<Filter>();
+                        LockedDictionary<string, Filter> dic = null;
 
-                        _settings.Filters[filter.Channel].Add(filter);
-
-                        var dic = new Dictionary<string, Filter>();
-
-                        foreach (var f2 in _settings.Filters[filter.Channel])
+                        if (!_settings.Filters.TryGetValue(filter.Channel, out dic))
                         {
-                            if (!dic.ContainsKey(f2.Certificate.ToString()))
-                            {
-                                dic[f2.Certificate.ToString()] = f2;
-                            }
-                            else
-                            {
-                                var f3 = dic[f2.Certificate.ToString()];
-
-                                if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                            }
+                            dic = new LockedDictionary<string, Filter>();
+                            _settings.Filters[filter.Channel] = dic;
                         }
 
-                        _settings.Filters[filter.Channel].Clear();
-                        _settings.Filters[filter.Channel].UnionWith(dic.Values);
+                        Filter tempFilter = null;
+
+                        if (!dic.TryGetValue(signature, out tempFilter)
+                            || filter.CreationTime > tempFilter.CreationTime)
+                        {
+                            dic[signature] = filter;
+                        }
                     }
                 }
             }
@@ -2458,37 +2419,30 @@ namespace Library.Net.Lair
                 var now = DateTime.UtcNow;
 
                 if (topic == null || topic.Channel == null || topic.Channel.Id == null || string.IsNullOrWhiteSpace(topic.Channel.Name)
-                    || (now - topic.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || (topic.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || !topic.VerifyCertificate()) return;
+                    || topic.Certificate == null || !topic.VerifyCertificate()) return;
+
+                var signature = topic.Certificate.ToString();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (!_settings.Topics.ContainsKey(topic.Channel))
-                            _settings.Topics[topic.Channel] = new LockedHashSet<Topic>();
+                        LockedDictionary<string, Topic> dic = null;
 
-                        _settings.Topics[topic.Channel].Add(topic);
-
-                        Dictionary<string, Topic> dic = new Dictionary<string, Topic>();
-
-                        foreach (var f2 in _settings.Topics[topic.Channel])
+                        if (!_settings.Topics.TryGetValue(topic.Channel, out dic))
                         {
-                            if (!dic.ContainsKey(f2.Certificate.ToString()))
-                            {
-                                dic[f2.Certificate.ToString()] = f2;
-                            }
-                            else
-                            {
-                                var f3 = dic[f2.Certificate.ToString()];
-
-                                if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                            }
+                            dic = new LockedDictionary<string, Topic>();
+                            _settings.Topics[topic.Channel] = dic;
                         }
 
-                        _settings.Topics[topic.Channel].Clear();
-                        _settings.Topics[topic.Channel].UnionWith(dic.Values);
+                        Topic tempTopic = null;
+
+                        if (!dic.TryGetValue(signature, out tempTopic)
+                            || topic.CreationTime > tempTopic.CreationTime)
+                        {
+                            dic[signature] = topic;
+                        }
                     }
                 }
             }
@@ -2512,7 +2466,7 @@ namespace Library.Net.Lair
                     {
                         if (_settings.Leaders.ContainsKey(section))
                         {
-                            tl.AddRange(_settings.Leaders[section]);
+                            tl.AddRange(_settings.Leaders[section].Values);
                         }
                     }
                 }
@@ -2523,7 +2477,7 @@ namespace Library.Net.Lair
                     {
                         if (_settings.Managers.ContainsKey(section))
                         {
-                            tm.AddRange(_settings.Managers[section]);
+                            tm.AddRange(_settings.Managers[section].Values);
                         }
                     }
                 }
@@ -2534,7 +2488,7 @@ namespace Library.Net.Lair
                     {
                         if (_settings.Creators.ContainsKey(section))
                         {
-                            tc.AddRange(_settings.Creators[section]);
+                            tc.AddRange(_settings.Creators[section].Values);
                         }
                     }
                 }
@@ -2554,37 +2508,30 @@ namespace Library.Net.Lair
                 var now = DateTime.UtcNow;
 
                 if (leader == null || leader.Section == null || leader.Section.Id == null || string.IsNullOrWhiteSpace(leader.Section.Name)
-                    || (now - leader.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || (leader.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || !leader.VerifyCertificate()) return;
+                    || leader.Certificate == null || !leader.VerifyCertificate()) return;
+
+                var signature = leader.Certificate.ToString();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (!_settings.Leaders.ContainsKey(leader.Section))
-                            _settings.Leaders[leader.Section] = new LockedHashSet<Leader>();
+                        LockedDictionary<string, Leader> dic = null;
 
-                        _settings.Leaders[leader.Section].Add(leader);
-
-                        var dic = new Dictionary<string, Leader>();
-
-                        foreach (var f2 in _settings.Leaders[leader.Section])
+                        if (!_settings.Leaders.TryGetValue(leader.Section, out dic))
                         {
-                            if (!dic.ContainsKey(f2.Certificate.ToString()))
-                            {
-                                dic[f2.Certificate.ToString()] = f2;
-                            }
-                            else
-                            {
-                                var f3 = dic[f2.Certificate.ToString()];
-
-                                if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                            }
+                            dic = new LockedDictionary<string, Leader>();
+                            _settings.Leaders[leader.Section] = dic;
                         }
 
-                        _settings.Leaders[leader.Section].Clear();
-                        _settings.Leaders[leader.Section].UnionWith(dic.Values);
+                        Leader tempLeader = null;
+
+                        if (!dic.TryGetValue(signature, out tempLeader)
+                            || leader.CreationTime > tempLeader.CreationTime)
+                        {
+                            dic[signature] = leader;
+                        }
                     }
                 }
             }
@@ -2599,37 +2546,30 @@ namespace Library.Net.Lair
                 var now = DateTime.UtcNow;
 
                 if (manager == null || manager.Section == null || manager.Section.Id == null || string.IsNullOrWhiteSpace(manager.Section.Name)
-                    || (now - manager.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || (manager.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || !manager.VerifyCertificate()) return;
+                    || manager.Certificate == null || !manager.VerifyCertificate()) return;
+
+                var signature = manager.Certificate.ToString();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (!_settings.Managers.ContainsKey(manager.Section))
-                            _settings.Managers[manager.Section] = new LockedHashSet<Manager>();
+                        LockedDictionary<string, Manager> dic = null;
 
-                        _settings.Managers[manager.Section].Add(manager);
-
-                        var dic = new Dictionary<string, Manager>();
-
-                        foreach (var f2 in _settings.Managers[manager.Section])
+                        if (!_settings.Managers.TryGetValue(manager.Section, out dic))
                         {
-                            if (!dic.ContainsKey(f2.Certificate.ToString()))
-                            {
-                                dic[f2.Certificate.ToString()] = f2;
-                            }
-                            else
-                            {
-                                var f3 = dic[f2.Certificate.ToString()];
-
-                                if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                            }
+                            dic = new LockedDictionary<string, Manager>();
+                            _settings.Managers[manager.Section] = dic;
                         }
 
-                        _settings.Managers[manager.Section].Clear();
-                        _settings.Managers[manager.Section].UnionWith(dic.Values);
+                        Manager tempManager = null;
+
+                        if (!dic.TryGetValue(signature, out tempManager)
+                            || manager.CreationTime > tempManager.CreationTime)
+                        {
+                            dic[signature] = manager;
+                        }
                     }
                 }
             }
@@ -2644,37 +2584,30 @@ namespace Library.Net.Lair
                 var now = DateTime.UtcNow;
 
                 if (creator == null || creator.Section == null || creator.Section.Id == null || string.IsNullOrWhiteSpace(creator.Section.Name)
-                    || (now - creator.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || (creator.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || !creator.VerifyCertificate()) return;
+                    || creator.Certificate == null || !creator.VerifyCertificate()) return;
+
+                var signature = creator.Certificate.ToString();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (!_settings.Creators.ContainsKey(creator.Section))
-                            _settings.Creators[creator.Section] = new LockedHashSet<Creator>();
+                        LockedDictionary<string, Creator> dic = null;
 
-                        _settings.Creators[creator.Section].Add(creator);
-
-                        var dic = new Dictionary<string, Creator>();
-
-                        foreach (var f2 in _settings.Creators[creator.Section])
+                        if (!_settings.Creators.TryGetValue(creator.Section, out dic))
                         {
-                            if (!dic.ContainsKey(f2.Certificate.ToString()))
-                            {
-                                dic[f2.Certificate.ToString()] = f2;
-                            }
-                            else
-                            {
-                                var f3 = dic[f2.Certificate.ToString()];
-
-                                if (f2.CreationTime > f3.CreationTime) dic[f2.Certificate.ToString()] = f2;
-                            }
+                            dic = new LockedDictionary<string, Creator>();
+                            _settings.Creators[creator.Section] = dic;
                         }
 
-                        _settings.Creators[creator.Section].Clear();
-                        _settings.Creators[creator.Section].UnionWith(dic.Values);
+                        Creator tempCreator = null;
+
+                        if (!dic.TryGetValue(signature, out tempCreator)
+                            || creator.CreationTime > tempCreator.CreationTime)
+                        {
+                            dic[signature] = creator;
+                        }
                     }
                 }
             }
@@ -2825,12 +2758,12 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<long>() { Name = "BandwidthLimit", Value = 0 },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedHashSet<Leader>>>() { Name = "Leaders", Value = new LockedDictionary<Section, LockedHashSet<Leader>>() },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedHashSet<Manager>>>() { Name = "Managers", Value = new LockedDictionary<Section, LockedHashSet<Manager>>() },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedHashSet<Creator>>>() { Name = "Creators", Value = new LockedDictionary<Section, LockedHashSet<Creator>>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Leader>>>() { Name = "Leaders", Value = new LockedDictionary<Section, LockedDictionary<string, Leader>>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Manager>>>() { Name = "Managers", Value = new LockedDictionary<Section, LockedDictionary<string, Manager>>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Creator>>>() { Name = "Creators", Value = new LockedDictionary<Section, LockedDictionary<string, Creator>>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Message>>>() { Name = "Messages", Value = new LockedDictionary<Channel, LockedHashSet<Message>>() },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Filter>>>() { Name = "Filters", Value = new LockedDictionary<Channel, LockedHashSet<Filter>>() },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Topic>>>() { Name = "Topics", Value = new LockedDictionary<Channel, LockedHashSet<Topic>>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedDictionary<string, Filter>>>() { Name = "Filters 2", Value = new LockedDictionary<Channel, LockedDictionary<string, Filter>>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedDictionary<string, Topic>>>() { Name = "Topics", Value = new LockedDictionary<Channel, LockedDictionary<string, Topic>>() },
                 })
             {
 
@@ -2917,35 +2850,35 @@ namespace Library.Net.Lair
                 }
             }
 
-            public LockedDictionary<Section, LockedHashSet<Leader>> Leaders
+            public LockedDictionary<Section, LockedDictionary<string, Leader>> Leaders
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Section, LockedHashSet<Leader>>)this["Leaders"];
+                        return (LockedDictionary<Section, LockedDictionary<string, Leader>>)this["Leaders"];
                     }
                 }
             }
 
-            public LockedDictionary<Section, LockedHashSet<Manager>> Managers
+            public LockedDictionary<Section, LockedDictionary<string, Manager>> Managers
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Section, LockedHashSet<Manager>>)this["Managers"];
+                        return (LockedDictionary<Section, LockedDictionary<string, Manager>>)this["Managers"];
                     }
                 }
             }
 
-            public LockedDictionary<Section, LockedHashSet<Creator>> Creators
+            public LockedDictionary<Section, LockedDictionary<string, Creator>> Creators
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Section, LockedHashSet<Creator>>)this["Creators"];
+                        return (LockedDictionary<Section, LockedDictionary<string, Creator>>)this["Creators"];
                     }
                 }
             }
@@ -2961,24 +2894,24 @@ namespace Library.Net.Lair
                 }
             }
 
-            public LockedDictionary<Channel, LockedHashSet<Filter>> Filters
+            public LockedDictionary<Channel, LockedDictionary<string, Filter>> Filters
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Channel, LockedHashSet<Filter>>)this["Filters"];
+                        return (LockedDictionary<Channel, LockedDictionary<string, Filter>>)this["Filters 2"];
                     }
                 }
             }
 
-            public LockedDictionary<Channel, LockedHashSet<Topic>> Topics
+            public LockedDictionary<Channel, LockedDictionary<string, Topic>> Topics
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (LockedDictionary<Channel, LockedHashSet<Topic>>)this["Topics"];
+                        return (LockedDictionary<Channel, LockedDictionary<string, Topic>>)this["Topics"];
                     }
                 }
             }

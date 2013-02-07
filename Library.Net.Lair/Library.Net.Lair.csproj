@@ -70,7 +70,7 @@
     <Compile Include="Cache\Section\ManagerCollection.cs" />
     <Compile Include="Cache\Section\Leader.cs" />
     <Compile Include="Cache\Section\ICreator.cs" />
-    <Compile Include="Cache\Channel\IComputeHash.cs" />
+    <Compile Include="Cache\IComputeHash.cs" />
     <Compile Include="Cache\Section\ILeader.cs" />
     <Compile Include="Cache\Section\IManager.cs" />
     <Compile Include="Cache\Section\Creator.cs" />
@@ -78,7 +78,7 @@
     <Compile Include="Cache\Section\Manager.cs" />
     <Compile Include="Cache\Section\Section.cs" />
     <Compile Include="Cache\Section\CreatorCollection.cs" />
-    <Compile Include="Cache\Section\SignatureCollection.cs" />
+    <Compile Include="SignatureCollection.cs" />
     <Compile Include="ItemCollection.cs" />
     <Compile Include="LairManager.cs" />
     <Compile Include="Cache\Channel\Channel.cs" />
@@ -103,7 +103,7 @@
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerManager.cs" />
-    <Compile Include="Cache\Channel\IHashAlgorithm.cs" />
+    <Compile Include="Cache\IHashAlgorithm.cs" />
     <Compile Include="Cache\Channel\Message.cs" />
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />

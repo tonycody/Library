@@ -6,7 +6,7 @@ using Library.Security;
 
 namespace Library.Net.Amoeba
 {
-    interface ISeed<TKey> : IKeywords, ICompressionAlgorithm, ICryptoAlgorithm
+    interface ISeed<TKey> : IKeywords, ICompressionAlgorithm, ICryptoAlgorithm, IComputeHash
         where TKey : IKey
     {
         string Name { get; }

@@ -462,7 +462,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IKey<Key>
+        #region ISeed<Key>
 
         [DataMember(Name = "Name")]
         public string Name
@@ -716,6 +716,36 @@ namespace Library.Net.Amoeba
                     }
                 }
             }
+        }
+
+        #endregion
+
+        #region IComputeHash
+
+        private byte[] _sha512_hash = null;
+
+        public byte[] GetHash(HashAlgorithm hashAlgorithm)
+        {
+            if (_sha512_hash == null)
+            {
+                using (BufferManager bufferManager = new BufferManager())
+                using (Stream stream = this.Export(bufferManager))
+                {
+                    _sha512_hash = Sha512.ComputeHash(stream);
+                }
+            }
+
+            if (hashAlgorithm == HashAlgorithm.Sha512)
+            {
+                return _sha512_hash;
+            }
+
+            return null;
+        }
+
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        {
+            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion

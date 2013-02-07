@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Library.Security;
 
 namespace Library.Net.Amoeba
 {
@@ -10,9 +11,7 @@ namespace Library.Net.Amoeba
 
         protected override bool Filter(string item)
         {
-            if (item == null || item.Length > 256) return true;
-
-            return false;
+            return Signature.HasSignature(item);
         }
 
         #region IEnumerable<string>

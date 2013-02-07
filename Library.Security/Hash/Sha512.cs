@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.IO;
 
-namespace Library.Net.Lair
+namespace Library.Security
 {
     /// <summary>
     /// SHA512bitハッシュ生成クラス

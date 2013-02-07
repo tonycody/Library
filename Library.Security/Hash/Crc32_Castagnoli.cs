@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Library.Net.Lair
+namespace Library.Security
 {
     static class Crc32_Castagnoli
     {

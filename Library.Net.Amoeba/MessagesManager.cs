@@ -151,10 +151,13 @@ namespace Library.Net.Amoeba
         private CirculationCollection<byte[]> _pushSeeds;
 
         private CirculationCollection<Key> _pushBlocksLink;
-        private CirculationCollection<Key> _pushBlocksRequest;
-
         private CirculationCollection<Key> _pullBlocksLink;
+
+        private CirculationCollection<Key> _pushBlocksRequest;
         private CirculationCollection<Key> _pullBlocksRequest;
+
+        private CirculationCollection<string> _pushSeedsRequest;
+        private CirculationCollection<string> _pullSeedsRequest;
 
         private object _thisLock = new object();
 
@@ -167,13 +170,13 @@ namespace Library.Net.Amoeba
             _pushSeeds = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
-
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
+
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
 
-            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
-            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pushSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 60, 0), 128 * 60);
+            _pullSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 30, 0), 128 * 30);
         }
 
         public int Id
@@ -299,6 +302,17 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public CirculationCollection<byte[]> PushSeeds
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushSeeds;
+                }
+            }
+        }
+
         public CirculationCollection<Key> PushBlocksLink
         {
             get
@@ -306,17 +320,6 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     return _pushBlocksLink;
-                }
-            }
-        }
-
-        public CirculationCollection<Key> PushBlocksRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushBlocksRequest;
                 }
             }
         }
@@ -332,6 +335,17 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public CirculationCollection<Key> PushBlocksRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushBlocksRequest;
+                }
+            }
+        }
+
         public CirculationCollection<Key> PullBlocksRequest
         {
             get
@@ -339,6 +353,28 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     return _pullBlocksRequest;
+                }
+            }
+        }
+
+        public CirculationCollection<string> PushSeedsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushSeedsRequest;
+                }
+            }
+        }
+
+        public CirculationCollection<string> PullSeedsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pullSeedsRequest;
                 }
             }
         }

@@ -6,7 +6,7 @@ using Library.Security;
 
 namespace Library.Net.Amoeba
 {
-    interface IBox
+    interface IBox : IComputeHash
     {
         string Name { get; }
         DateTime CreationTime { get; }

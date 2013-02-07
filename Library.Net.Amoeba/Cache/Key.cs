@@ -142,7 +142,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IHeader
+        #region IKey
 
         [DataMember(Name = "Hash")]
         public byte[] Hash

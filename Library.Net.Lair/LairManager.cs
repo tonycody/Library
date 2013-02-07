@@ -61,11 +61,11 @@ namespace Library.Net.Lair
                 }
             };
 
-            _connectionsManager.UnlockTopicsEvent += (object sender, Channel channel, ref IList<Topic> filters) =>
+            _connectionsManager.UnlockTopicsEvent += (object sender, Channel channel, ref IList<Topic> topics) =>
             {
                 if (this.UnlockTopicsEvent != null)
                 {
-                    this.UnlockTopicsEvent(this, channel, ref filters);
+                    this.UnlockTopicsEvent(this, channel, ref topics);
                 }
             };
 
@@ -77,27 +77,27 @@ namespace Library.Net.Lair
                 }
             };
 
-            _connectionsManager.UnlockLeadersEvent += (object sender, Section section, ref IList<Leader> filters) =>
+            _connectionsManager.UnlockLeadersEvent += (object sender, Section section, ref IList<Leader> leaders) =>
             {
                 if (this.UnlockLeadersEvent != null)
                 {
-                    this.UnlockLeadersEvent(this, section, ref filters);
+                    this.UnlockLeadersEvent(this, section, ref leaders);
                 }
             };
 
-            _connectionsManager.UnlockManagersEvent += (object sender, Section section, ref IList<Manager> filters) =>
+            _connectionsManager.UnlockManagersEvent += (object sender, Section section, ref IList<Manager> managers) =>
             {
                 if (this.UnlockManagersEvent != null)
                 {
-                    this.UnlockManagersEvent(this, section, ref filters);
+                    this.UnlockManagersEvent(this, section, ref managers);
                 }
             };
 
-            _connectionsManager.UnlockCreatorsEvent += (object sender, Section section, ref IList<Creator> filters) =>
+            _connectionsManager.UnlockCreatorsEvent += (object sender, Section section, ref IList<Creator> creators) =>
             {
                 if (this.UnlockCreatorsEvent != null)
                 {
-                    this.UnlockCreatorsEvent(this, section, ref filters);
+                    this.UnlockCreatorsEvent(this, section, ref creators);
                 }
             };
         }

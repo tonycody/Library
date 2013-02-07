@@ -239,7 +239,7 @@ namespace Library.Security
             lock (this.ThisLock)
             {
                 if (_toString == null)
-                    _toString = DigitalSignatureConverter.GetSignature(this);
+                    _toString = Library.Security.Signature.GetSignature(this);
 
                 return _toString;
             }

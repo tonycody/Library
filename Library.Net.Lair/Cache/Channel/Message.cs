@@ -255,32 +255,6 @@ namespace Library.Net.Lair
 
         #region IMessage<Channel, Key>
 
-        private byte[] _sha512_hash = null;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (BufferManager bufferManager = new BufferManager())
-                using (Stream stream = this.Export(bufferManager))
-                {
-                    _sha512_hash = Sha512.ComputeHash(stream);
-                }
-            }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
-        }
-
         [DataMember(Name = "Channel")]
         public Channel Channel
         {
@@ -346,6 +320,36 @@ namespace Library.Net.Lair
 
                 return _anchors;
             }
+        }
+
+        #endregion
+
+        #region IComputeHash
+
+        private byte[] _sha512_hash = null;
+
+        public byte[] GetHash(HashAlgorithm hashAlgorithm)
+        {
+            if (_sha512_hash == null)
+            {
+                using (BufferManager bufferManager = new BufferManager())
+                using (Stream stream = this.Export(bufferManager))
+                {
+                    _sha512_hash = Sha512.ComputeHash(stream);
+                }
+            }
+
+            if (hashAlgorithm == HashAlgorithm.Sha512)
+            {
+                return _sha512_hash;
+            }
+
+            return null;
+        }
+
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        {
+            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion
