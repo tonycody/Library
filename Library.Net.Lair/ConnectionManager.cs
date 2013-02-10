@@ -34,11 +34,6 @@ namespace Library.Net.Lair
         public Filter Filter { get; set; }
     }
 
-    class PullTopicEventArgs : EventArgs
-    {
-        public Topic Topic { get; set; }
-    }
-
     class PullSectionsRequestEventArgs : EventArgs
     {
         public IEnumerable<Section> Sections { get; set; }
@@ -64,7 +59,6 @@ namespace Library.Net.Lair
     delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
     delegate void PullMessageEventHandler(object sender, PullMessageEventArgs e);
     delegate void PullFilterEventHandler(object sender, PullFilterEventArgs e);
-    delegate void PullTopicEventHandler(object sender, PullTopicEventArgs e);
 
     delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
     delegate void PullLeaderEventHandler(object sender, PullLeaderEventArgs e);
@@ -96,12 +90,11 @@ namespace Library.Net.Lair
             ChannelsRequest = 5,
             Message = 6,
             Filter = 7,
-            Topic = 8,
 
-            SectionsRequest = 9,
-            Leader = 10,
-            Manager = 11,
-            Creator = 12,
+            SectionsRequest = 8,
+            Leader = 9,
+            Manager = 10,
+            Creator = 11,
         }
 
         private byte[] _mySessionId;
@@ -136,7 +129,6 @@ namespace Library.Net.Lair
         public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
         public event PullMessageEventHandler PullMessageEvent;
         public event PullFilterEventHandler PullFilterEvent;
-        public event PullTopicEventHandler PullTopicEvent;
 
         public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
         public event PullLeaderEventHandler PullLeaderEvent;
@@ -581,11 +573,6 @@ namespace Library.Net.Lair
                                     var filter = Filter.Import(stream2, _bufferManager);
                                     this.OnPullFilter(new PullFilterEventArgs() { Filter = filter });
                                 }
-                                else if (type == (byte)SerializeId.Topic)
-                                {
-                                    var topic = Topic.Import(stream2, _bufferManager);
-                                    this.OnPullTopic(new PullTopicEventArgs() { Topic = topic });
-                                }
                                 else if (type == (byte)SerializeId.SectionsRequest)
                                 {
                                     var message = SectionsRequestMessage.Import(stream2, _bufferManager);
@@ -653,14 +640,6 @@ namespace Library.Net.Lair
             if (this.PullFilterEvent != null)
             {
                 this.PullFilterEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullTopic(PullTopicEventArgs e)
-        {
-            if (this.PullTopicEvent != null)
-            {
-                this.PullTopicEvent(this, e);
             }
         }
 
@@ -837,41 +816,6 @@ namespace Library.Net.Lair
                 try
                 {
                     stream.WriteByte((byte)SerializeId.Filter);
-                    stream.Flush();
-
-                    stream = new JoinStream(stream, filter.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushTopic(Topic filter)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.Topic);
                     stream.Flush();
 
                     stream = new JoinStream(stream, filter.Export(_bufferManager));

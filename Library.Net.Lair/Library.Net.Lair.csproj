@@ -59,9 +59,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BytesEqualityComparer.cs" />
-    <Compile Include="Cache\Channel\TopicCollection.cs" />
-    <Compile Include="Cache\Channel\Topic.cs" />
-    <Compile Include="Cache\Channel\ITopic.cs" />
+    <Compile Include="Cache\Section\BoardCollection.cs" />
+    <Compile Include="Cache\Section\Board.cs" />
+    <Compile Include="Cache\Section\IBoard.cs" />
     <Compile Include="Cache\Channel\Filter.cs" />
     <Compile Include="Cache\Channel\FilterCollection.cs" />
     <Compile Include="Cache\Channel\IFilter.cs" />

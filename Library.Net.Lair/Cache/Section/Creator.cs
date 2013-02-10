@@ -11,14 +11,14 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Creator", Namespace = "http://Library/Net/Lair")]
-    public sealed class Creator : ReadOnlyCertificateItemBase<Creator>, ICreator<Section>
+    public sealed class Creator : ReadOnlyCertificateItemBase<Creator>, ICreator<Section, Board, Channel>
     {
         private enum SerializeId : byte
         {
             Section = 0,
             CreationTime = 1,
             Comment = 2,
-            Channel = 3,
+            Board = 3,
             FilterSignature = 4,
 
             Certificate = 5,
@@ -27,16 +27,16 @@ namespace Library.Net.Lair
         private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private string _comment = null;
-        private ChannelCollection _channels = null;
+        private BoardCollection _channels = null;
         private SignatureCollection _filterSignatures = null;
 
         private Certificate _certificate;
 
         public const int MaxCommentLength = 1024 * 4;
-        public const int MaxChannelsCount = 128;
+        public const int MaxBoardsCount = 128;
         public const int MaxFilterSignaturesCount = 32;
 
-        public Creator(Section section, string comment, ChannelCollection channels, SignatureCollection filterSignatures, DigitalSignature digitalSignature)
+        public Creator(Section section, string comment, BoardCollection channels, SignatureCollection filterSignatures, DigitalSignature digitalSignature)
         {
             if (section == null) throw new ArgumentNullException("section");
             if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
@@ -44,7 +44,7 @@ namespace Library.Net.Lair
             this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             this.Comment = comment;
-            if (channels != null) this.ProtectedChannels.AddRange(channels);
+            if (channels != null) this.ProtectedBoards.AddRange(channels);
             if (filterSignatures != null) this.ProtectedFilterSignatures.AddRange(filterSignatures);
 
             this.CreateCertificate(digitalSignature);
@@ -81,9 +81,9 @@ namespace Library.Net.Lair
                             this.Comment = reader.ReadToEnd();
                         }
                     }
-                    else if (id == (byte)SerializeId.Channel)
+                    else if (id == (byte)SerializeId.Board)
                     {
-                        this.ProtectedChannels.Add(Channel.Import(rangeStream, bufferManager));
+                        this.ProtectedBoards.Add(Board.Import(rangeStream, bufferManager));
                     }
                     else if (id == (byte)SerializeId.FilterSignature)
                     {
@@ -155,14 +155,14 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Channels
-            foreach (var c in this.ProtectedChannels)
+            // Boards
+            foreach (var c in this.ProtectedBoards)
             {
                 Stream exportStream = c.Export(bufferManager);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Channel);
+                bufferStream.WriteByte((byte)SerializeId.Board);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
@@ -332,21 +332,21 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Channel> Channels
+        public IEnumerable<Board> Boards
         {
             get
             {
-                return this.ProtectedChannels;
+                return this.ProtectedBoards;
             }
         }
 
-        [DataMember(Name = "Channels")]
-        private ChannelCollection ProtectedChannels
+        [DataMember(Name = "Boards")]
+        private BoardCollection ProtectedBoards
         {
             get
             {
                 if (_channels == null)
-                    _channels = new ChannelCollection(Creator.MaxChannelsCount);
+                    _channels = new BoardCollection(Creator.MaxBoardsCount);
 
                 return _channels;
             }

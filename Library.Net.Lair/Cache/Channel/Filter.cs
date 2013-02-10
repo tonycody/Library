@@ -17,17 +17,20 @@ namespace Library.Net.Lair
         {
             Channel = 0,
             CreationTime = 1,
-            Anchor = 2,
+            TrustSignature = 2,
+            Anchor = 3,
 
-            Certificate = 3,
+            Certificate = 4,
         }
 
         private Channel _channel = null;
         private DateTime _creationTime = DateTime.MinValue;
+        private SignatureCollection _trustSignatures = null;
         private KeyCollection _anchors = null;
 
         private Certificate _certificate;
 
+        public const int MaxTrustSignaturesCount = 32;
         public const int MaxAnchorsCount = 1024;
 
         public Filter(Channel channel, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
@@ -64,6 +67,13 @@ namespace Library.Net.Lair
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                        }
+                    }
+                    else if (id == (byte)SerializeId.TrustSignature)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
                         }
                     }
                     else if (id == (byte)SerializeId.Anchor)
@@ -111,6 +121,25 @@ namespace Library.Net.Lair
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.CreationTime);
+
+                streams.Add(bufferStream);
+            }
+            // TrustSignatures
+            foreach (var c in this.TrustSignatures)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
+                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                {
+                    writer.Write(c);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.TrustSignature);
 
                 streams.Add(bufferStream);
             }
@@ -165,6 +194,13 @@ namespace Library.Net.Lair
                 || this.Certificate != other.Certificate)
             {
                 return false;
+            }
+
+            if (this.ProtectedTrustSignatures != null && other.ProtectedTrustSignatures != null)
+            {
+                if (this.ProtectedTrustSignatures.Count != other.ProtectedTrustSignatures.Count) return false;
+
+                for (int i = 0; i < this.ProtectedTrustSignatures.Count; i++) if (this.ProtectedTrustSignatures[i] != other.ProtectedTrustSignatures[i]) return false;
             }
 
             if (this.ProtectedAnchors != null && other.ProtectedAnchors != null)
@@ -247,6 +283,26 @@ namespace Library.Net.Lair
             {
                 var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
                 _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+            }
+        }
+
+        public IEnumerable<string> TrustSignatures
+        {
+            get
+            {
+                return this.ProtectedTrustSignatures;
+            }
+        }
+
+        [DataMember(Name = "TrustSignatures")]
+        private SignatureCollection ProtectedTrustSignatures
+        {
+            get
+            {
+                if (_trustSignatures == null)
+                    _trustSignatures = new SignatureCollection(Filter.MaxTrustSignaturesCount);
+
+                return _trustSignatures;
             }
         }
 

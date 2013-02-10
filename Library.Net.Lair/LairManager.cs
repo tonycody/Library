@@ -20,7 +20,6 @@ namespace Library.Net.Lair
         public event UnlockChannelsEventHandler UnlockChannelsEvent;
         public event UnlockMessagesEventHandler UnlockMessagesEvent;
         public event UnlockFiltersEventHandler UnlockFiltersEvent;
-        public event UnlockTopicsEventHandler UnlockTopicsEvent;
 
         public event UnlockSectionsEventHandler UnlockSectionsEvent;
         public event UnlockLeadersEventHandler UnlockLeadersEvent;
@@ -58,14 +57,6 @@ namespace Library.Net.Lair
                 if (this.UnlockFiltersEvent != null)
                 {
                     this.UnlockFiltersEvent(this, channel, ref filters);
-                }
-            };
-
-            _connectionsManager.UnlockTopicsEvent += (object sender, Channel channel, ref IList<Topic> topics) =>
-            {
-                if (this.UnlockTopicsEvent != null)
-                {
-                    this.UnlockTopicsEvent(this, channel, ref topics);
                 }
             };
 
@@ -278,13 +269,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Filter> filters, out IList<Topic> topics)
+        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Filter> filters)
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _connectionsManager.GetChannelInfomation(channel, out messages, out filters, out topics);
+                _connectionsManager.GetChannelInfomation(channel, out messages, out filters);
             }
         }
 
