@@ -30,7 +30,7 @@ namespace Library.Net.Lair
 
         private Certificate _certificate;
 
-        public const int MaxTrustSignaturesCount = 32;
+        public const int MaxTrustSignaturesCount = 128;
         public const int MaxAnchorsCount = 1024;
 
         public Filter(Channel channel, IEnumerable<Key> anchors, DigitalSignature digitalSignature)

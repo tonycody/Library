@@ -8,7 +8,7 @@ using System.Text;
 namespace Library.Security
 {
     [DataContract(Name = "CertificateItemBase", Namespace = "http://Library/Security")]
-    public abstract class CertificateItemBase<T> : ItemBase<T>
+    public abstract class CertificateItemBase<T> : ItemBase<T>, ICertificate
         where T : CertificateItemBase<T>
     {
         public void CreateCertificate(DigitalSignature digitalSignature)

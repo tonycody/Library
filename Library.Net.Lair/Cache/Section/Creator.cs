@@ -27,7 +27,7 @@ namespace Library.Net.Lair
         private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private string _comment = null;
-        private BoardCollection _channels = null;
+        private BoardCollection _boards = null;
         private SignatureCollection _filterSignatures = null;
 
         private Certificate _certificate;
@@ -36,7 +36,7 @@ namespace Library.Net.Lair
         public const int MaxBoardsCount = 128;
         public const int MaxFilterSignaturesCount = 32;
 
-        public Creator(Section section, string comment, BoardCollection channels, SignatureCollection filterSignatures, DigitalSignature digitalSignature)
+        public Creator(Section section, string comment, BoardCollection boards, SignatureCollection filterSignatures, DigitalSignature digitalSignature)
         {
             if (section == null) throw new ArgumentNullException("section");
             if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
@@ -44,7 +44,7 @@ namespace Library.Net.Lair
             this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             this.Comment = comment;
-            if (channels != null) this.ProtectedBoards.AddRange(channels);
+            if (boards != null) this.ProtectedBoards.AddRange(boards);
             if (filterSignatures != null) this.ProtectedFilterSignatures.AddRange(filterSignatures);
 
             this.CreateCertificate(digitalSignature);
@@ -345,10 +345,10 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_channels == null)
-                    _channels = new BoardCollection(Creator.MaxBoardsCount);
+                if (_boards == null)
+                    _boards = new BoardCollection(Creator.MaxBoardsCount);
 
-                return _channels;
+                return _boards;
             }
         }
 
