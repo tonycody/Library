@@ -262,6 +262,41 @@ namespace Library.Net.Lair
             }
         }
 
+        public static string ToSectionString(Section item)
+        {
+            if (item == null) throw new ArgumentNullException("Section");
+
+            try
+            {
+                using (Stream stream = LairConverter.ToStream<Section>(item))
+                {
+                    return "Section@" + LairConverter.ToBase64String(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Section FromSectionString(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (!item.StartsWith("Section@")) throw new ArgumentException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
+                {
+                    return LairConverter.FromStream<Section>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         public static string ToChannelString(Channel item)
         {
             if (item == null) throw new ArgumentNullException("Channel");
