@@ -64,11 +64,16 @@
     <Compile Include="DigitalSignature.cs" />
     <Compile Include="DigitalSignatureAlgorithm.cs" />
     <Compile Include="Signature.cs" />
+    <Compile Include="SignatureCollection.cs" />
     <Compile Include="Signature\ECDsaP521_Sha512.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Signature\Rsa2048_Sha512.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
+      <Project>{197C654F-2461-446A-B531-4A789F14BE19}</Project>
+      <Name>Library.Collections</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Library.Io\Library.Io.csproj">
       <Project>{74597E45-7F3C-4958-8B6A-B16DE8DE47B9}</Project>
       <Name>Library.Io</Name>

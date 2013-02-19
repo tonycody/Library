@@ -18,9 +18,9 @@ namespace Library.Net.Lair
             Channel = 0,
             CreationTime = 1,
             Content = 2,
-            Anchor = 4,
+            Anchor = 3,
 
-            Certificate = 3,
+            Certificate = 4,
         }
 
         private Channel _channel = null;

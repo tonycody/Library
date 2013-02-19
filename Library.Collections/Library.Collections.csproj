@@ -57,6 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FilterList.cs" />
     <Compile Include="LockedDictionary.cs" />
     <Compile Include="LockedHashSet.cs" />
     <Compile Include="LockedList.cs" />

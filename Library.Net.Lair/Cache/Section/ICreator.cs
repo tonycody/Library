@@ -14,6 +14,5 @@ namespace Library.Net.Lair
         DateTime CreationTime { get; }
         string Comment { get; }
         IEnumerable<Board> Boards { get; }
-        IEnumerable<string> FilterSignatures { get; }
     }
 }

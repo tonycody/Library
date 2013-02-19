@@ -18,7 +18,7 @@ namespace Library.Net.Lair
             Section = 0,
             CreationTime = 1,
             Comment = 2,
-            CreatorSignature = 3,
+            TrustSignature = 3,
 
             Certificate = 4,
         }
@@ -26,14 +26,14 @@ namespace Library.Net.Lair
         private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private string _comment = null;
-        private SignatureCollection _creatorSignatures = null;
+        private SignatureCollection _trustSignatures = null;
 
         private Certificate _certificate;
 
         public const int MaxCommentLength = 1024 * 4;
-        public const int MaxCreatorSignaturesCount = 32;
+        public const int MaxTrustSignaturesCount = 1024;
 
-        public Manager(Section section, string comment, SignatureCollection creatorSignatures, DigitalSignature digitalSignature)
+        public Manager(Section section, string comment, SignatureCollection trustSignatures, DigitalSignature digitalSignature)
         {
             if (section == null) throw new ArgumentNullException("section");
             if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
@@ -41,7 +41,7 @@ namespace Library.Net.Lair
             this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             this.Comment = comment;
-            if (creatorSignatures != null) this.ProtectedCreatorSignatures.AddRange(creatorSignatures);
+            if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
 
             this.CreateCertificate(digitalSignature);
         }
@@ -77,11 +77,11 @@ namespace Library.Net.Lair
                             this.Comment = reader.ReadToEnd();
                         }
                     }
-                    else if (id == (byte)SerializeId.CreatorSignature)
+                    else if (id == (byte)SerializeId.TrustSignature)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.ProtectedCreatorSignatures.Add(reader.ReadToEnd());
+                            this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
                         }
                     }
 
@@ -147,8 +147,8 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // CreatorSignatures
-            foreach (var c in this.CreatorSignatures)
+            // TurstSignatures
+            foreach (var t in this.TrustSignatures)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -157,12 +157,12 @@ namespace Library.Net.Lair
                 using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
                 using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
                 {
-                    writer.Write(c);
+                    writer.Write(t);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CreatorSignature);
+                bufferStream.WriteByte((byte)SerializeId.TrustSignature);
 
                 streams.Add(bufferStream);
             }
@@ -210,11 +210,11 @@ namespace Library.Net.Lair
                 return false;
             }
 
-            if (this.ProtectedCreatorSignatures != null && other.ProtectedCreatorSignatures != null)
+            if (this.ProtectedTrustSignatures != null && other.ProtectedTrustSignatures != null)
             {
-                if (this.ProtectedCreatorSignatures.Count != other.ProtectedCreatorSignatures.Count) return false;
+                if (this.ProtectedTrustSignatures.Count != other.ProtectedTrustSignatures.Count) return false;
 
-                for (int i = 0; i < this.ProtectedCreatorSignatures.Count; i++) if (this.ProtectedCreatorSignatures[i] != other.ProtectedCreatorSignatures[i]) return false;
+                for (int i = 0; i < this.ProtectedTrustSignatures.Count; i++) if (this.ProtectedTrustSignatures[i] != other.ProtectedTrustSignatures[i]) return false;
             }
 
             return true;
@@ -313,23 +313,23 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<string> CreatorSignatures
+        public IEnumerable<string> TrustSignatures
         {
             get
             {
-                return this.ProtectedCreatorSignatures;
+                return this.ProtectedTrustSignatures;
             }
         }
 
-        [DataMember(Name = "CreatorSignatures")]
-        private SignatureCollection ProtectedCreatorSignatures
+        [DataMember(Name = "TrustSignatures")]
+        private SignatureCollection ProtectedTrustSignatures
         {
             get
             {
-                if (_creatorSignatures == null)
-                    _creatorSignatures = new SignatureCollection(Manager.MaxCreatorSignaturesCount);
+                if (_trustSignatures == null)
+                    _trustSignatures = new SignatureCollection(Manager.MaxTrustSignaturesCount);
 
-                return _creatorSignatures;
+                return _trustSignatures;
             }
         }
 

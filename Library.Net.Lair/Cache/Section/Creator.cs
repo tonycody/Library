@@ -19,24 +19,21 @@ namespace Library.Net.Lair
             CreationTime = 1,
             Comment = 2,
             Board = 3,
-            FilterSignature = 4,
 
-            Certificate = 5,
+            Certificate = 4,
         }
 
         private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private string _comment = null;
         private BoardCollection _boards = null;
-        private SignatureCollection _filterSignatures = null;
 
         private Certificate _certificate;
 
         public const int MaxCommentLength = 1024 * 4;
         public const int MaxBoardsCount = 128;
-        public const int MaxFilterSignaturesCount = 32;
 
-        public Creator(Section section, string comment, BoardCollection boards, SignatureCollection filterSignatures, DigitalSignature digitalSignature)
+        public Creator(Section section, string comment, BoardCollection boards, DigitalSignature digitalSignature)
         {
             if (section == null) throw new ArgumentNullException("section");
             if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
@@ -45,7 +42,6 @@ namespace Library.Net.Lair
             this.CreationTime = DateTime.UtcNow;
             this.Comment = comment;
             if (boards != null) this.ProtectedBoards.AddRange(boards);
-            if (filterSignatures != null) this.ProtectedFilterSignatures.AddRange(filterSignatures);
 
             this.CreateCertificate(digitalSignature);
         }
@@ -84,13 +80,6 @@ namespace Library.Net.Lair
                     else if (id == (byte)SerializeId.Board)
                     {
                         this.ProtectedBoards.Add(Board.Import(rangeStream, bufferManager));
-                    }
-                    else if (id == (byte)SerializeId.FilterSignature)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ProtectedFilterSignatures.Add(reader.ReadToEnd());
-                        }
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -166,25 +155,6 @@ namespace Library.Net.Lair
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
-            // FilterSignatures
-            foreach (var f in this.FilterSignatures)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
-                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
-                {
-                    writer.Write(f);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.FilterSignature);
-
-                streams.Add(bufferStream);
-            }
 
             // Certificate
             if (this.Certificate != null)
@@ -229,11 +199,11 @@ namespace Library.Net.Lair
                 return false;
             }
 
-            if (this.ProtectedFilterSignatures != null && other.ProtectedFilterSignatures != null)
+            if (this.ProtectedBoards != null && other.ProtectedBoards != null)
             {
-                if (this.ProtectedFilterSignatures.Count != other.ProtectedFilterSignatures.Count) return false;
+                if (this.ProtectedBoards.Count != other.ProtectedBoards.Count) return false;
 
-                for (int i = 0; i < this.ProtectedFilterSignatures.Count; i++) if (this.ProtectedFilterSignatures[i] != other.ProtectedFilterSignatures[i]) return false;
+                for (int i = 0; i < this.ProtectedBoards.Count; i++) if (this.ProtectedBoards[i] != other.ProtectedBoards[i]) return false;
             }
 
             return true;
@@ -349,26 +319,6 @@ namespace Library.Net.Lair
                     _boards = new BoardCollection(Creator.MaxBoardsCount);
 
                 return _boards;
-            }
-        }
-
-        public IEnumerable<string> FilterSignatures
-        {
-            get
-            {
-                return this.ProtectedFilterSignatures;
-            }
-        }
-
-        [DataMember(Name = "FilterSignatures")]
-        private SignatureCollection ProtectedFilterSignatures
-        {
-            get
-            {
-                if (_filterSignatures == null)
-                    _filterSignatures = new SignatureCollection(Creator.MaxFilterSignaturesCount);
-
-                return _filterSignatures;
             }
         }
 

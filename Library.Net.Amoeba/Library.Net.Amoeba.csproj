@@ -69,7 +69,6 @@
     <Compile Include="Cache\IComputeHash.cs" />
     <Compile Include="Cache\IKeywords.cs" />
     <Compile Include="NativeMethods.cs" />
-    <Compile Include="FilterList.cs" />
     <Compile Include="CirculationCollection.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
@@ -107,7 +106,6 @@
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
-    <Compile Include="SignatureCollection.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />

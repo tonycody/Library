@@ -19,7 +19,6 @@ namespace Library.Net.Lair
 
         public event UnlockChannelsEventHandler UnlockChannelsEvent;
         public event UnlockMessagesEventHandler UnlockMessagesEvent;
-        public event UnlockFiltersEventHandler UnlockFiltersEvent;
 
         public event UnlockSectionsEventHandler UnlockSectionsEvent;
         public event UnlockLeadersEventHandler UnlockLeadersEvent;
@@ -49,14 +48,6 @@ namespace Library.Net.Lair
                 if (this.UnlockMessagesEvent != null)
                 {
                     this.UnlockMessagesEvent(this, channel, ref messages);
-                }
-            };
-
-            _connectionsManager.UnlockFiltersEvent += (object sender, Channel channel, ref IList<Filter> filters) =>
-            {
-                if (this.UnlockFiltersEvent != null)
-                {
-                    this.UnlockFiltersEvent(this, channel, ref filters);
                 }
             };
 
@@ -259,6 +250,16 @@ namespace Library.Net.Lair
             }
         }
 
+        public IEnumerable<Section> GetSections()
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                return _connectionsManager.GetSections();
+            }
+        }
+
         public IEnumerable<Channel> GetChannels()
         {
             lock (this.ThisLock)
@@ -266,16 +267,6 @@ namespace Library.Net.Lair
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return _connectionsManager.GetChannels();
-            }
-        }
-
-        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Filter> filters)
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                _connectionsManager.GetChannelInfomation(channel, out messages, out filters);
             }
         }
 
@@ -289,6 +280,16 @@ namespace Library.Net.Lair
             }
         }
 
+        public void GetChannelInfomation(Channel channel, out IList<Message> messages)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _connectionsManager.GetChannelInfomation(channel, out messages);
+            }
+        }
+
         public void Upload(Message message)
         {
             lock (this.ThisLock)
@@ -296,16 +297,6 @@ namespace Library.Net.Lair
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 _connectionsManager.Upload(message);
-            }
-        }
-
-        public void Upload(Filter filter)
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                _connectionsManager.Upload(filter);
             }
         }
 

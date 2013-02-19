@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Library.Collections;
 
 namespace Library.Net.Amoeba
 {

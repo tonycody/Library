@@ -11,6 +11,6 @@ namespace Library.Net.Lair
         TSection Section { get; }
         DateTime CreationTime { get; }
         string Comment { get; }
-        IEnumerable<string> CreatorSignatures { get; }
+        IEnumerable<string> TrustSignatures { get; }
     }
 }

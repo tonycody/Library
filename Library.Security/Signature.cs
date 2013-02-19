@@ -83,7 +83,7 @@ namespace Library.Security
                 if (!match.Success) return false;
 
                 if (match.Groups[1].Value.Length > 256) return false;
-                if (match.Groups[2].Value.Length > 128) return false;
+                if (match.Groups[2].Value.Length != 86) return false;
             }
             catch (Exception)
             {

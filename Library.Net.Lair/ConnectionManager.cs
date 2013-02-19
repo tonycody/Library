@@ -29,11 +29,6 @@ namespace Library.Net.Lair
         public Message Message { get; set; }
     }
 
-    class PullFilterEventArgs : EventArgs
-    {
-        public Filter Filter { get; set; }
-    }
-
     class PullSectionsRequestEventArgs : EventArgs
     {
         public IEnumerable<Section> Sections { get; set; }
@@ -58,7 +53,6 @@ namespace Library.Net.Lair
 
     delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
     delegate void PullMessageEventHandler(object sender, PullMessageEventArgs e);
-    delegate void PullFilterEventHandler(object sender, PullFilterEventArgs e);
 
     delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
     delegate void PullLeaderEventHandler(object sender, PullLeaderEventArgs e);
@@ -128,7 +122,6 @@ namespace Library.Net.Lair
 
         public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
         public event PullMessageEventHandler PullMessageEvent;
-        public event PullFilterEventHandler PullFilterEvent;
 
         public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
         public event PullLeaderEventHandler PullLeaderEvent;
@@ -568,11 +561,6 @@ namespace Library.Net.Lair
                                     var message = Message.Import(stream2, _bufferManager);
                                     this.OnPullMessage(new PullMessageEventArgs() { Message = message });
                                 }
-                                else if (type == (byte)SerializeId.Filter)
-                                {
-                                    var filter = Filter.Import(stream2, _bufferManager);
-                                    this.OnPullFilter(new PullFilterEventArgs() { Filter = filter });
-                                }
                                 else if (type == (byte)SerializeId.SectionsRequest)
                                 {
                                     var message = SectionsRequestMessage.Import(stream2, _bufferManager);
@@ -632,14 +620,6 @@ namespace Library.Net.Lair
             if (this.PullMessageEvent != null)
             {
                 this.PullMessageEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullFilter(PullFilterEventArgs e)
-        {
-            if (this.PullFilterEvent != null)
-            {
-                this.PullFilterEvent(this, e);
             }
         }
 
@@ -805,42 +785,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushFilter(Filter filter)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.Filter);
-                    stream.Flush();
-
-                    stream = new JoinStream(stream, filter.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushSectionsRequest(IEnumerable<Section> channels)
+        public void PushSectionsRequest(IEnumerable<Section> sections)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -854,7 +799,7 @@ namespace Library.Net.Lair
                     stream.Flush();
 
                     var message = new SectionsRequestMessage();
-                    message.Sections.AddRange(channels);
+                    message.Sections.AddRange(sections);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
