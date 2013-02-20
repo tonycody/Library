@@ -5,14 +5,13 @@ using System.Text;
 
 namespace Library.Net.Lair
 {
-    interface ICreator<TSection, TBoard, TChannel> : IComputeHash
+    interface ICreator<TSection, TChannel> : IComputeHash
         where TSection : ISection
-        where TBoard : IBoard<TChannel>
         where TChannel : IChannel
     {
         TSection Section { get; }
         DateTime CreationTime { get; }
         string Comment { get; }
-        IEnumerable<Board> Boards { get; }
+        IEnumerable<Channel> Channels { get; }
     }
 }

@@ -19,16 +19,6 @@ namespace Library.Net.Lair
         public IEnumerable<Node> Nodes { get; set; }
     }
 
-    class PullChannelsRequestEventArgs : EventArgs
-    {
-        public IEnumerable<Channel> Channels { get; set; }
-    }
-
-    class PullMessageEventArgs : EventArgs
-    {
-        public Message Message { get; set; }
-    }
-
     class PullSectionsRequestEventArgs : EventArgs
     {
         public IEnumerable<Section> Sections { get; set; }
@@ -49,15 +39,31 @@ namespace Library.Net.Lair
         public Creator Creator { get; set; }
     }
 
-    delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
+    class PullChannelsRequestEventArgs : EventArgs
+    {
+        public IEnumerable<Channel> Channels { get; set; }
+    }
 
-    delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
-    delegate void PullMessageEventHandler(object sender, PullMessageEventArgs e);
+    class PullTopicEventArgs : EventArgs
+    {
+        public Topic Topic { get; set; }
+    }
+
+    class PullMessageEventArgs : EventArgs
+    {
+        public Message Message { get; set; }
+    }
+
+    delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
 
     delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
     delegate void PullLeaderEventHandler(object sender, PullLeaderEventArgs e);
     delegate void PullManagerEventHandler(object sender, PullManagerEventArgs e);
     delegate void PullCreatorEventHandler(object sender, PullCreatorEventArgs e);
+
+    delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
+    delegate void PullTopicEventHandler(object sender, PullTopicEventArgs e);
+    delegate void PullMessageEventHandler(object sender, PullMessageEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
 
@@ -81,14 +87,14 @@ namespace Library.Net.Lair
 
             Nodes = 4,
 
-            ChannelsRequest = 5,
-            Message = 6,
-            Filter = 7,
+            SectionsRequest = 5,
+            Leader = 6,
+            Manager = 7,
+            Creator = 8,
 
-            SectionsRequest = 8,
-            Leader = 9,
-            Manager = 10,
-            Creator = 11,
+            ChannelsRequest = 9,
+            Topic = 10,
+            Message = 11,
         }
 
         private byte[] _mySessionId;
@@ -120,13 +126,14 @@ namespace Library.Net.Lair
 
         public event PullNodesEventHandler PullNodesEvent;
 
-        public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
-        public event PullMessageEventHandler PullMessageEvent;
-
         public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
         public event PullLeaderEventHandler PullLeaderEvent;
         public event PullManagerEventHandler PullManagerEvent;
         public event PullCreatorEventHandler PullCreatorEvent;
+
+        public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
+        public event PullTopicEventHandler PullTopicEvent;
+        public event PullMessageEventHandler PullMessageEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
 
@@ -257,10 +264,10 @@ namespace Library.Net.Lair
 
                         xml.WriteStartElement("Protocol");
 
-                        if (_myProtocolVersion == ProtocolVersion.Version1)
+                        if (_myProtocolVersion == ProtocolVersion.Version2)
                         {
                             xml.WriteStartElement("Lair");
-                            xml.WriteAttributeString("Version", "1");
+                            xml.WriteAttributeString("Version", "2");
 
                             xml.WriteEndElement(); //Protocol
                         }
@@ -286,9 +293,9 @@ namespace Library.Net.Lair
                                 {
                                     var version = xml.GetAttribute("Version");
 
-                                    if (version == "1")
+                                    if (version == "2")
                                     {
-                                        _otherProtocolVersion |= ProtocolVersion.Version1;
+                                        _otherProtocolVersion |= ProtocolVersion.Version2;
                                     }
                                 }
                             }
@@ -551,16 +558,6 @@ namespace Library.Net.Lair
                                     var message = NodesMessage.Import(stream2, _bufferManager);
                                     this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
                                 }
-                                else if (type == (byte)SerializeId.ChannelsRequest)
-                                {
-                                    var message = ChannelsRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullChannelsRequest(new PullChannelsRequestEventArgs() { Channels = message.Channels });
-                                }
-                                else if (type == (byte)SerializeId.Message)
-                                {
-                                    var message = Message.Import(stream2, _bufferManager);
-                                    this.OnPullMessage(new PullMessageEventArgs() { Message = message });
-                                }
                                 else if (type == (byte)SerializeId.SectionsRequest)
                                 {
                                     var message = SectionsRequestMessage.Import(stream2, _bufferManager);
@@ -580,6 +577,21 @@ namespace Library.Net.Lair
                                 {
                                     var creator = Creator.Import(stream2, _bufferManager);
                                     this.OnPullCreator(new PullCreatorEventArgs() { Creator = creator });
+                                }
+                                else if (type == (byte)SerializeId.ChannelsRequest)
+                                {
+                                    var message = ChannelsRequestMessage.Import(stream2, _bufferManager);
+                                    this.OnPullChannelsRequest(new PullChannelsRequestEventArgs() { Channels = message.Channels });
+                                }
+                                else if (type == (byte)SerializeId.Topic)
+                                {
+                                    var topic = Topic.Import(stream2, _bufferManager);
+                                    this.OnPullTopic(new PullTopicEventArgs() { Topic = topic });
+                                }
+                                else if (type == (byte)SerializeId.Message)
+                                {
+                                    var message = Message.Import(stream2, _bufferManager);
+                                    this.OnPullMessage(new PullMessageEventArgs() { Message = message });
                                 }
                             }
                         }
@@ -604,22 +616,6 @@ namespace Library.Net.Lair
             if (this.PullNodesEvent != null)
             {
                 this.PullNodesEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullChannelsRequest(PullChannelsRequestEventArgs e)
-        {
-            if (this.PullChannelsRequestEvent != null)
-            {
-                this.PullChannelsRequestEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullMessage(PullMessageEventArgs e)
-        {
-            if (this.PullMessageEvent != null)
-            {
-                this.PullMessageEvent(this, e);
             }
         }
 
@@ -652,6 +648,30 @@ namespace Library.Net.Lair
             if (this.PullCreatorEvent != null)
             {
                 this.PullCreatorEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullChannelsRequest(PullChannelsRequestEventArgs e)
+        {
+            if (this.PullChannelsRequestEvent != null)
+            {
+                this.PullChannelsRequestEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullTopic(PullTopicEventArgs e)
+        {
+            if (this.PullTopicEvent != null)
+            {
+                this.PullTopicEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullMessage(PullMessageEventArgs e)
+        {
+            if (this.PullMessageEvent != null)
+            {
+                this.PullMessageEvent(this, e);
             }
         }
 
@@ -689,79 +709,6 @@ namespace Library.Net.Lair
 
                     var message = new NodesMessage();
                     message.Nodes.AddRange(nodes);
-
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushChannelsRequest(IEnumerable<Channel> channels)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.ChannelsRequest);
-                    stream.Flush();
-
-                    var message = new ChannelsRequestMessage();
-                    message.Channels.AddRange(channels);
-
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushMessage(Message message)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.Message);
-                    stream.Flush();
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -928,6 +875,114 @@ namespace Library.Net.Lair
             }
         }
 
+        public void PushChannelsRequest(IEnumerable<Channel> channels)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.ChannelsRequest);
+                    stream.Flush();
+
+                    var message = new ChannelsRequestMessage();
+                    message.Channels.AddRange(channels);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushTopic(Topic topic)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Topic);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, topic.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushMessage(Message message)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Message);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
         public void PushCancel()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -1063,111 +1118,6 @@ namespace Library.Net.Lair
             #endregion
         }
 
-        [DataContract(Name = "ChannelsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class ChannelsRequestMessage : ItemBase<ChannelsRequestMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Channel = 0,
-            }
-
-            private ChannelCollection _channels;
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Channel)
-                            {
-                                this.Channels.Add(Channel.Import(rangeStream, bufferManager));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
-
-                    // Channels
-                    foreach (var c in this.Channels)
-                    {
-                        Stream exportStream = c.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Channel);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
-                }
-            }
-
-            public override ChannelsRequestMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
-                    {
-                        return ChannelsRequestMessage.Import(stream, bufferManager);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Channels")]
-            public ChannelCollection Channels
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_channels == null)
-                            _channels = new ChannelCollection(128);
-
-                        return _channels;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
         [DataContract(Name = "SectionsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
         private sealed class SectionsRequestMessage : ItemBase<SectionsRequestMessage>, IThisLock
         {
@@ -1248,6 +1198,111 @@ namespace Library.Net.Lair
                     {
                         if (_channels == null)
                             _channels = new SectionCollection(128);
+
+                        return _channels;
+                    }
+                }
+            }
+
+            #region IThisLock
+
+            public object ThisLock
+            {
+                get
+                {
+                    lock (_thisStaticLock)
+                    {
+                        if (_thisLock == null)
+                            _thisLock = new object();
+
+                        return _thisLock;
+                    }
+                }
+            }
+
+            #endregion
+        }
+
+        [DataContract(Name = "ChannelsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class ChannelsRequestMessage : ItemBase<ChannelsRequestMessage>, IThisLock
+        {
+            private enum SerializeId : byte
+            {
+                Channel = 0,
+            }
+
+            private ChannelCollection _channels;
+            private object _thisLock;
+            private static object _thisStaticLock = new object();
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    Encoding encoding = new UTF8Encoding(false);
+                    byte[] lengthBuffer = new byte[4];
+
+                    for (; ; )
+                    {
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+                        byte id = (byte)stream.ReadByte();
+
+                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        {
+                            if (id == (byte)SerializeId.Channel)
+                            {
+                                this.Channels.Add(Channel.Import(rangeStream, bufferManager));
+                            }
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    List<Stream> streams = new List<Stream>();
+                    Encoding encoding = new UTF8Encoding(false);
+
+                    // Channels
+                    foreach (var c in this.Channels)
+                    {
+                        Stream exportStream = c.Export(bufferManager);
+
+                        BufferStream bufferStream = new BufferStream(bufferManager);
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Channel);
+
+                        streams.Add(new JoinStream(bufferStream, exportStream));
+                    }
+
+                    return new JoinStream(streams);
+                }
+            }
+
+            public override ChannelsRequestMessage DeepClone()
+            {
+                lock (this.ThisLock)
+                {
+                    using (var bufferManager = new BufferManager())
+                    using (var stream = this.Export(bufferManager))
+                    {
+                        return ChannelsRequestMessage.Import(stream, bufferManager);
+                    }
+                }
+            }
+
+            [DataMember(Name = "Channels")]
+            public ChannelCollection Channels
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_channels == null)
+                            _channels = new ChannelCollection(128);
 
                         return _channels;
                     }

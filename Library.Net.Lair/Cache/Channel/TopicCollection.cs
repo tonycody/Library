@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class BoardCollection : FilterList<Board>, IEnumerable<Board>
+    public sealed class TopicCollection : FilterList<Topic>, IEnumerable<Topic>
     {
-        public BoardCollection() : base() { }
-        public BoardCollection(int capacity) : base(capacity) { }
-        public BoardCollection(IEnumerable<Board> collections) : base(collections) { }
+        public TopicCollection() : base() { }
+        public TopicCollection(int capacity) : base(capacity) { }
+        public TopicCollection(IEnumerable<Topic> collections) : base(collections) { }
 
-        protected override bool Filter(Board item)
+        protected override bool Filter(Topic item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Board>
+        #region IEnumerable<Topic>
 
-        IEnumerator<Board> IEnumerable<Board>.GetEnumerator()
+        IEnumerator<Topic> IEnumerable<Topic>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

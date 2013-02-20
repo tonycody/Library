@@ -15,13 +15,14 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public delegate void UnlockChannelsEventHandler(object sender, ref IList<Channel> channels);
-    public delegate void UnlockMessagesEventHandler(object sender, Channel channel, ref IList<Message> messages);
-
     public delegate void UnlockSectionsEventHandler(object sender, ref IList<Section> sections);
     public delegate void UnlockLeadersEventHandler(object sender, Section section, ref IList<Leader> leaders);
     public delegate void UnlockManagersEventHandler(object sender, Section section, ref IList<Manager> managers);
     public delegate void UnlockCreatorsEventHandler(object sender, Section section, ref IList<Creator> creators);
+
+    public delegate void UnlockChannelsEventHandler(object sender, ref IList<Channel> channels);
+    public delegate void UnlockTopicsEventHandler(object sender, Channel channel, ref IList<Topic> topics);
+    public delegate void UnlockMessagesEventHandler(object sender, Channel channel, ref IList<Message> messages);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -70,31 +71,34 @@ namespace Library.Net.Lair
         private long _sentByteCount = 0;
 
         private volatile int _pushNodeCount;
-        private volatile int _pushChannelRequestCount;
-        private volatile int _pushMessageCount;
         private volatile int _pushSectionRequestCount;
         private volatile int _pushLeaderCount;
         private volatile int _pushManagerCount;
         private volatile int _pushCreatorCount;
+        private volatile int _pushChannelRequestCount;
+        private volatile int _pushTopicCount;
+        private volatile int _pushMessageCount;
 
         private volatile int _pullNodeCount;
-        private volatile int _pullChannelRequestCount;
-        private volatile int _pullMessageCount;
         private volatile int _pullSectionRequestCount;
         private volatile int _pullLeaderCount;
         private volatile int _pullManagerCount;
         private volatile int _pullCreatorCount;
+        private volatile int _pullChannelRequestCount;
+        private volatile int _pullTopicCount;
+        private volatile int _pullMessageCount;
 
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
-
-        public event UnlockChannelsEventHandler UnlockChannelsEvent;
-        public event UnlockMessagesEventHandler UnlockMessagesEvent;
 
         public event UnlockSectionsEventHandler UnlockSectionsEvent;
         public event UnlockLeadersEventHandler UnlockLeadersEvent;
         public event UnlockManagersEventHandler UnlockManagersEvent;
         public event UnlockCreatorsEventHandler UnlockCreatorsEvent;
+
+        public event UnlockChannelsEventHandler UnlockChannelsEvent;
+        public event UnlockTopicsEventHandler UnlockTopicsEvent;
+        public event UnlockMessagesEventHandler UnlockMessagesEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -268,20 +272,22 @@ namespace Library.Net.Lair
                     List<InformationContext> contexts = new List<InformationContext>();
 
                     contexts.Add(new InformationContext("PushNodeCount", _pushNodeCount));
-                    contexts.Add(new InformationContext("PushChannelRequestCount", _pushChannelRequestCount));
-                    contexts.Add(new InformationContext("PushMessageCount", _pushMessageCount));
                     contexts.Add(new InformationContext("PushSectionRequestCount", _pushSectionRequestCount));
                     contexts.Add(new InformationContext("PushLeaderCount", _pushLeaderCount));
                     contexts.Add(new InformationContext("PushCreatorCount", _pushCreatorCount));
                     contexts.Add(new InformationContext("PushManagerCount", _pushManagerCount));
+                    contexts.Add(new InformationContext("PushChannelRequestCount", _pushChannelRequestCount));
+                    contexts.Add(new InformationContext("PushMessageCount", _pushMessageCount));
+                    contexts.Add(new InformationContext("PushTopicCount", _pushTopicCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
-                    contexts.Add(new InformationContext("PullChannelRequestCount", _pullChannelRequestCount));
-                    contexts.Add(new InformationContext("PullMessageCount", _pullMessageCount));
                     contexts.Add(new InformationContext("PullSectionRequestCount", _pullSectionRequestCount));
                     contexts.Add(new InformationContext("PullLeaderCount", _pullLeaderCount));
                     contexts.Add(new InformationContext("PullCreatorCount", _pullCreatorCount));
                     contexts.Add(new InformationContext("PullManagerCount", _pullManagerCount));
+                    contexts.Add(new InformationContext("PullChannelRequestCount", _pullChannelRequestCount));
+                    contexts.Add(new InformationContext("PullMessageCount", _pullMessageCount));
+                    contexts.Add(new InformationContext("PullTopicCount", _pullTopicCount));
 
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
@@ -337,22 +343,6 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnUnlockChannelsEvent(ref IList<Channel> channels)
-        {
-            if (this.UnlockChannelsEvent != null)
-            {
-                this.UnlockChannelsEvent(this, ref channels);
-            }
-        }
-
-        protected virtual void OnUnlockMessagesEvent(Channel channel, ref IList<Message> messages)
-        {
-            if (this.UnlockMessagesEvent != null)
-            {
-                this.UnlockMessagesEvent(this, channel, ref messages);
-            }
-        }
-
         protected virtual void OnUnlockSectionsEvent(ref IList<Section> sections)
         {
             if (this.UnlockSectionsEvent != null)
@@ -382,6 +372,30 @@ namespace Library.Net.Lair
             if (this.UnlockCreatorsEvent != null)
             {
                 this.UnlockCreatorsEvent(this, section, ref creators);
+            }
+        }
+
+        protected virtual void OnUnlockChannelsEvent(ref IList<Channel> channels)
+        {
+            if (this.UnlockChannelsEvent != null)
+            {
+                this.UnlockChannelsEvent(this, ref channels);
+            }
+        }
+
+        protected virtual void OnUnlockTopicsEvent(Channel channel, ref IList<Topic> topics)
+        {
+            if (this.UnlockTopicsEvent != null)
+            {
+                this.UnlockTopicsEvent(this, channel, ref topics);
+            }
+        }
+
+        protected virtual void OnUnlockMessagesEvent(Channel channel, ref IList<Message> messages)
+        {
+            if (this.UnlockMessagesEvent != null)
+            {
+                this.UnlockMessagesEvent(this, channel, ref messages);
             }
         }
 
@@ -672,12 +686,13 @@ namespace Library.Net.Lair
                 Debug.WriteLine("ConnectionManager: Connect");
 
                 connectionManager.PullNodesEvent += new PullNodesEventHandler(connectionManager_NodesEvent);
-                connectionManager.PullChannelsRequestEvent += new PullChannelsRequestEventHandler(connectionManager_PullChannelsRequestEvent);
-                connectionManager.PullMessageEvent += new PullMessageEventHandler(connectionManager_PullMessageEvent);
                 connectionManager.PullSectionsRequestEvent += new PullSectionsRequestEventHandler(connectionManager_PullSectionsRequestEvent);
                 connectionManager.PullLeaderEvent += new PullLeaderEventHandler(connectionManager_PullLeaderEvent);
                 connectionManager.PullManagerEvent += new PullManagerEventHandler(connectionManager_PullManagerEvent);
                 connectionManager.PullCreatorEvent += new PullCreatorEventHandler(connectionManager_PullCreatorEvent);
+                connectionManager.PullChannelsRequestEvent += new PullChannelsRequestEventHandler(connectionManager_PullChannelsRequestEvent);
+                connectionManager.PullTopicEvent += new PullTopicEventHandler(connectionManager_PullTopicEvent);
+                connectionManager.PullMessageEvent += new PullMessageEventHandler(connectionManager_PullMessageEvent);
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 
@@ -1141,26 +1156,6 @@ namespace Library.Net.Lair
                 {
                     pushUploadStopwatch.Restart();
 
-                    Parallel.ForEach(this.GetChannels(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
-                    {
-                        try
-                        {
-                            List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
-
-                            for (int i = 0; i < requestNodes.Count; i++)
-                            {
-                                var messageManager = _messagesManager[requestNodes[i]];
-
-                                messageManager.PullChannelsRequest.Add(item);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Log.Error(e);
-                        }
-                    });
-
                     Parallel.ForEach(this.GetSections(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                     {
                         try
@@ -1180,49 +1175,39 @@ namespace Library.Net.Lair
                             Log.Error(e);
                         }
                     });
+
+                    Parallel.ForEach(this.GetChannels(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                    {
+                        try
+                        {
+                            List<Node> requestNodes = new List<Node>();
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
+
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                var messageManager = _messagesManager[requestNodes[i]];
+
+                                messageManager.PullChannelsRequest.Add(item);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    });
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
                 {
                     pushDownloadStopwatch.Restart();
 
-                    HashSet<Channel> pushChannelsRequestList = new HashSet<Channel>();
                     HashSet<Section> pushSectionsRequestList = new HashSet<Section>();
+                    HashSet<Channel> pushChannelsRequestList = new HashSet<Channel>();
                     List<Node> nodes = new List<Node>();
 
                     lock (this.ThisLock)
                     {
                         nodes.AddRange(_connectionManagers.Select(n => n.Node));
-                    }
-
-                    {
-                        {
-                            var list = _pushChannelsRequestList
-                                .ToArray()
-                                .OrderBy(n => _random.Next())
-                                .ToList();
-
-                            for (int i = 0; i < 128 && i < list.Count; i++)
-                            {
-                                pushChannelsRequestList.Add(list[i]);
-                            }
-                        }
-                    }
-
-                    {
-                        foreach (var node in nodes)
-                        {
-                            var messageManager = _messagesManager[node];
-                            var list = messageManager.PullChannelsRequest
-                                .ToArray()
-                                .OrderBy(n => _random.Next())
-                                .ToList();
-
-                            for (int i = 0; i < 128 && i < list.Count; i++)
-                            {
-                                pushChannelsRequestList.Add(list[i]);
-                            }
-                        }
                     }
 
                     {
@@ -1256,39 +1241,31 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        LockedDictionary<Node, LockedHashSet<Channel>> pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
-
-                        Parallel.ForEach(pushChannelsRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
-                            try
+                            var list = _pushChannelsRequestList
+                                .ToArray()
+                                .OrderBy(n => _random.Next())
+                                .ToList();
+
+                            for (int i = 0; i < 128 && i < list.Count; i++)
                             {
-                                List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
-
-                                for (int i = 0; i < requestNodes.Count; i++)
-                                {
-                                    lock (pushChannelsRequestDictionary.ThisLock)
-                                    {
-                                        if (!pushChannelsRequestDictionary.ContainsKey(requestNodes[i]))
-                                            pushChannelsRequestDictionary[requestNodes[i]] = new LockedHashSet<Channel>();
-
-                                        pushChannelsRequestDictionary[requestNodes[i]].Add(item);
-                                    }
-                                }
+                                pushChannelsRequestList.Add(list[i]);
                             }
-                            catch (Exception e)
-                            {
-                                Log.Error(e);
-                            }
-                        });
+                        }
+                    }
 
-                        lock (_pushChannelsRequestDictionary.ThisLock)
+                    {
+                        foreach (var node in nodes)
                         {
-                            _pushChannelsRequestDictionary.Clear();
+                            var messageManager = _messagesManager[node];
+                            var list = messageManager.PullChannelsRequest
+                                .ToArray()
+                                .OrderBy(n => _random.Next())
+                                .ToList();
 
-                            foreach (var item in pushChannelsRequestDictionary)
+                            for (int i = 0; i < 128 && i < list.Count; i++)
                             {
-                                _pushChannelsRequestDictionary.Add(item.Key, item.Value);
+                                pushChannelsRequestList.Add(list[i]);
                             }
                         }
                     }
@@ -1327,6 +1304,44 @@ namespace Library.Net.Lair
                             foreach (var item in pushSectionsRequestDictionary)
                             {
                                 _pushSectionsRequestDictionary.Add(item.Key, item.Value);
+                            }
+                        }
+                    }
+
+                    {
+                        LockedDictionary<Node, LockedHashSet<Channel>> pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
+
+                        Parallel.ForEach(pushChannelsRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        {
+                            try
+                            {
+                                List<Node> requestNodes = new List<Node>();
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
+
+                                for (int i = 0; i < requestNodes.Count; i++)
+                                {
+                                    lock (pushChannelsRequestDictionary.ThisLock)
+                                    {
+                                        if (!pushChannelsRequestDictionary.ContainsKey(requestNodes[i]))
+                                            pushChannelsRequestDictionary[requestNodes[i]] = new LockedHashSet<Channel>();
+
+                                        pushChannelsRequestDictionary[requestNodes[i]].Add(item);
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e);
+                            }
+                        });
+
+                        lock (_pushChannelsRequestDictionary.ThisLock)
+                        {
+                            _pushChannelsRequestDictionary.Clear();
+
+                            foreach (var item in pushChannelsRequestDictionary)
+                            {
+                                _pushChannelsRequestDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1425,49 +1440,6 @@ namespace Library.Net.Lair
                     {
                         updateTime.Restart();
 
-                        // PushChannelsRequest
-                        if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
-                        {
-                            ChannelCollection tempList = null;
-                            int count = (int)(128 * this.ResponseTimePriority(connectionManager.Node));
-
-                            lock (_pushChannelsRequestDictionary.ThisLock)
-                            {
-                                if (_pushChannelsRequestDictionary.ContainsKey(connectionManager.Node))
-                                {
-                                    tempList = new ChannelCollection(_pushChannelsRequestDictionary[connectionManager.Node]
-                                        .ToArray()
-                                        .OrderBy(n => _random.Next())
-                                        .Take(count));
-
-                                    _pushChannelsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
-                                    _messagesManager[connectionManager.Node].PushChannelsRequest.AddRange(tempList);
-                                }
-                            }
-
-                            if (tempList != null && tempList.Count != 0)
-                            {
-                                try
-                                {
-                                    connectionManager.PushChannelsRequest(tempList);
-
-                                    _pushChannelsRequestList.ExceptWith(tempList);
-
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push ChannelsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
-                                    _pushChannelRequestCount += tempList.Count;
-                                }
-                                catch (Exception e)
-                                {
-                                    foreach (var item in tempList)
-                                    {
-                                        _messagesManager[connectionManager.Node].PushChannelsRequest.Remove(item);
-                                    }
-
-                                    throw e;
-                                }
-                            }
-                        }
-
                         // PushSectionsRequest
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
@@ -1510,59 +1482,57 @@ namespace Library.Net.Lair
                                 }
                             }
                         }
+
+                        // PushChannelsRequest
+                        if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
+                        {
+                            ChannelCollection tempList = null;
+                            int count = (int)(128 * this.ResponseTimePriority(connectionManager.Node));
+
+                            lock (_pushChannelsRequestDictionary.ThisLock)
+                            {
+                                if (_pushChannelsRequestDictionary.ContainsKey(connectionManager.Node))
+                                {
+                                    tempList = new ChannelCollection(_pushChannelsRequestDictionary[connectionManager.Node]
+                                        .ToArray()
+                                        .OrderBy(n => _random.Next())
+                                        .Take(count));
+
+                                    _pushChannelsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
+                                    _messagesManager[connectionManager.Node].PushChannelsRequest.AddRange(tempList);
+                                }
+                            }
+
+                            if (tempList != null && tempList.Count != 0)
+                            {
+                                try
+                                {
+                                    connectionManager.PushChannelsRequest(tempList);
+
+                                    _pushChannelsRequestList.ExceptWith(tempList);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push ChannelsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                    _pushChannelRequestCount += tempList.Count;
+                                }
+                                catch (Exception e)
+                                {
+                                    foreach (var item in tempList)
+                                    {
+                                        _messagesManager[connectionManager.Node].PushChannelsRequest.Remove(item);
+                                    }
+
+                                    throw e;
+                                }
+                            }
+                        }
                     }
 
                     if (connectionCount >= _uploadingConnectionCountLowerLimit)
                     {
-                        foreach (var s in new int[] { 0, 1, 2, 3, }.Randomize())
+                        foreach (var s in new int[] { 0, 1, 2, 3, 4, }.Randomize())
                         {
-                            // Upload (Message)
-                            if (s == 0)
-                            {
-                                List<Channel> channels = new List<Channel>();
-                                channels.AddRange(messageManager.PullChannelsRequest);
-
-                                HashSet<Message> messages = new HashSet<Message>();
-
-                                lock (this.ThisLock)
-                                {
-                                    lock (_settings.ThisLock)
-                                    {
-                                        foreach (var channel in channels.OrderBy(n => _random.Next()))
-                                        {
-                                            if (_settings.Messages.ContainsKey(channel))
-                                            {
-                                                foreach (var m in _settings.Messages[channel].OrderBy(n => _random.Next()))
-                                                {
-                                                    if (!messageManager.PushMessages.Contains(m.GetHash(_hashAlgorithm)))
-                                                    {
-                                                        messages.Add(m);
-
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (messages.Count != 0)
-                                {
-                                    var message = messages.First();
-                                    connectionManager.PushMessage(message);
-
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push Message ({0})", message.Channel.Name));
-                                    _pushMessageCount++;
-
-                                    messageManager.PushMessages.Add(message.GetHash(_hashAlgorithm));
-                                    messageManager.Priority--;
-                                }
-
-                                break;
-                            }
-
                             // Upload (Leader)
-                            if (s == 1)
+                            if (s == 0)
                             {
                                 List<Section> channels = new List<Section>();
                                 channels.AddRange(messageManager.PullSectionsRequest);
@@ -1607,7 +1577,7 @@ namespace Library.Net.Lair
                             }
 
                             // Upload (Manager)
-                            if (s == 2)
+                            if (s == 1)
                             {
                                 List<Section> channels = new List<Section>();
                                 channels.AddRange(messageManager.PullSectionsRequest);
@@ -1652,7 +1622,7 @@ namespace Library.Net.Lair
                             }
 
                             // Upload (Creator)
-                            if (s == 3)
+                            if (s == 2)
                             {
                                 List<Section> channels = new List<Section>();
                                 channels.AddRange(messageManager.PullSectionsRequest);
@@ -1690,6 +1660,96 @@ namespace Library.Net.Lair
                                     _pushCreatorCount++;
 
                                     messageManager.PushCreators.Add(creator.GetHash(_hashAlgorithm));
+                                    messageManager.Priority--;
+                                }
+
+                                break;
+                            }
+
+                            // Upload (Topic)
+                            if (s == 3)
+                            {
+                                List<Channel> channels = new List<Channel>();
+                                channels.AddRange(messageManager.PullChannelsRequest);
+
+                                HashSet<Topic> topics = new HashSet<Topic>();
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var channel in channels.OrderBy(n => _random.Next()))
+                                        {
+                                            if (_settings.Topics.ContainsKey(channel))
+                                            {
+                                                foreach (var c in _settings.Topics[channel].Values.OrderBy(n => _random.Next()))
+                                                {
+                                                    if (!messageManager.PushTopics.Contains(c.GetHash(_hashAlgorithm)))
+                                                    {
+                                                        topics.Add(c);
+
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (topics.Count != 0)
+                                {
+                                    var topic = topics.First();
+                                    connectionManager.PushTopic(topic);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Topic ({0})", topic.Channel.Name));
+                                    _pushTopicCount++;
+
+                                    messageManager.PushTopics.Add(topic.GetHash(_hashAlgorithm));
+                                    messageManager.Priority--;
+                                }
+
+                                break;
+                            }
+
+                            // Upload (Message)
+                            if (s == 4)
+                            {
+                                List<Channel> channels = new List<Channel>();
+                                channels.AddRange(messageManager.PullChannelsRequest);
+
+                                HashSet<Message> messages = new HashSet<Message>();
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var channel in channels.OrderBy(n => _random.Next()))
+                                        {
+                                            if (_settings.Messages.ContainsKey(channel))
+                                            {
+                                                foreach (var m in _settings.Messages[channel].OrderBy(n => _random.Next()))
+                                                {
+                                                    if (!messageManager.PushMessages.Contains(m.GetHash(_hashAlgorithm)))
+                                                    {
+                                                        messages.Add(m);
+
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (messages.Count != 0)
+                                {
+                                    var message = messages.First();
+                                    connectionManager.PushMessage(message);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Message ({0})", message.Channel.Name));
+                                    _pushMessageCount++;
+
+                                    messageManager.PushMessages.Add(message.GetHash(_hashAlgorithm));
                                     messageManager.Priority--;
                                 }
 
@@ -1745,57 +1805,6 @@ namespace Library.Net.Lair
                     }
                 }
             }
-        }
-
-        private void connectionManager_PullChannelsRequestEvent(object sender, PullChannelsRequestEventArgs e)
-        {
-            var connectionManager = sender as ConnectionManager;
-            if (connectionManager == null) return;
-
-            if (e.Channels == null) return;
-
-            Debug.WriteLine(string.Format("ConnectionManager: Pull ChannelsRequest {0} ({1})", String.Join(", ", e.Channels), e.Channels.Count()));
-
-            foreach (var c in e.Channels.Take(_maxRequestCount))
-            {
-                if (c == null || c.Id == null || string.IsNullOrWhiteSpace(c.Name)) continue;
-
-                _messagesManager[connectionManager.Node].PullChannelsRequest.Add(c);
-                _pullChannelRequestCount++;
-            }
-        }
-
-        private void connectionManager_PullMessageEvent(object sender, PullMessageEventArgs e)
-        {
-            var connectionManager = sender as ConnectionManager;
-            if (connectionManager == null) return;
-
-            var now = DateTime.UtcNow;
-
-            if (e.Message == null || e.Message.Channel == null || e.Message.Channel.Id == null || string.IsNullOrWhiteSpace(e.Message.Channel.Name)
-                || string.IsNullOrWhiteSpace(e.Message.Content)
-                || (now - e.Message.CreationTime) > new TimeSpan(64, 0, 0, 0)
-                || (e.Message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                || e.Message.Certificate == null || !e.Message.VerifyCertificate()) return;
-
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Message ({0})", e.Message.Channel.Name));
-
-            lock (this.ThisLock)
-            {
-                lock (_settings.ThisLock)
-                {
-                    if (!_settings.Messages.ContainsKey(e.Message.Channel))
-                        _settings.Messages[e.Message.Channel] = new LockedHashSet<Message>();
-
-                    _settings.Messages[e.Message.Channel].Add(e.Message);
-                }
-            }
-
-            _messagesManager[connectionManager.Node].PushMessages.Add(e.Message.GetHash(_hashAlgorithm));
-            _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
-            _messagesManager[connectionManager.Node].Priority++;
-
-            _pullMessageCount++;
         }
 
         private void connectionManager_PullSectionsRequestEvent(object sender, PullSectionsRequestEventArgs e)
@@ -1947,7 +1956,102 @@ namespace Library.Net.Lair
 
             _pullCreatorCount++;
         }
-        
+
+        private void connectionManager_PullChannelsRequestEvent(object sender, PullChannelsRequestEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            if (e.Channels == null) return;
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull ChannelsRequest {0} ({1})", String.Join(", ", e.Channels), e.Channels.Count()));
+
+            foreach (var c in e.Channels.Take(_maxRequestCount))
+            {
+                if (c == null || c.Id == null || string.IsNullOrWhiteSpace(c.Name)) continue;
+
+                _messagesManager[connectionManager.Node].PullChannelsRequest.Add(c);
+                _pullChannelRequestCount++;
+            }
+        }
+
+        private void connectionManager_PullTopicEvent(object sender, PullTopicEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            var now = DateTime.UtcNow;
+
+            if (e.Topic == null || e.Topic.Channel == null || e.Topic.Channel.Id == null || string.IsNullOrWhiteSpace(e.Topic.Channel.Name)
+                || (e.Topic.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                || e.Topic.Certificate == null || !e.Topic.VerifyCertificate()) return;
+
+            var signature = e.Topic.Certificate.ToString();
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Topic {0} ({1})", signature, e.Topic.Channel.Name));
+
+            lock (this.ThisLock)
+            {
+                lock (_settings.ThisLock)
+                {
+                    LockedDictionary<string, Topic> dic = null;
+
+                    if (!_settings.Topics.TryGetValue(e.Topic.Channel, out dic))
+                    {
+                        dic = new LockedDictionary<string, Topic>();
+                        _settings.Topics[e.Topic.Channel] = dic;
+                    }
+
+                    Topic tempTopic = null;
+
+                    if (!dic.TryGetValue(signature, out tempTopic)
+                        || e.Topic.CreationTime > tempTopic.CreationTime)
+                    {
+                        dic[signature] = e.Topic;
+                    }
+                }
+            }
+
+            _messagesManager[connectionManager.Node].PushTopics.Add(e.Topic.GetHash(_hashAlgorithm));
+            _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
+            _messagesManager[connectionManager.Node].Priority++;
+
+            _pullTopicCount++;
+        }
+
+        private void connectionManager_PullMessageEvent(object sender, PullMessageEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            var now = DateTime.UtcNow;
+
+            if (e.Message == null || e.Message.Channel == null || e.Message.Channel.Id == null || string.IsNullOrWhiteSpace(e.Message.Channel.Name)
+                || string.IsNullOrWhiteSpace(e.Message.Content)
+                || (now - e.Message.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                || (e.Message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                || e.Message.Certificate == null || !e.Message.VerifyCertificate()) return;
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Message ({0})", e.Message.Channel.Name));
+
+            lock (this.ThisLock)
+            {
+                lock (_settings.ThisLock)
+                {
+                    if (!_settings.Messages.ContainsKey(e.Message.Channel))
+                        _settings.Messages[e.Message.Channel] = new LockedHashSet<Message>();
+
+                    _settings.Messages[e.Message.Channel].Add(e.Message);
+                }
+            }
+
+            _messagesManager[connectionManager.Node].PushMessages.Add(e.Message.GetHash(_hashAlgorithm));
+            _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
+            _messagesManager[connectionManager.Node].Priority++;
+
+            _pullMessageCount++;
+        }
+
         private void connectionManager_PullCancelEvent(object sender, EventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
@@ -2010,20 +2114,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Channel> GetChannels()
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                var tc = new HashSet<Channel>();
-
-                tc.UnionWith(_settings.Messages.Keys);
-
-                return tc;
-            }
-        }
-
         public IEnumerable<Section> GetSections()
         {
             lock (this.ThisLock)
@@ -2040,55 +2130,17 @@ namespace Library.Net.Lair
             }
         }
 
-        public void GetChannelInfomation(Channel channel, out IList<Message> messages)
+        public IEnumerable<Channel> GetChannels()
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _pushChannelsRequestList.Add(channel);
+                var tc = new HashSet<Channel>();
 
-                var tm = new List<Message>();
+                tc.UnionWith(_settings.Messages.Keys);
 
-                lock (this.ThisLock)
-                {
-                    lock (_settings.ThisLock)
-                    {
-                        if (_settings.Messages.ContainsKey(channel))
-                        {
-                            tm.AddRange(_settings.Messages[channel]);
-                        }
-                    }
-                }
-
-                messages = tm;
-            }
-        }
-
-        public void Upload(Message message)
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                var now = DateTime.UtcNow;
-
-                if (message == null || message.Channel == null || message.Channel.Id == null || string.IsNullOrWhiteSpace(message.Channel.Name)
-                    || string.IsNullOrWhiteSpace(message.Content)
-                    || (now - message.CreationTime) > new TimeSpan(64, 0, 0, 0)
-                    || (message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || !message.VerifyCertificate()) return;
-
-                lock (this.ThisLock)
-                {
-                    lock (_settings.ThisLock)
-                    {
-                        if (!_settings.Messages.ContainsKey(message.Channel))
-                            _settings.Messages[message.Channel] = new LockedHashSet<Message>();
-
-                        _settings.Messages[message.Channel].Add(message);
-                    }
-                }
+                return tc;
             }
         }
 
@@ -2257,6 +2309,109 @@ namespace Library.Net.Lair
             }
         }
 
+        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Topic> topics)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _pushChannelsRequestList.Add(channel);
+
+                var tt = new List<Topic>();
+                var tm = new List<Message>();
+
+                lock (this.ThisLock)
+                {
+                    lock (_settings.ThisLock)
+                    {
+                        if (_settings.Topics.ContainsKey(channel))
+                        {
+                            tt.AddRange(_settings.Topics[channel].Values);
+                        }
+                    }
+                }
+
+                lock (this.ThisLock)
+                {
+                    lock (_settings.ThisLock)
+                    {
+                        if (_settings.Messages.ContainsKey(channel))
+                        {
+                            tm.AddRange(_settings.Messages[channel]);
+                        }
+                    }
+                }
+
+                topics = tt;
+                messages = tm;
+            }
+        }
+
+        public void Upload(Topic topic)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                var now = DateTime.UtcNow;
+
+                if (topic == null || topic.Channel == null || topic.Channel.Id == null || string.IsNullOrWhiteSpace(topic.Channel.Name)
+                    || (topic.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                    || topic.Certificate == null || !topic.VerifyCertificate()) return;
+
+                var signature = topic.Certificate.ToString();
+
+                lock (this.ThisLock)
+                {
+                    lock (_settings.ThisLock)
+                    {
+                        LockedDictionary<string, Topic> dic = null;
+
+                        if (!_settings.Topics.TryGetValue(topic.Channel, out dic))
+                        {
+                            dic = new LockedDictionary<string, Topic>();
+                            _settings.Topics[topic.Channel] = dic;
+                        }
+
+                        Topic tempTopic = null;
+
+                        if (!dic.TryGetValue(signature, out tempTopic)
+                            || topic.CreationTime > tempTopic.CreationTime)
+                        {
+                            dic[signature] = topic;
+                        }
+                    }
+                }
+            }
+        }
+
+        public void Upload(Message message)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                var now = DateTime.UtcNow;
+
+                if (message == null || message.Channel == null || message.Channel.Id == null || string.IsNullOrWhiteSpace(message.Channel.Name)
+                    || string.IsNullOrWhiteSpace(message.Content)
+                    || (now - message.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                    || (message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                    || message.Certificate == null || !message.VerifyCertificate()) return;
+
+                lock (this.ThisLock)
+                {
+                    lock (_settings.ThisLock)
+                    {
+                        if (!_settings.Messages.ContainsKey(message.Channel))
+                            _settings.Messages[message.Channel] = new LockedHashSet<Message>();
+
+                        _settings.Messages[message.Channel].Add(message);
+                    }
+                }
+            }
+        }
+
         public override ManagerState State
         {
             get
@@ -2405,6 +2560,7 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Leader>>>() { Name = "Leaders", Value = new LockedDictionary<Section, LockedDictionary<string, Leader>>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Manager>>>() { Name = "Managers", Value = new LockedDictionary<Section, LockedDictionary<string, Manager>>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Creator>>>() { Name = "Creators", Value = new LockedDictionary<Section, LockedDictionary<string, Creator>>() },
+                    new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedDictionary<string, Topic>>>() { Name = "Topics", Value = new LockedDictionary<Channel, LockedDictionary<string, Topic>>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Channel, LockedHashSet<Message>>>() { Name = "Messages", Value = new LockedDictionary<Channel, LockedHashSet<Message>>() },
                 })
             {
@@ -2521,6 +2677,17 @@ namespace Library.Net.Lair
                     lock (this.ThisLock)
                     {
                         return (LockedDictionary<Section, LockedDictionary<string, Creator>>)this["Creators"];
+                    }
+                }
+            }
+
+            public LockedDictionary<Channel, LockedDictionary<string, Topic>> Topics
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return (LockedDictionary<Channel, LockedDictionary<string, Topic>>)this["Topics"];
                     }
                 }
             }

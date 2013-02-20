@@ -5,10 +5,11 @@ using System.Text;
 
 namespace Library.Net.Lair
 {
-    interface IBoard<TChannel>
+    interface ITopic<TChannel> : IComputeHash
         where TChannel : IChannel
     {
         TChannel Channel { get; }
+        DateTime CreationTime { get; }
         string Content { get; }
     }
 }

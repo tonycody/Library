@@ -11,6 +11,7 @@ using System.Xml;
 using Library.Collections;
 using Library.Io;
 using Library.Net.Connection;
+using Library.Security;
 
 namespace Library.Net.Amoeba
 {

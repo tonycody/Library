@@ -17,13 +17,14 @@ namespace Library.Net.Lair
 
         private ManagerState _state = ManagerState.Stop;
 
-        public event UnlockChannelsEventHandler UnlockChannelsEvent;
-        public event UnlockMessagesEventHandler UnlockMessagesEvent;
-
         public event UnlockSectionsEventHandler UnlockSectionsEvent;
         public event UnlockLeadersEventHandler UnlockLeadersEvent;
         public event UnlockManagersEventHandler UnlockManagersEvent;
         public event UnlockCreatorsEventHandler UnlockCreatorsEvent;
+
+        public event UnlockChannelsEventHandler UnlockChannelsEvent;
+        public event UnlockTopicsEventHandler UnlockTopicsEvent;
+        public event UnlockMessagesEventHandler UnlockMessagesEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -34,22 +35,6 @@ namespace Library.Net.Lair
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _bufferManager);
-
-            _connectionsManager.UnlockChannelsEvent += (object sender, ref IList<Channel> channels) =>
-            {
-                if (this.UnlockChannelsEvent != null)
-                {
-                    this.UnlockChannelsEvent(this, ref channels);
-                }
-            };
-
-            _connectionsManager.UnlockMessagesEvent += (object sender, Channel channel, ref IList<Message> messages) =>
-            {
-                if (this.UnlockMessagesEvent != null)
-                {
-                    this.UnlockMessagesEvent(this, channel, ref messages);
-                }
-            };
 
             _connectionsManager.UnlockSectionsEvent += (object sender, ref IList<Section> channels) =>
             {
@@ -80,6 +65,30 @@ namespace Library.Net.Lair
                 if (this.UnlockCreatorsEvent != null)
                 {
                     this.UnlockCreatorsEvent(this, section, ref creators);
+                }
+            };
+
+            _connectionsManager.UnlockChannelsEvent += (object sender, ref IList<Channel> channels) =>
+            {
+                if (this.UnlockChannelsEvent != null)
+                {
+                    this.UnlockChannelsEvent(this, ref channels);
+                }
+            };
+
+            _connectionsManager.UnlockTopicsEvent += (object sender, Channel channel, ref IList<Topic> topics) =>
+            {
+                if (this.UnlockTopicsEvent != null)
+                {
+                    this.UnlockTopicsEvent(this, channel, ref topics);
+                }
+            };
+
+            _connectionsManager.UnlockMessagesEvent += (object sender, Channel channel, ref IList<Message> messages) =>
+            {
+                if (this.UnlockMessagesEvent != null)
+                {
+                    this.UnlockMessagesEvent(this, channel, ref messages);
                 }
             };
         }
@@ -280,16 +289,56 @@ namespace Library.Net.Lair
             }
         }
 
-        public void GetChannelInfomation(Channel channel, out IList<Message> messages)
+        public void Upload(Leader leader)
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _connectionsManager.GetChannelInfomation(channel, out messages);
+                _connectionsManager.Upload(leader);
             }
         }
 
+        public void Upload(Manager manager)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _connectionsManager.Upload(manager);
+            }
+        }
+
+        public void Upload(Creator creator)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _connectionsManager.Upload(creator);
+            }
+        }
+
+        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Topic> topics)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _connectionsManager.GetChannelInfomation(channel, out messages, out topics);
+            }
+        }
+
+        public void Upload(Topic topic)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _connectionsManager.Upload(topic);
+            }
+        }
+        
         public void Upload(Message message)
         {
             lock (this.ThisLock)

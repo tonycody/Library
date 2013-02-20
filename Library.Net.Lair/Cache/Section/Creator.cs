@@ -11,14 +11,14 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Creator", Namespace = "http://Library/Net/Lair")]
-    public sealed class Creator : ReadOnlyCertificateItemBase<Creator>, ICreator<Section, Board, Channel>
+    public sealed class Creator : ReadOnlyCertificateItemBase<Creator>, ICreator<Section, Channel>
     {
         private enum SerializeId : byte
         {
             Section = 0,
             CreationTime = 1,
             Comment = 2,
-            Board = 3,
+            Channel = 3,
 
             Certificate = 4,
         }
@@ -26,14 +26,14 @@ namespace Library.Net.Lair
         private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private string _comment = null;
-        private BoardCollection _boards = null;
+        private ChannelCollection _channels = null;
 
         private Certificate _certificate;
 
         public const int MaxCommentLength = 1024 * 4;
-        public const int MaxBoardsCount = 128;
+        public const int MaxChannelsCount = 1024;
 
-        public Creator(Section section, string comment, BoardCollection boards, DigitalSignature digitalSignature)
+        public Creator(Section section, string comment, ChannelCollection channels, DigitalSignature digitalSignature)
         {
             if (section == null) throw new ArgumentNullException("section");
             if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
@@ -41,7 +41,7 @@ namespace Library.Net.Lair
             this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             this.Comment = comment;
-            if (boards != null) this.ProtectedBoards.AddRange(boards);
+            if (channels != null) this.ProtectedChannels.AddRange(channels);
 
             this.CreateCertificate(digitalSignature);
         }
@@ -77,9 +77,9 @@ namespace Library.Net.Lair
                             this.Comment = reader.ReadToEnd();
                         }
                     }
-                    else if (id == (byte)SerializeId.Board)
+                    else if (id == (byte)SerializeId.Channel)
                     {
-                        this.ProtectedBoards.Add(Board.Import(rangeStream, bufferManager));
+                        this.ProtectedChannels.Add(Channel.Import(rangeStream, bufferManager));
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -144,14 +144,14 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Boards
-            foreach (var c in this.ProtectedBoards)
+            // Channels
+            foreach (var c in this.ProtectedChannels)
             {
                 Stream exportStream = c.Export(bufferManager);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Board);
+                bufferStream.WriteByte((byte)SerializeId.Channel);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
@@ -199,11 +199,11 @@ namespace Library.Net.Lair
                 return false;
             }
 
-            if (this.ProtectedBoards != null && other.ProtectedBoards != null)
+            if (this.ProtectedChannels != null && other.ProtectedChannels != null)
             {
-                if (this.ProtectedBoards.Count != other.ProtectedBoards.Count) return false;
+                if (this.ProtectedChannels.Count != other.ProtectedChannels.Count) return false;
 
-                for (int i = 0; i < this.ProtectedBoards.Count; i++) if (this.ProtectedBoards[i] != other.ProtectedBoards[i]) return false;
+                for (int i = 0; i < this.ProtectedChannels.Count; i++) if (this.ProtectedChannels[i] != other.ProtectedChannels[i]) return false;
             }
 
             return true;
@@ -302,23 +302,23 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Board> Boards
+        public IEnumerable<Channel> Channels
         {
             get
             {
-                return this.ProtectedBoards;
+                return this.ProtectedChannels;
             }
         }
 
-        [DataMember(Name = "Boards")]
-        private BoardCollection ProtectedBoards
+        [DataMember(Name = "Channels")]
+        private ChannelCollection ProtectedChannels
         {
             get
             {
-                if (_boards == null)
-                    _boards = new BoardCollection(Creator.MaxBoardsCount);
+                if (_channels == null)
+                    _channels = new ChannelCollection(Creator.MaxChannelsCount);
 
-                return _boards;
+                return _channels;
             }
         }
 
