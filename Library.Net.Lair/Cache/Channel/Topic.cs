@@ -33,9 +33,6 @@ namespace Library.Net.Lair
 
         public Topic(Channel channel, string content, DigitalSignature digitalSignature)
         {
-            if (channel == null) throw new ArgumentNullException("channel");
-            if (string.IsNullOrWhiteSpace(content)) throw new ArgumentNullException("content");
-
             this.Channel = channel;
             this.CreationTime = DateTime.UtcNow;
             this.Content = content;

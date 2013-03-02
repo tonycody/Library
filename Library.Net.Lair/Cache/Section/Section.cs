@@ -26,9 +26,6 @@ namespace Library.Net.Lair
 
         public Section(byte[] id, string name)
         {
-            if (id == null) throw new ArgumentNullException("id");
-            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException("name");
-
             this.Id = id;
             this.Name = name;
         }

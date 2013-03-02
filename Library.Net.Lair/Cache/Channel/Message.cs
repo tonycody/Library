@@ -18,9 +18,9 @@ namespace Library.Net.Lair
             Channel = 0,
             CreationTime = 1,
             Content = 2,
-            Anchor = 3,
+            Anchor = 4,
 
-            Certificate = 4,
+            Certificate = 3,
         }
 
         private Channel _channel = null;
@@ -35,9 +35,6 @@ namespace Library.Net.Lair
 
         public Message(Channel channel, string content, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
         {
-            if (channel == null) throw new ArgumentNullException("channel");
-            if (string.IsNullOrWhiteSpace(content)) throw new ArgumentNullException("content");
-
             this.Channel = channel;
             this.CreationTime = DateTime.UtcNow;
             this.Content = content;

@@ -2130,21 +2130,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Channel> GetChannels()
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                var tc = new HashSet<Channel>();
-
-                tc.UnionWith(_settings.Messages.Keys);
-
-                return tc;
-            }
-        }
-
-        public void GetSectionInfomation(Section section, out IList<Leader> leaders, out IList<Manager> managers, out IList<Creator> creators)
+        public IEnumerable<Leader> GetLeaders(Section section)
         {
             lock (this.ThisLock)
             {
@@ -2152,46 +2138,76 @@ namespace Library.Net.Lair
 
                 _pushSectionsRequestList.Add(section);
 
-                var tl = new List<Leader>();
-                var tm = new List<Manager>();
-                var tc = new List<Creator>();
+                var list = new List<Leader>();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (_settings.Leaders.ContainsKey(section))
+                        LockedDictionary<string, Leader> tempList;
+
+                        if (_settings.Leaders.TryGetValue(section, out tempList))
                         {
-                            tl.AddRange(_settings.Leaders[section].Values);
+                            list.AddRange(tempList.Values);
                         }
                     }
                 }
+
+                return list;
+            }
+        }
+
+        public IEnumerable<Creator> GetCreators(Section section)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _pushSectionsRequestList.Add(section);
+
+                var list = new List<Creator>();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (_settings.Managers.ContainsKey(section))
+                        LockedDictionary<string, Creator> tempList;
+
+                        if (_settings.Creators.TryGetValue(section, out tempList))
                         {
-                            tm.AddRange(_settings.Managers[section].Values);
+                            list.AddRange(tempList.Values);
                         }
                     }
                 }
+
+                return list;
+            }
+        }
+
+        public IEnumerable<Manager> GetManagers(Section section)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _pushSectionsRequestList.Add(section);
+
+                var list = new List<Manager>();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (_settings.Creators.ContainsKey(section))
+                        LockedDictionary<string, Manager> tempList;
+
+                        if (_settings.Managers.TryGetValue(section, out tempList))
                         {
-                            tc.AddRange(_settings.Creators[section].Values);
+                            list.AddRange(tempList.Values);
                         }
                     }
                 }
 
-                leaders = tl;
-                managers = tm;
-                creators = tc;
+                return list;
             }
         }
 
@@ -2227,44 +2243,6 @@ namespace Library.Net.Lair
                             || leader.CreationTime > tempLeader.CreationTime)
                         {
                             dic[signature] = leader;
-                        }
-                    }
-                }
-            }
-        }
-
-        public void Upload(Manager manager)
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                var now = DateTime.UtcNow;
-
-                if (manager == null || manager.Section == null || manager.Section.Id == null || string.IsNullOrWhiteSpace(manager.Section.Name)
-                    || (manager.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || manager.Certificate == null || !manager.VerifyCertificate()) return;
-
-                var signature = manager.Certificate.ToString();
-
-                lock (this.ThisLock)
-                {
-                    lock (_settings.ThisLock)
-                    {
-                        LockedDictionary<string, Manager> dic = null;
-
-                        if (!_settings.Managers.TryGetValue(manager.Section, out dic))
-                        {
-                            dic = new LockedDictionary<string, Manager>();
-                            _settings.Managers[manager.Section] = dic;
-                        }
-
-                        Manager tempManager = null;
-
-                        if (!dic.TryGetValue(signature, out tempManager)
-                            || manager.CreationTime > tempManager.CreationTime)
-                        {
-                            dic[signature] = manager;
                         }
                     }
                 }
@@ -2309,7 +2287,59 @@ namespace Library.Net.Lair
             }
         }
 
-        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Topic> topics)
+        public void Upload(Manager manager)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                var now = DateTime.UtcNow;
+
+                if (manager == null || manager.Section == null || manager.Section.Id == null || string.IsNullOrWhiteSpace(manager.Section.Name)
+                    || (manager.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                    || manager.Certificate == null || !manager.VerifyCertificate()) return;
+
+                var signature = manager.Certificate.ToString();
+
+                lock (this.ThisLock)
+                {
+                    lock (_settings.ThisLock)
+                    {
+                        LockedDictionary<string, Manager> dic = null;
+
+                        if (!_settings.Managers.TryGetValue(manager.Section, out dic))
+                        {
+                            dic = new LockedDictionary<string, Manager>();
+                            _settings.Managers[manager.Section] = dic;
+                        }
+
+                        Manager tempManager = null;
+
+                        if (!dic.TryGetValue(signature, out tempManager)
+                            || manager.CreationTime > tempManager.CreationTime)
+                        {
+                            dic[signature] = manager;
+                        }
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<Channel> GetChannels()
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                var tc = new HashSet<Channel>();
+
+                tc.UnionWith(_settings.Messages.Keys);
+
+                return tc;
+            }
+        }
+
+        public IEnumerable<Topic> GetTopics(Channel channel)
         {
             lock (this.ThisLock)
             {
@@ -2317,33 +2347,49 @@ namespace Library.Net.Lair
 
                 _pushChannelsRequestList.Add(channel);
 
-                var tt = new List<Topic>();
-                var tm = new List<Message>();
+                var list = new List<Topic>();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (_settings.Topics.ContainsKey(channel))
+                        LockedDictionary<string, Topic> tempList;
+
+                        if (_settings.Topics.TryGetValue(channel, out tempList))
                         {
-                            tt.AddRange(_settings.Topics[channel].Values);
+                            list.AddRange(tempList.Values);
                         }
                     }
                 }
+
+                return list;
+            }
+        }
+
+        public IEnumerable<Message> GetMessages(Channel channel)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _pushChannelsRequestList.Add(channel);
+
+                var list = new List<Message>();
 
                 lock (this.ThisLock)
                 {
                     lock (_settings.ThisLock)
                     {
-                        if (_settings.Messages.ContainsKey(channel))
+                        LockedHashSet<Message> tempList;
+
+                        if (_settings.Messages.TryGetValue(channel, out tempList))
                         {
-                            tm.AddRange(_settings.Messages[channel]);
+                            list.AddRange(tempList);
                         }
                     }
                 }
 
-                topics = tt;
-                messages = tm;
+                return list;
             }
         }
 

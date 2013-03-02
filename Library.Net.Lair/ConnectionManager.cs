@@ -29,14 +29,14 @@ namespace Library.Net.Lair
         public Leader Leader { get; set; }
     }
 
-    class PullManagerEventArgs : EventArgs
-    {
-        public Manager Manager { get; set; }
-    }
-
     class PullCreatorEventArgs : EventArgs
     {
         public Creator Creator { get; set; }
+    }
+
+    class PullManagerEventArgs : EventArgs
+    {
+        public Manager Manager { get; set; }
     }
 
     class PullChannelsRequestEventArgs : EventArgs
@@ -58,8 +58,8 @@ namespace Library.Net.Lair
 
     delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
     delegate void PullLeaderEventHandler(object sender, PullLeaderEventArgs e);
-    delegate void PullManagerEventHandler(object sender, PullManagerEventArgs e);
     delegate void PullCreatorEventHandler(object sender, PullCreatorEventArgs e);
+    delegate void PullManagerEventHandler(object sender, PullManagerEventArgs e);
 
     delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
     delegate void PullTopicEventHandler(object sender, PullTopicEventArgs e);
@@ -89,8 +89,8 @@ namespace Library.Net.Lair
 
             SectionsRequest = 5,
             Leader = 6,
-            Manager = 7,
-            Creator = 8,
+            Creator = 7,
+            Manager = 8,
 
             ChannelsRequest = 9,
             Topic = 10,
@@ -128,8 +128,8 @@ namespace Library.Net.Lair
 
         public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
         public event PullLeaderEventHandler PullLeaderEvent;
-        public event PullManagerEventHandler PullManagerEvent;
         public event PullCreatorEventHandler PullCreatorEvent;
+        public event PullManagerEventHandler PullManagerEvent;
 
         public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
         public event PullTopicEventHandler PullTopicEvent;
@@ -568,15 +568,15 @@ namespace Library.Net.Lair
                                     var leader = Leader.Import(stream2, _bufferManager);
                                     this.OnPullLeader(new PullLeaderEventArgs() { Leader = leader });
                                 }
-                                else if (type == (byte)SerializeId.Manager)
-                                {
-                                    var manager = Manager.Import(stream2, _bufferManager);
-                                    this.OnPullManager(new PullManagerEventArgs() { Manager = manager });
-                                }
                                 else if (type == (byte)SerializeId.Creator)
                                 {
                                     var creator = Creator.Import(stream2, _bufferManager);
                                     this.OnPullCreator(new PullCreatorEventArgs() { Creator = creator });
+                                }
+                                else if (type == (byte)SerializeId.Manager)
+                                {
+                                    var manager = Manager.Import(stream2, _bufferManager);
+                                    this.OnPullManager(new PullManagerEventArgs() { Manager = manager });
                                 }
                                 else if (type == (byte)SerializeId.ChannelsRequest)
                                 {
@@ -635,19 +635,19 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnPullManager(PullManagerEventArgs e)
-        {
-            if (this.PullManagerEvent != null)
-            {
-                this.PullManagerEvent(this, e);
-            }
-        }
-
         protected virtual void OnPullCreator(PullCreatorEventArgs e)
         {
             if (this.PullCreatorEvent != null)
             {
                 this.PullCreatorEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullManager(PullManagerEventArgs e)
+        {
+            if (this.PullManagerEvent != null)
+            {
+                this.PullManagerEvent(this, e);
             }
         }
 
@@ -770,7 +770,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushLeader(Leader filter)
+        public void PushLeader(Leader leader)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -783,7 +783,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.Leader);
                     stream.Flush();
 
-                    stream = new JoinStream(stream, filter.Export(_bufferManager));
+                    stream = new JoinStream(stream, leader.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -805,42 +805,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushManager(Manager filter)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version1)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.Manager);
-                    stream.Flush();
-
-                    stream = new JoinStream(stream, filter.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
-        public void PushCreator(Creator filter)
+        public void PushCreator(Creator creator)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -853,7 +818,42 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.Creator);
                     stream.Flush();
 
-                    stream = new JoinStream(stream, filter.Export(_bufferManager));
+                    stream = new JoinStream(stream, creator.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushManager(Manager manager)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version1)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Manager);
+                    stream.Flush();
+
+                    stream = new JoinStream(stream, manager.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;

@@ -35,9 +35,6 @@ namespace Library.Net.Lair
 
         public Manager(Section section, string comment, SignatureCollection trustSignatures, DigitalSignature digitalSignature)
         {
-            if (section == null) throw new ArgumentNullException("section");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
             this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             this.Comment = comment;

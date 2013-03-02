@@ -269,23 +269,33 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Channel> GetChannels()
+        public IEnumerable<Leader> GetLeaders(Section section)
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _connectionsManager.GetChannels();
+                return _connectionsManager.GetLeaders(section);
             }
         }
 
-        public void GetSectionInfomation(Section channel, out IList<Leader> leaders, out IList<Manager> managers, out IList<Creator> creators)
+        public IEnumerable<Creator> GetCreators(Section section)
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _connectionsManager.GetSectionInfomation(channel, out leaders, out managers, out creators);
+                return _connectionsManager.GetCreators(section);
+            }
+        }
+
+        public IEnumerable<Manager> GetManagers(Section section)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                return _connectionsManager.GetManagers(section);
             }
         }
 
@@ -319,13 +329,33 @@ namespace Library.Net.Lair
             }
         }
 
-        public void GetChannelInfomation(Channel channel, out IList<Message> messages, out IList<Topic> topics)
+        public IEnumerable<Channel> GetChannels()
         {
             lock (this.ThisLock)
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                _connectionsManager.GetChannelInfomation(channel, out messages, out topics);
+                return _connectionsManager.GetChannels();
+            }
+        }
+
+        public IEnumerable<Topic> GetTopics(Channel channel)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                return _connectionsManager.GetTopics(channel);
+            }
+        }
+
+        public IEnumerable<Message> GetMessages(Channel channel)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                return _connectionsManager.GetMessages(channel);
             }
         }
 
