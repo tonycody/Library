@@ -17,14 +17,14 @@ namespace Library.Net.Lair
 
         private ManagerState _state = ManagerState.Stop;
 
-        public event UnlockSectionsEventHandler UnlockSectionsEvent;
-        public event UnlockLeadersEventHandler UnlockLeadersEvent;
-        public event UnlockManagersEventHandler UnlockManagersEvent;
-        public event UnlockCreatorsEventHandler UnlockCreatorsEvent;
+        public RemoveSectionsEventHandler RemoveSectionsEvent;
+        public RemoveLeadersEventHandler RemoveLeadersEvent;
+        public RemoveCreatorsEventHandler RemoveCreatorsEvent;
+        public RemoveManagersEventHandler RemoveManagersEvent;
 
-        public event UnlockChannelsEventHandler UnlockChannelsEvent;
-        public event UnlockTopicsEventHandler UnlockTopicsEvent;
-        public event UnlockMessagesEventHandler UnlockMessagesEvent;
+        public RemoveChannelsEventHandler RemoveChannelsEvent;
+        public RemoveTopicsEventHandler RemoveTopicsEvent;
+        public RemoveMessagesEventHandler RemoveMessagesEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -36,60 +36,74 @@ namespace Library.Net.Lair
             _serverManager = new ServerManager(_bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _bufferManager);
 
-            _connectionsManager.UnlockSectionsEvent += (object sender, ref IList<Section> channels) =>
+            _connectionsManager.RemoveSectionsEvent = (object sender) =>
             {
-                if (this.UnlockSectionsEvent != null)
+                if (this.RemoveSectionsEvent != null)
                 {
-                    this.UnlockSectionsEvent(this, ref channels);
+                    return this.RemoveSectionsEvent(this);
                 }
+
+                return null;
             };
 
-            _connectionsManager.UnlockLeadersEvent += (object sender, Section section, ref IList<Leader> leaders) =>
+            _connectionsManager.RemoveLeadersEvent = (object sender, Section section) =>
             {
-                if (this.UnlockLeadersEvent != null)
+                if (this.RemoveLeadersEvent != null)
                 {
-                    this.UnlockLeadersEvent(this, section, ref leaders);
+                    return this.RemoveLeadersEvent(this, section);
                 }
+
+                return null;
             };
 
-            _connectionsManager.UnlockManagersEvent += (object sender, Section section, ref IList<Manager> managers) =>
+            _connectionsManager.RemoveManagersEvent = (object sender, Section section) =>
             {
-                if (this.UnlockManagersEvent != null)
+                if (this.RemoveManagersEvent != null)
                 {
-                    this.UnlockManagersEvent(this, section, ref managers);
+                    return this.RemoveManagersEvent(this, section);
                 }
+
+                return null;
             };
 
-            _connectionsManager.UnlockCreatorsEvent += (object sender, Section section, ref IList<Creator> creators) =>
+            _connectionsManager.RemoveCreatorsEvent = (object sender, Section section) =>
             {
-                if (this.UnlockCreatorsEvent != null)
+                if (this.RemoveCreatorsEvent != null)
                 {
-                    this.UnlockCreatorsEvent(this, section, ref creators);
+                    return this.RemoveCreatorsEvent(this, section);
                 }
+
+                return null;
             };
 
-            _connectionsManager.UnlockChannelsEvent += (object sender, ref IList<Channel> channels) =>
+            _connectionsManager.RemoveChannelsEvent = (object sender) =>
             {
-                if (this.UnlockChannelsEvent != null)
+                if (this.RemoveChannelsEvent != null)
                 {
-                    this.UnlockChannelsEvent(this, ref channels);
+                    return this.RemoveChannelsEvent(this);
                 }
+
+                return null;
             };
 
-            _connectionsManager.UnlockTopicsEvent += (object sender, Channel channel, ref IList<Topic> topics) =>
+            _connectionsManager.RemoveTopicsEvent = (object sender, Channel channel) =>
             {
-                if (this.UnlockTopicsEvent != null)
+                if (this.RemoveTopicsEvent != null)
                 {
-                    this.UnlockTopicsEvent(this, channel, ref topics);
+                    return this.RemoveTopicsEvent(this, channel);
                 }
+
+                return null;
             };
 
-            _connectionsManager.UnlockMessagesEvent += (object sender, Channel channel, ref IList<Message> messages) =>
+            _connectionsManager.RemoveMessagesEvent = (object sender, Channel channel) =>
             {
-                if (this.UnlockMessagesEvent != null)
+                if (this.RemoveMessagesEvent != null)
                 {
-                    this.UnlockMessagesEvent(this, channel, ref messages);
+                    return this.RemoveMessagesEvent(this, channel);
                 }
+
+                return null;
             };
         }
 

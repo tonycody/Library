@@ -21,14 +21,28 @@ namespace Library
             if (offset < 0 || bytes.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (length < 0 || (bytes.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
 
-            return System.Convert.ToBase64String(bytes, offset, length);
+            return System.Convert.ToBase64String(bytes, offset, length).Replace('+', '-').Replace('/', '_').TrimEnd('=');
         }
 
         public static byte[] FromBase64String(string value)
         {
             if (value == null) throw new ArgumentNullException("value");
 
-            return System.Convert.FromBase64String(value);
+            string padding = "";
+
+            switch (value.Length % 4)
+            {
+                case 1:
+                case 3:
+                    padding = "=";
+                    break;
+
+                case 2:
+                    padding = "==";
+                    break;
+            }
+
+            return System.Convert.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding);
         }
 
         /// <summary>

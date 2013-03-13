@@ -15,14 +15,14 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public delegate void UnlockSectionsEventHandler(object sender, ref IList<Section> sections);
-    public delegate void UnlockLeadersEventHandler(object sender, Section section, ref IList<Leader> leaders);
-    public delegate void UnlockManagersEventHandler(object sender, Section section, ref IList<Manager> managers);
-    public delegate void UnlockCreatorsEventHandler(object sender, Section section, ref IList<Creator> creators);
+    public delegate IEnumerable<Section> RemoveSectionsEventHandler(object sender);
+    public delegate IEnumerable<string> RemoveLeadersEventHandler(object sender, Section section);
+    public delegate IEnumerable<string> RemoveCreatorsEventHandler(object sender, Section section);
+    public delegate IEnumerable<string> RemoveManagersEventHandler(object sender, Section section);
 
-    public delegate void UnlockChannelsEventHandler(object sender, ref IList<Channel> channels);
-    public delegate void UnlockTopicsEventHandler(object sender, Channel channel, ref IList<Topic> topics);
-    public delegate void UnlockMessagesEventHandler(object sender, Channel channel, ref IList<Message> messages);
+    public delegate IEnumerable<Channel> RemoveChannelsEventHandler(object sender);
+    public delegate IEnumerable<string> RemoveTopicsEventHandler(object sender, Channel channel);
+    public delegate IEnumerable<Message> RemoveMessagesEventHandler(object sender, Channel channel);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -91,14 +91,14 @@ namespace Library.Net.Lair
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        public event UnlockSectionsEventHandler UnlockSectionsEvent;
-        public event UnlockLeadersEventHandler UnlockLeadersEvent;
-        public event UnlockManagersEventHandler UnlockManagersEvent;
-        public event UnlockCreatorsEventHandler UnlockCreatorsEvent;
+        public RemoveSectionsEventHandler RemoveSectionsEvent;
+        public RemoveLeadersEventHandler RemoveLeadersEvent;
+        public RemoveCreatorsEventHandler RemoveCreatorsEvent;
+        public RemoveManagersEventHandler RemoveManagersEvent;
 
-        public event UnlockChannelsEventHandler UnlockChannelsEvent;
-        public event UnlockTopicsEventHandler UnlockTopicsEvent;
-        public event UnlockMessagesEventHandler UnlockMessagesEvent;
+        public RemoveChannelsEventHandler RemoveChannelsEvent;
+        public RemoveTopicsEventHandler RemoveTopicsEvent;
+        public RemoveMessagesEventHandler RemoveMessagesEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -106,9 +106,14 @@ namespace Library.Net.Lair
         private readonly int _maxNodeCount = 128;
         private readonly int _maxRequestCount = 128;
 
+#if DEBUG
+        private readonly int _downloadingConnectionCountLowerLimit = 0;
+        private readonly int _uploadingConnectionCountLowerLimit = 0;
+#else
         private readonly int _downloadingConnectionCountLowerLimit = 3;
         private readonly int _uploadingConnectionCountLowerLimit = 3;
-
+#endif
+        
         private int _threadCount = 2;
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, BufferManager bufferManager)
@@ -277,8 +282,8 @@ namespace Library.Net.Lair
                     contexts.Add(new InformationContext("PushCreatorCount", _pushCreatorCount));
                     contexts.Add(new InformationContext("PushManagerCount", _pushManagerCount));
                     contexts.Add(new InformationContext("PushChannelRequestCount", _pushChannelRequestCount));
-                    contexts.Add(new InformationContext("PushMessageCount", _pushMessageCount));
                     contexts.Add(new InformationContext("PushTopicCount", _pushTopicCount));
+                    contexts.Add(new InformationContext("PushMessageCount", _pushMessageCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
                     contexts.Add(new InformationContext("PullSectionRequestCount", _pullSectionRequestCount));
@@ -286,8 +291,8 @@ namespace Library.Net.Lair
                     contexts.Add(new InformationContext("PullCreatorCount", _pullCreatorCount));
                     contexts.Add(new InformationContext("PullManagerCount", _pullManagerCount));
                     contexts.Add(new InformationContext("PullChannelRequestCount", _pullChannelRequestCount));
-                    contexts.Add(new InformationContext("PullMessageCount", _pullMessageCount));
                     contexts.Add(new InformationContext("PullTopicCount", _pullTopicCount));
+                    contexts.Add(new InformationContext("PullMessageCount", _pullMessageCount));
 
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
@@ -310,6 +315,13 @@ namespace Library.Net.Lair
                         contexts.Add(new InformationContext("SurroundingNodeCount", nodes.Count));
                     }
 
+                    contexts.Add(new InformationContext("SectionCount", this.GetSections().Count()));
+                    contexts.Add(new InformationContext("LeaderCount", _settings.Leaders.Count));
+                    contexts.Add(new InformationContext("CreatorCount", _settings.Creators.Count));
+                    contexts.Add(new InformationContext("ManagerCount", _settings.Managers.Count));
+
+                    contexts.Add(new InformationContext("ChannelCount", this.GetChannels().Count()));
+                    contexts.Add(new InformationContext("TopicCount", _settings.Topics.Count));
                     contexts.Add(new InformationContext("MessageCount", _settings.Messages.Values.Sum(n => n.Count)));
 
                     return new Information(contexts);
@@ -343,60 +355,74 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnUnlockSectionsEvent(ref IList<Section> sections)
+        protected virtual IEnumerable<Section> OnRemoveSectionsEvent()
         {
-            if (this.UnlockSectionsEvent != null)
+            if (this.RemoveSectionsEvent != null)
             {
-                this.UnlockSectionsEvent(this, ref sections);
+                return this.RemoveSectionsEvent(this);
             }
+
+            return null;
         }
 
-        protected virtual void OnUnlockLeadersEvent(Section section, ref IList<Leader> leaders)
+        protected virtual IEnumerable<string> OnRemoveLeadersEvent(Section section)
         {
-            if (this.UnlockLeadersEvent != null)
+            if (this.RemoveLeadersEvent != null)
             {
-                this.UnlockLeadersEvent(this, section, ref leaders);
+                return this.RemoveLeadersEvent(this, section);
             }
+
+            return null;
         }
 
-        protected virtual void OnUnlockManagersEvent(Section section, ref IList<Manager> managers)
+        protected virtual IEnumerable<string> OnRemoveCreatorsEvent(Section section)
         {
-            if (this.UnlockManagersEvent != null)
+            if (this.RemoveCreatorsEvent != null)
             {
-                this.UnlockManagersEvent(this, section, ref managers);
+                return this.RemoveCreatorsEvent(this, section);
             }
+
+            return null;
         }
 
-        protected virtual void OnUnlockCreatorsEvent(Section section, ref IList<Creator> creators)
+        protected virtual IEnumerable<string> OnRemoveManagersEvent(Section section)
         {
-            if (this.UnlockCreatorsEvent != null)
+            if (this.RemoveManagersEvent != null)
             {
-                this.UnlockCreatorsEvent(this, section, ref creators);
+                return this.RemoveManagersEvent(this, section);
             }
+
+            return null;
         }
 
-        protected virtual void OnUnlockChannelsEvent(ref IList<Channel> channels)
+        protected virtual IEnumerable<Channel> OnRemoveChannelsEvent()
         {
-            if (this.UnlockChannelsEvent != null)
+            if (this.RemoveChannelsEvent != null)
             {
-                this.UnlockChannelsEvent(this, ref channels);
+                return this.RemoveChannelsEvent(this);
             }
+
+            return null;
         }
 
-        protected virtual void OnUnlockTopicsEvent(Channel channel, ref IList<Topic> topics)
+        protected virtual IEnumerable<string> OnRemoveTopicsEvent(Channel channel)
         {
-            if (this.UnlockTopicsEvent != null)
+            if (this.RemoveTopicsEvent != null)
             {
-                this.UnlockTopicsEvent(this, channel, ref topics);
+                return this.RemoveTopicsEvent(this, channel);
             }
+
+            return null;
         }
 
-        protected virtual void OnUnlockMessagesEvent(Channel channel, ref IList<Message> messages)
+        protected virtual IEnumerable<Message> OnRemoveMessagesEvent(Channel channel)
         {
-            if (this.UnlockMessagesEvent != null)
+            if (this.RemoveMessagesEvent != null)
             {
-                this.UnlockMessagesEvent(this, channel, ref messages);
+                this.RemoveMessagesEvent(this, channel);
             }
+
+            return null;
         }
 
         private void UpdateSessionId()
@@ -948,9 +974,9 @@ namespace Library.Net.Lair
         {
             Stopwatch connectionCheckStopwatch = new Stopwatch();
             connectionCheckStopwatch.Start();
+
             Stopwatch refreshStopwatch = new Stopwatch();
-            Stopwatch removeStopwatch = new Stopwatch();
-            removeStopwatch.Start();
+
             Stopwatch pushUploadStopwatch = new Stopwatch();
             pushUploadStopwatch.Start();
             Stopwatch pushDownloadStopwatch = new Stopwatch();
@@ -1038,7 +1064,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 60)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     refreshStopwatch.Restart();
 
@@ -1064,33 +1090,181 @@ namespace Library.Net.Lair
                             }
                         }
                     }
-                }
-
-                if (removeStopwatch.Elapsed.TotalMinutes >= 3)
-                {
-                    removeStopwatch.Restart();
-
+                    
                     ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
                     {
                         try
                         {
                             {
-                                var channels = this.GetChannels().ToList();
+                                var removeSections = this.OnRemoveSectionsEvent();
 
-                                if (channels.Count > 128)
+                                if (removeSections != null)
                                 {
-                                    IList<Channel> unlockChannels = new List<Channel>();
+                                    lock (this.ThisLock)
+                                    {
+                                        lock (_settings.ThisLock)
+                                        {
+                                            foreach (var section in removeSections)
+                                            {
+                                                _settings.Leaders.Remove(section);
+                                                _settings.Creators.Remove(section);
+                                                _settings.Managers.Remove(section);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
-                                    this.OnUnlockChannelsEvent(ref unlockChannels);
+                            {
+                                List<Section> sections = new List<Section>();
 
-                                    var removeChannels = unlockChannels.Skip(32).Take(channels.Count - 128);
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var section in _settings.Leaders.Keys)
+                                        {
+                                            sections.Add(section);
+                                        }
+                                    }
+                                }
 
+                                Dictionary<Section, IEnumerable<string>> removeLeadersDictionary = new Dictionary<Section, IEnumerable<string>>();
+
+                                foreach (var section in sections)
+                                {
+                                    var removeLeaders = this.OnRemoveLeadersEvent(section);
+
+                                    if (removeLeaders != null)
+                                    {
+                                        removeLeadersDictionary.Add(section, removeLeaders);
+                                    }
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var section in removeLeadersDictionary.Keys)
+                                        {
+                                            LockedDictionary<string, Leader> list;
+
+                                            if (_settings.Leaders.TryGetValue(section, out list))
+                                            {
+                                                foreach (var leader in removeLeadersDictionary[section])
+                                                {
+                                                    list.Remove(leader);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            {
+                                List<Section> sections = new List<Section>();
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var section in _settings.Creators.Keys)
+                                        {
+                                            sections.Add(section);
+                                        }
+                                    }
+                                }
+
+                                Dictionary<Section, IEnumerable<string>> removeCreatorsDictionary = new Dictionary<Section, IEnumerable<string>>();
+
+                                foreach (var section in sections)
+                                {
+                                    var removeCreators = this.OnRemoveCreatorsEvent(section);
+
+                                    if (removeCreators != null)
+                                    {
+                                        removeCreatorsDictionary.Add(section, removeCreators);
+                                    }
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var section in removeCreatorsDictionary.Keys)
+                                        {
+                                            LockedDictionary<string, Creator> list;
+
+                                            if (_settings.Creators.TryGetValue(section, out list))
+                                            {
+                                                foreach (var leader in removeCreatorsDictionary[section])
+                                                {
+                                                    list.Remove(leader);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            {
+                                List<Section> sections = new List<Section>();
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var section in _settings.Managers.Keys)
+                                        {
+                                            sections.Add(section);
+                                        }
+                                    }
+                                }
+
+                                Dictionary<Section, IEnumerable<string>> removeManagersDictionary = new Dictionary<Section, IEnumerable<string>>();
+
+                                foreach (var section in sections)
+                                {
+                                    var removeManagers = this.OnRemoveManagersEvent(section);
+
+                                    if (removeManagers != null)
+                                    {
+                                        removeManagersDictionary.Add(section, removeManagers);
+                                    }
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var section in removeManagersDictionary.Keys)
+                                        {
+                                            LockedDictionary<string, Manager> list;
+
+                                            if (_settings.Managers.TryGetValue(section, out list))
+                                            {
+                                                foreach (var leader in removeManagersDictionary[section])
+                                                {
+                                                    list.Remove(leader);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            {
+                                var removeChannels = this.OnRemoveChannelsEvent();
+
+                                if (removeChannels != null)
+                                {
                                     lock (this.ThisLock)
                                     {
                                         lock (_settings.ThisLock)
                                         {
                                             foreach (var channel in removeChannels)
                                             {
+                                                _settings.Topics.Remove(channel);
                                                 _settings.Messages.Remove(channel);
                                             }
                                         }
@@ -1099,55 +1273,100 @@ namespace Library.Net.Lair
                             }
 
                             {
-                                List<KeyValuePair<Channel, int>> items = new List<KeyValuePair<Channel, int>>();
+                                List<Channel> channels = new List<Channel>();
 
                                 lock (this.ThisLock)
                                 {
                                     lock (_settings.ThisLock)
                                     {
-                                        foreach (var m in _settings.Messages.ToArray())
+                                        foreach (var channel in _settings.Topics.Keys)
                                         {
-                                            if (m.Value.Count > 256)
-                                            {
-                                                items.Add(new KeyValuePair<Channel, int>(m.Key, m.Value.Count));
-                                            }
+                                            channels.Add(channel);
                                         }
                                     }
                                 }
 
-                                Dictionary<Channel, IList<Message>> unlockMessagesDic = new Dictionary<Channel, IList<Message>>();
+                                Dictionary<Channel, IEnumerable<string>> removeTopicsDictionary = new Dictionary<Channel, IEnumerable<string>>();
 
-                                foreach (var item in items)
+                                foreach (var channel in channels)
                                 {
-                                    IList<Message> unlockMessages = new List<Message>();
-                                    this.OnUnlockMessagesEvent(item.Key, ref unlockMessages);
+                                    var removeTopics = this.OnRemoveTopicsEvent(channel);
 
-                                    unlockMessagesDic.Add(item.Key, unlockMessages);
+                                    if (removeTopics != null)
+                                    {
+                                        removeTopicsDictionary.Add(channel, removeTopics);
+                                    }
                                 }
 
                                 lock (this.ThisLock)
                                 {
                                     lock (_settings.ThisLock)
                                     {
-                                        foreach (var item in items)
+                                        foreach (var channel in removeTopicsDictionary.Keys)
                                         {
-                                            if (!_settings.Messages.ContainsKey(item.Key)) continue;
+                                            LockedDictionary<string, Topic> list;
 
-                                            var list = _settings.Messages[item.Key];
-                                            var unlockMessages = unlockMessagesDic[item.Key];
-
-                                            foreach (var m in unlockMessages.Take(item.Value - 256))
+                                            if (_settings.Topics.TryGetValue(channel, out list))
                                             {
-                                                list.Remove(m);
+                                                foreach (var topic in removeTopicsDictionary[channel])
+                                                {
+                                                    list.Remove(topic);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            {
+                                List<Channel> channels = new List<Channel>();
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var channel in _settings.Messages.Keys)
+                                        {
+                                            channels.Add(channel);
+                                        }
+                                    }
+                                }
+
+                                Dictionary<Channel, IEnumerable<Message>> removeMessagesDictionary = new Dictionary<Channel, IEnumerable<Message>>();
+
+                                foreach (var channel in channels)
+                                {
+                                    var removeMessages = this.OnRemoveMessagesEvent(channel);
+
+                                    if (removeMessages != null)
+                                    {
+                                        removeMessagesDictionary.Add(channel, removeMessages);
+                                    }
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    lock (_settings.ThisLock)
+                                    {
+                                        foreach (var channel in removeMessagesDictionary.Keys)
+                                        {
+                                            LockedHashSet<Message> list;
+
+                                            if (_settings.Messages.TryGetValue(channel, out list))
+                                            {
+                                                foreach (var message in removeMessagesDictionary[channel])
+                                                {
+                                                    list.Remove(message);
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
-
+                            Log.Error(e);
                         }
                     }));
                 }
@@ -1537,7 +1756,7 @@ namespace Library.Net.Lair
                                 List<Section> channels = new List<Section>();
                                 channels.AddRange(messageManager.PullSectionsRequest);
 
-                                HashSet<Leader> leaders = new HashSet<Leader>();
+                                Leader leader = null;
 
                                 lock (this.ThisLock)
                                 {
@@ -1551,8 +1770,7 @@ namespace Library.Net.Lair
                                                 {
                                                     if (!messageManager.PushLeaders.Contains(l.GetHash(_hashAlgorithm)))
                                                     {
-                                                        leaders.Add(l);
-
+                                                        leader = l;
                                                         break;
                                                     }
                                                 }
@@ -1561,9 +1779,8 @@ namespace Library.Net.Lair
                                     }
                                 }
 
-                                if (leaders.Count != 0)
+                                if (leader != null)
                                 {
-                                    var leader = leaders.First();
                                     connectionManager.PushLeader(leader);
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Leader ({0})", leader.Section.Name));
@@ -1582,7 +1799,7 @@ namespace Library.Net.Lair
                                 List<Section> channels = new List<Section>();
                                 channels.AddRange(messageManager.PullSectionsRequest);
 
-                                HashSet<Manager> managers = new HashSet<Manager>();
+                                Manager manager = null;
 
                                 lock (this.ThisLock)
                                 {
@@ -1596,8 +1813,7 @@ namespace Library.Net.Lair
                                                 {
                                                     if (!messageManager.PushManagers.Contains(m.GetHash(_hashAlgorithm)))
                                                     {
-                                                        managers.Add(m);
-
+                                                        manager = m;
                                                         break;
                                                     }
                                                 }
@@ -1606,9 +1822,8 @@ namespace Library.Net.Lair
                                     }
                                 }
 
-                                if (managers.Count != 0)
+                                if (manager != null)
                                 {
-                                    var manager = managers.First();
                                     connectionManager.PushManager(manager);
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Manager ({0})", manager.Section.Name));
@@ -1627,7 +1842,7 @@ namespace Library.Net.Lair
                                 List<Section> channels = new List<Section>();
                                 channels.AddRange(messageManager.PullSectionsRequest);
 
-                                HashSet<Creator> creators = new HashSet<Creator>();
+                                Creator creator = null;
 
                                 lock (this.ThisLock)
                                 {
@@ -1641,8 +1856,7 @@ namespace Library.Net.Lair
                                                 {
                                                     if (!messageManager.PushCreators.Contains(c.GetHash(_hashAlgorithm)))
                                                     {
-                                                        creators.Add(c);
-
+                                                        creator = c;
                                                         break;
                                                     }
                                                 }
@@ -1651,9 +1865,8 @@ namespace Library.Net.Lair
                                     }
                                 }
 
-                                if (creators.Count != 0)
+                                if (creator != null)
                                 {
-                                    var creator = creators.First();
                                     connectionManager.PushCreator(creator);
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Creator ({0})", creator.Section.Name));
@@ -1672,7 +1885,7 @@ namespace Library.Net.Lair
                                 List<Channel> channels = new List<Channel>();
                                 channels.AddRange(messageManager.PullChannelsRequest);
 
-                                HashSet<Topic> topics = new HashSet<Topic>();
+                                Topic topic = null;
 
                                 lock (this.ThisLock)
                                 {
@@ -1686,8 +1899,7 @@ namespace Library.Net.Lair
                                                 {
                                                     if (!messageManager.PushTopics.Contains(c.GetHash(_hashAlgorithm)))
                                                     {
-                                                        topics.Add(c);
-
+                                                        topic = c;
                                                         break;
                                                     }
                                                 }
@@ -1696,9 +1908,8 @@ namespace Library.Net.Lair
                                     }
                                 }
 
-                                if (topics.Count != 0)
+                                if (topic != null)
                                 {
-                                    var topic = topics.First();
                                     connectionManager.PushTopic(topic);
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Topic ({0})", topic.Channel.Name));
@@ -1717,7 +1928,7 @@ namespace Library.Net.Lair
                                 List<Channel> channels = new List<Channel>();
                                 channels.AddRange(messageManager.PullChannelsRequest);
 
-                                HashSet<Message> messages = new HashSet<Message>();
+                                Message message = null;
 
                                 lock (this.ThisLock)
                                 {
@@ -1731,8 +1942,7 @@ namespace Library.Net.Lair
                                                 {
                                                     if (!messageManager.PushMessages.Contains(m.GetHash(_hashAlgorithm)))
                                                     {
-                                                        messages.Add(m);
-
+                                                        message = m;
                                                         break;
                                                     }
                                                 }
@@ -1741,9 +1951,8 @@ namespace Library.Net.Lair
                                     }
                                 }
 
-                                if (messages.Count != 0)
+                                if (message != null)
                                 {
-                                    var message = messages.First();
                                     connectionManager.PushMessage(message);
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push Message ({0})", message.Channel.Name));
@@ -2120,13 +2329,13 @@ namespace Library.Net.Lair
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                var ts = new HashSet<Section>();
+                var hashSet = new HashSet<Section>();
 
-                ts.UnionWith(_settings.Leaders.Keys);
-                ts.UnionWith(_settings.Managers.Keys);
-                ts.UnionWith(_settings.Creators.Keys);
+                hashSet.UnionWith(_settings.Leaders.Keys);
+                hashSet.UnionWith(_settings.Managers.Keys);
+                hashSet.UnionWith(_settings.Creators.Keys);
 
-                return ts;
+                return hashSet;
             }
         }
 
@@ -2203,6 +2412,75 @@ namespace Library.Net.Lair
                         if (_settings.Managers.TryGetValue(section, out tempList))
                         {
                             list.AddRange(tempList.Values);
+                        }
+                    }
+                }
+
+                return list;
+            }
+        }
+
+        public IEnumerable<Channel> GetChannels()
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                var hashSet = new HashSet<Channel>();
+
+                hashSet.UnionWith(_settings.Topics.Keys);
+                hashSet.UnionWith(_settings.Messages.Keys);
+
+                return hashSet;
+            }
+        }
+
+        public IEnumerable<Topic> GetTopics(Channel channel)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _pushChannelsRequestList.Add(channel);
+
+                var list = new List<Topic>();
+
+                lock (this.ThisLock)
+                {
+                    lock (_settings.ThisLock)
+                    {
+                        LockedDictionary<string, Topic> tempList;
+
+                        if (_settings.Topics.TryGetValue(channel, out tempList))
+                        {
+                            list.AddRange(tempList.Values);
+                        }
+                    }
+                }
+
+                return list;
+            }
+        }
+
+        public IEnumerable<Message> GetMessages(Channel channel)
+        {
+            lock (this.ThisLock)
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                _pushChannelsRequestList.Add(channel);
+
+                var list = new List<Message>();
+
+                lock (this.ThisLock)
+                {
+                    lock (_settings.ThisLock)
+                    {
+                        LockedHashSet<Message> tempList;
+
+                        if (_settings.Messages.TryGetValue(channel, out tempList))
+                        {
+                            list.AddRange(tempList);
                         }
                     }
                 }
@@ -2322,74 +2600,6 @@ namespace Library.Net.Lair
                         }
                     }
                 }
-            }
-        }
-
-        public IEnumerable<Channel> GetChannels()
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                var tc = new HashSet<Channel>();
-
-                tc.UnionWith(_settings.Messages.Keys);
-
-                return tc;
-            }
-        }
-
-        public IEnumerable<Topic> GetTopics(Channel channel)
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                _pushChannelsRequestList.Add(channel);
-
-                var list = new List<Topic>();
-
-                lock (this.ThisLock)
-                {
-                    lock (_settings.ThisLock)
-                    {
-                        LockedDictionary<string, Topic> tempList;
-
-                        if (_settings.Topics.TryGetValue(channel, out tempList))
-                        {
-                            list.AddRange(tempList.Values);
-                        }
-                    }
-                }
-
-                return list;
-            }
-        }
-
-        public IEnumerable<Message> GetMessages(Channel channel)
-        {
-            lock (this.ThisLock)
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                _pushChannelsRequestList.Add(channel);
-
-                var list = new List<Message>();
-
-                lock (this.ThisLock)
-                {
-                    lock (_settings.ThisLock)
-                    {
-                        LockedHashSet<Message> tempList;
-
-                        if (_settings.Messages.TryGetValue(channel, out tempList))
-                        {
-                            list.AddRange(tempList);
-                        }
-                    }
-                }
-
-                return list;
             }
         }
 

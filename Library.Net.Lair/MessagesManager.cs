@@ -35,11 +35,16 @@ namespace Library.Net.Lair
 
                     foreach (var node in _messageManagerDictionary.Keys.ToArray())
                     {
+                        _messageManagerDictionary[node].PushLeaders.TrimExcess();
+                        _messageManagerDictionary[node].PushCreators.TrimExcess();
+                        _messageManagerDictionary[node].PushManagers.TrimExcess();
+                        _messageManagerDictionary[node].PushTopics.TrimExcess();
                         _messageManagerDictionary[node].PushMessages.TrimExcess();
-                        _messageManagerDictionary[node].PushFilters.TrimExcess();
 
+                        _messageManagerDictionary[node].PushSectionsRequest.TrimExcess();
                         _messageManagerDictionary[node].PushChannelsRequest.TrimExcess();
 
+                        _messageManagerDictionary[node].PullSectionsRequest.TrimExcess();
                         _messageManagerDictionary[node].PullChannelsRequest.TrimExcess();
                     }
 
@@ -146,9 +151,8 @@ namespace Library.Net.Lair
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
 
-        private CirculationCollection<byte[]> _pushMessages;
-        private CirculationCollection<byte[]> _pushFilters;
-        private CirculationCollection<byte[]> _pushTopics;
+        private CirculationCollection<Section> _pushSectionsRequest;
+        private CirculationCollection<Section> _pullSectionsRequest;
 
         private CirculationCollection<byte[]> _pushLeaders;
         private CirculationCollection<byte[]> _pushManagers;
@@ -157,8 +161,8 @@ namespace Library.Net.Lair
         private CirculationCollection<Channel> _pushChannelsRequest;
         private CirculationCollection<Channel> _pullChannelsRequest;
 
-        private CirculationCollection<Section> _pushSectionsRequest;
-        private CirculationCollection<Section> _pullSectionsRequest;
+        private CirculationCollection<byte[]> _pushTopics;
+        private CirculationCollection<byte[]> _pushMessages;
 
         private object _thisLock = new object();
 
@@ -168,9 +172,8 @@ namespace Library.Net.Lair
 
             _surroundingNodes = new LockedHashSet<Node>(128);
 
-            _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
-            _pushFilters = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
-            _pushTopics = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
 
             _pushLeaders = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
             _pushManagers = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
@@ -179,8 +182,8 @@ namespace Library.Net.Lair
             _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
             _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
 
-            _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
-            _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushTopics = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
         }
 
         public int Id
@@ -295,35 +298,24 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<byte[]> PushMessages
+        public CirculationCollection<Section> PushSectionsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushMessages;
+                    return _pushSectionsRequest;
                 }
             }
         }
 
-        public CirculationCollection<byte[]> PushFilters
+        public CirculationCollection<Section> PullSectionsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushFilters;
-                }
-            }
-        }
-
-        public CirculationCollection<byte[]> PushTopics
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushTopics;
+                    return _pullSectionsRequest;
                 }
             }
         }
@@ -339,17 +331,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<byte[]> PushManagers
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushManagers;
-                }
-            }
-        }
-
         public CirculationCollection<byte[]> PushCreators
         {
             get
@@ -357,6 +338,17 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _pushCreators;
+                }
+            }
+        }
+
+        public CirculationCollection<byte[]> PushManagers
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushManagers;
                 }
             }
         }
@@ -383,24 +375,24 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Section> PushSectionsRequest
+        public CirculationCollection<byte[]> PushTopics
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSectionsRequest;
+                    return _pushTopics;
                 }
             }
         }
 
-        public CirculationCollection<Section> PullSectionsRequest
+        public CirculationCollection<byte[]> PushMessages
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullSectionsRequest;
+                    return _pushMessages;
                 }
             }
         }

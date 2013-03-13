@@ -192,7 +192,7 @@ namespace Library.Net.Amoeba
                 stream.Seek(0, SeekOrigin.Begin);
                 stream.Read(buffer, 0, (int)stream.Length);
 
-                return NetworkConverter.ToBase64String(buffer, 0, (int)stream.Length).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+                return NetworkConverter.ToBase64String(buffer, 0, (int)stream.Length);
             }
             finally
             {
@@ -210,21 +210,7 @@ namespace Library.Net.Amoeba
 
             value = match.Groups[1].Value;
 
-            string padding = "";
-
-            switch (value.Length % 4)
-            {
-                case 1:
-                case 3:
-                    padding = "=";
-                    break;
-
-                case 2:
-                    padding = "==";
-                    break;
-            }
-
-            return new MemoryStream(NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding));
+            return new MemoryStream(NetworkConverter.FromBase64String(value));
         }
 
         public static string ToNodeString(Node item)

@@ -30,8 +30,7 @@ namespace Library.Security
                         bufferStream.Write(digitalSignature.PublicKey, 0, digitalSignature.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
-                        return digitalSignature.Nickname + "@" + Convert.ToBase64String(Sha512.ComputeHash(bufferStream))
-                            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+                        return digitalSignature.Nickname + "@" + NetworkConverter.ToBase64String(Sha512.ComputeHash(bufferStream));
                     }
                 }
             }
@@ -60,8 +59,7 @@ namespace Library.Security
                         bufferStream.Write(certificate.PublicKey, 0, certificate.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
-                        return certificate.Nickname + "@" + Convert.ToBase64String(Sha512.ComputeHash(bufferStream))
-                            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+                        return certificate.Nickname + "@" + NetworkConverter.ToBase64String(Sha512.ComputeHash(bufferStream));
                     }
                 }
             }
@@ -124,21 +122,8 @@ namespace Library.Security
                 if (!match.Success) throw new ArgumentException();
 
                 var value = match.Groups[1].Value;
-                string padding = "";
 
-                switch (value.Length % 4)
-                {
-                    case 1:
-                    case 3:
-                        padding = "=";
-                        break;
-
-                    case 2:
-                        padding = "==";
-                        break;
-                }
-
-                return NetworkConverter.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding);
+                return NetworkConverter.FromBase64String(value);
             }
             catch (Exception)
             {

@@ -142,7 +142,7 @@ namespace Library.Net.Lair
         public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectionManagerType type, BufferManager bufferManager)
         {
             _connection = connection;
-            _myProtocolVersion = ProtocolVersion.Version1;
+            _myProtocolVersion = ProtocolVersion.Version2;
             _baseNode = baseNode;
             _mySessionId = mySessionId;
             _bufferManager = bufferManager;
@@ -304,7 +304,7 @@ namespace Library.Net.Lair
 
                     _protocolVersion = _myProtocolVersion & _otherProtocolVersion;
 
-                    if (_protocolVersion == ProtocolVersion.Version1)
+                    if (_protocolVersion == ProtocolVersion.Version2)
                     {
                         using (Stream stream = new MemoryStream(_mySessionId))
                         {
@@ -409,7 +409,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 try
                 {
@@ -443,7 +443,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 try
                 {
@@ -476,7 +476,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 try
                 {
@@ -511,11 +511,15 @@ namespace Library.Net.Lair
 
             try
             {
+                Stopwatch sw = new Stopwatch();
+
                 for (; ; )
                 {
                     if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                    if (_protocolVersion == ProtocolVersion.Version1)
+                    sw.Restart();
+
+                    if (_protocolVersion == ProtocolVersion.Version2)
                     {
                         using (Stream stream = _connection.Receive(_receiveTimeSpan))
                         {
@@ -600,6 +604,10 @@ namespace Library.Net.Lair
                     {
                         throw new ConnectionManagerException();
                     }
+
+                    sw.Stop();
+
+                    if (sw.ElapsedMilliseconds < 1000) Thread.Sleep(1000 - (int)sw.ElapsedMilliseconds);
                 }
             }
             catch (Exception)
@@ -698,7 +706,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -736,7 +744,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -774,7 +782,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -809,7 +817,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -844,7 +852,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -879,7 +887,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -917,7 +925,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -952,7 +960,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -987,7 +995,7 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion == ProtocolVersion.Version2)
             {
                 try
                 {

@@ -95,9 +95,13 @@ namespace Library.Net.Amoeba
         private readonly int _maxBlockRequestCount = 8192;
         private readonly int _maxSeedRequestCount = 128;
 
+#if DEBUG
+        private readonly int _downloadingConnectionCountLowerLimit = 0;
+        private readonly int _uploadingConnectionCountLowerLimit = 0;
+#else
         private readonly int _downloadingConnectionCountLowerLimit = 3;
         private readonly int _uploadingConnectionCountLowerLimit = 3;
-
+#endif
         private int _threadCount = 2;
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
@@ -893,24 +897,18 @@ namespace Library.Net.Amoeba
         {
             Stopwatch connectionCheckStopwatch = new Stopwatch();
             connectionCheckStopwatch.Start();
-            Stopwatch seedRemoveStopwatch = new Stopwatch();
-            seedRemoveStopwatch.Start();
-            Stopwatch pushDownloadStopwatch = new Stopwatch();
-            pushDownloadStopwatch.Start();
+            
+            Stopwatch refreshStopwatch = new Stopwatch();
+           
             Stopwatch pushUploadStopwatch = new Stopwatch();
             pushUploadStopwatch.Start();
+            Stopwatch pushDownloadStopwatch = new Stopwatch();
+            pushDownloadStopwatch.Start();
 
             for (; ; )
             {
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
-
-                if (seedRemoveStopwatch.Elapsed.TotalMinutes >= 30)
-                {
-                    seedRemoveStopwatch.Restart();
-
-                    _cacheManager.CheckSeeds();
-                }
 
                 var connectionCount = 0;
 
@@ -984,6 +982,110 @@ namespace Library.Net.Amoeba
                                 this.RemoveConnectionManager(connectionManager);
 
                                 break;
+                            }
+                        }
+                    }
+                }
+
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 30)
+                {
+                    refreshStopwatch.Restart();
+
+                    _cacheManager.CheckSeeds();
+                }
+
+                if (connectionCount >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
+                {
+                    pushUploadStopwatch.Restart();
+
+                    HashSet<Key> pushBlocksList = new HashSet<Key>();
+
+                    {
+                        {
+                            var list = _settings.UploadBlocksRequest
+                                .ToArray()
+                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
+                                .OrderBy(n => _random.Next())
+                                .ToList();
+
+                            int count = 1024;
+
+                            for (int i = 0; i < count && i < list.Count; i++)
+                            {
+                                pushBlocksList.Add(list[i]);
+                            }
+                        }
+
+                        {
+                            var list = _settings.DiffusionBlocksRequest
+                                .ToArray()
+                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
+                                .OrderBy(n => _random.Next())
+                                .ToList();
+
+                            int count = 1024;
+
+                            for (int i = 0; i < count && i < list.Count; i++)
+                            {
+                                pushBlocksList.Add(list[i]);
+                            }
+                        }
+                    }
+
+                    {
+                        LockedDictionary<Node, LockedHashSet<Key>> pushBlocksDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
+
+                        //foreach (var item in pushBlocksList)
+                        Parallel.ForEach(pushBlocksList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        {
+                            try
+                            {
+                                var requestNodes = this.GetSearchNode(item.Hash, 1).ToList();
+
+                                if (requestNodes.Count == 0)
+                                {
+                                    _settings.UploadBlocksRequest.Remove(item);
+                                    _settings.DiffusionBlocksRequest.Remove(item);
+
+                                    this.OnUploadedEvent(new Key[] { item });
+
+                                    return;
+                                }
+
+                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
+                                {
+                                    if (!_messagesManager[requestNodes[i]].PushBlocks.Contains(item))
+                                    {
+                                        lock (pushBlocksDictionary.ThisLock)
+                                        {
+                                            if (!pushBlocksDictionary.ContainsKey(requestNodes[i]))
+                                                pushBlocksDictionary[requestNodes[i]] = new LockedHashSet<Key>();
+
+                                            pushBlocksDictionary[requestNodes[i]].Add(item);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        _settings.UploadBlocksRequest.Remove(item);
+                                        _settings.DiffusionBlocksRequest.Remove(item);
+
+                                        this.OnUploadedEvent(new Key[] { item });
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e);
+                            }
+                        });
+
+                        lock (_pushBlocksDictionary.ThisLock)
+                        {
+                            _pushBlocksDictionary.Clear();
+
+                            foreach (var item in pushBlocksDictionary)
+                            {
+                                _pushBlocksDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1168,103 +1270,6 @@ namespace Library.Net.Amoeba
                             foreach (var item in pushBlocksRequestDictionary)
                             {
                                 _pushBlocksRequestDictionary.Add(item.Key, item.Value);
-                            }
-                        }
-                    }
-                }
-
-                if (connectionCount >= _uploadingConnectionCountLowerLimit && pushUploadStopwatch.Elapsed.TotalSeconds > 60)
-                {
-                    pushUploadStopwatch.Restart();
-
-                    HashSet<Key> pushBlocksList = new HashSet<Key>();
-
-                    {
-                        {
-                            var list = _settings.UploadBlocksRequest
-                                .ToArray()
-                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next())
-                                .ToList();
-
-                            int count = 1024;
-
-                            for (int i = 0; i < count && i < list.Count; i++)
-                            {
-                                pushBlocksList.Add(list[i]);
-                            }
-                        }
-
-                        {
-                            var list = _settings.DiffusionBlocksRequest
-                                .ToArray()
-                                .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next())
-                                .ToList();
-
-                            int count = 1024;
-
-                            for (int i = 0; i < count && i < list.Count; i++)
-                            {
-                                pushBlocksList.Add(list[i]);
-                            }
-                        }
-                    }
-
-                    {
-                        LockedDictionary<Node, LockedHashSet<Key>> pushBlocksDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
-
-                        //foreach (var item in pushBlocksList)
-                        Parallel.ForEach(pushBlocksList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
-                        {
-                            try
-                            {
-                                var requestNodes = this.GetSearchNode(item.Hash, 1).ToList();
-
-                                if (requestNodes.Count == 0)
-                                {
-                                    _settings.UploadBlocksRequest.Remove(item);
-                                    _settings.DiffusionBlocksRequest.Remove(item);
-
-                                    this.OnUploadedEvent(new Key[] { item });
-
-                                    return;
-                                }
-
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
-                                {
-                                    if (!_messagesManager[requestNodes[i]].PushBlocks.Contains(item))
-                                    {
-                                        lock (pushBlocksDictionary.ThisLock)
-                                        {
-                                            if (!pushBlocksDictionary.ContainsKey(requestNodes[i]))
-                                                pushBlocksDictionary[requestNodes[i]] = new LockedHashSet<Key>();
-
-                                            pushBlocksDictionary[requestNodes[i]].Add(item);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        _settings.UploadBlocksRequest.Remove(item);
-                                        _settings.DiffusionBlocksRequest.Remove(item);
-
-                                        this.OnUploadedEvent(new Key[] { item });
-                                    }
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Log.Error(e);
-                            }
-                        });
-
-                        lock (_pushBlocksDictionary.ThisLock)
-                        {
-                            _pushBlocksDictionary.Clear();
-
-                            foreach (var item in pushBlocksDictionary)
-                            {
-                                _pushBlocksDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1985,8 +1990,6 @@ namespace Library.Net.Amoeba
 
                     _routeTable.Add(node);
                 }
-
-                _cacheManager.CheckSeeds();
 
                 _bandwidthLimit.In = _settings.BandwidthLimit;
                 _bandwidthLimit.Out = _settings.BandwidthLimit;
