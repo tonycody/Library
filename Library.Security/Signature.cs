@@ -30,7 +30,7 @@ namespace Library.Security
                         bufferStream.Write(digitalSignature.PublicKey, 0, digitalSignature.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
-                        return digitalSignature.Nickname + "@" + NetworkConverter.ToBase64String(Sha512.ComputeHash(bufferStream));
+                        return digitalSignature.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
                     }
                 }
             }
@@ -59,7 +59,7 @@ namespace Library.Security
                         bufferStream.Write(certificate.PublicKey, 0, certificate.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
-                        return certificate.Nickname + "@" + NetworkConverter.ToBase64String(Sha512.ComputeHash(bufferStream));
+                        return certificate.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
                     }
                 }
             }
@@ -123,7 +123,7 @@ namespace Library.Security
 
                 var value = match.Groups[1].Value;
 
-                return NetworkConverter.FromBase64String(value);
+                return NetworkConverter.FromBase64UrlString(value);
             }
             catch (Exception)
             {

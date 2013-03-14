@@ -1487,7 +1487,7 @@ namespace Library.Net.Amoeba
 
                                     connectionManager.PushBlock(key, buffer);
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Upload Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
+                                    Debug.WriteLine(string.Format("ConnectionManager: Upload Push Block ({0})", NetworkConverter.ToBase64UrlString(key.Hash)));
                                     _pushBlockCount++;
 
                                     messageManager.PullBlocksRequest.Remove(key);
@@ -1535,7 +1535,7 @@ namespace Library.Net.Amoeba
 
                                     connectionManager.PushBlock(key, buffer);
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64String(key.Hash)));
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64UrlString(key.Hash)));
                                     _pushBlockCount++;
 
                                     messageManager.PullBlocksRequest.Remove(key);
@@ -1662,7 +1662,7 @@ namespace Library.Net.Amoeba
             {
                 if (e.Key == null || e.Key.Hash == null || e.Key.HashAlgorithm != HashAlgorithm.Sha512 || e.Value.Array == null) return;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Block ({0})", NetworkConverter.ToBase64String(e.Key.Hash)));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull Block ({0})", NetworkConverter.ToBase64UrlString(e.Key.Hash)));
                 _pullBlockCount++;
 
                 if (_messagesManager[connectionManager.Node].PushBlocksRequest.Contains(e.Key))

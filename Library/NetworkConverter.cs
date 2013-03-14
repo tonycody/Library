@@ -8,14 +8,14 @@ namespace Library
 {
     public static class NetworkConverter
     {
-        public static string ToBase64String(byte[] bytes)
+        public static string ToBase64UrlString(byte[] bytes)
         {
             if (bytes == null) throw new ArgumentNullException("bytes");
 
-            return NetworkConverter.ToBase64String(bytes, 0, bytes.Length);
+            return NetworkConverter.ToBase64UrlString(bytes, 0, bytes.Length);
         }
 
-        public static string ToBase64String(byte[] bytes, int offset, int length)
+        public static string ToBase64UrlString(byte[] bytes, int offset, int length)
         {
             if (bytes == null) throw new ArgumentNullException("bytes");
             if (offset < 0 || bytes.Length < offset) throw new ArgumentOutOfRangeException("offset");
@@ -24,7 +24,7 @@ namespace Library
             return System.Convert.ToBase64String(bytes, offset, length).Replace('+', '-').Replace('/', '_').TrimEnd('=');
         }
 
-        public static byte[] FromBase64String(string value)
+        public static byte[] FromBase64UrlString(string value)
         {
             if (value == null) throw new ArgumentNullException("value");
 
