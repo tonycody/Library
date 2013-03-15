@@ -21,8 +21,6 @@ namespace Library.Net.Proxy
         private const int WAIT_FOR_DATA_INTERVAL = 50;   // 50 ms
         private const int WAIT_FOR_DATA_TIMEOUT = 15000; // 15 seconds
 
-        private string _proxyHost;
-        private int _proxyPort;
         private string _proxyUserId;
         private TcpClient _tcpClient;
         private string _destinationHost;
@@ -159,27 +157,6 @@ namespace Library.Net.Proxy
             {
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-
-                // if we have no connection, create one
-                if (_tcpClient == null)
-                {
-                    if (String.IsNullOrEmpty(_proxyHost))
-                    {
-                        throw new ProxyClientException("ProxyHost property must contain a value.");
-                    }
-                    else if (_proxyPort <= 0 || _proxyPort > 65535)
-                    {
-                        throw new ProxyClientException("ProxyPort value must be greater than zero and less than 65535");
-                    }
-
-                    // create new tcp client object to the proxy server
-                    _tcpClient = new TcpClient();
-
-                    // attempt to open the connection
-                    _tcpClient.Connect(_proxyHost, _proxyPort);
-                    _tcpClient.Client.SendTimeout = (int)Socks4ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
-                    _tcpClient.Client.ReceiveTimeout = (int)Socks4ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
-                }
 
                 // send connection command to proxy host for the specified destination host and port
                 SendCommand(_tcpClient.GetStream(), SOCKS4_CMD_CONNECT, _destinationHost, _destinationPort, _proxyUserId);

@@ -14,9 +14,10 @@ namespace Library.Net.Lair
         private BufferManager _bufferManager;
         private Settings _settings;
 
-        private List<TcpListener> _listeners = new List<TcpListener>();
+        private Dictionary<string, TcpListener> _tcpListeners = new Dictionary<string, TcpListener>();
         private List<string> _urisHistory = new List<string>();
-        private volatile Thread _watchThread = null;
+
+        private System.Threading.Timer _watchTimer;
 
         private ManagerState _state = ManagerState.Stop;
 
@@ -30,6 +31,8 @@ namespace Library.Net.Lair
             _bufferManager = bufferManager;
 
             _settings = new Settings();
+
+            _watchTimer = new Timer(new TimerCallback(this.WatchTimer), null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public UriCollection ListenUris
@@ -54,25 +57,13 @@ namespace Library.Net.Lair
                 {
                     if (this.State == ManagerState.Stop) return null;
 
-                    for (int i = 0; i < _listeners.Count; i++)
+                    foreach (var item in _tcpListeners)
                     {
-                        if (_listeners[i] == null) continue;
-
-                        if (_listeners[i].Pending())
+                        if (item.Value.Pending())
                         {
-                            var socket = _listeners[i].AcceptTcpClient().Client;
+                            var socket = item.Value.AcceptTcpClient().Client;
 
-                            IPEndPoint ipEndPoint = (IPEndPoint)socket.LocalEndPoint;
-
-                            if (ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
-                            {
-                                uri = string.Format("tcp:{0}:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
-                            }
-                            else if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
-                            {
-                                uri = string.Format("tcp:[{0}]:{1}", ipEndPoint.Address.ToString(), ipEndPoint.Port);
-                            }
-
+                            uri = item.Key;
                             connection = new TcpConnection(socket, ServerManager.MaxReceiveCount, _bufferManager);
                             break;
                         }
@@ -117,55 +108,49 @@ namespace Library.Net.Lair
             return null;
         }
 
-        private void WatchThread()
+        private void WatchTimer(object state)
         {
-            for (; ; )
+            lock (this.ThisLock)
             {
-                Thread.Sleep(1000);
-                if (this.State == ManagerState.Stop) return;
-
-                lock (this.ThisLock)
+                if (!Collection.Equals(_urisHistory, this.ListenUris))
                 {
-                    if (!Collection.Equals(_urisHistory, this.ListenUris))
+                    // Stop
                     {
-                        // Stop
+                        foreach (var tcpListener in _tcpListeners.Values)
                         {
-                            for (int i = 0; i < _listeners.Count; i++)
-                            {
-                                _listeners[i].Stop();
-                            }
-
-                            _listeners.Clear();
+                            tcpListener.Stop();
                         }
 
-                        // Start
+                        _tcpListeners.Clear();
+                    }
+
+                    // Start
+                    {
+                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+
+                        foreach (var uri in this.ListenUris)
                         {
-                            Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                            var match = regex.Match(uri);
+                            if (!match.Success) continue;
 
-                            foreach (var uri in this.ListenUris)
+                            if (match.Groups[1].Value == "tcp")
                             {
-                                var match = regex.Match(uri);
-                                if (!match.Success) continue;
-
-                                if (match.Groups[1].Value == "tcp")
+                                try
                                 {
-                                    try
-                                    {
-                                        var listener = new TcpListener(IPAddress.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
-                                        listener.Start(3);
-                                        _listeners.Add(listener);
-                                    }
-                                    catch (Exception)
-                                    {
+                                    var listener = new TcpListener(IPAddress.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
+                                    listener.Start(3);
+                                    _tcpListeners[uri] = listener;
+                                }
+                                catch (Exception)
+                                {
 
-                                    }
                                 }
                             }
                         }
-
-                        _urisHistory.Clear();
-                        _urisHistory.AddRange(this.ListenUris);
                     }
+
+                    _urisHistory.Clear();
+                    _urisHistory.AddRange(this.ListenUris);
                 }
             }
         }
@@ -185,17 +170,12 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            while (_watchThread != null) Thread.Sleep(1000);
-
             lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
 
-                _watchThread = new Thread(this.WatchThread);
-                _watchThread.Priority = ThreadPriority.Lowest;
-                _watchThread.Name = "ServerManager_WatchThread";
-                _watchThread.Start();
+                _watchTimer.Change(1000 * 10, 1000 * 10);
             }
         }
 
@@ -207,10 +187,9 @@ namespace Library.Net.Lair
             {
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
-            }
 
-            _watchThread.Join();
-            _watchThread = null;
+                _watchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            }
         }
 
         #region ISettings

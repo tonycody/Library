@@ -127,7 +127,7 @@ namespace Library.Net.Amoeba
 
             _creatingNodes = new LockedList<Node>();
             _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
-            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
+            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
             _nodesStatus = new LockedDictionary<Node, int>();
 
             _downloadBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));

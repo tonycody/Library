@@ -45,8 +45,6 @@ namespace Library.Net.Proxy
         private const byte SOCKS5_ADDRTYPE_DOMAIN_NAME = 0x03;
         private const byte SOCKS5_ADDRTYPE_IPV6 = 0x04;
 
-        private string _proxyHost;
-        private int _proxyPort;
         private string _proxyUserName;
         private string _proxyPassword;
         private SocksAuthentication _proxyAuthMethod;
@@ -186,27 +184,6 @@ namespace Library.Net.Proxy
             {
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
-
-                // if we have no connection, create one
-                if (_tcpClient == null)
-                {
-                    if (String.IsNullOrEmpty(_proxyHost))
-                    {
-                        throw new ProxyClientException("ProxyHost property must contain a value.");
-                    }
-                    else if (_proxyPort <= 0 || _proxyPort > 65535)
-                    {
-                        throw new ProxyClientException("ProxyPort value must be greater than zero and less than 65535");
-                    }
-
-                    // create new tcp client object to the proxy server
-                    _tcpClient = new TcpClient();
-
-                    // attempt to open the connection
-                    _tcpClient.Connect(_proxyHost, _proxyPort);
-                    _tcpClient.Client.SendTimeout = (int)Socks5ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
-                    _tcpClient.Client.ReceiveTimeout = (int)Socks5ProxyClient.CheckTimeout(stopwatch.Elapsed, timeout).TotalMilliseconds;
-                }
 
                 // determine which authentication method the client would like to use
                 DetermineClientAuthMethod();
