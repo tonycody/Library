@@ -2780,6 +2780,19 @@ namespace Library.Net.Lair
                     _routeTable.Add(node);
                 }
 
+                // 旧LairのAnonymousなメッセージのDelete
+                {
+                    foreach (var messages in _settings.Messages.Values)
+                    {
+                        foreach (var message in messages)
+                        {
+                            if (message.Certificate != null) continue;
+
+                            messages.Remove(message);
+                        }
+                    }
+                }
+
                 _bandwidthLimit.In = _settings.BandwidthLimit;
                 _bandwidthLimit.Out = _settings.BandwidthLimit;
             }
