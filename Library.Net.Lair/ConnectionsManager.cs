@@ -2784,7 +2784,7 @@ namespace Library.Net.Lair
                 {
                     foreach (var messages in _settings.Messages.Values)
                     {
-                        foreach (var message in messages)
+                        foreach (var message in messages.ToArray())
                         {
                             if (message.Certificate != null) continue;
 
