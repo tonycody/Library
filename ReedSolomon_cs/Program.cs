@@ -811,7 +811,7 @@ namespace ReedSolomon_cs
             for (int i = 0; i < 128; i++)
             {
                 //buffList.Add(new ArraySegment<byte>(GetBytes(rand.Next()), 0, 4));
-                buffList.Add(new ArraySegment<byte>(GetBytes(i), 0, 4));
+                buffList.Add(new ArraySegment<byte>(GetBytes(i*8), 0, 4));
             }
 
             List<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
@@ -826,7 +826,17 @@ namespace ReedSolomon_cs
                 intList.Add(i);
             }
 
-            pc.Encode(buffList.ToArray(), buffList2.ToArray(), intList.ToArray());
+            {
+                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                {
+                    sw.Start();
+                    for (int i = 0; i < 1000 * 10; i++)
+                    {
+                        pc.Encode(buffList.ToArray(), buffList2.ToArray(), intList.ToArray());
+                    }
+                    Console.WriteLine(sw.ElapsedMilliseconds / 1000.0);
+                }
+            }
 
             List<ArraySegment<byte>> buffList3 = new List<ArraySegment<byte>>();
 
