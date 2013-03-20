@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace Library.Correction
 {
+#if false
     public class ReedSolomon
     {
         private int _k;
@@ -768,4 +769,5 @@ namespace Library.Correction
             }
         }
     }
+#endif
 }

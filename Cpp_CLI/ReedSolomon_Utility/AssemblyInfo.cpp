@@ -6,11 +6,11 @@ using namespace System::Runtime::CompilerServices;
 using namespace System::Runtime::InteropServices;
 using namespace System::Security::Permissions;
 
-[assembly:AssemblyTitleAttribute("ReedSolomon")];
+[assembly:AssemblyTitleAttribute("ReedSolomon_Utility")];
 [assembly:AssemblyDescriptionAttribute("")];
 [assembly:AssemblyConfigurationAttribute("")];
 [assembly:AssemblyCompanyAttribute("")];
-[assembly:AssemblyProductAttribute("ReedSolomon")];
+[assembly:AssemblyProductAttribute("ReedSolomon_Utility")];
 [assembly:AssemblyCopyrightAttribute("Copyright (c)  2013")];
 [assembly:AssemblyTrademarkAttribute("")];
 [assembly:AssemblyCultureAttribute("")];

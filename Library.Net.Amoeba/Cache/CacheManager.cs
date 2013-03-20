@@ -1036,12 +1036,12 @@ namespace Library.Net.Amoeba
                         parityBufferList.Add(new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength));
                     }
 
-                    ReedSolomon reedSolomon = new ReedSolomon(8, bufferList.Count, bufferList.Count + parityBufferList.Count, _threadCount);
+                    ReedSolomon reedSolomon = new ReedSolomon(bufferList.Count, bufferList.Count + parityBufferList.Count);
                     List<int> intList = new List<int>();
 
-                    for (int i = 0, length = bufferList.Count + parityBufferList.Count; i < length; i++)
+                    for (int i = keys.Count, length = bufferList.Count + parityBufferList.Count; i < length; i++)
                     {
-                        intList.Add(keys.Count + i);
+                        intList.Add(i);
                     }
 
                     Exception exception = null;
@@ -1050,7 +1050,7 @@ namespace Library.Net.Amoeba
                     {
                         try
                         {
-                            reedSolomon.Encode(bufferList.ToArray(), parityBufferList.ToArray(), intList.ToArray());
+                            reedSolomon.Encode(bufferList.Select(n => n.Array).ToArray(), parityBufferList.Select(n => n.Array).ToArray(), intList.ToArray(), blockLength);
                         }
                         catch (Exception e)
                         {
@@ -1138,7 +1138,7 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    ReedSolomon reedSolomon = new ReedSolomon(8, group.InformationLength, group.Keys.Count, _threadCount);
+                    ReedSolomon reedSolomon = new ReedSolomon(group.InformationLength, group.Keys.Count);
                     List<int> intList = new List<int>();
 
                     for (int i = 0; i < group.Keys.Count; i++)
@@ -1179,7 +1179,7 @@ namespace Library.Net.Amoeba
                     {
                         try
                         {
-                            reedSolomon.Decode(bufferList.ToArray(), intList.ToArray());
+                            reedSolomon.Decode(bufferList.Select(n => n.Array).ToArray(), intList.ToArray(), group.BlockLength);
                         }
                         catch (Exception e)
                         {
