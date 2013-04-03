@@ -1,10 +1,10 @@
 // Stephen Toub
 
 using System;
-using System.Text;
-using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 
 namespace Library
 {

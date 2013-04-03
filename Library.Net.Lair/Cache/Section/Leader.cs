@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using Library;
 using Library.Io;
 using Library.Security;
 
@@ -32,9 +30,9 @@ namespace Library.Net.Lair
 
         private Certificate _certificate;
 
-        public const int MaxCommentLength = 1024 * 4;
-        public const int MaxCreatorSignaturesCount = 128;
-        public const int MaxManagerSignaturesCount = 128;
+        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxCreatorSignaturesCount = 128;
+        public static readonly int MaxManagerSignaturesCount = 128;
 
         public Leader(Section section, string comment, SignatureCollection creatorSignatures, SignatureCollection managerSignatures, DigitalSignature digitalSignature)
         {
@@ -261,7 +259,7 @@ namespace Library.Net.Lair
 
         public override Leader DeepClone()
         {
-            using (var bufferManagerSignature = new BufferManager())
+            using (var bufferManagerSignature = BufferManager.Instance)
             using (var stream = this.Export(bufferManagerSignature))
             {
                 return Leader.Import(stream, bufferManagerSignature);
@@ -275,7 +273,7 @@ namespace Library.Net.Lair
 
             try
             {
-                using (BufferManager bufferManagerSignature = new BufferManager())
+                using (BufferManager bufferManagerSignature = BufferManager.Instance)
                 {
                     return this.Export(bufferManagerSignature);
                 }
@@ -397,8 +395,7 @@ namespace Library.Net.Lair
         {
             if (_sha512_hash == null)
             {
-                using (BufferManager bufferManager = new BufferManager())
-                using (Stream stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
                     _sha512_hash = Sha512.ComputeHash(stream);
                 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
@@ -30,9 +29,9 @@ namespace Library.Security
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxNickNameLength = 256;
-        public const int MaxPublickeyLength = 1024 * 8;
-        public const int MaxSignatureLength = 1024 * 8;
+        public static readonly int MaxNickNameLength = 256;
+        public static readonly int MaxPublickeyLength = 1024 * 8;
+        public static readonly int MaxSignatureLength = 1024 * 8;
 
         internal Certificate(DigitalSignature digitalSignature, Stream stream)
         {
@@ -226,10 +225,9 @@ namespace Library.Security
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Certificate.Import(stream, bufferManager);
+                    return Certificate.Import(stream, BufferManager.Instance);
                 }
             }
         }

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using Library.Net;
 using Library.Io;
 
 namespace Library.Net.Lair
@@ -29,8 +27,8 @@ namespace Library.Net.Lair
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxIdLength = 64;
-        public const int MaxUrisCount = 32;
+        public static readonly int MaxIdLength = 64;
+        public static readonly int MaxUrisCount = 32;
 
         public Node()
         {
@@ -169,10 +167,9 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Node.Import(stream, bufferManager);
+                    return Node.Import(stream, BufferManager.Instance);
                 }
             }
         }

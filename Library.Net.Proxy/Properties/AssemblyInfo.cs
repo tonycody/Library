@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Net.Proxy")]
@@ -12,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("41a15ae4-fc24-4b04-ad81-cbb06507954a")]
-[assembly: AssemblyVersion("0.0.0.36")] // C+kl54QcYhxCeUmAJ8MchJDsia0vpMOKzGoDZCjJQ8Yy4gwiwrXSDYNWT+ukuF2GtEparltAYqsh4DM8kelCNA==
+[assembly: AssemblyVersion("0.0.0.38")] // Zj1mmFGu31pK+UV/ok1k2P0oM/fswZ/CtZxYsVRjYKNZUeoRPrg1pHaMhuz5CY7QeY5qZCsUg/tllg3h7jFgRw==

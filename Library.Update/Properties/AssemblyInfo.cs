@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Update")]
@@ -12,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("485786c0-4db9-460f-8ff7-53dccc13e950")]
-[assembly: AssemblyVersion("0.0.0.23")] // LcNs4GcIcz3qEPHGwvufuPxL07niPmoGPdwxS/gSTzDytTFrfDBROvbs4xcBdEbL6Av3bgXzJqZT2iOh/IITGQ==
+[assembly: AssemblyVersion("0.0.0.24")] // 3UEKHuyf40XiuHliKgn8yY8NtPg/Q4pUh4nepyi25TM0tkX6qm6CoTOsvfotZQmXbkKuz3jtgdsaIya4rNlGFg==

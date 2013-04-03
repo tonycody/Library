@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
-using Library;
 using Library.Io;
 
 namespace Library.Net.Amoeba
@@ -22,7 +21,7 @@ namespace Library.Net.Amoeba
 
         private int _hashCode = 0;
 
-        public const int MaxHashLength = 64;
+        public static readonly int MaxHashLength = 64;
 
         public Key(byte[] hash, HashAlgorithm hashAlgorithm)
         {
@@ -135,10 +134,9 @@ namespace Library.Net.Amoeba
 
         public override Key DeepClone()
         {
-            using (var bufferManager = new BufferManager())
-            using (var stream = this.Export(bufferManager))
+            using (var stream = this.Export(BufferManager.Instance))
             {
-                return Key.Import(stream, bufferManager);
+                return Key.Import(stream, BufferManager.Instance);
             }
         }
 

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.Serialization;
-using System.Net.Sockets;
 using System.IO;
+using System.Runtime.Serialization;
+using System.Text;
 using Library.Io;
 
 namespace Library.Net.Connection.SecureVersion1
@@ -170,10 +168,9 @@ namespace Library.Net.Connection.SecureVersion1
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Protocol.Import(stream, bufferManager);
+                    return Protocol.Import(stream, BufferManager.Instance);
                 }
             }
         }

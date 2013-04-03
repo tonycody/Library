@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
 using System.Runtime.Serialization;
-using Library;
+using System.Text;
 using Library.Io;
 
 namespace Library.Net.Amoeba
@@ -32,7 +30,7 @@ namespace Library.Net.Amoeba
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxCryptoKeyLength = 64;
+        public static readonly int MaxCryptoKeyLength = 64;
 
         public Index()
         {
@@ -163,9 +161,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (this.Groups == null) return 0;
-                else if (this.Groups.Count == 0) return 0;
-                else if (this.Groups[0].Keys == null) return 0;
+                if (this.Groups.Count == 0) return 0;
                 else if (this.Groups[0].Keys.Count == 0) return 0;
                 else return this.Groups[0].Keys[0].GetHashCode();
             }
@@ -215,10 +211,9 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Index.Import(stream, bufferManager);
+                    return Index.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -347,7 +342,7 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) 
+                    if (_thisLock == null)
                         _thisLock = new object();
 
                     return _thisLock;

@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Compression")]
@@ -12,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("424730D2-135C-41D8-9C26-9C379F9CC0C6")]
-[assembly: AssemblyVersion("0.0.0.3")] // c8PVo8dYTQ7ZFNWf+iWjXgcogtatg4v/vUNmTfOSyqcDl+ntJY8V08qu6kPhIy6AeymqE88oifDmrRvJCv6v2A==
+[assembly: AssemblyVersion("0.0.0.4")] // zXSx+wz1su4aZM+DK6X8LIzqLYEhRyYgilwNTq1tDD7Bo91u5Vhz1AlHYcRQ8e5QrQPFdFkfsRxrTpiuVpk9zQ==

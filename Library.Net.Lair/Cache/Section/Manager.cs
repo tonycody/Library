@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using Library;
 using Library.Io;
 using Library.Security;
 
@@ -30,8 +28,8 @@ namespace Library.Net.Lair
 
         private Certificate _certificate;
 
-        public const int MaxCommentLength = 1024 * 4;
-        public const int MaxTrustSignaturesCount = 1024;
+        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxTrustSignaturesCount = 1024;
 
         public Manager(Section section, string comment, SignatureCollection trustSignatures, DigitalSignature digitalSignature)
         {
@@ -224,10 +222,9 @@ namespace Library.Net.Lair
 
         public override Manager DeepClone()
         {
-            using (var bufferManager = new BufferManager())
-            using (var stream = this.Export(bufferManager))
+            using (var stream = this.Export(BufferManager.Instance))
             {
-                return Manager.Import(stream, bufferManager);
+                return Manager.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -238,7 +235,7 @@ namespace Library.Net.Lair
 
             try
             {
-                using (BufferManager bufferManager = new BufferManager())
+                using (BufferManager bufferManager = BufferManager.Instance)
                 {
                     return this.Export(bufferManager);
                 }
@@ -340,8 +337,7 @@ namespace Library.Net.Lair
         {
             if (_sha512_hash == null)
             {
-                using (BufferManager bufferManager = new BufferManager())
-                using (Stream stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
                     _sha512_hash = Sha512.ComputeHash(stream);
                 }

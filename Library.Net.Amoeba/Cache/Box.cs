@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using Library.Collections;
-using Library.Net.Amoeba;
-using Library;
 using Library.Io;
 using Library.Security;
 
@@ -39,8 +35,8 @@ namespace Library.Net.Amoeba
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxNameLength = 256;
-        public const int MaxCommentLength = 1024;
+        public static readonly int MaxNameLength = 256;
+        public static readonly int MaxCommentLength = 1024;
 
         public Box()
         {
@@ -266,10 +262,9 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Box.Import(stream, bufferManager);
+                    return Box.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -283,7 +278,7 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    using (BufferManager bufferManager = new BufferManager())
+                    using (BufferManager bufferManager = BufferManager.Instance)
                     {
                         return this.Export(bufferManager);
                     }
@@ -416,36 +411,6 @@ namespace Library.Net.Amoeba
                     return _boxes;
                 }
             }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private byte[] _sha512_hash = null;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (BufferManager bufferManager = new BufferManager())
-                using (Stream stream = this.Export(bufferManager))
-                {
-                    _sha512_hash = Sha512.ComputeHash(stream);
-                }
-            }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion

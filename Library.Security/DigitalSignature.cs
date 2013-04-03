@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Xml;
-using Library;
 using Library.Io;
 
 namespace Library.Security
@@ -39,9 +35,9 @@ namespace Library.Security
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxNickNameLength = 256;
-        public const int MaxPublickeyLength = 1024 * 8;
-        public const int MaxPrivatekeyLength = 1024 * 8;
+        public static readonly int MaxNickNameLength = 256;
+        public static readonly int MaxPublickeyLength = 1024 * 8;
+        public static readonly int MaxPrivatekeyLength = 1024 * 8;
 
         public DigitalSignature(string nickname, DigitalSignatureAlgorithm digitalSignatureAlgorithm)
         {
@@ -235,10 +231,9 @@ namespace Library.Security
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return DigitalSignature.Import(stream, bufferManager);
+                    return DigitalSignature.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -303,11 +298,13 @@ namespace Library.Security
             return certificate.Verify(stream);
         }
 
-        public static bool VerifyFileCertificate(Certificate certificate, FileStream stream, BufferManager bufferManager)
+        public static bool VerifyFileCertificate(Certificate certificate, FileStream stream)
         {
+            BufferManager bufferManager = BufferManager.Instance;
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
+            // Name
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -325,7 +322,7 @@ namespace Library.Security
 
                 streams.Add(bufferStream);
             }
-
+            // Stream
             {
                 Stream exportStream = new RangeStream(stream, true);
 

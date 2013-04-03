@@ -63,26 +63,12 @@ namespace Library.UnitTest
             var id = new byte[64];
             new Random().NextBytes(id);
 
-            var message = new Message(new Channel(id, "aoeui"), "aoeui", digitalSignature);
+            var message = new Message(new Channel(id, "aoeui"), "aoeui", null, digitalSignature);
 
             var stream = LairConverter.ToMessageString(message);
             var value = LairConverter.FromMessageString(stream);
 
             Assert.AreEqual(message, value, "LairConverter #3");
-        }
-
-        [Test]
-        public void Test_LairConverter_DigitalSigunature()
-        {
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.ECDsaP521_Sha512 })
-            {
-                DigitalSignature sigunature = new DigitalSignature("123", a);
-
-                var streamSigunature = DigitalSignatureConverter.ToSignatureStream(sigunature);
-                var sigunature2 = DigitalSignatureConverter.FromSignatureStream(streamSigunature);
-
-                Assert.AreEqual(sigunature, sigunature2, "LairConverter #4");
-            }
         }
 
         [Test]
@@ -143,8 +129,8 @@ namespace Library.UnitTest
                     new Random().NextBytes(channelNameBuffer);
                     new Random().NextBytes(contentBuffer);
 
-                    var channel = new Channel(id, NetworkConverter.ToBase64String(channelNameBuffer).Substring(0, 256));
-                    var message = new Message(channel, NetworkConverter.ToBase64String(contentBuffer).Substring(0, 1024 * 2), null);
+                    var channel = new Channel(id, NetworkConverter.ToBase64UrlString(channelNameBuffer).Substring(0, 256));
+                    var message = new Message(channel, NetworkConverter.ToBase64UrlString(contentBuffer).Substring(0, 1024 * 2), null, null);
 
                     var buffer = new byte[1024];
 
@@ -165,39 +151,6 @@ namespace Library.UnitTest
                     Assert.AreEqual(message, message2, "Message #1");
                 }
             });
-        }
-
-        [Test]
-        public void Test_Filter()
-        {
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
-            var id = new byte[64];
-            new Random().NextBytes(id);
-
-            List<Key> list = new List<Key>();
-
-            for (int i = 0; i < 64; i++)
-            {
-                var buffer = new byte[64];
-                new Random().NextBytes(buffer);
-
-                list.Add(new Key(buffer, HashAlgorithm.Sha512));
-            }
-
-            var filter = new Filter(new Channel(id, "aoeui"), list, digitalSignature);
-            Filter filter3 = null;
-
-            using (var filterStream = filter.Export(_bufferManager))
-            {
-                var buffer = new byte[filterStream.Length];
-                filterStream.Read(buffer, 0, buffer.Length);
-
-                filterStream.Position = 0;
-                filter3 = Filter.Import(filterStream, _bufferManager);
-            }
-
-            Assert.AreEqual(filter, filter3, "Filter #1");
-            Assert.IsTrue(filter3.VerifyCertificate(), "Filter #2");
         }
     }
 }

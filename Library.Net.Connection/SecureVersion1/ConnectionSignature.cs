@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.Serialization;
-using Library.Security;
 using System.IO;
+using System.Runtime.Serialization;
+using System.Text;
 using Library.Io;
+using Library.Security;
 
 namespace Library.Net.Connection.SecureVersion1
 {
@@ -28,7 +27,7 @@ namespace Library.Net.Connection.SecureVersion1
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public const int MaxKeyLength = 1024;
+        public static readonly int MaxKeyLength = 1024;
 
         public ConnectionSignature()
         {
@@ -168,10 +167,9 @@ namespace Library.Net.Connection.SecureVersion1
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return ConnectionSignature.Import(stream, bufferManager);
+                    return ConnectionSignature.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -185,7 +183,7 @@ namespace Library.Net.Connection.SecureVersion1
 
                 try
                 {
-                    using (BufferManager bufferManager = new BufferManager())
+                    using (BufferManager bufferManager = BufferManager.Instance)
                     {
                         return this.Export(bufferManager);
                     }

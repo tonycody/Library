@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Library.Collections;
 using System.Threading;
+using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
@@ -35,13 +34,13 @@ namespace Library.Net.Amoeba
 
                     foreach (var node in _messageManagerDictionary.Keys.ToArray())
                     {
-                        _messageManagerDictionary[node].PushBlocks.TrimExcess();
+                        _messageManagerDictionary[node].PushBlocks.Trim();
 
-                        _messageManagerDictionary[node].PullBlocksLink.TrimExcess();
-                        _messageManagerDictionary[node].PullBlocksRequest.TrimExcess();
+                        _messageManagerDictionary[node].PullBlocksLink.Trim();
+                        _messageManagerDictionary[node].PullBlocksRequest.Trim();
 
-                        _messageManagerDictionary[node].PushBlocksLink.TrimExcess();
-                        _messageManagerDictionary[node].PushBlocksRequest.TrimExcess();
+                        _messageManagerDictionary[node].PushBlocksLink.Trim();
+                        _messageManagerDictionary[node].PushBlocksRequest.Trim();
                     }
 
                     _lastCircularTime = now;
@@ -55,10 +54,7 @@ namespace Library.Net.Amoeba
 
                         if (this.GetLockNodesEvent != null)
                         {
-                            foreach (var node in this.GetLockNodesEvent(this))
-                            {
-                                lockedNodes.Add(node);
-                            }
+                            lockedNodes.AddRange(this.GetLockNodesEvent(this));
                         }
 
                         lock (this.ThisLock)
@@ -148,7 +144,7 @@ namespace Library.Net.Amoeba
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
         private CirculationCollection<Key> _pushBlocks;
-        private CirculationCollection<byte[]> _pushSeeds;
+        private CirculationDictionary<string, DateTime> _pushStoreSeeds;
 
         private CirculationCollection<Key> _pushBlocksLink;
         private CirculationCollection<Key> _pullBlocksLink;
@@ -167,7 +163,7 @@ namespace Library.Net.Amoeba
 
             _surroundingNodes = new LockedHashSet<Node>(128);
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushSeeds = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
@@ -302,13 +298,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<byte[]> PushSeeds
+        public CirculationDictionary<string, DateTime> PushStoreSeeds
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSeeds;
+                    return _pushStoreSeeds;
                 }
             }
         }

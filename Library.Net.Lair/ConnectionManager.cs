@@ -2,13 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Xml;
-using Library.Collections;
 using Library.Io;
 using Library.Net.Connection;
 
@@ -1084,10 +1081,9 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return NodesMessage.Import(stream, bufferManager);
+                        return NodesMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
@@ -1189,10 +1185,9 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return SectionsRequestMessage.Import(stream, bufferManager);
+                        return SectionsRequestMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
@@ -1294,10 +1289,9 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return ChannelsRequestMessage.Import(stream, bufferManager);
+                        return ChannelsRequestMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }

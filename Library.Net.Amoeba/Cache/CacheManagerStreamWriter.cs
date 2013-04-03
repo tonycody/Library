@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using Library;
 using Library.Collections;
 
 namespace Library.Net.Amoeba

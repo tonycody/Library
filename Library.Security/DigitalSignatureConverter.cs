@@ -3,12 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using Library.Io;
-using Library.Security;
 
 namespace Library.Security
 {
@@ -20,7 +16,7 @@ namespace Library.Security
             Deflate = 1,
         }
 
-        private static BufferManager _bufferManager = new BufferManager();
+        private static BufferManager _bufferManager = BufferManager.Instance;
         private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static Stream ToStream<T>(ItemBase<T> item)

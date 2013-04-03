@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Net")]
@@ -12,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("178e272e-2e93-48ea-866c-a6da86ca3484")]
-[assembly: AssemblyVersion("0.0.0.66")] // N6pt4vnDvrV4/WYnWMkH3UIXpswkQ7fR7gt1DlE7JTVdjeu+K3IzSQI7L+ZG0rLfZ5+hu88TMs7/UxsdaXoFBw==
+[assembly: AssemblyVersion("0.0.0.70")] // VqHSBuRqwN/f6Jv0JO18fpA8Mg60c3ZCZUKTlkcFDAarDTHeWpQ5PJqIykB1sgCwVeRG267+krTD++aPIY1uEw==

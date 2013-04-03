@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Library.Security;
-using System.IO;
 
 namespace Library.Net.Lair
 {
-    public class LairManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
+    public sealed class LairManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private BufferManager _bufferManager;
 
@@ -17,14 +13,14 @@ namespace Library.Net.Lair
 
         private ManagerState _state = ManagerState.Stop;
 
-        public RemoveSectionsEventHandler RemoveSectionsEvent;
-        public RemoveLeadersEventHandler RemoveLeadersEvent;
-        public RemoveCreatorsEventHandler RemoveCreatorsEvent;
-        public RemoveManagersEventHandler RemoveManagersEvent;
+        private RemoveSectionsEventHandler _removeSectionsEvent;
+        private RemoveLeadersEventHandler _removeLeadersEvent;
+        private RemoveCreatorsEventHandler _removeCreatorsEvent;
+        private RemoveManagersEventHandler _removeManagersEvent;
 
-        public RemoveChannelsEventHandler RemoveChannelsEvent;
-        public RemoveTopicsEventHandler RemoveTopicsEvent;
-        public RemoveMessagesEventHandler RemoveMessagesEvent;
+        private RemoveChannelsEventHandler _removeChannelsEvent;
+        private RemoveTopicsEventHandler _removeTopicsEvent;
+        private RemoveMessagesEventHandler _removeMessagesEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -38,9 +34,9 @@ namespace Library.Net.Lair
 
             _connectionsManager.RemoveSectionsEvent = (object sender) =>
             {
-                if (this.RemoveSectionsEvent != null)
+                if (_removeSectionsEvent != null)
                 {
-                    return this.RemoveSectionsEvent(this);
+                    return _removeSectionsEvent(this);
                 }
 
                 return null;
@@ -48,9 +44,9 @@ namespace Library.Net.Lair
 
             _connectionsManager.RemoveLeadersEvent = (object sender, Section section) =>
             {
-                if (this.RemoveLeadersEvent != null)
+                if (_removeLeadersEvent != null)
                 {
-                    return this.RemoveLeadersEvent(this, section);
+                    return _removeLeadersEvent(this, section);
                 }
 
                 return null;
@@ -58,9 +54,9 @@ namespace Library.Net.Lair
 
             _connectionsManager.RemoveManagersEvent = (object sender, Section section) =>
             {
-                if (this.RemoveManagersEvent != null)
+                if (_removeManagersEvent != null)
                 {
-                    return this.RemoveManagersEvent(this, section);
+                    return _removeManagersEvent(this, section);
                 }
 
                 return null;
@@ -68,9 +64,9 @@ namespace Library.Net.Lair
 
             _connectionsManager.RemoveCreatorsEvent = (object sender, Section section) =>
             {
-                if (this.RemoveCreatorsEvent != null)
+                if (_removeCreatorsEvent != null)
                 {
-                    return this.RemoveCreatorsEvent(this, section);
+                    return _removeCreatorsEvent(this, section);
                 }
 
                 return null;
@@ -78,9 +74,9 @@ namespace Library.Net.Lair
 
             _connectionsManager.RemoveChannelsEvent = (object sender) =>
             {
-                if (this.RemoveChannelsEvent != null)
+                if (_removeChannelsEvent != null)
                 {
-                    return this.RemoveChannelsEvent(this);
+                    return _removeChannelsEvent(this);
                 }
 
                 return null;
@@ -88,9 +84,9 @@ namespace Library.Net.Lair
 
             _connectionsManager.RemoveTopicsEvent = (object sender, Channel channel) =>
             {
-                if (this.RemoveTopicsEvent != null)
+                if (_removeTopicsEvent != null)
                 {
-                    return this.RemoveTopicsEvent(this, channel);
+                    return _removeTopicsEvent(this, channel);
                 }
 
                 return null;
@@ -98,13 +94,90 @@ namespace Library.Net.Lair
 
             _connectionsManager.RemoveMessagesEvent = (object sender, Channel channel) =>
             {
-                if (this.RemoveMessagesEvent != null)
+                if (_removeMessagesEvent != null)
                 {
-                    return this.RemoveMessagesEvent(this, channel);
+                    return _removeMessagesEvent(this, channel);
                 }
 
                 return null;
             };
+        }
+
+        public RemoveSectionsEventHandler RemoveSectionsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeSectionsEvent = value;
+                }
+            }
+        }
+
+        public RemoveLeadersEventHandler RemoveLeadersEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeLeadersEvent = value;
+                }
+            }
+        }
+
+        public RemoveCreatorsEventHandler RemoveCreatorsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeCreatorsEvent = value;
+                }
+            }
+        }
+
+        public RemoveManagersEventHandler RemoveManagersEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeManagersEvent = value;
+                }
+            }
+        }
+
+        public RemoveChannelsEventHandler RemoveChannelsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeChannelsEvent = value;
+                }
+            }
+        }
+
+        public RemoveTopicsEventHandler RemoveTopicsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeTopicsEvent = value;
+                }
+            }
+        }
+
+        public RemoveMessagesEventHandler RemoveMessagesEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeMessagesEvent = value;
+                }
+            }
         }
 
         public ConnectionFilterCollection Filters
@@ -382,7 +455,7 @@ namespace Library.Net.Lair
                 _connectionsManager.Upload(topic);
             }
         }
-        
+
         public void Upload(Message message)
         {
             lock (this.ThisLock)
@@ -462,15 +535,6 @@ namespace Library.Net.Lair
 
             if (disposing)
             {
-                try
-                {
-                    this.Stop();
-                }
-                catch (Exception)
-                {
-
-                }
-
                 _connectionsManager.Dispose();
                 _serverManager.Dispose();
                 _clientManager.Dispose();

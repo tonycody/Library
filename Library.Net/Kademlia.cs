@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
 
 namespace Library.Net
 {
@@ -29,7 +27,25 @@ namespace Library.Net
         private List<T>[] _nodesList;
 
         private T _baseNode;
+        private static byte[] _distanceHashtable = new byte[256];
+
         private object _thisLock = new object();
+
+        static Kademlia()
+        {
+            _distanceHashtable[0] = 0;
+            _distanceHashtable[1] = 1;
+
+            int i = 2;
+
+            for (; i < 0x4; i++) _distanceHashtable[i] = 2;
+            for (; i < 0x8; i++) _distanceHashtable[i] = 3;
+            for (; i < 0x10; i++) _distanceHashtable[i] = 4;
+            for (; i < 0x20; i++) _distanceHashtable[i] = 5;
+            for (; i < 0x40; i++) _distanceHashtable[i] = 6;
+            for (; i < 0x80; i++) _distanceHashtable[i] = 7;
+            for (; i <= 0xff; i++) _distanceHashtable[i] = 8;
+        }
 
         /// <summary>
         /// RouteTableクラスの新しいインスタンスを初期化します
@@ -155,14 +171,7 @@ namespace Library.Net
                     else if (i >= y.Length) value = x[i];
                     else value = (byte)(x[i] ^ y[i]);
 
-                    if ((value & 0x80) == 0x80) digit = 8;
-                    else if ((value & 0x40) == 0x40) digit = 7;
-                    else if ((value & 0x20) == 0x20) digit = 6;
-                    else if ((value & 0x10) == 0x10) digit = 5;
-                    else if ((value & 0x8) == 0x8) digit = 4;
-                    else if ((value & 0x4) == 0x4) digit = 3;
-                    else if ((value & 0x2) == 0x2) digit = 2;
-                    else if ((value & 0x1) == 0x1) digit = 1;
+                    digit = _distanceHashtable[value];
 
                     if (digit != 0)
                     {
@@ -182,14 +191,7 @@ namespace Library.Net
                 {
                     byte value = (byte)(x[i] ^ y[i]);
 
-                    if ((value & 0x80) == 0x80) digit = 8;
-                    else if ((value & 0x40) == 0x40) digit = 7;
-                    else if ((value & 0x20) == 0x20) digit = 6;
-                    else if ((value & 0x10) == 0x10) digit = 5;
-                    else if ((value & 0x8) == 0x8) digit = 4;
-                    else if ((value & 0x4) == 0x4) digit = 3;
-                    else if ((value & 0x2) == 0x2) digit = 2;
-                    else if ((value & 0x1) == 0x1) digit = 1;
+                    digit = _distanceHashtable[value];
 
                     if (digit != 0)
                     {
@@ -252,8 +254,8 @@ namespace Library.Net
             if (id == null) throw new ArgumentNullException("key");
             if (nodeList == null) throw new ArgumentNullException("nodeList");
 
-            var dic = new Dictionary<byte[], List<T>>(new BytesEqualityComparer());
             byte[] myXor = Kademlia<T>.Xor(id, baseNode.Id);
+            var list = new List<KeyValuePair<byte[], T>>();
 
             foreach (var node in nodeList)
             {
@@ -261,18 +263,11 @@ namespace Library.Net
 
                 if (Collection.Compare(myXor, xor) > 0)
                 {
-                    if (!dic.ContainsKey(xor))
-                    {
-                        dic[xor] = new List<T>();
-                    }
-
-                    dic[xor].Add(node);
+                    list.Add(new KeyValuePair<byte[], T>(xor, node));
                 }
             }
 
-            var list = new List<KeyValuePair<byte[], List<T>>>(dic);
-
-            list.Sort(delegate(KeyValuePair<byte[], List<T>> x, KeyValuePair<byte[], List<T>> y)
+            list.Sort(delegate(KeyValuePair<byte[], T> x, KeyValuePair<byte[], T> y)
             {
                 return Collection.Compare(x.Key, y.Key);
             });
@@ -281,7 +276,7 @@ namespace Library.Net
 
             for (int i = 0; i < list.Count; i++)
             {
-                sumList.AddRange(list[i].Value);
+                sumList.Add(list[i].Value);
             }
 
             return sumList;
@@ -504,41 +499,6 @@ namespace Library.Net
 
                 return array;
             }
-        }
-
-        sealed class BytesEqualityComparer : IEqualityComparer<byte[]>
-        {
-            #region IEqualityComparer<byte[]>
-
-            public bool Equals(byte[] x, byte[] y)
-            {
-                if (x.Length != y.Length) return false;
-
-                for (int i = 0; i < x.Length; i++)
-                {
-                    if (x[i] != y[i])
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            public int GetHashCode(byte[] obj)
-            {
-                if (obj != null && obj.Length != 0)
-                {
-                    if (obj.Length >= 2) return BitConverter.ToUInt16(obj, 0);
-                    else return obj[0];
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-
-            #endregion
         }
     }
 }

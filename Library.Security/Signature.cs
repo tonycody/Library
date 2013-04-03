@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.IO;
 using Library.Io;
 
 namespace Library.Security
 {
     public static class Signature
     {
-        private static BufferManager _bufferManager = new BufferManager();
+        private static BufferManager _bufferManager = BufferManager.Instance;
         private static Regex _signatureRegex = new Regex(@"^(.*)@([a-zA-Z0-9\-_]*)$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         public static string GetSignature(DigitalSignature digitalSignature)

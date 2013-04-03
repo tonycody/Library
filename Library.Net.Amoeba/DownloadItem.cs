@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.IO;
 using System.Runtime.Serialization;
-using System.IO;
+using System.Text;
 using System.Xml;
 
 namespace Library.Net.Amoeba
@@ -39,7 +36,7 @@ namespace Library.Net.Amoeba
         private string _path;
         private long _decodeBytes;
         private long _decodingBytes;
-        private IndexCollection _indexs;
+        private IndexCollection _indexes;
 
         private object _thisLock;
         private static object _thisStaticLock = new object();
@@ -197,16 +194,16 @@ namespace Library.Net.Amoeba
         }
 
         [DataMember(Name = "Indexs")]
-        public IndexCollection Indexs
+        public IndexCollection Indexes
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_indexs == null)
-                        _indexs = new IndexCollection();
+                    if (_indexes == null)
+                        _indexes = new IndexCollection();
 
-                    return _indexs;
+                    return _indexes;
                 }
             }
         }

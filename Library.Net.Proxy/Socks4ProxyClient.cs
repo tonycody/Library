@@ -1,8 +1,6 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -30,42 +28,42 @@ namespace Library.Net.Proxy
         /// <summary>
         /// Default Socks4 proxy port.
         /// </summary>
-        protected const int SOCKS_PROXY_DEFAULT_PORT = 1080;
+        protected internal const int SOCKS_PROXY_DEFAULT_PORT = 1080;
 
         /// <summary>
         /// Socks4 version number.
         /// </summary>
-        protected const byte SOCKS4_VERSION_NUMBER = 4;
+        protected internal const byte SOCKS4_VERSION_NUMBER = 4;
 
         /// <summary>
         /// Socks4 connection command value.
         /// </summary>
-        protected const byte SOCKS4_CMD_CONNECT = 0x01;
+        protected internal const byte SOCKS4_CMD_CONNECT = 0x01;
 
         /// <summary>
         /// Socks4 bind command value.
         /// </summary>
-        protected const byte SOCKS4_CMD_BIND = 0x02;
+        protected internal const byte SOCKS4_CMD_BIND = 0x02;
 
         /// <summary>
         /// Socks4 reply request grant response value.
         /// </summary>
-        protected const byte SOCKS4_CMD_REPLY_REQUEST_GRANTED = 90;
+        protected internal const byte SOCKS4_CMD_REPLY_REQUEST_GRANTED = 90;
 
         /// <summary>
         /// Socks4 reply request rejected or failed response value.
         /// </summary>
-        protected const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_OR_FAILED = 91;
+        protected internal const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_OR_FAILED = 91;
 
         /// <summary>
         /// Socks4 reply request rejected becauase the proxy server can not connect to the IDENTD server value.
         /// </summary>
-        protected const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_CANNOT_CONNECT_TO_IDENTD = 92;
+        protected internal const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_CANNOT_CONNECT_TO_IDENTD = 92;
 
         /// <summary>
         /// Socks4 reply request rejected because of a different IDENTD server.
         /// </summary>
-        protected const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_DIFFERENT_IDENTD = 93;
+        protected internal const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_DIFFERENT_IDENTD = 93;
 
         private Socks4ProxyClient(string destinationHost, int destinationPort)
         {

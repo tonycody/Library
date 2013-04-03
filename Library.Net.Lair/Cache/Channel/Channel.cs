@@ -21,8 +21,8 @@ namespace Library.Net.Lair
 
         private int _hashCode = 0;
 
-        public const int MaxIdLength = 64;
-        public const int MaxNameLength = 256;
+        public static readonly int MaxIdLength = 64;
+        public static readonly int MaxNameLength = 256;
 
         public Channel(byte[] id, string name)
         {
@@ -140,10 +140,9 @@ namespace Library.Net.Lair
 
         public override Channel DeepClone()
         {
-            using (var bufferManager = new BufferManager())
-            using (var stream = this.Export(bufferManager))
+            using (var stream = this.Export(BufferManager.Instance))
             {
-                return Channel.Import(stream, bufferManager);
+                return Channel.Import(stream, BufferManager.Instance);
             }
         }
 

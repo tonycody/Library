@@ -11,10 +11,18 @@ namespace Library.UnitTest
     [TestFixture, Category("Library.Correction")]
     public class Test_Library_Correction
     {
+        private BufferManager _bufferManager = new BufferManager();
+
+        [TearDown]
+        public void TearDown()
+        {
+            _bufferManager.Dispose();
+        }
+
         [Test]
         public void Test_ReedSolomon()
         {
-            ReedSolomon pc = new ReedSolomon(8, 128, 256, 4);
+            ReedSolomon pc = new ReedSolomon(8, 128, 256, 4, _bufferManager);
             Random rand = new Random();
 
             List<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();

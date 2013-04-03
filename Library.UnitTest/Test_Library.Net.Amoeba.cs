@@ -286,20 +286,6 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_AmoebaConverter_DigitalSigunature()
-        {
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.ECDsaP521_Sha512 })
-            {
-                DigitalSignature sigunature = new DigitalSignature("123", a);
-
-                var streamSigunature = DigitalSignatureConverter.ToSignatureStream(sigunature);
-                var sigunature2 = DigitalSignatureConverter.FromSignatureStream(streamSigunature);
-
-                Assert.AreEqual(sigunature, sigunature2, "AmoebaConverter #4");
-            }
-        }
-
-        [Test]
         public void Test_Node()
         {
             var node = new Node();

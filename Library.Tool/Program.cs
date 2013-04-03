@@ -6,9 +6,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Xml;
 using System.Windows.Forms;
+using System.Xml;
 using Library.Security;
 
 namespace Library.Tool
@@ -34,7 +33,7 @@ namespace Library.Tool
                     using (FileStream inStream = new FileStream(path, FileMode.Open))
                     using (FileStream outStream = new FileStream(path + ".certificate", FileMode.Create))
                     {
-                        var certificate = DigitalSignature.CreateFileCertificate(digitalSignature, inStream, new BufferManager());
+                        var certificate = DigitalSignature.CreateFileCertificate(digitalSignature, inStream, BufferManager.Instance);
 
                         using (var certificateStream = DigitalSignatureConverter.ToCertificateStream(certificate))
                         {
@@ -62,7 +61,7 @@ namespace Library.Tool
 
                     using (FileStream inStream = new FileStream(path, FileMode.Open))
                     {
-                        MessageBox.Show(DigitalSignature.VerifyFileCertificate(certificate, inStream, new BufferManager()).ToString());
+                        MessageBox.Show(DigitalSignature.VerifyFileCertificate(certificate, inStream).ToString());
                     }
                 }
                 else if (args.Length >= 4 && args[0] == "define")

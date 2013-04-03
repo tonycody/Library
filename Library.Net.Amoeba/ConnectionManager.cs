@@ -2,13 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Xml;
-using Library.Collections;
 using Library.Io;
 using Library.Net.Connection;
 using Library.Security;
@@ -981,10 +978,9 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return NodesMessage.Import(stream, bufferManager);
+                        return NodesMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
@@ -1086,10 +1082,9 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return BlocksLinkMessage.Import(stream, bufferManager);
+                        return BlocksLinkMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
@@ -1191,10 +1186,9 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return BlocksRequestMessage.Import(stream, bufferManager);
+                        return BlocksRequestMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
@@ -1314,10 +1308,9 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return BlockMessage.Import(stream, bufferManager);
+                        return BlockMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
@@ -1453,10 +1446,9 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return SeedsRequestMessage.Import(stream, bufferManager);
+                        return SeedsRequestMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }

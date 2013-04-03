@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Correction")]
@@ -12,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("d2d1fc65-7ba4-4237-b4b9-31df32f7f76b")]
-[assembly: AssemblyVersion("0.0.0.44")] // 2jIR+T/e3qjs1zZpMlEYzbclFzKA9Xhaw0+4UVlJgNzkL6K8b9on4EmeJplY4C1/cflIeuLOnpwxgH9IllmFxg==
+[assembly: AssemblyVersion("0.0.0.47")] // ojrIJea7Ec3r2KJpdj5Wg9CrN/2CWNJn9xziggoS2lz9fwfeA7t8tYdk0+lncOdf0b9ofKkfoH15EH2AxLwIEQ==

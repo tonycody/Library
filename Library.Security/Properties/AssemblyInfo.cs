@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Security")]
@@ -12,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c11a4dc2-bbf1-4d08-863f-ea93a7027dbd")]
-[assembly: AssemblyVersion("0.0.0.118")] // GKYw+vr02MCXKcLy1zn92LvD5eEavax8MWnRH6BLOgq0/LgcltXGSYW9Bhqx1Po1H5EiPIaD51ui08w9AM+ocg==
+[assembly: AssemblyVersion("0.0.0.124")] // PRF5UzyK6k7w/b1WbWcrt/2jQ0u8l+QQDyq5DTmaazBld5f/Yf3iXyWaaD8K4flPtLjSUL4TIPaHug/nU6cX7Q==

@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Net.Amoeba")]
@@ -12,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("8c62c763-25dc-4cf4-93fb-96b406eaf9cc")]
-[assembly: AssemblyVersion("0.0.0.1946")] // WU2EEHW5MqU/MAixrN5HRcHHZwsdXanQ41eYOv5bc6Lk6hgqS+/CJ3bB2DRoYPREtKhp6aYhjIQBVsME1R2mjw==
+[assembly: AssemblyVersion("0.0.0.2020")] // SMmKUeuUU2BQr49s7eKsblsJkXCAxSp/Dp1F2Em4KzcDVuo5CMYlKctQ04MjokKPrNKSN4d/Us9Fev1WkfUscQ==

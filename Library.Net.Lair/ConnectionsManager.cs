@@ -1,17 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using Library.Collections;
-using Library.Net;
 using Library.Net.Connection;
-using Library.Security;
 
 namespace Library.Net.Lair
 {
@@ -48,10 +42,10 @@ namespace Library.Net.Lair
         private CirculationCollection<Node> _removeNodes;
         private LockedDictionary<Node, int> _nodesStatus;
 
-        private LockedHashSet<Channel> _pushChannelsRequestList = new LockedHashSet<Channel>();
-        private LockedHashSet<Section> _pushSectionsRequestList = new LockedHashSet<Section>();
+        private CirculationCollection<Section> _pushSectionsRequestList;
+        private CirculationCollection<Channel> _pushChannelsRequestList;
 
-        private readonly HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
+        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
         private volatile Thread _connectionsManagerThread = null;
         private volatile Thread _createClientConnection1Thread = null;
@@ -91,29 +85,29 @@ namespace Library.Net.Lair
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        public RemoveSectionsEventHandler RemoveSectionsEvent;
-        public RemoveLeadersEventHandler RemoveLeadersEvent;
-        public RemoveCreatorsEventHandler RemoveCreatorsEvent;
-        public RemoveManagersEventHandler RemoveManagersEvent;
+        private RemoveSectionsEventHandler _removeSectionsEvent;
+        private RemoveLeadersEventHandler _removeLeadersEvent;
+        private RemoveCreatorsEventHandler _removeCreatorsEvent;
+        private RemoveManagersEventHandler _removeManagersEvent;
 
-        public RemoveChannelsEventHandler RemoveChannelsEvent;
-        public RemoveTopicsEventHandler RemoveTopicsEvent;
-        public RemoveMessagesEventHandler RemoveMessagesEvent;
+        private RemoveChannelsEventHandler _removeChannelsEvent;
+        private RemoveTopicsEventHandler _removeTopicsEvent;
+        private RemoveMessagesEventHandler _removeMessagesEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        private readonly int _maxNodeCount = 128;
-        private readonly int _maxRequestCount = 128;
+        private const int _maxNodeCount = 128;
+        private const int _maxRequestCount = 128;
 
 #if DEBUG
-        private readonly int _downloadingConnectionCountLowerLimit = 0;
-        private readonly int _uploadingConnectionCountLowerLimit = 0;
+        private const int _downloadingConnectionCountLowerLimit = 1;
+        private const int _uploadingConnectionCountLowerLimit = 1;
 #else
-        private readonly int _downloadingConnectionCountLowerLimit = 3;
-        private readonly int _uploadingConnectionCountLowerLimit = 3;
+        private const int _downloadingConnectionCountLowerLimit = 3;
+        private const int _uploadingConnectionCountLowerLimit = 3;
 #endif
-        
+
         private int _threadCount = 2;
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, BufferManager bufferManager)
@@ -141,6 +135,9 @@ namespace Library.Net.Lair
             _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
             _nodesStatus = new LockedDictionary<Node, int>();
 
+            _pushSectionsRequestList = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
+            _pushChannelsRequestList = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
+
             this.UpdateSessionId();
 
 #if !MONO
@@ -151,6 +148,83 @@ namespace Library.Net.Lair
                 _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
             }
 #endif
+        }
+
+        public RemoveSectionsEventHandler RemoveSectionsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeSectionsEvent = value;
+                }
+            }
+        }
+
+        public RemoveLeadersEventHandler RemoveLeadersEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeLeadersEvent = value;
+                }
+            }
+        }
+
+        public RemoveCreatorsEventHandler RemoveCreatorsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeCreatorsEvent = value;
+                }
+            }
+        }
+
+        public RemoveManagersEventHandler RemoveManagersEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeManagersEvent = value;
+                }
+            }
+        }
+
+        public RemoveChannelsEventHandler RemoveChannelsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeChannelsEvent = value;
+                }
+            }
+        }
+
+        public RemoveTopicsEventHandler RemoveTopicsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeTopicsEvent = value;
+                }
+            }
+        }
+
+        public RemoveMessagesEventHandler RemoveMessagesEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _removeMessagesEvent = value;
+                }
+            }
         }
 
         public Node BaseNode
@@ -357,9 +431,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<Section> OnRemoveSectionsEvent()
         {
-            if (this.RemoveSectionsEvent != null)
+            if (_removeSectionsEvent != null)
             {
-                return this.RemoveSectionsEvent(this);
+                return _removeSectionsEvent(this);
             }
 
             return null;
@@ -367,9 +441,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<string> OnRemoveLeadersEvent(Section section)
         {
-            if (this.RemoveLeadersEvent != null)
+            if (_removeLeadersEvent != null)
             {
-                return this.RemoveLeadersEvent(this, section);
+                return _removeLeadersEvent(this, section);
             }
 
             return null;
@@ -377,9 +451,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<string> OnRemoveCreatorsEvent(Section section)
         {
-            if (this.RemoveCreatorsEvent != null)
+            if (_removeCreatorsEvent != null)
             {
-                return this.RemoveCreatorsEvent(this, section);
+                return _removeCreatorsEvent(this, section);
             }
 
             return null;
@@ -387,9 +461,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<string> OnRemoveManagersEvent(Section section)
         {
-            if (this.RemoveManagersEvent != null)
+            if (_removeManagersEvent != null)
             {
-                return this.RemoveManagersEvent(this, section);
+                return _removeManagersEvent(this, section);
             }
 
             return null;
@@ -397,9 +471,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<Channel> OnRemoveChannelsEvent()
         {
-            if (this.RemoveChannelsEvent != null)
+            if (_removeChannelsEvent != null)
             {
-                return this.RemoveChannelsEvent(this);
+                return _removeChannelsEvent(this);
             }
 
             return null;
@@ -407,9 +481,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<string> OnRemoveTopicsEvent(Channel channel)
         {
-            if (this.RemoveTopicsEvent != null)
+            if (_removeTopicsEvent != null)
             {
-                return this.RemoveTopicsEvent(this, channel);
+                return _removeTopicsEvent(this, channel);
             }
 
             return null;
@@ -417,9 +491,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<Message> OnRemoveMessagesEvent(Channel channel)
         {
-            if (this.RemoveMessagesEvent != null)
+            if (_removeMessagesEvent != null)
             {
-                this.RemoveMessagesEvent(this, channel);
+                _removeMessagesEvent(this, channel);
             }
 
             return null;
@@ -1064,7 +1138,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 1)
                 {
                     refreshStopwatch.Restart();
 
@@ -1090,7 +1164,7 @@ namespace Library.Net.Lair
                             }
                         }
                     }
-                    
+
                     ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
                     {
                         try
@@ -1441,9 +1515,7 @@ namespace Library.Net.Lair
                                 pushSectionsRequestList.Add(list[i]);
                             }
                         }
-                    }
 
-                    {
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
@@ -1471,9 +1543,7 @@ namespace Library.Net.Lair
                                 pushChannelsRequestList.Add(list[i]);
                             }
                         }
-                    }
 
-                    {
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
@@ -1685,7 +1755,10 @@ namespace Library.Net.Lair
                                 {
                                     connectionManager.PushSectionsRequest(tempList);
 
-                                    _pushSectionsRequestList.ExceptWith(tempList);
+                                    foreach (var item in tempList)
+                                    {
+                                        _pushSectionsRequestList.Remove(item);
+                                    }
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push SectionsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
                                     _pushSectionRequestCount += tempList.Count;
@@ -1728,7 +1801,10 @@ namespace Library.Net.Lair
                                 {
                                     connectionManager.PushChannelsRequest(tempList);
 
-                                    _pushChannelsRequestList.ExceptWith(tempList);
+                                    foreach (var item in tempList)
+                                    {
+                                        _pushChannelsRequestList.Remove(item);
+                                    }
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push ChannelsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
                                     _pushChannelRequestCount += tempList.Count;
@@ -1753,8 +1829,8 @@ namespace Library.Net.Lair
                             // Upload (Leader)
                             if (s == 0)
                             {
-                                List<Section> channels = new List<Section>();
-                                channels.AddRange(messageManager.PullSectionsRequest);
+                                List<Section> sections = new List<Section>();
+                                sections.AddRange(messageManager.PullSectionsRequest);
 
                                 Leader leader = null;
 
@@ -1762,11 +1838,11 @@ namespace Library.Net.Lair
                                 {
                                     lock (_settings.ThisLock)
                                     {
-                                        foreach (var channel in channels.OrderBy(n => _random.Next()))
+                                        foreach (var section in sections.OrderBy(n => _random.Next()))
                                         {
-                                            if (_settings.Leaders.ContainsKey(channel))
+                                            if (_settings.Leaders.ContainsKey(section))
                                             {
-                                                foreach (var l in _settings.Leaders[channel].Values.OrderBy(n => _random.Next()))
+                                                foreach (var l in _settings.Leaders[section].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushLeaders.Contains(l.GetHash(_hashAlgorithm)))
                                                     {
@@ -1796,8 +1872,8 @@ namespace Library.Net.Lair
                             // Upload (Manager)
                             if (s == 1)
                             {
-                                List<Section> channels = new List<Section>();
-                                channels.AddRange(messageManager.PullSectionsRequest);
+                                List<Section> sections = new List<Section>();
+                                sections.AddRange(messageManager.PullSectionsRequest);
 
                                 Manager manager = null;
 
@@ -1805,11 +1881,11 @@ namespace Library.Net.Lair
                                 {
                                     lock (_settings.ThisLock)
                                     {
-                                        foreach (var channel in channels.OrderBy(n => _random.Next()))
+                                        foreach (var section in sections.OrderBy(n => _random.Next()))
                                         {
-                                            if (_settings.Managers.ContainsKey(channel))
+                                            if (_settings.Managers.ContainsKey(section))
                                             {
-                                                foreach (var m in _settings.Managers[channel].Values.OrderBy(n => _random.Next()))
+                                                foreach (var m in _settings.Managers[section].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushManagers.Contains(m.GetHash(_hashAlgorithm)))
                                                     {
@@ -1839,8 +1915,8 @@ namespace Library.Net.Lair
                             // Upload (Creator)
                             if (s == 2)
                             {
-                                List<Section> channels = new List<Section>();
-                                channels.AddRange(messageManager.PullSectionsRequest);
+                                List<Section> sections = new List<Section>();
+                                sections.AddRange(messageManager.PullSectionsRequest);
 
                                 Creator creator = null;
 
@@ -1848,11 +1924,11 @@ namespace Library.Net.Lair
                                 {
                                     lock (_settings.ThisLock)
                                     {
-                                        foreach (var channel in channels.OrderBy(n => _random.Next()))
+                                        foreach (var section in sections.OrderBy(n => _random.Next()))
                                         {
-                                            if (_settings.Creators.ContainsKey(channel))
+                                            if (_settings.Creators.ContainsKey(section))
                                             {
-                                                foreach (var c in _settings.Creators[channel].Values.OrderBy(n => _random.Next()))
+                                                foreach (var c in _settings.Creators[section].Values.OrderBy(n => _random.Next()))
                                                 {
                                                     if (!messageManager.PushCreators.Contains(c.GetHash(_hashAlgorithm)))
                                                     {
@@ -1925,8 +2001,7 @@ namespace Library.Net.Lair
                             // Upload (Message)
                             if (s == 4)
                             {
-                                List<Channel> channels = new List<Channel>();
-                                channels.AddRange(messageManager.PullChannelsRequest);
+                                List<Channel> channels = new List<Channel>(messageManager.PullChannelsRequest);
 
                                 Message message = null;
 

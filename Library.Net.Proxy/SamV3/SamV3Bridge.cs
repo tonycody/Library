@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Net.Sockets;
 using System.Globalization;
+using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Library.Net.Proxy.Sam
 {

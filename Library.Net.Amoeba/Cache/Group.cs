@@ -1,10 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Collections.Generic;
-using Library;
 using Library.Io;
 
 namespace Library.Net.Amoeba
@@ -173,8 +171,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (this.Keys == null) return 0;
-                else if (this.Keys.Count == 0) return 0;
+                if (this.Keys.Count == 0) return 0;
                 else return this.Keys[0].GetHashCode();
             }
         }
@@ -216,10 +213,9 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                using (var bufferManager = new BufferManager())
-                using (var stream = this.Export(bufferManager))
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Group.Import(stream, bufferManager);
+                    return Group.Import(stream, BufferManager.Instance);
                 }
             }
         }

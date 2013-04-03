@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
 using System.Threading;
 using Library.Collections;
 using Library.Io;
@@ -33,7 +31,7 @@ namespace Library.Net.Amoeba
 
         private WaitQueue<Key> _uploadedKeys = new WaitQueue<Key>();
         private WaitQueue<string> _removeShare = new WaitQueue<string>();
-        
+
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
@@ -325,8 +323,8 @@ namespace Library.Net.Amoeba
                                     {
                                         item.UploadKeys.Add(key);
                                         item.LockedKeys.Add(key);
-                                    } 
-                                    
+                                    }
+
                                     item.EncodingBytes = 0;
                                     item.EncodeBytes = 0;
 
@@ -361,8 +359,8 @@ namespace Library.Net.Amoeba
 
                                     this.SetKeyCount(item);
 
-                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexs);
-                                    item.Indexs.Clear();
+                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexes);
+                                    item.Indexes.Clear();
 
                                     foreach (var key in item.LockedKeys)
                                     {
@@ -458,7 +456,7 @@ namespace Library.Net.Amoeba
                                 index.CryptoAlgorithm = item.CryptoAlgorithm;
                                 index.CryptoKey = item.CryptoKey;
 
-                                item.Indexs.Add(index);
+                                item.Indexes.Add(index);
 
                                 byte[] cryptoKey;
                                 KeyCollection keys = null;
@@ -605,8 +603,8 @@ namespace Library.Net.Amoeba
 
                                     this.SetKeyCount(item);
 
-                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.FilePath, item.Indexs);
-                                    item.Indexs.Clear();
+                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.FilePath, item.Indexes);
+                                    item.Indexes.Clear();
 
                                     foreach (var key in item.LockedKeys)
                                     {
@@ -614,7 +612,7 @@ namespace Library.Net.Amoeba
                                     }
 
                                     item.LockedKeys.Clear();
-                                    
+
                                     item.State = UploadState.Uploading;
                                 }
                             }
@@ -706,7 +704,7 @@ namespace Library.Net.Amoeba
                                     index.CryptoAlgorithm = item.CryptoAlgorithm;
                                     index.CryptoKey = item.CryptoKey;
 
-                                    item.Indexs.Add(index);
+                                    item.Indexes.Add(index);
                                 }
 
                                 byte[] cryptoKey;
@@ -872,6 +870,11 @@ namespace Library.Net.Amoeba
             {
                 var item = _ids[id];
 
+                foreach (var key in item.LockedKeys)
+                {
+                    _cacheManager.Unlock(key);
+                }
+
                 _settings.UploadItems.Remove(item);
                 _ids.Remove(id);
 
@@ -951,14 +954,6 @@ namespace Library.Net.Amoeba
                 _uploadManagerThread.Priority = ThreadPriority.Lowest;
                 _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
                 _uploadManagerThread.Start();
-
-                foreach (var item in _settings.UploadItems)
-                {
-                    foreach (var key in item.LockedKeys)
-                    {
-                        _cacheManager.Lock(key);
-                    }
-                }
             }
         }
 
@@ -972,17 +967,6 @@ namespace Library.Net.Amoeba
 
             _uploadManagerThread.Join();
             _uploadManagerThread = null;
-
-            lock (this.ThisLock)
-            {
-                foreach (var item in _settings.UploadItems)
-                {
-                    foreach (var key in item.LockedKeys)
-                    {
-                        _cacheManager.Unlock(key);
-                    }
-                }
-            }
         }
 
         #region ISettings
@@ -1002,6 +986,14 @@ namespace Library.Net.Amoeba
                     catch (Exception)
                     {
                         _settings.UploadItems.Remove(item);
+                    }
+                }
+
+                foreach (var item in _settings.UploadItems)
+                {
+                    foreach (var key in item.LockedKeys)
+                    {
+                        _cacheManager.Lock(key);
                     }
                 }
 
