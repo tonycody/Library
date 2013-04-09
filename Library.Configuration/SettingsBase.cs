@@ -86,11 +86,15 @@ namespace Library.Configuration
                 Directory.CreateDirectory(directoryPath);
             }
 
+            HashSet<string> successNames = new HashSet<string>();
+
             foreach (var configPath in Directory.GetFiles(directoryPath))
             {
                 if (!configPath.EndsWith(".gz")) continue;
 
-                var context = _contextList.FirstOrDefault(n => n.Name == Path.GetFileNameWithoutExtension(configPath));
+                var name = Path.GetFileNameWithoutExtension(configPath);
+
+                var context = _contextList.FirstOrDefault(n => n.Name == name);
                 if (context == null) continue;
 
                 try
@@ -104,6 +108,8 @@ namespace Library.Configuration
                             context.Value = ds.ReadObject(textDictionaryReader);
                         }
                     }
+
+                    successNames.Add(context.Name);
                 }
                 catch (Exception)
                 {
@@ -115,7 +121,10 @@ namespace Library.Configuration
             {
                 if (!configPath.EndsWith(".gz.bak")) continue;
 
-                var context = _contextList.FirstOrDefault(n => n.Value == null && n.Name == Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(configPath)));
+                var name = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(configPath));
+                if (successNames.Contains(name)) continue;
+
+                var context = _contextList.FirstOrDefault(n => n.Name == name);
                 if (context == null) continue;
 
                 try

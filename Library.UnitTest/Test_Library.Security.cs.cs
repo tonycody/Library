@@ -1,23 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Library.Security;
 using NUnit.Framework;
-using Library.Security;
 
 namespace Library.UnitTest
 {
     [TestFixture, Category("Library.Security")]
     public class Test_Library_Security
     {
-        private BufferManager _bufferManager = new BufferManager();
-
-        [TearDown]
-        public void TearDown()
-        {
-            _bufferManager.Dispose();
-        }
-
         [Test]
         public void Test_DigitalSigunature()
         {

@@ -429,10 +429,7 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    using (BufferManager bufferManager = BufferManager.Instance)
-                    {
-                        return this.Export(bufferManager);
-                    }
+                    return this.Export(BufferManager.Instance);
                 }
                 finally
                 {

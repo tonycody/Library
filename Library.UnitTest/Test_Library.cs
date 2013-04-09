@@ -1,14 +1,14 @@
-using System;
-using System.IO;
-using Library.Io;
-using NUnit.Framework;
 using System.Collections.Generic;
+using NUnit.Framework;
 
 namespace Library.UnitTest
 {
     [TestFixture, Category("Library")]
     public class Test_Library
     {
+        private BufferManager _bufferManager = BufferManager.Instance;
+
+
         [Test]
         public void Test_Collection()
         {
@@ -111,23 +111,17 @@ namespace Library.UnitTest
         [Test]
         public void Test_BufferManager()
         {
-            using (BufferManager manager = new BufferManager())
-            {
-                byte[] buffer1 = manager.TakeBuffer(1024);
-                byte[] buffer2 = manager.TakeBuffer(1024 * 10);
+            byte[] buffer1 = _bufferManager.TakeBuffer(1024);
+            byte[] buffer2 = _bufferManager.TakeBuffer(1024 * 10);
 
-                manager.ReturnBuffer(buffer1);
-                manager.ReturnBuffer(buffer2);
+            _bufferManager.ReturnBuffer(buffer1);
+            _bufferManager.ReturnBuffer(buffer2);
 
-                buffer1 = null;
-                buffer2 = null;
+            buffer1 = _bufferManager.TakeBuffer(1024);
+            buffer2 = _bufferManager.TakeBuffer(1024 * 2);
 
-                buffer1 = manager.TakeBuffer(1024);
-                buffer2 = manager.TakeBuffer(1024 * 2);
-
-                manager.ReturnBuffer(buffer1);
-                manager.ReturnBuffer(buffer2);
-            }
+            _bufferManager.ReturnBuffer(buffer1);
+            _bufferManager.ReturnBuffer(buffer2);
         }
     }
 }

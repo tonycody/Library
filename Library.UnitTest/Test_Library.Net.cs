@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Windows.Forms;
 using Library.Net;
 using Library.Net.Amoeba;
-using Library.Security;
 using NUnit.Framework;
 
 namespace Library.UnitTest

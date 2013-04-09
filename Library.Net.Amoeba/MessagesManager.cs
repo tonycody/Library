@@ -35,12 +35,15 @@ namespace Library.Net.Amoeba
                     foreach (var node in _messageManagerDictionary.Keys.ToArray())
                     {
                         _messageManagerDictionary[node].PushBlocks.Trim();
+                        _messageManagerDictionary[node].PushStoreSeeds.Trim();
 
                         _messageManagerDictionary[node].PullBlocksLink.Trim();
                         _messageManagerDictionary[node].PullBlocksRequest.Trim();
+                        _messageManagerDictionary[node].PullSeedsRequest.Trim();
 
                         _messageManagerDictionary[node].PushBlocksLink.Trim();
                         _messageManagerDictionary[node].PushBlocksRequest.Trim();
+                        _messageManagerDictionary[node].PushStoreSeeds.Trim();
                     }
 
                     _lastCircularTime = now;
@@ -68,10 +71,10 @@ namespace Library.Net.Amoeba
                                     nodes.Remove(node);
                                 }
 
-                                nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                                nodes.Sort((x, y) =>
                                 {
                                     return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
-                                }));
+                                });
 
                                 foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
                                 {

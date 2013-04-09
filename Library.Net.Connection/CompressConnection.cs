@@ -286,10 +286,10 @@ namespace Library.Net.Connection
 
                     list.Add(new KeyValuePair<int, Stream>(0, new RangeStream(stream, true)));
 
-                    list.Sort(new Comparison<KeyValuePair<int, Stream>>((KeyValuePair<int, Stream> x, KeyValuePair<int, Stream> y) =>
+                    list.Sort((x, y) =>
                     {
                         return x.Value.Length.CompareTo(y.Value.Length);
-                    }));
+                    });
 
 #if DEBUG
                     if (list[0].Value.Length != stream.Length)

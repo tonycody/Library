@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace Library.Net.Upnp
 {
@@ -21,6 +20,8 @@ namespace Library.Net.Upnp
     {
         private string _services = null;
         private Uri _location;
+        private readonly static Regex _deviceTypeRegex = new Regex(@"(\s*)<deviceType>(\s*)urn:schemas-upnp-org:device:InternetGatewayDevice:1(\s*)</deviceType>(\s*)");
+        private readonly static Regex _controlUrlRegex = new Regex(@"<controlURL>(\s*)(?<url>.*?)(\s*)</controlURL>");
 
         private object _thisLock = new object();
         private volatile bool _disposed = false;
@@ -106,118 +107,129 @@ namespace Library.Net.Upnp
             querys.Add("M-SEARCH * HTTP/1.1\r\n" +
                     "Host: 239.255.255.250:1900\r\n" +
                     "Man: \"ssdp:discover\"\r\n" +
+                    "ST: upnp:rootdevice\r\n" +
                     "MX: 3\r\n" +
-                    "ST: urn:schemas-upnp-org:service:WANIPConnection:1\r\n" +
                     "\r\n");
 
             querys.Add("M-SEARCH * HTTP/1.1\r\n" +
                     "Host: 239.255.255.250:1900\r\n" +
                     "Man: \"ssdp:discover\"\r\n" +
+                    "ST: urn:schemas-upnp-org:service:WANIPConnection:1\r\n" +
                     "MX: 3\r\n" +
-                    "ST: urn:schemas-upnp-org:service:WANPPPConnection:1\r\n" +
                     "\r\n");
+
+            querys.Add("M-SEARCH * HTTP/1.1\r\n" +
+                    "Host: 239.255.255.250:1900\r\n" +
+                    "Man: \"ssdp:discover\"\r\n" +
+                    "ST: urn:schemas-upnp-org:service:WANPPPConnection:1\r\n" +
+                    "MX: 3\r\n" +
+                    "\r\n");
+
+            int queryCount = 0;
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-
-            Uri tempLocation = null;
 
             for (; ; )
             {
                 TimeoutCheck(stopwatch.Elapsed, timeout);
 
-                string queryResponse = null;
-
                 try
                 {
-                    using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+                    List<string> queryResponses = new List<string>();
+
+                    try
                     {
-                        client.ReceiveTimeout = 3000;
-                        client.SendTimeout = 1000;
-
-                        if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
-
-                        foreach (var query in querys)
+                        using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
                         {
-                            byte[] q = Encoding.ASCII.GetBytes(query);
+                            client.ReceiveTimeout = 3000;
+                            client.SendTimeout = 1000;
+
+                            if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
+
+                            byte[] q = Encoding.ASCII.GetBytes(querys[queryCount++]);
 
                             IPEndPoint endPoint = new IPEndPoint(ip, 1900);
                             client.SendTo(q, q.Length, SocketFlags.None, endPoint);
+
+                            for (int i = 0; i < 10; i++)
+                            {
+                                byte[] data = new byte[1024];
+                                int dataLength = client.Receive(data);
+
+                                var temp = Encoding.ASCII.GetString(data, 0, dataLength);
+                                if (!string.IsNullOrWhiteSpace(temp)) queryResponses.Add(temp);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    foreach (var queryResponse in queryResponses)
+                    {
+                        var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
+                        if (string.IsNullOrWhiteSpace(regexLocation)) continue;
+
+                        Uri tempLocation = new Uri(regexLocation);
+
+                        Debug.WriteLine("UPnP Router: " + ip.ToString());
+                        Debug.WriteLine("UPnP Location: " + tempLocation.ToString());
+
+                        string downloadString = null;
+
+                        using (var webClient = new WebClient())
+                        {
+                            downloadString = webClient.DownloadString(tempLocation);
                         }
 
-                        byte[] data = new byte[1024];
-                        int dataLength = client.Receive(data);
+                        if (string.IsNullOrWhiteSpace(downloadString)) continue;
+                        if (!_deviceTypeRegex.IsMatch(downloadString)) continue;
 
-                        queryResponse = Encoding.ASCII.GetString(data, 0, dataLength);
-                    }
-                }
-                catch (Exception)
-                {
-
-                }
-
-                if (string.IsNullOrWhiteSpace(queryResponse)) continue;
-
-                try
-                {
-                    var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
-                    if (string.IsNullOrWhiteSpace(regexLocation)) continue;
-
-                    tempLocation = new Uri(regexLocation);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                Debug.WriteLine("UPnP Router: " + ip.ToString());
-                Debug.WriteLine("UPnP Location: " + tempLocation.ToString());
-
-                string downloadString = null;
-
-                try
-                {
-                    using (var webClient = new WebClient())
-                    {
-                        downloadString = webClient.DownloadString(tempLocation);
+                        location = tempLocation;
+                        return downloadString;
                     }
                 }
                 catch (Exception)
                 {
                     continue;
                 }
-
-                if (downloadString == null) continue;
-
-                location = tempLocation;
-                return downloadString;
             }
         }
 
-        private static string GetExternalIpAddressFromService(string services, string serviceType, string gatewayIp, int gatewayPort)
+        private static string GetExternalIpAddressFromService(string services, string serviceType, string gatewayIp, int gatewayPort, TimeSpan timeout)
         {
             if (services == null || services == "" || !services.Contains(serviceType)) return null;
 
-            services = services.Substring(services.IndexOf(serviceType));
-
-            string controlUrl = Regex.Match(services, "<controlURL>(.*)</controlURL>").Groups[1].Value;
-            string soapBody =
-                "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                " <s:Body>" +
-                "  <u:GetExternalIPAddress xmlns:u=\"" + serviceType + "\">" + "</u:GetExternalIPAddress>" +
-                " </s:Body>" +
-                "</s:Envelope>";
-            byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
-            string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
-
             try
             {
-                System.Net.WebRequest wr = System.Net.WebRequest.Create(url);
+                services = services.Substring(services.IndexOf(serviceType));
+
+                string controlUrl = _controlUrlRegex.Match(services).Groups["url"].Value;
+                string soapBody =
+                    "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+                    " <s:Body>" +
+                    "  <u:GetExternalIPAddress xmlns:u=\"" + serviceType + "\">" + "</u:GetExternalIPAddress>" +
+                    " </s:Body>" +
+                    "</s:Envelope>";
+                byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
+
+                Uri uri = new Uri(controlUrl, UriKind.RelativeOrAbsolute);
+
+                if (!uri.IsAbsoluteUri)
+                {
+                    Uri baseUri = new Uri("http://" + gatewayIp + ":" + gatewayPort.ToString());
+                    uri = new Uri(baseUri, uri);
+                }
+
+                System.Net.WebRequest wr = System.Net.WebRequest.Create(uri);
 
                 wr.Method = "POST";
                 wr.Headers.Add("SOAPAction", "\"" + serviceType + "#GetExternalIPAddress\"");
                 wr.ContentType = "text/xml;charset=\"utf-8\"";
                 wr.ContentLength = body.Length;
+                wr.Timeout = (int)timeout.TotalMilliseconds;
 
                 using (System.IO.Stream stream = wr.GetRequestStream())
                 {
@@ -247,50 +259,58 @@ namespace Library.Net.Upnp
             return null;
         }
 
-        private static bool OpenPortFromService(string services, string serviceType, string gatewayIp, int gatewayPort, UpnpProtocolType protocol, string machineIp, int externalPort, int internalPort, string description)
+        private static bool OpenPortFromService(string services, string serviceType, string gatewayIp, int gatewayPort, UpnpProtocolType protocol, string machineIp, int externalPort, int internalPort, string description, TimeSpan timeout)
         {
             if (services == null || services == "" || !services.Contains(serviceType)) return false;
 
-            services = services.Substring(services.IndexOf(serviceType));
-
-            string controlUrl = Regex.Match(services, "<controlURL>(.*)</controlURL>").Groups[1].Value;
-            string protocolString = "";
-
-            if (protocol == UpnpProtocolType.Tcp)
-            {
-                protocolString = "TCP";
-            }
-            else if (protocol == UpnpProtocolType.Udp)
-            {
-                protocolString = "UDP";
-            }
-
-            string soapBody =
-                "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                " <s:Body>" +
-                "  <u:AddPortMapping xmlns:u=\"" + serviceType + "\">" +
-                "   <NewRemoteHost></NewRemoteHost>" +
-                "   <NewExternalPort>" + externalPort + "</NewExternalPort>" +
-                "   <NewProtocol>" + protocolString + "</NewProtocol>" +
-                "   <NewInternalPort>" + internalPort + "</NewInternalPort>" +
-                "   <NewInternalClient>" + machineIp + "</NewInternalClient>" +
-                "   <NewEnabled>1</NewEnabled>" +
-                "   <NewPortMappingDescription>" + description + "</NewPortMappingDescription>" +
-                "   <NewLeaseDuration>0</NewLeaseDuration>" +
-                "  </u:AddPortMapping>" +
-                " </s:Body>" +
-                "</s:Envelope>";
-            byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
-            string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
-
             try
             {
-                System.Net.WebRequest wr = System.Net.WebRequest.Create(url);
+                services = services.Substring(services.IndexOf(serviceType));
+
+                string controlUrl = _controlUrlRegex.Match(services).Groups["url"].Value;
+                string protocolString = "";
+
+                if (protocol == UpnpProtocolType.Tcp)
+                {
+                    protocolString = "TCP";
+                }
+                else if (protocol == UpnpProtocolType.Udp)
+                {
+                    protocolString = "UDP";
+                }
+
+                string soapBody =
+                    "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+                    " <s:Body>" +
+                    "  <u:AddPortMapping xmlns:u=\"" + serviceType + "\">" +
+                    "   <NewRemoteHost></NewRemoteHost>" +
+                    "   <NewExternalPort>" + externalPort + "</NewExternalPort>" +
+                    "   <NewProtocol>" + protocolString + "</NewProtocol>" +
+                    "   <NewInternalPort>" + internalPort + "</NewInternalPort>" +
+                    "   <NewInternalClient>" + machineIp + "</NewInternalClient>" +
+                    "   <NewEnabled>1</NewEnabled>" +
+                    "   <NewPortMappingDescription>" + description + "</NewPortMappingDescription>" +
+                    "   <NewLeaseDuration>0</NewLeaseDuration>" +
+                    "  </u:AddPortMapping>" +
+                    " </s:Body>" +
+                    "</s:Envelope>";
+                byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
+
+                Uri uri = new Uri(controlUrl, UriKind.RelativeOrAbsolute);
+
+                if (!uri.IsAbsoluteUri)
+                {
+                    Uri baseUri = new Uri("http://" + gatewayIp + ":" + gatewayPort.ToString());
+                    uri = new Uri(baseUri, uri);
+                }
+
+                System.Net.WebRequest wr = System.Net.WebRequest.Create(uri);
 
                 wr.Method = "POST";
                 wr.Headers.Add("SOAPAction", "\"" + serviceType + "#AddPortMapping\"");
                 wr.ContentType = "text/xml;charset=\"utf-8\"";
                 wr.ContentLength = body.Length;
+                wr.Timeout = (int)timeout.TotalMilliseconds;
 
                 using (System.IO.Stream stream = wr.GetRequestStream())
                 {
@@ -313,45 +333,53 @@ namespace Library.Net.Upnp
             return false;
         }
 
-        private static bool ClosePortFromService(string services, string serviceType, string gatewayIp, int gatewayPort, UpnpProtocolType protocol, int externalPort)
+        private static bool ClosePortFromService(string services, string serviceType, string gatewayIp, int gatewayPort, UpnpProtocolType protocol, int externalPort, TimeSpan timeout)
         {
             if (services == null || services == "" || !services.Contains(serviceType)) return false;
 
-            services = services.Substring(services.IndexOf(serviceType));
-
-            string controlUrl = Regex.Match(services, "<controlURL>(.*)</controlURL>").Groups[1].Value;
-            string protocolString = "";
-
-            if (protocol == UpnpProtocolType.Tcp)
-            {
-                protocolString = "TCP";
-            }
-            else if (protocol == UpnpProtocolType.Udp)
-            {
-                protocolString = "UDP";
-            }
-
-            string soapBody =
-                "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                " <s:Body>" +
-                "  <u:DeletePortMapping xmlns:u=\"" + serviceType + "\">" +
-                "   <NewRemoteHost></NewRemoteHost>" +
-                "   <NewExternalPort>" + externalPort + "</NewExternalPort>" +
-                "   <NewProtocol>" + protocolString + "</NewProtocol>" +
-                "  </u:DeletePortMapping>" +
-                " </s:Body>" +
-                "</s:Envelope>";
-            byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
-            string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
-
             try
             {
-                System.Net.WebRequest wr = System.Net.WebRequest.Create(url);
+                services = services.Substring(services.IndexOf(serviceType));
+
+                string controlUrl = _controlUrlRegex.Match(services).Groups["url"].Value;
+                string protocolString = "";
+
+                if (protocol == UpnpProtocolType.Tcp)
+                {
+                    protocolString = "TCP";
+                }
+                else if (protocol == UpnpProtocolType.Udp)
+                {
+                    protocolString = "UDP";
+                }
+
+                string soapBody =
+                    "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+                    " <s:Body>" +
+                    "  <u:DeletePortMapping xmlns:u=\"" + serviceType + "\">" +
+                    "   <NewRemoteHost></NewRemoteHost>" +
+                    "   <NewExternalPort>" + externalPort + "</NewExternalPort>" +
+                    "   <NewProtocol>" + protocolString + "</NewProtocol>" +
+                    "  </u:DeletePortMapping>" +
+                    " </s:Body>" +
+                    "</s:Envelope>";
+                byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
+
+                Uri uri = new Uri(controlUrl, UriKind.RelativeOrAbsolute);
+
+                if (!uri.IsAbsoluteUri)
+                {
+                    Uri baseUri = new Uri("http://" + gatewayIp + ":" + gatewayPort.ToString());
+                    uri = new Uri(baseUri, uri);
+                }
+
+                System.Net.WebRequest wr = System.Net.WebRequest.Create(uri);
 
                 wr.Method = "POST";
                 wr.Headers.Add("SOAPAction", "\"" + serviceType + "#DeletePortMapping\"");
                 wr.ContentType = "text/xml;charset=\"utf-8\"";
                 wr.ContentLength = body.Length;
+                wr.Timeout = (int)timeout.TotalMilliseconds;
 
                 using (System.IO.Stream stream = wr.GetRequestStream())
                 {
@@ -374,32 +402,40 @@ namespace Library.Net.Upnp
             return false;
         }
 
-        private static string GetPortEntryFromService(string services, string serviceType, string gatewayIp, int gatewayPort, int index)
+        private static string GetPortEntryFromService(string services, string serviceType, string gatewayIp, int gatewayPort, int index, TimeSpan timeout)
         {
             if (services == null || services == "" || !services.Contains(serviceType)) return null;
 
-            services = services.Substring(services.IndexOf(serviceType));
-
-            string controlUrl = Regex.Match(services, "<controlURL>(.*)</controlURL>").Groups[1].Value;
-            string soapBody =
-                "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                " <s:Body>" +
-                "  <u:GetGenericPortMappingEntry xmlns:u=\"" + serviceType + "\">" +
-                "   <NewPortMappingIndex>" + index + "</NewPortMappingIndex>" +
-                "  </u:GetGenericPortMappingEntry>" +
-                " </s:Body>" +
-                "</s:Envelope>";
-            byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
-            string url = "http://" + gatewayIp + ":" + gatewayPort.ToString() + controlUrl;
-
             try
             {
-                System.Net.WebRequest wr = System.Net.WebRequest.Create(url);
+                services = services.Substring(services.IndexOf(serviceType));
+
+                string controlUrl = _controlUrlRegex.Match(services).Groups["url"].Value;
+                string soapBody =
+                    "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+                    " <s:Body>" +
+                    "  <u:GetGenericPortMappingEntry xmlns:u=\"" + serviceType + "\">" +
+                    "   <NewPortMappingIndex>" + index + "</NewPortMappingIndex>" +
+                    "  </u:GetGenericPortMappingEntry>" +
+                    " </s:Body>" +
+                    "</s:Envelope>";
+                byte[] body = System.Text.UTF8Encoding.ASCII.GetBytes(soapBody);
+
+                Uri uri = new Uri(controlUrl, UriKind.RelativeOrAbsolute);
+
+                if (!uri.IsAbsoluteUri)
+                {
+                    Uri baseUri = new Uri("http://" + gatewayIp + ":" + gatewayPort.ToString());
+                    uri = new Uri(baseUri, uri);
+                }
+
+                System.Net.WebRequest wr = System.Net.WebRequest.Create(uri);
 
                 wr.Method = "POST";
                 wr.Headers.Add("SOAPAction", "\"" + serviceType + "#GetGenericPortMappingEntry\"");
                 wr.ContentType = "text/xml;charset=\"utf-8\"";
                 wr.ContentLength = body.Length;
+                wr.Timeout = (int)timeout.TotalMilliseconds;
 
                 using (System.IO.Stream stream = wr.GetRequestStream())
                 {
@@ -433,33 +469,26 @@ namespace Library.Net.Upnp
         {
             if (_services == null) throw new UpnpClientException();
 
-            string value = null;
-
             try
             {
-                Thread startThread = new Thread(new ThreadStart(delegate()
-                {
-                    try
-                    {
-                        if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port)))
-                            return;
-                        if (null != (value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port)))
-                            return;
-                    }
-                    catch (Exception)
-                    {
+                var value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, timeout);
+                if (value != null) return value;
+            }
+            catch (Exception)
+            {
 
-                    }
-                }));
-                startThread.Start();
-                startThread.Join(timeout);
+            }
+            try
+            {
+                var value = GetExternalIpAddressFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, timeout);
+                if (value != null) return value;
             }
             catch (Exception)
             {
 
             }
 
-            return value;
+            return null;
         }
 
         public bool OpenPort(UpnpProtocolType protocol, int externalPort, int internalPort, string description, TimeSpan timeout)
@@ -508,99 +537,81 @@ namespace Library.Net.Upnp
         {
             if (_services == null) throw new UpnpClientException();
 
-            bool flag = false;
-
             try
             {
-                Thread startThread = new Thread(new ThreadStart(delegate()
-                {
-                    try
-                    {
-                        if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
-                            return;
-                        if (flag = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description))
-                            return;
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-                }));
-                startThread.Start();
-                startThread.Join(timeout);
+                var value = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description, timeout);
+                if (value) return value;
             }
             catch (Exception)
             {
 
             }
 
-            return flag;
+            try
+            {
+                var value = OpenPortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, machineIp, externalPort, internalPort, description, timeout);
+                if (value) return value;
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return false;
         }
 
         public bool ClosePort(UpnpProtocolType protocol, int externalPort, TimeSpan timeout)
         {
             if (_services == null) throw new UpnpClientException();
 
-            bool flag = false;
-
             try
             {
-                Thread startThread = new Thread(new ThreadStart(delegate()
-                {
-                    try
-                    {
-                        if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, externalPort))
-                            return;
-                        if (flag = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, externalPort))
-                            return;
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-                }));
-                startThread.Start();
-                startThread.Join(timeout);
+                var value = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, protocol, externalPort, timeout);
+                if (value) return value;
             }
             catch (Exception)
             {
 
             }
 
-            return flag;
+            try
+            {
+                var value = ClosePortFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, protocol, externalPort, timeout);
+                if (value) return value;
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return false;
         }
 
         public string GetPortEntry(int index, TimeSpan timeout)
         {
             if (_services == null) throw new UpnpClientException();
 
-            string value = null;
-
             try
             {
-                Thread startThread = new Thread(new ThreadStart(delegate()
-                {
-                    try
-                    {
-                        if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, index)))
-                            return;
-                        if (null != (value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, index)))
-                            return;
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-                }));
-                startThread.Start();
-                startThread.Join(timeout);
+                var value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANIPConnection:1", _location.Host, _location.Port, index, timeout);
+                if (value != null) return value;
             }
             catch (Exception)
             {
 
             }
 
-            return value;
+            try
+            {
+                var value = GetPortEntryFromService(_services, "urn:schemas-upnp-org:service:WANPPPConnection:1", _location.Host, _location.Port, index, timeout);
+                if (value != null) return value;
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return null;
         }
 
         protected override void Dispose(bool disposing)

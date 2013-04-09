@@ -99,7 +99,7 @@ namespace Library.Security
                 if (!match.Success) throw new ArgumentNullException("item");
 
                 if (match.Groups[1].Value.Length > 256) throw new ArgumentNullException("item");
-                if (match.Groups[2].Value.Length > 128) throw new ArgumentNullException("item");
+                if (match.Groups[2].Value.Length != 86) throw new ArgumentNullException("item");
 
                 return match.Groups[1].Value;
             }
@@ -112,16 +112,16 @@ namespace Library.Security
         public static byte[] GetSignatureHash(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!Signature.HasSignature(item)) throw new ArgumentException("item");
 
             try
             {
-                var match = _signatureRegex.Match(item.Split('@')[1]);
-                if (!match.Success) throw new ArgumentException();
+                var match = _signatureRegex.Match(item);
+                if (!match.Success) throw new ArgumentNullException("item");
 
-                var value = match.Groups[1].Value;
+                if (match.Groups[1].Value.Length > 256) throw new ArgumentNullException("item");
+                if (match.Groups[2].Value.Length != 86) throw new ArgumentNullException("item");
 
-                return NetworkConverter.FromBase64UrlString(value);
+                return NetworkConverter.FromBase64UrlString(match.Groups[2].Value);
             }
             catch (Exception)
             {

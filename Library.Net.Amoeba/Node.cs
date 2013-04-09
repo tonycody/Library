@@ -249,7 +249,7 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) 
+                    if (_thisLock == null)
                         _thisLock = new object();
 
                     return _thisLock;

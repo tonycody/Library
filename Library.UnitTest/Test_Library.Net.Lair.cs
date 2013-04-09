@@ -1,30 +1,16 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using Library.Collections;
-using Library.Net;
+using System.Threading.Tasks;
+using Library.Io;
 using Library.Net.Lair;
 using Library.Security;
 using NUnit.Framework;
-using System.Threading.Tasks;
-using Library.Io;
 
 namespace Library.UnitTest
 {
     [TestFixture, Category("Library.Net.Lair")]
     public class Test_Library_Net_Lair
     {
-        private BufferManager _bufferManager = new BufferManager();
-
-        [TearDown]
-        public void TearDown()
-        {
-            _bufferManager.Dispose();
-        }
+        private BufferManager _bufferManager = BufferManager.Instance;
 
         [Test]
         public void Test_LairConverter_Node()

@@ -664,9 +664,9 @@ namespace Library.Net.Amoeba
                                             _cacheManager.Unlock(item.Seed.Key);
                                         }
 
-                                        if (item.Index != null)
+                                        foreach (var index in item.Indexes)
                                         {
-                                            foreach (var group in item.Index.Groups)
+                                            foreach (var group in index.Groups)
                                             {
                                                 foreach (var key in group.Keys)
                                                 {
@@ -878,9 +878,9 @@ namespace Library.Net.Amoeba
                                             _cacheManager.Unlock(item.Seed.Key);
                                         }
 
-                                        if (item.Index != null)
+                                        foreach (var index in item.Indexes)
                                         {
-                                            foreach (var group in item.Index.Groups)
+                                            foreach (var group in index.Groups)
                                             {
                                                 foreach (var key in group.Keys)
                                                 {
@@ -1005,16 +1005,13 @@ namespace Library.Net.Amoeba
                         _cacheManager.Unlock(item.Seed.Key);
                     }
 
-                    if (item.Index != null)
+                    foreach (var index in item.Indexes)
                     {
-                        foreach (var group in item.Index.Groups)
+                        foreach (var group in index.Groups)
                         {
-                            if (group != null)
+                            foreach (var key in group.Keys)
                             {
-                                foreach (var key in group.Keys)
-                                {
-                                    _cacheManager.Unlock(key);
-                                }
+                                _cacheManager.Unlock(key);
                             }
                         }
                     }
@@ -1121,16 +1118,13 @@ namespace Library.Net.Amoeba
                             _cacheManager.Lock(item.Seed.Key);
                         }
 
-                        if (item.Index != null)
+                        foreach (var index in item.Indexes)
                         {
-                            foreach (var group in item.Index.Groups)
+                            foreach (var group in index.Groups)
                             {
-                                if (group != null)
+                                foreach (var key in group.Keys)
                                 {
-                                    foreach (var key in group.Keys)
-                                    {
-                                        _cacheManager.Lock(key);
-                                    }
+                                    _cacheManager.Lock(key);
                                 }
                             }
                         }

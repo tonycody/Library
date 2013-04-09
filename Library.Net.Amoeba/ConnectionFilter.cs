@@ -218,7 +218,7 @@ namespace Library.Net.Amoeba
     {
         private string _value = null;
         private Regex _regex;
-       
+
         private object _thisLock;
         private static object _thisStaticLock = new object();
 

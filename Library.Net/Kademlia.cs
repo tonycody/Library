@@ -267,7 +267,7 @@ namespace Library.Net
                 }
             }
 
-            list.Sort(delegate(KeyValuePair<byte[], T> x, KeyValuePair<byte[], T> y)
+            list.Sort((x, y) =>
             {
                 return Collection.Compare(x.Key, y.Key);
             });

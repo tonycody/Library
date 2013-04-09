@@ -9,62 +9,61 @@ namespace Library.UnitTest
     [TestFixture, Category("Library.Io")]
     public class Test_Library_Io
     {
+        private BufferManager _bufferManager = BufferManager.Instance;
+
         [Test]
         public void Test_BufferStream()
         {
-            using (BufferManager manager = new BufferManager())
+            Random rand = new Random();
+
+            //for (int i = 0; i < 10; i++)
+            var p = Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
             {
-                Random rand = new Random();
-
-                //for (int i = 0; i < 10; i++)
-                var p = Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
+                ////using (MemoryStream stream = new MemoryStream())
+                using (BufferStream stream = new BufferStream(_bufferManager))
                 {
-                    ////using (MemoryStream stream = new MemoryStream())
-                    using (BufferStream stream = new BufferStream(manager))
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
+                    long seek = rand.Next(64, buffer.Length);
+                    //long seek = 0;
+
+                    rand.NextBytes(buffer);
+
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Position = seek;
+
+                    byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
+                    stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
+
+                    if (!Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
                     {
-                        byte[] buffer = manager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
-                        long seek = rand.Next(64, buffer.Length);
-                        //long seek = 0;
-
-                        rand.NextBytes(buffer);
-
-                        stream.Write(buffer, 0, buffer.Length);
-                        stream.Position = seek;
-
-                        byte[] buff2 = manager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
-                        stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
-
-                        if (!Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
-                        {
-                            Assert.IsTrue(Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
-                        }
-
-                        manager.ReturnBuffer(buffer);
-                        manager.ReturnBuffer(buff2);
+                        Assert.IsTrue(Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
                     }
-                });
 
-                using (MemoryStream mstream = new MemoryStream())
-                using (BufferStream stream = new BufferStream(manager))
+                    _bufferManager.ReturnBuffer(buffer);
+                    _bufferManager.ReturnBuffer(buff2);
+                }
+            });
+
+            using (MemoryStream mstream = new MemoryStream())
+            using (BufferStream stream = new BufferStream(_bufferManager))
+            {
+                Random random = new Random();
+
+                for (int i = 0; i < 1024 * 1024; i++)
                 {
-                    Random random = new Random();
+                    var v = (byte)rand.Next(0, 255);
+                    mstream.WriteByte(v);
+                    stream.WriteByte(v);
+                }
 
-                    for (int i = 0; i < 1024 * 1024; i++)
-                    {
-                        var v = (byte)rand.Next(0, 255);
-                        mstream.WriteByte(v);
-                        stream.WriteByte(v);
-                    }
+                mstream.Seek(0, SeekOrigin.Begin);
+                stream.Seek(0, SeekOrigin.Begin);
 
-                    mstream.Seek(0, SeekOrigin.Begin);
-                    stream.Seek(0, SeekOrigin.Begin);
+                Assert.IsTrue(mstream.Length == stream.Length);
 
-                    Assert.IsTrue(mstream.Length == stream.Length);
-
-                    for (int i = 0; i < 1024 * 1024; i++)
-                    {
-                        Assert.IsTrue(mstream.ReadByte() == stream.ReadByte());
-                    }
+                for (int i = 0; i < 1024 * 1024; i++)
+                {
+                    Assert.IsTrue(mstream.ReadByte() == stream.ReadByte());
                 }
             }
         }
@@ -72,65 +71,62 @@ namespace Library.UnitTest
         [Test]
         public void Test_CacheStream()
         {
-            using (BufferManager manager = new BufferManager())
+            Random rand = new Random();
+
+            //for (int i = 0; i < 10; i++)
+            Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
             {
-                Random rand = new Random();
-
-                //for (int i = 0; i < 10; i++)
-                Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
+                ////using (MemoryStream stream = new MemoryStream())
+                using (BufferStream bufferStream = new BufferStream(_bufferManager))
+                using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))
                 {
-                    ////using (MemoryStream stream = new MemoryStream())
-                    using (BufferStream bufferStream = new BufferStream(manager))
-                    using (CacheStream stream = new CacheStream(bufferStream, 1024, manager))
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
+                    long seek = rand.Next(64, buffer.Length);
+                    //long seek = 0;
+
+                    rand.NextBytes(buffer);
+
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Position = seek;
+
+                    byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
+                    stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
+
+                    if (!Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
                     {
-                        byte[] buffer = manager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
-                        long seek = rand.Next(64, buffer.Length);
-                        //long seek = 0;
-
-                        rand.NextBytes(buffer);
-
-                        stream.Write(buffer, 0, buffer.Length);
-                        stream.Position = seek;
-
-                        byte[] buff2 = manager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
-                        stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
-
-                        if (!Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
-                        {
-                            Assert.IsTrue(Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
-                        }
-
-                        manager.ReturnBuffer(buffer);
-                        manager.ReturnBuffer(buff2);
+                        Assert.IsTrue(Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
                     }
-                });
+
+                    _bufferManager.ReturnBuffer(buffer);
+                    _bufferManager.ReturnBuffer(buff2);
+                }
+            });
 
 
-                using (MemoryStream mstream = new MemoryStream())
-                using (BufferStream bufferStream = new BufferStream(manager))
-                using (CacheStream stream = new CacheStream(bufferStream, 1024, manager))
+            using (MemoryStream mstream = new MemoryStream())
+            using (BufferStream bufferStream = new BufferStream(_bufferManager))
+            using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))
+            {
+                Random random = new Random();
+
+                for (int i = 0; i < 1024 * 1024; i++)
                 {
-                    Random random = new Random();
-
-                    for (int i = 0; i < 1024 * 1024; i++)
-                    {
-                        var v = (byte)rand.Next(0, 255);
-                        mstream.WriteByte(v);
-                        stream.WriteByte(v);
-                    }
-
-                    mstream.Seek(0, SeekOrigin.Begin);
-                    stream.Seek(0, SeekOrigin.Begin);
-
-                    Assert.IsTrue(mstream.Length == stream.Length);
-
-                    for (int i = 0; i < 1024 * 1024; i++)
-                    {
-                        Assert.IsTrue(mstream.ReadByte() == stream.ReadByte());
-                    }
+                    var v = (byte)rand.Next(0, 255);
+                    mstream.WriteByte(v);
+                    stream.WriteByte(v);
                 }
 
+                mstream.Seek(0, SeekOrigin.Begin);
+                stream.Seek(0, SeekOrigin.Begin);
+
+                Assert.IsTrue(mstream.Length == stream.Length);
+
+                for (int i = 0; i < 1024 * 1024; i++)
+                {
+                    Assert.IsTrue(mstream.ReadByte() == stream.ReadByte());
+                }
             }
+
         }
 
         [Test]

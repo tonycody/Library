@@ -452,13 +452,13 @@ namespace Library.Net.Amoeba
                     .Where(n => !usingHeaders.Contains(n))
                     .ToList();
 
-                removeHeaders.Sort(new Comparison<Key>((x, y) =>
+                removeHeaders.Sort((x, y) =>
                 {
                     var xc = _settings.ClustersIndex[x];
                     var yc = _settings.ClustersIndex[y];
 
                     return xc.UpdateTime.CompareTo(yc.UpdateTime);
-                }));
+                });
 
                 foreach (var header in removeHeaders)
                 {

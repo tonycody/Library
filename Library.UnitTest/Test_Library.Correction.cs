@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using Library.Correction;
 using NUnit.Framework;
 
@@ -11,13 +8,7 @@ namespace Library.UnitTest
     [TestFixture, Category("Library.Correction")]
     public class Test_Library_Correction
     {
-        private BufferManager _bufferManager = new BufferManager();
-
-        [TearDown]
-        public void TearDown()
-        {
-            _bufferManager.Dispose();
-        }
+        private BufferManager _bufferManager = BufferManager.Instance;
 
         [Test]
         public void Test_ReedSolomon()

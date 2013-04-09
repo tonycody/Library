@@ -1,8 +1,4 @@
-﻿#define MONITOR
-
-using System;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
+﻿using System;
 
 namespace Library
 {
@@ -68,8 +64,10 @@ namespace Library
     {
         private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 32);
 
-        private volatile ConditionalWeakTable<byte[], BufferTracker> trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();
-        private volatile System.ServiceModel.Channels.BufferManager _bufferManager;
+        private ConditionalWeakTable<byte[], BufferTracker> _trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();
+        private System.ServiceModel.Channels.BufferManager _bufferManager;
+
+        private object _thisLock = new object();
         private volatile bool _disposed = false;
 
         public BufferManager(long maxBufferPoolSize, int maxBufferSize)
@@ -89,31 +87,40 @@ namespace Library
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            var buffer = _bufferManager.TakeBuffer(size);
-            trackLeakedBuffers.GetOrCreateValue(buffer).TrackAllocation();
+            lock (_thisLock)
+            {
+                var buffer = _bufferManager.TakeBuffer(size);
+                _trackLeakedBuffers.GetOrCreateValue(buffer).TrackAllocation();
 
-            return buffer;
+                return buffer;
+            }
         }
 
         public void ReturnBuffer(byte[] buffer)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            BufferTracker value;
-
-            if (trackLeakedBuffers.TryGetValue(buffer, out value))
+            lock (_thisLock)
             {
-                value.Discard();
-            }
+                BufferTracker value;
 
-            _bufferManager.ReturnBuffer(buffer);
+                if (_trackLeakedBuffers.TryGetValue(buffer, out value))
+                {
+                    value.Discard();
+                }
+
+                _bufferManager.ReturnBuffer(buffer);
+            }
         }
 
         public void Clear()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            _bufferManager.Clear();
+            lock (_thisLock)
+            {
+                _bufferManager.Clear();
+            }
         }
 
         private class BufferTracker

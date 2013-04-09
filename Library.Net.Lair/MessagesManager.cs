@@ -58,10 +58,7 @@ namespace Library.Net.Lair
 
                         if (this.GetLockNodesEvent != null)
                         {
-                            foreach (var node in this.GetLockNodesEvent(this))
-                            {
-                                lockedNodes.Add(node);
-                            }
+                            lockedNodes.AddRange(this.GetLockNodesEvent(this));
                         }
 
                         lock (this.ThisLock)
@@ -75,10 +72,10 @@ namespace Library.Net.Lair
                                     nodes.Remove(node);
                                 }
 
-                                nodes.Sort(new Comparison<Node>((Node x, Node y) =>
+                                nodes.Sort((x, y) =>
                                 {
                                     return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
-                                }));
+                                });
 
                                 foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
                                 {

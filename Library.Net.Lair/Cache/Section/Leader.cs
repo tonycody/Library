@@ -259,10 +259,9 @@ namespace Library.Net.Lair
 
         public override Leader DeepClone()
         {
-            using (var bufferManagerSignature = BufferManager.Instance)
-            using (var stream = this.Export(bufferManagerSignature))
+            using (var stream = this.Export(BufferManager.Instance))
             {
-                return Leader.Import(stream, bufferManagerSignature);
+                return Leader.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -273,10 +272,7 @@ namespace Library.Net.Lair
 
             try
             {
-                using (BufferManager bufferManagerSignature = BufferManager.Instance)
-                {
-                    return this.Export(bufferManagerSignature);
-                }
+                return this.Export(BufferManager.Instance);
             }
             finally
             {

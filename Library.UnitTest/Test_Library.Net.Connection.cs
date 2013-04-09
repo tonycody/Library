@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using Library.Net.Connection;
 using Library.Security;
 using NUnit.Framework;
@@ -14,14 +11,8 @@ namespace Library.UnitTest
     [TestFixture, Category("Library.Net.Connection")]
     public class Test_Library_Net_Connection
     {
+        private BufferManager _bufferManager = BufferManager.Instance;
         private const int MaxReceiveCount = 1 * 1024 * 1024;
-        private BufferManager _bufferManager = new BufferManager();
-
-        [TearDown]
-        public void TearDown()
-        {
-            _bufferManager.Dispose();
-        }
 
         [Test]
         public void Test_TcpConnection()
@@ -164,7 +155,7 @@ namespace Library.UnitTest
 
                 compressClient.EndClose(compressClientConnect);
                 compressServer.EndClose(compressServerConnect);
-                
+
                 using (MemoryStream stream = new MemoryStream())
                 {
                     var buffer = new byte[1024 * 8];

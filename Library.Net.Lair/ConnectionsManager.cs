@@ -101,8 +101,8 @@ namespace Library.Net.Lair
         private const int _maxRequestCount = 128;
 
 #if DEBUG
-        private const int _downloadingConnectionCountLowerLimit = 1;
-        private const int _uploadingConnectionCountLowerLimit = 1;
+        private const int _downloadingConnectionCountLowerLimit = 0;
+        private const int _uploadingConnectionCountLowerLimit = 0;
 #else
         private const int _downloadingConnectionCountLowerLimit = 3;
         private const int _uploadingConnectionCountLowerLimit = 3;
@@ -521,10 +521,10 @@ namespace Library.Net.Lair
 
                 if (nodes.Count <= 1) return 0.5;
 
-                nodes.Sort(new Comparison<KeyValuePair<Node, TimeSpan>>((KeyValuePair<Node, TimeSpan> x, KeyValuePair<Node, TimeSpan> y) =>
+                nodes.Sort((x, y) =>
                 {
                     return y.Value.CompareTo(x.Value);
-                }));
+                });
 
                 int i = 1;
                 while (i < nodes.Count && nodes[i].Key != node) i++;
@@ -599,10 +599,10 @@ namespace Library.Net.Lair
                             .Where(n => _messagesManager[n].SurroundingNodes.Contains(item))
                             .ToList();
 
-                        list.Sort(new Comparison<Node>((Node x, Node y) =>
+                        list.Sort((x, y) =>
                         {
                             return _responseTimeDic[x].CompareTo(_responseTimeDic[y]);
-                        }));
+                        });
 
                         foreach (var node in list)
                         {
@@ -657,7 +657,7 @@ namespace Library.Net.Lair
         //                responseTimeDic.Add(connectionManager.Node, connectionManager.ResponseTime);
         //            }
 
-        //            list.Sort(new Comparison<Node>((Node x, Node y) =>
+        //            list.Sort((x, y) =>
         //            {
         //                var tx = _connectionManagers.FirstOrDefault(n => n.Node == x);
         //                var ty = _connectionManagers.FirstOrDefault(n => n.Node == y);
@@ -667,7 +667,7 @@ namespace Library.Net.Lair
         //                else if (tx == null && ty == null) return 0;
 
         //                return tx.ResponseTime.CompareTo(ty.ResponseTime);
-        //            }));
+        //            });
 
         //            returnNodes.AddRange(list.Where(n => !returnNodes.Contains(n)));
         //        }
@@ -741,10 +741,10 @@ namespace Library.Net.Lair
                                     var clist = _connectionManagers.ToList();
                                     clist.Remove(connectionManager);
 
-                                    clist.Sort(new Comparison<ConnectionManager>((ConnectionManager x, ConnectionManager y) =>
+                                    clist.Sort((x, y) =>
                                     {
                                         return x.ResponseTime.CompareTo(y.ResponseTime);
-                                    }));
+                                    });
 
                                     nodes.AddRange(clist
                                         .Select(n => n.Node)
@@ -1090,13 +1090,13 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    nodeSortItems.Sort(new Comparison<NodeSortItem>((NodeSortItem x, NodeSortItem y) =>
+                    nodeSortItems.Sort((x, y) =>
                     {
                         int c = x.LastPullTime.CompareTo(y.LastPullTime);
                         if (c != 0) return c;
 
                         return y.ResponseTime.CompareTo(x.ResponseTime);
-                    }));
+                    });
 
                     if (nodeSortItems.Count != 0)
                     {
@@ -1705,10 +1705,10 @@ namespace Library.Net.Lair
                             var clist = _connectionManagers.ToList();
                             clist.Remove(connectionManager);
 
-                            clist.Sort(new Comparison<ConnectionManager>((ConnectionManager x, ConnectionManager y) =>
+                            clist.Sort((x, y) =>
                             {
                                 return x.ResponseTime.CompareTo(y.ResponseTime);
-                            }));
+                            });
 
                             nodes.AddRange(clist
                                 .Select(n => n.Node)
@@ -2045,7 +2045,7 @@ namespace Library.Net.Lair
             }
             catch (Exception)
             {
-
+                
             }
             finally
             {

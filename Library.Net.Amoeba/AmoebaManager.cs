@@ -171,6 +171,19 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public SignatureCollection Signatures
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _storeDownloadManager.Signatures;
+                }
+            }
+        }
+
         public IEnumerable<Seed> CacheSeeds
         {
             get
@@ -219,19 +232,6 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     return _uploadManager.UploadedSeeds;
-                }
-            }
-        }
-
-        public SignatureCollection Signatures
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _storeDownloadManager.Signatures;
                 }
             }
         }
@@ -367,6 +367,40 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public void Upload(Store store,
+            DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _storeUploadManager.Upload(store,
+                    CompressionAlgorithm.Lzma,
+                    CryptoAlgorithm.Rijndael256,
+                    CorrectionAlgorithm.ReedSolomon8,
+                    HashAlgorithm.Sha512,
+                    digitalSignature);
+            }
+        }
+
+        public Store GetStore(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                return _storeDownloadManager.GetStore(signature);
+            }
+        }
+
+        public void ResetStore(string signature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _storeDownloadManager.Reset(signature);
+            }
+        }
+
         public void Download(Seed seed, int priority)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -432,21 +466,6 @@ namespace Library.Net.Amoeba
                     HashAlgorithm.Sha512,
                     digitalSignature,
                     priority);
-            }
-        }
-
-        public void Upload(Store store,
-            CompressionAlgorithm compressionAlgorithm,
-            CryptoAlgorithm cryptoAlgorithm,
-            CorrectionAlgorithm correctionAlgorithm,
-            HashAlgorithm hashAlgorithm,
-            DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _storeUploadManager.Upload(store, compressionAlgorithm, cryptoAlgorithm, correctionAlgorithm, hashAlgorithm, digitalSignature);
             }
         }
 
@@ -542,7 +561,7 @@ namespace Library.Net.Amoeba
 
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
@@ -552,7 +571,7 @@ namespace Library.Net.Amoeba
 
         public void Resize(long size)
         {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {

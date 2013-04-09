@@ -18,7 +18,6 @@ namespace Library.Net.Amoeba
         private Settings _settings;
 
         private volatile Thread _uploadManagerThread = null;
-        private LockedDictionary<Key, bool> _keyCount = new LockedDictionary<Key, bool>();
 
         private ManagerState _state = ManagerState.Stop;
 
@@ -322,6 +321,8 @@ namespace Library.Net.Amoeba
                     item.State = StoreUploadState.Error;
 
                     Log.Error(e);
+
+                    this.Remove(item);
                 }
             }
         }

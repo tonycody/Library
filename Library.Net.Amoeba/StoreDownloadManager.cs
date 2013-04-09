@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -19,6 +20,7 @@ namespace Library.Net.Amoeba
 
         private volatile Thread _downloadManagerThread = null;
         private volatile Thread _decodeManagerThread = null;
+        private volatile Thread _watchThread = null;
         private string _workDirectory = Path.GetTempPath();
         private CountCache _countCache = new CountCache();
 
@@ -26,7 +28,6 @@ namespace Library.Net.Amoeba
 
         private Thread _setThread;
         private Thread _removeThread;
-        private Thread _watchThread;
 
         private WaitQueue<Key> _setKeys = new WaitQueue<Key>();
         private WaitQueue<Key> _removeKeys = new WaitQueue<Key>();
@@ -103,44 +104,6 @@ namespace Library.Net.Amoeba
             _removeThread.Priority = ThreadPriority.BelowNormal;
             _removeThread.Name = "DownloadManager_RemoveThread";
             _removeThread.Start();
-
-            _watchThread = new Thread(new ThreadStart(() =>
-            {
-                try
-                {
-                    for (; ; )
-                    {
-                        lock (this.ThisLock)
-                        {
-                            foreach (var item in _settings.StoreDownloadItems.ToArray())
-                            {
-                                if (this.Signatures.Contains(item.Seed.Certificate.ToString())) continue;
-
-                                this.Remove(item);
-                            }
-
-                            foreach (var signature in this.Signatures)
-                            {
-                                if (_settings.StoreDownloadItems.Any(n => n.Seed.Certificate.ToString() == signature)) continue;
-
-                                var seed = _connectionsManager.GetStoreSeed(signature);
-                                if (seed == null) continue;
-
-                                this.Download(seed);
-                            }
-                        }
-
-                        Thread.Sleep(1000 * 60);
-                    }
-                }
-                catch (Exception)
-                {
-
-                }
-            }));
-            _watchThread.Priority = ThreadPriority.BelowNormal;
-            _watchThread.Name = "DownloadManager_WatchThread";
-            _watchThread.Start();
         }
 
         public SignatureCollection Signatures
@@ -170,6 +133,37 @@ namespace Library.Net.Amoeba
                     }
                 }
             }
+        }
+
+        private static bool CheckStoreDigitalSignature(Store store)
+        {
+            var seedList = new List<Seed>();
+            var boxList = new List<Box>();
+            boxList.AddRange(store.Boxes);
+
+            for (int i = 0; i < boxList.Count; i++)
+            {
+                boxList.AddRange(boxList[i].Boxes);
+                seedList.AddRange(boxList[i].Seeds);
+            }
+
+            foreach (var item in seedList)
+            {
+                if (!item.VerifyCertificate())
+                {
+                    return false;
+                }
+            }
+
+            foreach (var item in boxList)
+            {
+                if (!item.VerifyCertificate())
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static FileStream GetUniqueFileStream(string path)
@@ -360,7 +354,7 @@ namespace Library.Net.Amoeba
 
                     Log.Error(e);
 
-                    this.Reset(item);
+                    this.Remove(item);
                 }
             }
         }
@@ -530,16 +524,19 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        item.Store = store;
+                                        if (StoreDownloadManager.CheckStoreDigitalSignature(store))
+                                        {
+                                            item.Store = store;
+                                        }
 
                                         if (item.Seed != null)
                                         {
                                             _cacheManager.Unlock(item.Seed.Key);
                                         }
 
-                                        if (item.Index != null)
+                                        foreach (var index in item.Indexes)
                                         {
-                                            foreach (var group in item.Index.Groups)
+                                            foreach (var group in index.Groups)
                                             {
                                                 foreach (var key in group.Keys)
                                                 {
@@ -703,16 +700,19 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        item.Store = store;
+                                        if (StoreDownloadManager.CheckStoreDigitalSignature(store))
+                                        {
+                                            item.Store = store;
+                                        }
 
                                         if (item.Seed != null)
                                         {
                                             _cacheManager.Unlock(item.Seed.Key);
                                         }
 
-                                        if (item.Index != null)
+                                        foreach (var index in item.Indexes)
                                         {
-                                            foreach (var group in item.Index.Groups)
+                                            foreach (var group in index.Groups)
                                             {
                                                 foreach (var key in group.Keys)
                                                 {
@@ -786,8 +786,57 @@ namespace Library.Net.Amoeba
 
                     Log.Error(e);
 
-                    this.Reset(item);
+                    this.Remove(item);
                 }
+            }
+        }
+
+        private void WatchThread()
+        {
+            Stopwatch watchStopwatch = new Stopwatch();
+
+            try
+            {
+                for (; ; )
+                {
+                    Thread.Sleep(1000);
+                    if (this.State == ManagerState.Stop) return;
+
+                    if (!watchStopwatch.IsRunning || watchStopwatch.Elapsed.TotalSeconds >= 60)
+                    {
+                        lock (this.ThisLock)
+                        {
+                            foreach (var item in _settings.StoreDownloadItems.ToArray())
+                            {
+                                if (this.Signatures.Contains(item.Seed.Certificate.ToString())) continue;
+
+                                this.Remove(item);
+                            }
+
+                            foreach (var signature in this.Signatures)
+                            {
+                                var seed = _connectionsManager.GetStoreSeed(signature);
+                                if (seed == null) continue;
+
+                                var item = _settings.StoreDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+
+                                if (item == null)
+                                {
+                                    this.Download(seed);
+                                }
+                                else if (seed.CreationTime > item.Seed.CreationTime)
+                                {
+                                    this.Remove(item);
+                                    this.Download(seed);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error(e);
             }
         }
 
@@ -802,16 +851,13 @@ namespace Library.Net.Amoeba
                         _cacheManager.Unlock(item.Seed.Key);
                     }
 
-                    if (item.Index != null)
+                    foreach (var index in item.Indexes)
                     {
-                        foreach (var group in item.Index.Groups)
+                        foreach (var group in index.Groups)
                         {
-                            if (group != null)
+                            foreach (var key in group.Keys)
                             {
-                                foreach (var key in group.Keys)
-                                {
-                                    _cacheManager.Unlock(key);
-                                }
+                                _cacheManager.Unlock(key);
                             }
                         }
                     }
@@ -851,6 +897,28 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public Store GetStore(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                var item = _settings.StoreDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                if (item == null) return null;
+
+                return item.Store;
+            }
+        }
+
+        public void Reset(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                var item = _settings.StoreDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                if (item == null) return;
+
+                this.Remove(item);
+            }
+        }
+
         public override ManagerState State
         {
             get
@@ -881,6 +949,11 @@ namespace Library.Net.Amoeba
                 _decodeManagerThread.Priority = ThreadPriority.Lowest;
                 _decodeManagerThread.Name = "StoreDownloadManager_DecodeManagerThread";
                 _decodeManagerThread.Start();
+
+                _watchThread = new Thread(this.WatchThread);
+                _watchThread.Priority = ThreadPriority.Lowest;
+                _watchThread.Name = "StoreDownloadManager_WatchThread";
+                _watchThread.Start();
             }
         }
 
@@ -897,6 +970,9 @@ namespace Library.Net.Amoeba
 
             _decodeManagerThread.Join();
             _decodeManagerThread = null;
+
+            _watchThread.Join();
+            _watchThread = null;
         }
 
         #region ISettings
@@ -928,16 +1004,13 @@ namespace Library.Net.Amoeba
                             _cacheManager.Lock(item.Seed.Key);
                         }
 
-                        if (item.Index != null)
+                        foreach (var index in item.Indexes)
                         {
-                            foreach (var group in item.Index.Groups)
+                            foreach (var group in index.Groups)
                             {
-                                if (group != null)
+                                foreach (var key in group.Keys)
                                 {
-                                    foreach (var key in group.Keys)
-                                    {
-                                        _cacheManager.Lock(key);
-                                    }
+                                    _cacheManager.Lock(key);
                                 }
                             }
                         }

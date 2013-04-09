@@ -183,10 +183,7 @@ namespace Library.Net.Connection.SecureVersion1
 
                 try
                 {
-                    using (BufferManager bufferManager = BufferManager.Instance)
-                    {
-                        return this.Export(bufferManager);
-                    }
+                    return this.Export(BufferManager.Instance);
                 }
                 finally
                 {
@@ -267,7 +264,7 @@ namespace Library.Net.Connection.SecureVersion1
             {
                 lock (_thisStaticLock)
                 {
-                    if (_thisLock == null) 
+                    if (_thisLock == null)
                         _thisLock = new object();
 
                     return _thisLock;

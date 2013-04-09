@@ -364,10 +364,9 @@ namespace Library.Net.Rosa
             {
                 using (DeadlockMonitor.Lock(this.ThisLock))
                 {
-                    using (var bufferManager = new BufferManager())
-                    using (var stream = this.Export(bufferManager))
+                    using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return CommandsMessage.Import(stream, bufferManager);
+                        return CommandsMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }

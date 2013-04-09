@@ -7,7 +7,7 @@ namespace Library.Net.Amoeba
     {
         [EnumMember(Value = "None")]
         None = 0,
-   
+
         [EnumMember(Value = "Rijndael256")]
         Rijndael256 = 1,
     }

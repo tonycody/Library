@@ -1,13 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Windows.Forms;
-using Library.Collections;
-using Library.Net;
 using Library.Net.Amoeba;
 using Library.Security;
 using NUnit.Framework;
@@ -17,13 +8,7 @@ namespace Library.UnitTest
     [TestFixture, Category("Library.Net.Amoeba")]
     public class Test_Library_Net_Amoeba
     {
-        private BufferManager _bufferManager = new BufferManager();
-
-        [TearDown]
-        public void TearDown()
-        {
-            _bufferManager.Dispose();
-        }
+        private BufferManager _bufferManager = BufferManager.Instance;
 
 #if false
         sealed class CirculationCollection<T> : IEnumerable<T>, IEnumerable, IThisLock
@@ -167,7 +152,7 @@ namespace Library.UnitTest
                 }
             }
 
-            #region IEnumerable<T>
+        #region IEnumerable<T>
 
             public IEnumerator<T> GetEnumerator()
             {
@@ -182,9 +167,9 @@ namespace Library.UnitTest
                 }
             }
 
-            #endregion
+        #endregion
 
-            #region IEnumerable
+        #region IEnumerable
 
             IEnumerator IEnumerable.GetEnumerator()
             {
@@ -194,9 +179,9 @@ namespace Library.UnitTest
                 }
             }
 
-            #endregion
+        #endregion
 
-            #region IThisLock
+        #region IThisLock
 
             public object ThisLock
             {
@@ -206,7 +191,7 @@ namespace Library.UnitTest
                 }
             }
 
-            #endregion
+        #endregion
         }
 
         [Test]

@@ -204,9 +204,9 @@ namespace Library.Io
         {
             if (_disposed) return;
 
-            this.Dispose(true);
+            base.Close();
         }
-
+        
         protected override void Dispose(bool disposing)
         {
             try
