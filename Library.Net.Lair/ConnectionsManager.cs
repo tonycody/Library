@@ -948,13 +948,15 @@ namespace Library.Net.Lair
                                 _routeTable.Live(connectionManager.Node);
 
                                 _createConnectionCount++;
-
-                                this.AddConnectionManager(connectionManager, uri);
                             }
                             catch (Exception)
                             {
                                 connectionManager.Dispose();
+
+                                continue;
                             }
+
+                            this.AddConnectionManager(connectionManager, uri);
                         }
                         else
                         {
@@ -1026,13 +1028,15 @@ namespace Library.Net.Lair
                             _routeTable.Add(connectionManager.Node);
 
                         _acceptConnectionCount++;
-
-                        this.AddConnectionManager(connectionManager, uri);
                     }
                     catch (Exception)
                     {
                         connectionManager.Dispose();
+
+                        continue;
                     }
+
+                    this.AddConnectionManager(connectionManager, uri);
                 }
             }
         }
@@ -2045,7 +2049,7 @@ namespace Library.Net.Lair
             }
             catch (Exception)
             {
-                
+
             }
             finally
             {

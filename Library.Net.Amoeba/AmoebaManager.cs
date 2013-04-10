@@ -367,6 +367,16 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public IEnumerable<string> GetSignatures()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetSignatures();
+            }
+        }
+
         public void Upload(Store store,
             DigitalSignature digitalSignature)
         {

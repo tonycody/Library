@@ -1,14 +1,18 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace Library
 {
 #if !MONITOR
 
-    public class BufferManager : ManagerBase
+    public class BufferManager : ManagerBase, IThisLock
     {
-        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 32);
+        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 128);
 
-        private volatile System.ServiceModel.Channels.BufferManager _bufferManager;
+        private System.ServiceModel.Channels.BufferManager _bufferManager;
+
+        private object _thisLock = new object();
         private volatile bool _disposed = false;
 
         public BufferManager(long maxBufferPoolSize, int maxBufferSize)
@@ -27,22 +31,31 @@ namespace Library
         public byte[] TakeBuffer(int bufferSize)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            
-            return _bufferManager.TakeBuffer(bufferSize);
+
+            lock (this.ThisLock)
+            {
+                return _bufferManager.TakeBuffer(bufferSize);
+            }
         }
 
         public void ReturnBuffer(byte[] buffer)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            
-            _bufferManager.ReturnBuffer(buffer);
+
+            lock (this.ThisLock)
+            {
+                _bufferManager.ReturnBuffer(buffer);
+            }
         }
 
         public void Clear()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            
-            _bufferManager.Clear();
+
+            lock (this.ThisLock)
+            {
+                _bufferManager.Clear();
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -56,16 +69,28 @@ namespace Library
 
             _disposed = true;
         }
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                return _thisLock;
+            }
+        }
+
+        #endregion
     }
 
 #else
 
-    public class BufferManager : ManagerBase
+    public class BufferManager : ManagerBase, IThisLock
     {
-        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 32);
+        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 128);
 
-        private ConditionalWeakTable<byte[], BufferTracker> _trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();
         private System.ServiceModel.Channels.BufferManager _bufferManager;
+        private ConditionalWeakTable<byte[], BufferTracker> _trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();
 
         private object _thisLock = new object();
         private volatile bool _disposed = false;
@@ -87,7 +112,7 @@ namespace Library
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 var buffer = _bufferManager.TakeBuffer(size);
                 _trackLeakedBuffers.GetOrCreateValue(buffer).TrackAllocation();
@@ -100,7 +125,7 @@ namespace Library
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 BufferTracker value;
 
@@ -117,7 +142,7 @@ namespace Library
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 _bufferManager.Clear();
             }
@@ -160,6 +185,18 @@ namespace Library
 
             _disposed = true;
         }
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                return _thisLock;
+            }
+        }
+
+        #endregion
     }
 
     [Serializable]
@@ -179,4 +216,5 @@ namespace Library
     }
 
 #endif
+
 }

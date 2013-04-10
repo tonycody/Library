@@ -5,40 +5,38 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class CirculationCollection<T> : ICollection<T>, IEnumerable<T>, IEnumerable, IThisLock
+    public class CirculationCollection<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
-        private Dictionary<T, DateTime> _dic;
-        private readonly TimeSpan _circularTime;
-        private int? _capacity = null;
+        private HashSet<T> _hashSet;
+        private Dictionary<T, DateTime> _circularDictionary;
 
         private DateTime _lastCircularTime = DateTime.MinValue;
+        private readonly TimeSpan _circularTime;
 
         private object _thisLock = new object();
 
         public CirculationCollection(TimeSpan circularTime)
         {
-            _dic = new Dictionary<T, DateTime>();
+            _hashSet = new HashSet<T>();
+            _circularDictionary = new Dictionary<T, DateTime>();
             _circularTime = circularTime;
-        }
-
-        public CirculationCollection(TimeSpan circularTime, int capacity)
-        {
-            _dic = new Dictionary<T, DateTime>(capacity);
-            _circularTime = circularTime;
-            _capacity = capacity;
         }
 
         public CirculationCollection(TimeSpan circularTime, IEqualityComparer<T> comparer)
         {
-            _dic = new Dictionary<T, DateTime>(comparer);
+            _hashSet = new HashSet<T>(comparer);
+            _circularDictionary = new Dictionary<T, DateTime>(comparer);
             _circularTime = circularTime;
         }
 
-        public CirculationCollection(TimeSpan circularTime, int capacity, IEqualityComparer<T> comparer)
+        public T[] ToArray()
         {
-            _dic = new Dictionary<T, DateTime>(capacity, comparer);
-            _circularTime = circularTime;
-            _capacity = capacity;
+            lock (this.ThisLock)
+            {
+                this.Circular(_circularTime);
+
+                return _hashSet.ToArray();
+            }
         }
 
         private void Circular(TimeSpan circularTime)
@@ -49,51 +47,35 @@ namespace Library.Collections
 
                 if ((now - _lastCircularTime) > new TimeSpan(0, 0, 30))
                 {
-                    foreach (var item in _dic.ToArray())
+                    foreach (var item in _hashSet.ToArray())
                     {
-                        if ((now - item.Value) > circularTime)
+                        if ((now - _circularDictionary[item]) > circularTime)
                         {
-                            _dic.Remove(item.Key);
+                            _hashSet.Remove(item);
                         }
                     }
 
+                    foreach (var item in _circularDictionary.Keys.ToArray())
+                    {
+                        if (!_hashSet.Contains(item))
+                        {
+                            _circularDictionary.Remove(item);
+                        }
+                    }
+
+                    _hashSet.TrimExcess();
                     _lastCircularTime = now;
                 }
             }
         }
 
-        public T[] ToArray()
-        {
-            lock (this.ThisLock)
-            {
-                this.Circular(_circularTime);
-
-                return _dic.Keys.ToArray();
-            }
-        }
-
-        public void Trim()
-        {
-            lock (this.ThisLock)
-            {
-                this.Circular(_circularTime);
-            }
-        }
-
-        public int Capacity
+        public IEqualityComparer<T> Comparer
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _capacity.Value;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _capacity = value;
+                    return _hashSet.Comparer;
                 }
             }
         }
@@ -106,7 +88,7 @@ namespace Library.Collections
                 {
                     this.Circular(_circularTime);
 
-                    return _dic.Count;
+                    return _hashSet.Count;
                 }
             }
         }
@@ -119,7 +101,8 @@ namespace Library.Collections
 
                 foreach (var item in collection)
                 {
-                    _dic[item] = DateTime.UtcNow;
+                    _circularDictionary[item] = DateTime.UtcNow;
+                    _hashSet.Add(item);
                 }
             }
         }
@@ -128,13 +111,10 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _dic.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
-
                 this.Circular(_circularTime);
 
-                int count = _dic.Count;
-                _dic[item] = DateTime.UtcNow;
-                return (count != _dic.Count);
+                _circularDictionary[item] = DateTime.UtcNow;
+                return _hashSet.Add(item);
             }
         }
 
@@ -142,9 +122,8 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _dic.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
-
-                _dic.Clear();
+                _circularDictionary.Clear();
+                _hashSet.Clear();
             }
         }
 
@@ -154,7 +133,17 @@ namespace Library.Collections
             {
                 this.Circular(_circularTime);
 
-                return _dic.ContainsKey(item);
+                return _hashSet.Contains(item);
+            }
+        }
+
+        public void CopyTo(T[] array, int arrayIndex)
+        {
+            lock (this.ThisLock)
+            {
+                this.Circular(_circularTime);
+
+                _hashSet.CopyTo(array, arrayIndex);
             }
         }
 
@@ -164,27 +153,32 @@ namespace Library.Collections
             {
                 this.Circular(_circularTime);
 
-                return _dic.Remove(item);
+                return _hashSet.Remove(item);
+            }
+        }
+
+        public void TrimExcess()
+        {
+            lock (this.ThisLock)
+            {
+                this.Circular(_circularTime);
+            }
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                this.Circular(_circularTime);
+
+                foreach (var item in _hashSet)
+                {
+                    yield return item;
+                }
             }
         }
 
         #region ICollection<T>
-
-        void ICollection<T>.Add(T item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Add(item);
-            }
-        }
-
-        void ICollection<T>.CopyTo(T[] array, int arrayIndex)
-        {
-            lock (this.ThisLock)
-            {
-                _dic.Keys.CopyTo(array, arrayIndex);
-            }
-        }
 
         bool ICollection<T>.IsReadOnly
         {
@@ -197,20 +191,42 @@ namespace Library.Collections
             }
         }
 
-        #endregion
-
-        #region IEnumerable<T>
-
-        public IEnumerator<T> GetEnumerator()
+        void ICollection<T>.Add(T item)
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Add(item);
+            }
+        }
 
-                foreach (var item in _dic.Keys)
+        #endregion
+
+        #region ICollection
+
+        void ICollection.CopyTo(Array array, int arrayIndex)
+        {
+            lock (this.ThisLock)
+            {
+                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+            }
+        }
+
+        bool ICollection.IsSynchronized
+        {
+            get
+            {
+                lock (this.ThisLock)
                 {
-                    yield return item;
+                    return true;
                 }
+            }
+        }
+
+        object ICollection.SyncRoot
+        {
+            get
+            {
+                return this.ThisLock;
             }
         }
 

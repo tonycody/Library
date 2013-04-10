@@ -10,7 +10,7 @@ using Library.Security;
 
 namespace Library.Net.Amoeba
 {
-    public delegate IEnumerable<string> RemoveSeedSignaturesEventHandler(object sender);
+    public delegate SignatureCollection RemoveSeedSignaturesEventHandler(object sender);
     delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -831,13 +831,15 @@ namespace Library.Net.Amoeba
                                 _routeTable.Live(connectionManager.Node);
 
                                 _createConnectionCount++;
-
-                                this.AddConnectionManager(connectionManager, uri);
                             }
                             catch (Exception)
                             {
                                 connectionManager.Dispose();
+
+                                continue;
                             }
+
+                            this.AddConnectionManager(connectionManager, uri);
                         }
                         else
                         {
@@ -906,13 +908,15 @@ namespace Library.Net.Amoeba
                             _routeTable.Add(connectionManager.Node);
 
                         _acceptConnectionCount++;
-
-                        this.AddConnectionManager(connectionManager, uri);
                     }
                     catch (Exception)
                     {
                         connectionManager.Dispose();
+
+                        continue;
                     }
+
+                    this.AddConnectionManager(connectionManager, uri);
                 }
             }
         }

@@ -56,6 +56,17 @@ namespace Library.Collections
             }
         }
 
+        public IEqualityComparer<T> Comparer
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _hashSet.Comparer;
+                }
+            }
+        }
+
         public int Capacity
         {
             get

@@ -168,15 +168,15 @@ namespace Library.Net.Lair
 
             _surroundingNodes = new LockedHashSet<Node>(128);
 
-            _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
-            _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
+            _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
 
             _pushLeaders = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
             _pushManagers = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
             _pushCreators = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
 
-            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
-            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0), 128 * 3 * 2);
+            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
+            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
 
             _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
             _pushTopics = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());

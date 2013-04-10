@@ -123,7 +123,6 @@
     <Compile Include="Cache\Channel\Key.cs" />
     <Compile Include="Cache\Channel\KeyCollection.cs" />
     <Compile Include="Cache\LairConverter.cs" />
-    <Compile Include="CirculationCollection.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />

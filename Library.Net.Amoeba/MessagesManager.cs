@@ -34,16 +34,16 @@ namespace Library.Net.Amoeba
 
                     foreach (var node in _messageManagerDictionary.Keys.ToArray())
                     {
-                        _messageManagerDictionary[node].PushBlocks.Trim();
-                        _messageManagerDictionary[node].PushStoreSeeds.Trim();
+                        _messageManagerDictionary[node].PushBlocks.TrimExcess();
+                        _messageManagerDictionary[node].PushStoreSeeds.TrimExcess();
 
-                        _messageManagerDictionary[node].PullBlocksLink.Trim();
-                        _messageManagerDictionary[node].PullBlocksRequest.Trim();
-                        _messageManagerDictionary[node].PullSeedsRequest.Trim();
+                        _messageManagerDictionary[node].PullBlocksLink.TrimExcess();
+                        _messageManagerDictionary[node].PullBlocksRequest.TrimExcess();
+                        _messageManagerDictionary[node].PullSeedsRequest.TrimExcess();
 
-                        _messageManagerDictionary[node].PushBlocksLink.Trim();
-                        _messageManagerDictionary[node].PushBlocksRequest.Trim();
-                        _messageManagerDictionary[node].PushStoreSeeds.Trim();
+                        _messageManagerDictionary[node].PushBlocksLink.TrimExcess();
+                        _messageManagerDictionary[node].PushBlocksRequest.TrimExcess();
+                        _messageManagerDictionary[node].PushStoreSeeds.TrimExcess();
                     }
 
                     _lastCircularTime = now;
@@ -168,14 +168,14 @@ namespace Library.Net.Amoeba
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
             _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
 
-            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
-            _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
+            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0), 8192 * 60);
-            _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0), 8192 * 30);
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 60, 0), 128 * 60);
-            _pullSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 30, 0), 128 * 30);
+            _pushSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 60, 0));
+            _pullSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 30, 0));
         }
 
         public int Id

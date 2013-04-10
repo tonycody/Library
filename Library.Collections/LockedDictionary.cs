@@ -181,7 +181,8 @@ namespace Library.Collections
                 if (_capacity != null && _dic.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
 
                 int count = _dic.Count;
-                _dic.Add(key, value);
+                _dic[key] = value;
+             
                 return (count != _dic.Count);
             }
         }

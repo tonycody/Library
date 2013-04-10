@@ -7,38 +7,37 @@ namespace Library.Collections
 {
     public class CirculationDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable, IThisLock
     {
-        private Dictionary<TKey, ValueLifeSpan> _dic;
-        private readonly TimeSpan _circularTime;
-        private int? _capacity = null;
+        private Dictionary<TKey, TValue> _dic;
+        private Dictionary<TKey, DateTime> _circularDictionary;
 
         private DateTime _lastCircularTime = DateTime.MinValue;
+        private readonly TimeSpan _circularTime;
 
         private object _thisLock = new object();
 
         public CirculationDictionary(TimeSpan circularTime)
         {
-            _dic = new Dictionary<TKey, ValueLifeSpan>();
+            _dic = new Dictionary<TKey, TValue>();
+            _circularDictionary = new Dictionary<TKey, DateTime>();
             _circularTime = circularTime;
-        }
-
-        public CirculationDictionary(TimeSpan circularTime, int capacity)
-        {
-            _dic = new Dictionary<TKey, ValueLifeSpan>(capacity);
-            _circularTime = circularTime;
-            _capacity = capacity;
         }
 
         public CirculationDictionary(TimeSpan circularTime, IEqualityComparer<TKey> comparer)
         {
-            _dic = new Dictionary<TKey, ValueLifeSpan>(comparer);
+            _dic = new Dictionary<TKey, TValue>(comparer);
+            _circularDictionary = new Dictionary<TKey, DateTime>(comparer);
             _circularTime = circularTime;
         }
 
-        public CirculationDictionary(TimeSpan circularTime, int capacity, IEqualityComparer<TKey> comparer)
+        public KeyValuePair<TKey, TValue>[] ToArray()
         {
-            _dic = new Dictionary<TKey, ValueLifeSpan>(capacity, comparer);
-            _circularTime = circularTime;
-            _capacity = capacity;
+            lock (this.ThisLock)
+            {
+                var array = new KeyValuePair<TKey, TValue>[_dic.Count];
+                ((IDictionary<TKey, TValue>)_dic).CopyTo(array, 0);
+
+                return array;
+            }
         }
 
         private void Circular(TimeSpan circularTime)
@@ -51,9 +50,17 @@ namespace Library.Collections
                 {
                     foreach (var item in _dic.ToArray())
                     {
-                        if ((now - item.Value.LifeSpan) > circularTime)
+                        if ((now - _circularDictionary[item.Key]) > circularTime)
                         {
                             _dic.Remove(item.Key);
+                        }
+                    }
+
+                    foreach (var item in _circularDictionary.Keys.ToArray())
+                    {
+                        if (!_dic.ContainsKey(item))
+                        {
+                            _circularDictionary.Remove(item);
                         }
                     }
 
@@ -62,20 +69,7 @@ namespace Library.Collections
             }
         }
 
-        public KeyValuePair<TKey, TValue>[] ToArray()
-        {
-            lock (this.ThisLock)
-            {
-                this.Circular(_circularTime);
-
-                var array = new KeyValuePair<TKey, TValue>[_dic.Count];
-                ((IDictionary<TKey, TValue>)_dic).CopyTo(array, 0);
-
-                return array;
-            }
-        }
-
-        public void Trim()
+        public void TrimExcess()
         {
             lock (this.ThisLock)
             {
@@ -90,7 +84,7 @@ namespace Library.Collections
                 lock (this.ThisLock)
                 {
                     this.Circular(_circularTime);
-                    
+
                     return new CirculationKeyCollection(_dic.Keys, this.ThisLock);
                 }
             }
@@ -103,26 +97,8 @@ namespace Library.Collections
                 lock (this.ThisLock)
                 {
                     this.Circular(_circularTime);
-                    
-                    return new CirculationValueCollection(_dic.Values, this.ThisLock);
-                }
-            }
-        }
 
-        public int Capacity
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _capacity.Value;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _capacity = value;
+                    return new CirculationValueCollection(_dic.Values, this.ThisLock);
                 }
             }
         }
@@ -159,7 +135,7 @@ namespace Library.Collections
                 {
                     this.Circular(_circularTime);
 
-                    return _dic[key].Value;
+                    return _dic[key];
                 }
             }
             set
@@ -168,7 +144,8 @@ namespace Library.Collections
                 {
                     this.Circular(_circularTime);
 
-                    _dic[key] = new ValueLifeSpan() { Value = value, LifeSpan = DateTime.UtcNow };
+                    _circularDictionary[key] = DateTime.UtcNow;
+                    _dic[key] = value;
                 }
             }
         }
@@ -179,8 +156,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
-
                     return this.Keys;
                 }
             }
@@ -192,8 +167,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
-
                     return this.Values;
                 }
             }
@@ -211,12 +184,12 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _dic.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
-
                 this.Circular(_circularTime);
 
                 int count = _dic.Count;
-                _dic.Add(key, new ValueLifeSpan() { Value = value, LifeSpan = DateTime.UtcNow });
+                _dic[key] = value;
+                _circularDictionary[key] = DateTime.UtcNow;
+
                 return (count != _dic.Count);
             }
         }
@@ -225,6 +198,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
+                _circularDictionary.Clear();
                 _dic.Clear();
             }
         }
@@ -245,9 +219,7 @@ namespace Library.Collections
             {
                 this.Circular(_circularTime);
 
-                HashSet<TValue> hashset = new HashSet<TValue>(_dic.Values.Select(n => n.Value));
-
-                return hashset.Contains(value);
+                return _dic.ContainsValue(value);
             }
         }
 
@@ -259,7 +231,7 @@ namespace Library.Collections
 
                 foreach (var item in _dic)
                 {
-                    yield return new KeyValuePair<TKey, TValue>(item.Key, item.Value.Value);
+                    yield return item;
                 }
             }
         }
@@ -280,18 +252,7 @@ namespace Library.Collections
             {
                 this.Circular(_circularTime);
 
-                ValueLifeSpan valueLifeSpan;
-
-                if (_dic.TryGetValue(key, out valueLifeSpan))
-                {
-                    value = valueLifeSpan.Value;
-                    return true;
-                }
-                else
-                {
-                    value = default(TValue);
-                    return false;
-                }
+                return _dic.TryGetValue(key, out value);
             }
         }
 
@@ -309,14 +270,7 @@ namespace Library.Collections
             {
                 this.Circular(_circularTime);
 
-                HashSet<KeyValuePair<TKey, TValue>> hashset = new HashSet<KeyValuePair<TKey, TValue>>();
-
-                foreach (var item2 in _dic)
-                {
-                    hashset.Add(new KeyValuePair<TKey, TValue>(item2.Key, item2.Value.Value));
-                }
-
-                return hashset.Contains(item);
+                return _dic.Contains(item);
             }
         }
 
@@ -324,6 +278,8 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
+                this.Circular(_circularTime);
+
                 ((IDictionary<TKey, TValue>)_dic).CopyTo(array, arrayIndex);
             }
         }
@@ -332,6 +288,8 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
+                this.Circular(_circularTime);
+
                 return ((IDictionary<TKey, TValue>)_dic).Remove(keyValuePair);
             }
         }
@@ -340,6 +298,8 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
+                this.Circular(_circularTime);
+
                 ((ICollection)_dic).CopyTo(array, index);
             }
         }
@@ -476,11 +436,17 @@ namespace Library.Collections
             }
         }
 
-        internal sealed class ValueLifeSpan
+        #region IThisLock
+
+        public object ThisLock
         {
-            public TValue Value { get; set; }
-            public DateTime LifeSpan { get; set; }
+            get
+            {
+                return _thisLock;
+            }
         }
+
+        #endregion
 
         public sealed class CirculationKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
         {
@@ -627,10 +593,10 @@ namespace Library.Collections
 
         public sealed class CirculationValueCollection : ICollection<TValue>, IEnumerable<TValue>, ICollection, IEnumerable, IThisLock
         {
-            private ICollection<ValueLifeSpan> _collection;
+            private ICollection<TValue> _collection;
             private object _thisLock;
 
-            internal CirculationValueCollection(ICollection<ValueLifeSpan> collection, object thisLock)
+            internal CirculationValueCollection(ICollection<TValue> collection, object thisLock)
             {
                 _collection = collection;
                 _thisLock = thisLock;
@@ -641,12 +607,7 @@ namespace Library.Collections
                 lock (this.ThisLock)
                 {
                     var array = new TValue[_collection.Count];
-                    int i = 0;
-
-                    foreach (var item in _collection)
-                    {
-                        array[i++] = item.Value;
-                    }
+                    _collection.CopyTo(array, 0);
 
                     return array;
                 }
@@ -672,9 +633,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    HashSet<TValue> hashset = new HashSet<TValue>(_collection.Select(n => n.Value));
-
-                    return hashset.Contains(item);
+                    return _collection.Contains(item);
                 }
             }
 
@@ -682,7 +641,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    _collection.Select(n => n.Value).ToList().CopyTo(array, arrayIndex);
+                    _collection.CopyTo(array, arrayIndex);
                 }
             }
 
@@ -722,7 +681,7 @@ namespace Library.Collections
                 {
                     foreach (var item in _collection)
                     {
-                        yield return item.Value;
+                        yield return item;
                     }
                 }
             }
@@ -774,17 +733,5 @@ namespace Library.Collections
 
             #endregion
         }
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                return _thisLock;
-            }
-        }
-
-        #endregion
     }
 }
