@@ -29,12 +29,12 @@ namespace Library.Correction
             _encMatrix = _fecMath.CreateEncodeMatrix(k, n);
         }
 
-        public void Encode(IList<ArraySegment<byte>> src, ArraySegment<byte>[] repair, int[] index)
+        public void Encode(IList<ArraySegment<byte>> src, ref IList<ArraySegment<byte>> repair, int[] index)
         {
             byte[][] srcBufs = new byte[src.Count][];
             int[] srcOffs = new int[src.Count];
-            byte[][] repairBufs = new byte[repair.Length][];
-            int[] repairOffs = new int[repair.Length];
+            byte[][] repairBufs = new byte[repair.Count][];
+            int[] repairOffs = new int[repair.Count];
 
             for (int i = 0; i < srcBufs.Length; i++)
             {
@@ -78,7 +78,7 @@ namespace Library.Correction
             });
         }
 
-        public void Decode(IList<ArraySegment<byte>> pkts, int[] index)
+        public void Decode(ref IList<ArraySegment<byte>> pkts, int[] index)
         {
             ReedSolomon.Shuffle(pkts, index, _k);
 
@@ -137,6 +137,7 @@ namespace Library.Correction
             }
         }
 
+        // メモリ節約のために参照のコピー
         private static void Shuffle(IList<ArraySegment<byte>> pkts, int[] index, int k)
         {
             for (int i = 0; i < k; )

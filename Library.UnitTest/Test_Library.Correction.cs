@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Library.Correction;
 using NUnit.Framework;
 
@@ -16,13 +17,13 @@ namespace Library.UnitTest
             ReedSolomon pc = new ReedSolomon(8, 128, 256, 4, _bufferManager);
             Random rand = new Random();
 
-            List<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();
+            IList<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();
             for (int i = 0; i < 128; i++)
             {
                 buffList.Add(new ArraySegment<byte>(NetworkConverter.GetBytes(rand.Next()), 0, 4));
             }
 
-            List<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
+            IList<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
             for (int i = 0; i < 256; i++)
             {
                 buffList2.Add(new ArraySegment<byte>(new byte[4], 0, 4));
@@ -34,9 +35,9 @@ namespace Library.UnitTest
                 intList.Add(i);
             }
 
-            pc.Encode(buffList.ToArray(), buffList2.ToArray(), intList.ToArray());
+            pc.Encode(buffList, ref buffList2, intList.ToArray());
 
-            List<ArraySegment<byte>> buffList3 = new List<ArraySegment<byte>>();
+            IList<ArraySegment<byte>> buffList3 = new List<ArraySegment<byte>>();
 
             for (int i = 0; i < 64; i++)
             {
@@ -59,9 +60,30 @@ namespace Library.UnitTest
                 intList2.Add(128 + i);
             }
 
-            pc.Decode(buffList3.ToArray(), intList2.ToArray());
+            {
+                Random random = new Random();
+                int n = buffList3.Count;
 
-            for (int i = buffList.Count; i < buffList.Count; i++)
+                while (n > 1)
+                {
+                    int k = random.Next(n--);
+
+                    var temp = buffList3[n];
+                    buffList3[n] = buffList3[k];
+                    buffList3[k] = temp;
+
+                    var temp2 = intList2[n];
+                    intList2[n] = intList2[k];
+                    intList2[k] = temp2;
+                }
+            }
+
+            // これだとToArrayで切り離され、Decode内部からIListをシャッフルしている意味が無くなるため、正常にデコードできない
+            //pc.Decode(buffList3.ToArray(), intList2.ToArray());          
+
+            pc.Decode(ref buffList3, intList2.ToArray());
+
+            for (int i = 0; i < buffList.Count; i++)
             {
                 Assert.IsTrue(Collection.Equals(buffList[i].Array, buffList[i].Offset, buffList3[i].Array, buffList3[i].Offset, 4), "ReedSolomon");
             }

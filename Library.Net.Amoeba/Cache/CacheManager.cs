@@ -1038,7 +1038,7 @@ namespace Library.Net.Amoeba
                 if (keys.Count > 128) throw new ArgumentOutOfRangeException("headers");
 
                 List<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
-                List<ArraySegment<byte>> parityBufferList = new List<ArraySegment<byte>>();
+                IList<ArraySegment<byte>> parityBufferList = new List<ArraySegment<byte>>();
                 int sumLength = 0;
 
                 try
@@ -1087,7 +1087,7 @@ namespace Library.Net.Amoeba
                     {
                         try
                         {
-                            reedSolomon.Encode(bufferList.ToArray(), parityBufferList.ToArray(), intList.ToArray());
+                            reedSolomon.Encode(bufferList, ref parityBufferList, intList.ToArray());
                         }
                         catch (Exception e)
                         {
@@ -1171,7 +1171,7 @@ namespace Library.Net.Amoeba
             }
             else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
-                List<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
+                IList<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
 
                 try
                 {
@@ -1216,7 +1216,7 @@ namespace Library.Net.Amoeba
                     {
                         try
                         {
-                            reedSolomon.Decode(bufferList.ToArray(), intList.ToArray());
+                            reedSolomon.Decode(ref bufferList, intList.ToArray());
                         }
                         catch (Exception e)
                         {

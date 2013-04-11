@@ -1275,9 +1275,9 @@ namespace Library.Net.Lair
 
                                             if (_settings.Creators.TryGetValue(section, out list))
                                             {
-                                                foreach (var leader in removeCreatorsDictionary[section])
+                                                foreach (var creator in removeCreatorsDictionary[section])
                                                 {
-                                                    list.Remove(leader);
+                                                    list.Remove(creator);
                                                 }
                                             }
                                         }
@@ -1321,9 +1321,9 @@ namespace Library.Net.Lair
 
                                             if (_settings.Managers.TryGetValue(section, out list))
                                             {
-                                                foreach (var leader in removeManagersDictionary[section])
+                                                foreach (var manager in removeManagersDictionary[section])
                                                 {
-                                                    list.Remove(leader);
+                                                    list.Remove(manager);
                                                 }
                                             }
                                         }
