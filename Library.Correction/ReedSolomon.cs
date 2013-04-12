@@ -1,20 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace Library.Correction
 {
     public class ReedSolomon
     {
+        private ReedSolomon.Math _fecMath;
         private int _k;
         private int _n;
         private int _threadCount;
+        private BufferManager _bufferManager;
 
         private byte[] _encMatrix;
-        private ReedSolomon.Math _fecMath;
-
-        private BufferManager _bufferManager;
 
         private object _thisLock = new object();
 
@@ -29,7 +31,7 @@ namespace Library.Correction
             _encMatrix = _fecMath.CreateEncodeMatrix(k, n);
         }
 
-        public void Encode(IList<ArraySegment<byte>> src, ref IList<ArraySegment<byte>> repair, int[] index)
+        public void Encode(IList<ArraySegment<byte>> src, IList<ArraySegment<byte>> repair, int[] index)
         {
             byte[][] srcBufs = new byte[src.Count][];
             int[] srcOffs = new int[src.Count];
@@ -80,7 +82,7 @@ namespace Library.Correction
 
         public void Decode(ref IList<ArraySegment<byte>> pkts, int[] index)
         {
-            ReedSolomon.Shuffle(pkts, index, _k);
+            ReedSolomon.Shuffle(ref pkts, index, _k);
 
             byte[][] bufs = new byte[pkts.Count][];
             int[] offs = new int[pkts.Count];
@@ -109,6 +111,7 @@ namespace Library.Correction
                 if (index[row] >= _k)
                 {
                     tmpPkts[row] = _bufferManager.TakeBuffer(packetLength);
+                    Array.Clear(tmpPkts[row], 0, packetLength);
 
                     for (int col = 0; col < _k; col++)
                     {
@@ -125,20 +128,12 @@ namespace Library.Correction
                     // only copy those actually decoded.
                     System.Array.Copy(tmpPkts[row], 0, pkts[row], pktsOff[row], packetLength);
                     index[row] = row;
-                }
-            }
-
-            for (int i = 0; i < tmpPkts.Length; i++)
-            {
-                if (tmpPkts[i] != null)
-                {
-                    _bufferManager.ReturnBuffer(tmpPkts[i]);
+                    _bufferManager.ReturnBuffer(tmpPkts[row]);
                 }
             }
         }
 
-        // メモリ節約のために参照のコピー
-        private static void Shuffle(IList<ArraySegment<byte>> pkts, int[] index, int k)
+        private static void Shuffle(ref IList<ArraySegment<byte>> pkts, int[] index, int k)
         {
             for (int i = 0; i < k; )
             {
@@ -156,19 +151,57 @@ namespace Library.Correction
                         throw new ArgumentException("Shuffle error at " + i);
                     }
 
-                    // swap(pkts[c],pkts[i])
-                    ArraySegment<byte> tmp = pkts[i];
-                    pkts[i] = pkts[c];
-                    pkts[c] = tmp;
-
                     // swap(index[c],index[i])
-                    int tmp2 = index[i];
+                    int tmp = index[i];
                     index[i] = index[c];
-                    index[c] = tmp2;
+                    index[c] = tmp;
+
+                    // swap(pkts[c],pkts[i])
+                    ArraySegment<byte> tmp2 = pkts[i];
+                    pkts[i] = pkts[c];
+                    pkts[c] = tmp2;
                 }
             }
         }
 
+        //private static void CopyShuffle(ArraySegment<byte>[] pkts, int[] index, int k)
+        //{
+        //    byte[] buffer = null;
+
+        //    for (int i = 0; i < k; )
+        //    {
+        //        if (index[i] >= k || index[i] == i)
+        //        {
+        //            i++;
+        //        }
+        //        else
+        //        {
+        //            // put pkts in the right position (first check for conflicts).
+        //            int c = index[i];
+
+        //            if (index[c] == c)
+        //            {
+        //                throw new ArgumentException("Shuffle Error: Duplicate indexes at " + i);
+        //            }
+
+        //            // swap(index[c],index[i])
+        //            int tmp = index[i];
+        //            index[i] = index[c];
+        //            index[c] = tmp;
+
+        //            // swap(pkts[c],pkts[i])
+        //            if (buffer == null)
+        //            {
+        //                buffer = new byte[pkts[0].Count];
+        //            }
+
+        //            System.Array.Copy(pkts[i].Array, pkts[i].Offset, buffer, 0, buffer.Length);
+        //            System.Array.Copy(pkts[c].Array, pkts[c].Offset, pkts[i].Array, pkts[i].Offset, buffer.Length);
+        //            System.Array.Copy(buffer, 0, pkts[c].Array, pkts[c].Offset, buffer.Length);
+        //        }
+        //    }
+        //}
+        
         private class Math
         {
             private int _gfBits;

@@ -35,7 +35,7 @@ namespace Library.UnitTest
                 intList.Add(i);
             }
 
-            pc.Encode(buffList, ref buffList2, intList.ToArray());
+            pc.Encode(buffList, buffList2, intList.ToArray());
 
             IList<ArraySegment<byte>> buffList3 = new List<ArraySegment<byte>>();
 

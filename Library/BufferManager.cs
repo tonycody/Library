@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace Library
 {
@@ -10,14 +11,14 @@ namespace Library
     {
         private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 128);
 
-        private System.ServiceModel.Channels.BufferManager _bufferManager;
+        private BufferManagerExtension _bufferManagerExtension;
 
         private object _thisLock = new object();
         private volatile bool _disposed = false;
 
         public BufferManager(long maxBufferPoolSize, int maxBufferSize)
         {
-            _bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(maxBufferPoolSize, maxBufferSize);
+            _bufferManagerExtension = new BufferManagerExtension(maxBufferPoolSize, maxBufferSize);
         }
 
         public static BufferManager Instance
@@ -34,7 +35,7 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                return _bufferManager.TakeBuffer(bufferSize);
+                return _bufferManagerExtension.TakeBuffer(bufferSize);
             }
         }
 
@@ -44,7 +45,7 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                _bufferManager.ReturnBuffer(buffer);
+                _bufferManagerExtension.ReturnBuffer(buffer);
             }
         }
 
@@ -54,7 +55,7 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                _bufferManager.Clear();
+                _bufferManagerExtension.Clear();
             }
         }
 
@@ -64,7 +65,7 @@ namespace Library
 
             if (disposing)
             {
-                _bufferManager.Clear();
+                _bufferManagerExtension.Clear();
             }
 
             _disposed = true;
@@ -81,6 +82,44 @@ namespace Library
         }
 
         #endregion
+
+        internal class BufferManagerExtension
+        {
+            private System.ServiceModel.Channels.BufferManager _bufferManager;
+            private HashSet<byte[]> _bufferReferences = new HashSet<byte[]>();
+
+            public BufferManagerExtension(long maxBufferPoolSize, int maxBufferSize)
+            {
+                _bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(maxBufferPoolSize, maxBufferSize);
+            }
+
+            public byte[] TakeBuffer(int bufferSize)
+            {
+                var buffer = _bufferManager.TakeBuffer(bufferSize);
+                if (buffer != null && buffer.Length >= bufferSize) return buffer;
+
+                var localBuffer = new byte[bufferSize];
+                _bufferReferences.Add(localBuffer);
+                return localBuffer;
+            }
+
+            public void ReturnBuffer(byte[] buffer)
+            {
+                if (!_bufferReferences.Contains(buffer))
+                {
+                    _bufferManager.ReturnBuffer(buffer);
+                }
+                else
+                {
+                    _bufferReferences.Remove(buffer);
+                }
+            }
+
+            public void Clear()
+            {
+                _bufferManager.Clear();
+            }
+        }
     }
 
 #else
@@ -186,7 +225,7 @@ namespace Library
             _disposed = true;
         }
 
-        #region IThisLock
+    #region IThisLock
 
         public object ThisLock
         {
@@ -196,7 +235,7 @@ namespace Library
             }
         }
 
-        #endregion
+    #endregion
     }
 
     [Serializable]

@@ -895,7 +895,7 @@ namespace Library.Net.Amoeba
                     {
                         connectionManager.Connect();
                         if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
-                        if (_removeNodes.Contains(connectionManager.Node)) throw new ArgumentException();
+                        //if (_removeNodes.Contains(connectionManager.Node)) throw new ArgumentException();
 
                         lock (this.ThisLock)
                         {
@@ -1811,7 +1811,6 @@ namespace Library.Net.Amoeba
                                 _pushSeedCount++;
 
                                 messageManager.PushStoreSeeds[seed.Certificate.ToString()] = seed.CreationTime;
-                                messageManager.Priority--;
                             }
                         }
                     }
@@ -2001,7 +2000,6 @@ namespace Library.Net.Amoeba
             }
 
             _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
-            _messagesManager[connectionManager.Node].Priority++;
 
             _pullSeedCount++;
         }
