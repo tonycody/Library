@@ -40,7 +40,7 @@ namespace Library.Net.Lair
         private LockedList<Node> _creatingNodes;
         private CirculationCollection<Node> _cuttingNodes;
         private CirculationCollection<Node> _removeNodes;
-        private LockedDictionary<Node, int> _nodesStatus;
+        private CirculationDictionary<Node, int> _nodesStatus;
 
         private CirculationCollection<Section> _pushSectionsRequestList;
         private CirculationCollection<Channel> _pushChannelsRequestList;
@@ -99,6 +99,7 @@ namespace Library.Net.Lair
 
         private const int _maxNodeCount = 128;
         private const int _maxRequestCount = 128;
+        private const int _routeTableMinCount = 100;
 
 #if DEBUG
         private const int _downloadingConnectionCountLowerLimit = 0;
@@ -133,7 +134,7 @@ namespace Library.Net.Lair
             _creatingNodes = new LockedList<Node>();
             _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
             _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
-            _nodesStatus = new LockedDictionary<Node, int>();
+            _nodesStatus = new CirculationDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _pushSectionsRequestList = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
             _pushChannelsRequestList = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
@@ -891,11 +892,6 @@ namespace Library.Net.Lair
 
                     if (uris.Count == 0)
                     {
-                        lock (this.ThisLock)
-                        {
-                            _nodesStatus.Remove(node);
-                        }
-
                         _removeNodes.Remove(node);
                         _cuttingNodes.Remove(node);
                         _routeTable.Remove(node);
@@ -932,11 +928,6 @@ namespace Library.Net.Lair
                                 connectionManager.Connect();
                                 if (connectionManager.Node == null || connectionManager.Node.Id == null) throw new ArgumentException();
 
-                                lock (this.ThisLock)
-                                {
-                                    _nodesStatus.Remove(node);
-                                }
-
                                 _cuttingNodes.Remove(node);
 
                                 if (node != connectionManager.Node)
@@ -948,44 +939,29 @@ namespace Library.Net.Lair
                                 _routeTable.Live(connectionManager.Node);
 
                                 _createConnectionCount++;
+
+                                this.AddConnectionManager(connectionManager, uri);
+
+                                goto End;
                             }
                             catch (Exception)
                             {
                                 connectionManager.Dispose();
-
-                                continue;
                             }
-
-                            this.AddConnectionManager(connectionManager, uri);
                         }
-                        else
+
                         {
-                            bool flag = false;
+                            _removeNodes.Add(node);
+                            _cuttingNodes.Remove(node);
 
-                            lock (this.ThisLock)
+                            if (_routeTable.Count > _routeTableMinCount)
                             {
-                                if (!_nodesStatus.ContainsKey(node)) _nodesStatus[node] = 0;
-                                _nodesStatus[node]++;
-
-                                if (_nodesStatus[node] >= 3)
-                                {
-                                    flag = true;
-                                }
-                            }
-
-                            if (flag)
-                            {
-                                _nodesStatus.Remove(node);
-                                _removeNodes.Add(node);
-                                _cuttingNodes.Remove(node);
-
-                                if (_routeTable.Count > 100)
-                                {
-                                    _routeTable.Remove(node);
-                                }
+                                _routeTable.Remove(node);
                             }
                         }
                     }
+
+                End: ;
                 }
                 finally
                 {
@@ -1017,26 +993,16 @@ namespace Library.Net.Lair
                         if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
                             _routeTable.Add(connectionManager.Node);
 
-                        lock (this.ThisLock)
-                        {
-                            _nodesStatus.Remove(connectionManager.Node);
-                        }
-
                         _cuttingNodes.Remove(connectionManager.Node);
 
-                        if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
-                            _routeTable.Add(connectionManager.Node);
-
                         _acceptConnectionCount++;
+
+                        this.AddConnectionManager(connectionManager, uri);
                     }
                     catch (Exception)
                     {
                         connectionManager.Dispose();
-
-                        continue;
                     }
-
-                    this.AddConnectionManager(connectionManager, uri);
                 }
             }
         }
@@ -1117,11 +1083,6 @@ namespace Library.Net.Lair
                             {
                                 try
                                 {
-                                    lock (this.ThisLock)
-                                    {
-                                        _nodesStatus.Remove(connectionManager.Node);
-                                    }
-
                                     _removeNodes.Add(connectionManager.Node);
                                     _routeTable.Remove(connectionManager.Node);
 
@@ -1680,13 +1641,8 @@ namespace Library.Net.Lair
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(1, 0, 0))
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 30, 0))
                         {
-                            lock (this.ThisLock)
-                            {
-                                _nodesStatus.Remove(connectionManager.Node);
-                            }
-
                             _removeNodes.Add(connectionManager.Node);
                             _routeTable.Remove(connectionManager.Node);
 
@@ -2351,7 +2307,7 @@ namespace Library.Net.Lair
             {
                 _removeNodes.Add(connectionManager.Node);
 
-                if (_routeTable.Count > 100)
+                if (_routeTable.Count > _routeTableMinCount)
                 {
                     _routeTable.Remove(connectionManager.Node);
                 }
@@ -2371,10 +2327,29 @@ namespace Library.Net.Lair
 
             try
             {
-                if (!_removeNodes.Contains(connectionManager.Node))
+                int closeCount;
+
+                _nodesStatus.TryGetValue(connectionManager.Node, out closeCount);
+                _nodesStatus[connectionManager.Node] = ++closeCount;
+
+                if (closeCount >= 3)
                 {
-                    if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
-                        _cuttingNodes.Add(connectionManager.Node);
+                    _removeNodes.Add(connectionManager.Node);
+
+                    if (_routeTable.Count > _routeTableMinCount)
+                    {
+                        _routeTable.Remove(connectionManager.Node);
+                    }
+
+                    _nodesStatus.Remove(connectionManager.Node);
+                }
+                else
+                {
+                    if (!_removeNodes.Contains(connectionManager.Node))
+                    {
+                        if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
+                            _cuttingNodes.Add(connectionManager.Node);
+                    }
                 }
 
                 this.RemoveConnectionManager(connectionManager);
