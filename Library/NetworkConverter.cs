@@ -8,6 +8,18 @@ namespace Library
 {
     public static class NetworkConverter
     {
+        private static readonly string[] _toHexStringHashtable;
+
+        static NetworkConverter()
+        {
+            _toHexStringHashtable = new string[256];
+
+            for (int i = 0; i < 256; i++)
+            {
+                _toHexStringHashtable[i] = i.ToString("x2");
+            }
+        }
+
         public static string ToBase64UrlString(byte[] bytes)
         {
             if (bytes == null) throw new ArgumentNullException("bytes");
@@ -21,7 +33,28 @@ namespace Library
             if (offset < 0 || bytes.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (length < 0 || (bytes.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
 
-            return System.Convert.ToBase64String(bytes, offset, length).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+            var value = System.Convert.ToBase64String(bytes, offset, length);
+            StringBuilder sb = new StringBuilder(value.Length);
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                switch (value[i])
+                {
+                    case '+':
+                        sb.Append('-');
+                        break;
+                    case '/':
+                        sb.Append('_');
+                        break;
+                    case '=':
+                        break;
+                    default:
+                        sb.Append(value[i]);
+                        break;
+                }
+            }
+
+            return sb.ToString();
         }
 
         public static byte[] FromBase64UrlString(string value)
@@ -42,7 +75,12 @@ namespace Library
                     break;
             }
 
-            return System.Convert.FromBase64String(value.Replace('-', '+').Replace('_', '/') + padding);
+            StringBuilder sb = new StringBuilder(value);
+            sb.Replace('-', '+');
+            sb.Replace('_', '/');
+            sb.Append(padding);
+
+            return System.Convert.FromBase64String(sb.ToString());
         }
 
         /// <summary>
@@ -68,11 +106,11 @@ namespace Library
             if (offset < 0 || bytes.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (length < 0 || (bytes.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(length);
 
             for (int i = offset; i < length; i++)
             {
-                sb.Append(bytes[i].ToString("x2"));
+                sb.Append(_toHexStringHashtable[bytes[i]]);
             }
 
             return sb.ToString();

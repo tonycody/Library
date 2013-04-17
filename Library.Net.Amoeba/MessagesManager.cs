@@ -166,7 +166,7 @@ namespace Library.Net.Amoeba
 
             _surroundingNodes = new LockedHashSet<Node>(128);
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
+            _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(3, 0, 0));
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));

@@ -1824,9 +1824,9 @@ namespace Library.Net.Lair
 
                                     messageManager.PushLeaders.Add(leader.GetHash(_hashAlgorithm));
                                     messageManager.Priority--;
-                                }
 
-                                break;
+                                    break;
+                                }
                             }
 
                             // Upload (Manager)
@@ -1867,9 +1867,9 @@ namespace Library.Net.Lair
 
                                     messageManager.PushManagers.Add(manager.GetHash(_hashAlgorithm));
                                     messageManager.Priority--;
-                                }
 
-                                break;
+                                    break;
+                                }
                             }
 
                             // Upload (Creator)
@@ -1910,9 +1910,9 @@ namespace Library.Net.Lair
 
                                     messageManager.PushCreators.Add(creator.GetHash(_hashAlgorithm));
                                     messageManager.Priority--;
-                                }
 
-                                break;
+                                    break;
+                                }
                             }
 
                             // Upload (Topic)
@@ -1953,9 +1953,9 @@ namespace Library.Net.Lair
 
                                     messageManager.PushTopics.Add(topic.GetHash(_hashAlgorithm));
                                     messageManager.Priority--;
-                                }
 
-                                break;
+                                    break;
+                                }
                             }
 
                             // Upload (Message)
@@ -1995,9 +1995,9 @@ namespace Library.Net.Lair
 
                                     messageManager.PushMessages.Add(message.GetHash(_hashAlgorithm));
                                     messageManager.Priority--;
-                                }
 
-                                break;
+                                    break;
+                                }
                             }
                         }
                     }
