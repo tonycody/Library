@@ -494,7 +494,7 @@ namespace Library.Net.Lair
         {
             if (_removeMessagesEvent != null)
             {
-                _removeMessagesEvent(this, channel);
+                return _removeMessagesEvent(this, channel);
             }
 
             return null;
@@ -1137,7 +1137,7 @@ namespace Library.Net.Lair
                             {
                                 var removeSections = this.OnRemoveSectionsEvent();
 
-                                if (removeSections != null)
+                                if (removeSections != null && removeSections.Count() > 0)
                                 {
                                     lock (this.ThisLock)
                                     {
@@ -1174,7 +1174,7 @@ namespace Library.Net.Lair
                                 {
                                     var removeLeaders = this.OnRemoveLeadersEvent(section);
 
-                                    if (removeLeaders != null)
+                                    if (removeLeaders != null && removeLeaders.Count() > 0)
                                     {
                                         removeLeadersDictionary.Add(section, removeLeaders);
                                     }
@@ -1220,7 +1220,7 @@ namespace Library.Net.Lair
                                 {
                                     var removeCreators = this.OnRemoveCreatorsEvent(section);
 
-                                    if (removeCreators != null)
+                                    if (removeCreators != null && removeCreators.Count() > 0)
                                     {
                                         removeCreatorsDictionary.Add(section, removeCreators);
                                     }
@@ -1266,7 +1266,7 @@ namespace Library.Net.Lair
                                 {
                                     var removeManagers = this.OnRemoveManagersEvent(section);
 
-                                    if (removeManagers != null)
+                                    if (removeManagers != null && removeManagers.Count() > 0)
                                     {
                                         removeManagersDictionary.Add(section, removeManagers);
                                     }
@@ -1295,7 +1295,7 @@ namespace Library.Net.Lair
                             {
                                 var removeChannels = this.OnRemoveChannelsEvent();
 
-                                if (removeChannels != null)
+                                if (removeChannels != null && removeChannels.Count() > 0)
                                 {
                                     lock (this.ThisLock)
                                     {
@@ -1331,7 +1331,7 @@ namespace Library.Net.Lair
                                 {
                                     var removeTopics = this.OnRemoveTopicsEvent(channel);
 
-                                    if (removeTopics != null)
+                                    if (removeTopics != null && removeTopics.Count() > 0)
                                     {
                                         removeTopicsDictionary.Add(channel, removeTopics);
                                     }
@@ -1377,7 +1377,7 @@ namespace Library.Net.Lair
                                 {
                                     var removeMessages = this.OnRemoveMessagesEvent(channel);
 
-                                    if (removeMessages != null)
+                                    if (removeMessages != null && removeMessages.Count() > 0)
                                     {
                                         removeMessagesDictionary.Add(channel, removeMessages);
                                     }
