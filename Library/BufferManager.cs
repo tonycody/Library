@@ -9,16 +9,16 @@ namespace Library
 
     public class BufferManager : ManagerBase, IThisLock
     {
-        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 128);
+        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 32);
 
-        private BufferManagerExtension _bufferManagerExtension;
+        private System.ServiceModel.Channels.BufferManager _bufferManager;
 
         private object _thisLock = new object();
         private volatile bool _disposed = false;
 
         public BufferManager(long maxBufferPoolSize, int maxBufferSize)
         {
-            _bufferManagerExtension = new BufferManagerExtension(maxBufferPoolSize, maxBufferSize);
+            _bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(maxBufferPoolSize, maxBufferSize);
         }
 
         public static BufferManager Instance
@@ -35,7 +35,7 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                return _bufferManagerExtension.TakeBuffer(bufferSize);
+                return _bufferManager.TakeBuffer(bufferSize);
             }
         }
 
@@ -45,7 +45,7 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                _bufferManagerExtension.ReturnBuffer(buffer);
+                _bufferManager.ReturnBuffer(buffer);
             }
         }
 
@@ -55,7 +55,7 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                _bufferManagerExtension.Clear();
+                _bufferManager.Clear();
             }
         }
 
@@ -65,7 +65,7 @@ namespace Library
 
             if (disposing)
             {
-                _bufferManagerExtension.Clear();
+                _bufferManager.Clear();
             }
 
             _disposed = true;
@@ -82,51 +82,13 @@ namespace Library
         }
 
         #endregion
-
-        internal class BufferManagerExtension
-        {
-            private System.ServiceModel.Channels.BufferManager _bufferManager;
-            private HashSet<byte[]> _bufferReferences = new HashSet<byte[]>();
-
-            public BufferManagerExtension(long maxBufferPoolSize, int maxBufferSize)
-            {
-                _bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(maxBufferPoolSize, maxBufferSize);
-            }
-
-            public byte[] TakeBuffer(int bufferSize)
-            {
-                var buffer = _bufferManager.TakeBuffer(bufferSize);
-                if (buffer != null && buffer.Length >= bufferSize) return buffer;
-
-                var localBuffer = new byte[bufferSize];
-                _bufferReferences.Add(localBuffer);
-                return localBuffer;
-            }
-
-            public void ReturnBuffer(byte[] buffer)
-            {
-                if (!_bufferReferences.Contains(buffer))
-                {
-                    _bufferManager.ReturnBuffer(buffer);
-                }
-                else
-                {
-                    _bufferReferences.Remove(buffer);
-                }
-            }
-
-            public void Clear()
-            {
-                _bufferManager.Clear();
-            }
-        }
     }
 
 #else
 
     public class BufferManager : ManagerBase, IThisLock
     {
-        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 128);
+        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 32);
 
         private System.ServiceModel.Channels.BufferManager _bufferManager;
         private ConditionalWeakTable<byte[], BufferTracker> _trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();

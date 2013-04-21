@@ -419,7 +419,7 @@ namespace Library.Net.Amoeba
                                     int length = group.InformationLength - (group.Keys.Count - keys.Count);
                                     if (length <= 0) continue;
 
-                                    length = Math.Max(length, 6);
+                                    length = Math.Max(length, 32);
 
                                     foreach (var key in keys
                                         .OrderBy(n => random.Next())

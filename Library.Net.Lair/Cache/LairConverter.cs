@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Library.Io;
+using Library.Security;
 
 namespace Library.Net.Lair
 {
@@ -243,15 +244,25 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToSectionString(Section item)
+        public static string ToSectionString(Section item, string leaderSignature)
         {
             if (item == null) throw new ArgumentNullException("Section");
 
             try
             {
-                using (Stream stream = LairConverter.ToStream<Section>(item))
+                if (leaderSignature != null && Signature.HasSignature(leaderSignature))
                 {
-                    return "Section@" + LairConverter.ToBase64String(stream);
+                    using (Stream stream = LairConverter.ToStream<Section>(item))
+                    {
+                        return "Section@" + LairConverter.ToBase64String(stream) + "," + leaderSignature;
+                    }
+                }
+                else
+                {
+                    using (Stream stream = LairConverter.ToStream<Section>(item))
+                    {
+                        return "Section@" + LairConverter.ToBase64String(stream);
+                    }
                 }
             }
             catch (Exception)
@@ -260,16 +271,32 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Section FromSectionString(string item)
+        public static Section FromSectionString(string item, out string leaderSignature)
         {
             if (item == null) throw new ArgumentNullException("item");
             if (!item.StartsWith("Section@")) throw new ArgumentException("item");
 
+            leaderSignature = null;
+
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
+                if (item.Contains(","))
                 {
-                    return LairConverter.FromStream<Section>(stream);
+                    var list = item.Split(new char[] { ',' }, 2);
+
+                    leaderSignature = list[1];
+
+                    using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, 8)))
+                    {
+                        return LairConverter.FromStream<Section>(stream);
+                    }
+                }
+                else
+                {
+                    using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
+                    {
+                        return LairConverter.FromStream<Section>(stream);
+                    }
                 }
             }
             catch (Exception)
