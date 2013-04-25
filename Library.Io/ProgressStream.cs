@@ -174,6 +174,7 @@ namespace Library.Io
             try
             {
                 if (_disposed) return;
+                _disposed = true;
 
                 if (disposing)
                 {
@@ -191,8 +192,6 @@ namespace Library.Io
                         _stream = null;
                     }
                 }
-
-                _disposed = true;
             }
             finally
             {

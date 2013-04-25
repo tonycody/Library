@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 namespace Library
 {
+
 #if !MONITOR
 
     public class BufferManager : ManagerBase, IThisLock
@@ -62,13 +63,12 @@ namespace Library
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
 
             if (disposing)
             {
                 _bufferManager.Clear();
             }
-
-            _disposed = true;
         }
 
         #region IThisLock
@@ -178,13 +178,12 @@ namespace Library
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
 
             if (disposing)
             {
                 _bufferManager.Clear();
             }
-
-            _disposed = true;
         }
 
     #region IThisLock
@@ -197,7 +196,7 @@ namespace Library
             }
         }
 
-    #endregion
+        #endregion
     }
 
     [Serializable]

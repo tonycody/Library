@@ -616,14 +616,12 @@ namespace Library.Net.Upnp
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
             {
-                if (disposing)
-                {
 
-                }
-
-                _disposed = true;
             }
         }
 

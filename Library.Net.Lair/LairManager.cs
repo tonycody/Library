@@ -206,19 +206,19 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _connectionsManager.BaseNode;
                 }
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     _connectionsManager.BaseNode = value;
                 }
             }
@@ -228,10 +228,10 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _connectionsManager.OtherNodes;
                 }
             }
@@ -241,19 +241,19 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _connectionsManager.ConnectionCountLimit;
                 }
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     _connectionsManager.ConnectionCountLimit = value;
                 }
             }
@@ -263,19 +263,19 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _connectionsManager.BandWidthLimit;
                 }
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     _connectionsManager.BandWidthLimit = value;
                 }
             }
@@ -285,10 +285,10 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _connectionsManager.ConnectionInformation;
                 }
             }
@@ -298,10 +298,10 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     List<InformationContext> contexts = new List<InformationContext>();
                     contexts.AddRange(_connectionsManager.Information);
 
@@ -314,10 +314,10 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _connectionsManager.ReceivedByteCount;
                 }
             }
@@ -327,10 +327,10 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _connectionsManager.SentByteCount;
                 }
             }
@@ -338,130 +338,130 @@ namespace Library.Net.Lair
 
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _connectionsManager.SetOtherNodes(nodes);
             }
         }
 
         public IEnumerable<Section> GetSections()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _connectionsManager.GetSections();
             }
         }
 
         public IEnumerable<Leader> GetLeaders(Section section)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _connectionsManager.GetLeaders(section);
             }
         }
 
         public IEnumerable<Creator> GetCreators(Section section)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _connectionsManager.GetCreators(section);
             }
         }
 
         public IEnumerable<Manager> GetManagers(Section section)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _connectionsManager.GetManagers(section);
             }
         }
 
         public void Upload(Leader leader)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _connectionsManager.Upload(leader);
             }
         }
 
         public void Upload(Manager manager)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _connectionsManager.Upload(manager);
             }
         }
 
         public void Upload(Creator creator)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _connectionsManager.Upload(creator);
             }
         }
 
         public IEnumerable<Channel> GetChannels()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _connectionsManager.GetChannels();
             }
         }
 
         public IEnumerable<Topic> GetTopics(Channel channel)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _connectionsManager.GetTopics(channel);
             }
         }
 
         public IEnumerable<Message> GetMessages(Channel channel)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 return _connectionsManager.GetMessages(channel);
             }
         }
 
         public void Upload(Topic topic)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _connectionsManager.Upload(topic);
             }
         }
 
         public void Upload(Message message)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _connectionsManager.Upload(message);
             }
         }
@@ -503,10 +503,10 @@ namespace Library.Net.Lair
 
         public void Load(string directoryPath)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 this.Stop();
 
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
@@ -517,10 +517,10 @@ namespace Library.Net.Lair
 
         public void Save(string directoryPath)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
@@ -532,6 +532,7 @@ namespace Library.Net.Lair
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
 
             if (disposing)
             {
@@ -539,8 +540,6 @@ namespace Library.Net.Lair
                 _serverManager.Dispose();
                 _clientManager.Dispose();
             }
-
-            _disposed = true;
         }
 
         #region IThisLock メンバ

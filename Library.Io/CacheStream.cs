@@ -287,7 +287,7 @@ namespace Library.Io
 
             if ((_writerBlockBuffer.Length - _writerBufferPosition) + _writerBlockBuffer.Length < count)
             {
-                if (_writerBufferPosition != 0) 
+                if (_writerBufferPosition != 0)
                 {
                     _stream.Write(_writerBlockBuffer, 0, _writerBufferPosition);
                     _writerBufferPosition = 0;
@@ -346,6 +346,7 @@ namespace Library.Io
             try
             {
                 if (_disposed) return;
+                _disposed = true;
 
                 if (disposing)
                 {
@@ -391,8 +392,6 @@ namespace Library.Io
                         _writerBlockBuffer = null;
                     }
                 }
-
-                _disposed = true;
             }
             finally
             {

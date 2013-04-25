@@ -139,10 +139,10 @@ namespace Library.Io
             for (; count > 0 && index < _buffers.Count; index++)
             {
                 int length = Math.Min(_buffers[index].Length - position, count);
-          
+
                 Array.Copy(_buffers[index], position, buffer, offset, length);
                 position = 0;
-                
+
                 offset += length;
                 count -= length;
                 readSumLength += length;
@@ -206,12 +206,13 @@ namespace Library.Io
 
             base.Close();
         }
-        
+
         protected override void Dispose(bool disposing)
         {
             try
             {
                 if (_disposed) return;
+                _disposed = true;
 
                 if (disposing)
                 {
@@ -232,8 +233,6 @@ namespace Library.Io
                         _buffers = null;
                     }
                 }
-
-                _disposed = true;
             }
             finally
             {

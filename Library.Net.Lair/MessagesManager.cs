@@ -178,8 +178,8 @@ namespace Library.Net.Lair
             _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
             _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
 
-            _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(3, 0, 0), new BytesEqualityComparer());
-            _pushTopics = new CirculationCollection<byte[]>(new TimeSpan(3, 0, 0), new BytesEqualityComparer());
+            _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0), new BytesEqualityComparer());
+            _pushTopics = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0), new BytesEqualityComparer());
         }
 
         public int Id

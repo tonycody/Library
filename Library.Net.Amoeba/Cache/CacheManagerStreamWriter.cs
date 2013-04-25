@@ -192,6 +192,7 @@ namespace Library.Net.Amoeba
             try
             {
                 if (_disposed) return;
+                _disposed = true;
 
                 if (disposing)
                 {
@@ -203,8 +204,6 @@ namespace Library.Net.Amoeba
 
                     _disposed = true;
                 }
-
-                _disposed = true;
             }
             finally
             {

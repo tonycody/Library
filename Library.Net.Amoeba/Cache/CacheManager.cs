@@ -1565,6 +1565,7 @@ namespace Library.Net.Amoeba
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
 
             if (disposing)
             {
@@ -1582,8 +1583,6 @@ namespace Library.Net.Amoeba
                     _fileStream = null;
                 }
             }
-
-            _disposed = true;
         }
 
         private class Settings : Library.Configuration.SettingsBase, IThisLock

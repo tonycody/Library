@@ -13,12 +13,12 @@ namespace Library.Net.Lair
         private BufferManager _bufferManager;
 
         private Settings _settings;
-        
+
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
         private const int MaxReceiveCount = 1024 * 1024 * 1;
-        
+
         public ClientManager(BufferManager bufferManager)
         {
             _bufferManager = bufferManager;
@@ -391,16 +391,12 @@ namespace Library.Net.Lair
 
         protected override void Dispose(bool disposing)
         {
-            lock (this.ThisLock)
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
             {
-                if (_disposed) return;
 
-                if (disposing)
-                {
-
-                }
-
-                _disposed = true;
             }
         }
 

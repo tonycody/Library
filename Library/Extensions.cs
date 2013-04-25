@@ -10,17 +10,19 @@ namespace Library
 
         public static IEnumerable<T> Randomize<T>(this IEnumerable<T> collection)
         {
-            var targetList = new List<T>(collection);
-            var responseList = new List<T>();
+            var random = _threadLocalRandom.Value;
+            var list = new List<T>(collection);
+            int n = list.Count;
 
-            while (targetList.Count > 0)
+            while (n > 1)
             {
-                int i = _threadLocalRandom.Value.Next(targetList.Count);
-                responseList.Add(targetList[i]);
-                targetList.RemoveAt(i);
+                int k = random.Next(n--);
+                T temp = list[n];
+                list[n] = list[k];
+                list[k] = temp;
             }
 
-            return responseList;
+            return list;
         }
     }
 }

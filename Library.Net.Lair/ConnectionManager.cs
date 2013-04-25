@@ -202,10 +202,10 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _protocolVersion;
                 }
             }
@@ -1334,35 +1334,33 @@ namespace Library.Net.Lair
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
             {
-                if (disposing)
+                if (_connection != null)
                 {
-                    if (_connection != null)
+                    try
                     {
-                        try
-                        {
-                            _aliveTimer.Dispose();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        try
-                        {
-                            _connection.Dispose();
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-
-                        _connection = null;
+                        _aliveTimer.Dispose();
                     }
-                }
+                    catch (Exception)
+                    {
 
-                _disposed = true;
+                    }
+
+                    try
+                    {
+                        _connection.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _connection = null;
+                }
             }
         }
 

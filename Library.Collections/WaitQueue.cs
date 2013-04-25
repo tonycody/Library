@@ -371,25 +371,23 @@ namespace Library.Collections
 
         protected void Dispose(bool disposing)
         {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    if (_lowerResetEvent != null)
-                    {
-                        _lowerResetEvent.Set();
-                        _lowerResetEvent.Close();
-                    }
+            if (_disposed) return;
+            _disposed = true;
 
-                    if (_upperResetEvent != null)
-                    {
-                        _upperResetEvent.Set();
-                        _upperResetEvent.Close();
-                    }
+            if (disposing)
+            {
+                if (_lowerResetEvent != null)
+                {
+                    _lowerResetEvent.Set();
+                    _lowerResetEvent.Close();
+                }
+
+                if (_upperResetEvent != null)
+                {
+                    _upperResetEvent.Set();
+                    _upperResetEvent.Close();
                 }
             }
-
-            _disposed = true;
         }
 
         #region IDisposable

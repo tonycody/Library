@@ -181,19 +181,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _settings.BaseNode;
                 }
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     _settings.BaseNode = value;
                     _routeTable.BaseNode = value;
 
@@ -206,10 +206,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _routeTable.ToArray();
                 }
             }
@@ -219,19 +219,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _settings.ConnectionCountLimit;
                 }
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     _settings.ConnectionCountLimit = value;
                 }
             }
@@ -241,19 +241,19 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _settings.BandwidthLimit;
                 }
             }
             set
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     _settings.BandwidthLimit = value;
                     _bandwidthLimit.In = value;
                     _bandwidthLimit.Out = value;
@@ -265,10 +265,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     List<Information> list = new List<Information>();
 
                     foreach (var item in _connectionManagers.ToArray())
@@ -294,10 +294,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     List<InformationContext> contexts = new List<InformationContext>();
 
                     contexts.Add(new InformationContext("PushNodeCount", _pushNodeCount));
@@ -347,10 +347,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _receivedByteCount + _connectionManagers.Sum(n => n.ReceivedByteCount);
                 }
             }
@@ -360,10 +360,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _sentByteCount + _connectionManagers.Sum(n => n.SentByteCount);
                 }
             }
@@ -617,55 +617,7 @@ namespace Library.Net.Amoeba
 
                     if (flag)
                     {
-                        ThreadPool.QueueUserWorkItem(new WaitCallback((object state) =>
-                        {
-                            // PushNodes
-                            try
-                            {
-                                List<Node> nodes = new List<Node>();
-
-                                lock (this.ThisLock)
-                                {
-                                    var clist = _connectionManagers.ToList();
-                                    clist.Remove(connectionManager);
-
-                                    clist.Sort((x, y) =>
-                                    {
-                                        return x.ResponseTime.CompareTo(y.ResponseTime);
-                                    });
-
-                                    nodes.AddRange(clist
-                                        .Select(n => n.Node)
-                                        .Where(n => n.Uris.Count > 0)
-                                        .Take(12));
-                                }
-
-                                if (nodes.Count > 0)
-                                {
-                                    connectionManager.PushNodes(nodes);
-
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
-                                    _pushNodeCount += nodes.Count;
-                                }
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            try
-                            {
-                                connectionManager.PushCancel();
-
-                                Debug.WriteLine("ConnectionManager: Push Cancel");
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            connectionManager.Dispose();
-                        }));
+                        connectionManager.Dispose();
 
                         return;
                     }
@@ -750,7 +702,7 @@ namespace Library.Net.Amoeba
                     node = _cuttingNodes
                         .ToArray()
                         .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
-                        .OrderBy(n => _random.Next())
+                        .Randomize()
                         .FirstOrDefault();
 
                     if (node == null)
@@ -758,7 +710,7 @@ namespace Library.Net.Amoeba
                         node = _routeTable
                             .ToArray()
                             .Where(n => !_connectionManagers.Any(m => Collection.Equals(m.Node.Id, n.Id)) && !_creatingNodes.Contains(n))
-                            .OrderBy(n => _random.Next())
+                            .Randomize()
                             .FirstOrDefault();
                     }
 
@@ -773,7 +725,7 @@ namespace Library.Net.Amoeba
                     uris.UnionWith(node.Uris
                         .Take(12)
                         .Where(n => _clientManager.CheckUri(n))
-                        .OrderBy(n => _random.Next()));
+                        .Randomize());
 
                     if (uris.Count == 0)
                     {
@@ -839,7 +791,7 @@ namespace Library.Net.Amoeba
                             _removeNodes.Add(node);
                             _cuttingNodes.Remove(node);
 
-                            if (_routeTable.Count >_routeTableMinCount)
+                            if (_routeTable.Count > _routeTableMinCount)
                             {
                                 _routeTable.Remove(node);
                             }
@@ -861,6 +813,22 @@ namespace Library.Net.Amoeba
             {
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
+
+                {
+                    var connectionCount = 0;
+
+                    lock (this.ThisLock)
+                    {
+                        connectionCount = _connectionManagers
+                            .Where(n => n.Type == ConnectionManagerType.Server)
+                            .Count();
+                    }
+
+                    if (connectionCount > ((this.ConnectionCountLimit / 3) * 2))
+                    {
+                        continue;
+                    }
+                }
 
                 string uri;
                 var connection = _serverManager.AcceptConnection(out uri);
@@ -1009,7 +977,7 @@ namespace Library.Net.Amoeba
                             {
                                 var removeSeedSignatures = this.OnRemoveSeedSignaturesEvent();
 
-                                if (removeSeedSignatures != null)
+                                if (removeSeedSignatures != null && removeSeedSignatures.Count() > 0)
                                 {
                                     lock (this.ThisLock)
                                     {
@@ -1042,7 +1010,7 @@ namespace Library.Net.Amoeba
                             var list = _settings.UploadBlocksRequest
                                 .ToArray()
                                 .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             int count = 1024;
@@ -1057,7 +1025,7 @@ namespace Library.Net.Amoeba
                             var list = _settings.DiffusionBlocksRequest
                                 .ToArray()
                                 .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             int count = 1024;
@@ -1073,7 +1041,7 @@ namespace Library.Net.Amoeba
                         LockedDictionary<Node, LockedHashSet<Key>> pushBlocksDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
                         //foreach (var item in pushBlocksList)
-                        Parallel.ForEach(pushBlocksList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        Parallel.ForEach(pushBlocksList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {
@@ -1167,7 +1135,7 @@ namespace Library.Net.Amoeba
                             var list = _cacheManager
                                 .ToArray()
                                 .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 256 && i < list.Count; i++)
@@ -1184,7 +1152,7 @@ namespace Library.Net.Amoeba
                             var list = _downloadBlocks
                                 .ToArray()
                                 .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 256 && i < list.Count; i++)
@@ -1204,7 +1172,7 @@ namespace Library.Net.Amoeba
                             var messageManager = _messagesManager[node];
                             var list = messageManager.PullBlocksLink
                                 .ToArray()
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 256 && i < list.Count; i++)
@@ -1222,7 +1190,7 @@ namespace Library.Net.Amoeba
                             var messageManager = _messagesManager[node];
                             var list = messageManager.PullBlocksRequest
                                 .ToArray()
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             if (list.Any(n => _cacheManager.Contains(n))) continue;
@@ -1242,7 +1210,7 @@ namespace Library.Net.Amoeba
                         {
                             var list = _pushSeedsRequestList
                                 .ToArray()
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             for (int i = 0; i < 128 && i < list.Count; i++)
@@ -1256,7 +1224,7 @@ namespace Library.Net.Amoeba
                             var messageManager = _messagesManager[node];
                             var list = messageManager.PullSeedsRequest
                                 .ToArray()
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .ToList();
 
                             for (int i = 0; i < 128 && i < list.Count; i++)
@@ -1270,7 +1238,7 @@ namespace Library.Net.Amoeba
                         LockedDictionary<Node, LockedHashSet<Key>> pushBlocksLinkDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
                         //foreach (var item in pushBlocksLinkList)
-                        Parallel.ForEach(pushBlocksLinkList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        Parallel.ForEach(pushBlocksLinkList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {
@@ -1311,7 +1279,7 @@ namespace Library.Net.Amoeba
                         LockedDictionary<Node, LockedHashSet<Key>> pushBlocksRequestDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
 
                         //foreach (var item in pushBlocksRequestList)
-                        Parallel.ForEach(pushBlocksRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        Parallel.ForEach(pushBlocksRequestList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {
@@ -1326,7 +1294,7 @@ namespace Library.Net.Amoeba
                                 }
 
                                 requestNodes = requestNodes
-                                    .OrderBy(n => _random.Next())
+                                    .Randomize()
                                     .ToList();
 
                                 if (requestNodes.Count == 0)
@@ -1366,7 +1334,7 @@ namespace Library.Net.Amoeba
                     {
                         LockedDictionary<Node, LockedHashSet<string>> pushSeedsRequestDictionary = new LockedDictionary<Node, LockedHashSet<string>>();
 
-                        Parallel.ForEach(pushSeedsRequestList.OrderBy(n => _random.Next()), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        Parallel.ForEach(pushSeedsRequestList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
                         {
                             try
                             {
@@ -1504,7 +1472,7 @@ namespace Library.Net.Amoeba
                                 {
                                     tempList = new KeyCollection(_pushBlocksLinkDictionary[connectionManager.Node]
                                         .ToArray()
-                                        .OrderBy(n => _random.Next())
+                                        .Randomize()
                                         .Take(2048));
 
                                     _pushBlocksLinkDictionary[connectionManager.Node].ExceptWith(tempList);
@@ -1544,7 +1512,7 @@ namespace Library.Net.Amoeba
                                 {
                                     tempList = new KeyCollection(_pushBlocksRequestDictionary[connectionManager.Node]
                                         .ToArray()
-                                        .OrderBy(n => _random.Next())
+                                        .Randomize()
                                         .Take(2048));
 
                                     _pushBlocksRequestDictionary[connectionManager.Node].ExceptWith(tempList);
@@ -1590,7 +1558,7 @@ namespace Library.Net.Amoeba
                                 {
                                     tempList = new SignatureCollection(_pushSeedsRequestDictionary[connectionManager.Node]
                                         .ToArray()
-                                        .OrderBy(n => _random.Next())
+                                        .Randomize()
                                         .Take(count));
 
                                     _pushSeedsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
@@ -1638,7 +1606,7 @@ namespace Library.Net.Amoeba
                                 {
                                     key = _pushBlocksDictionary[connectionManager.Node]
                                         .ToArray()
-                                        .OrderBy(n => _random.Next())
+                                        .Randomize()
                                         .FirstOrDefault();
 
                                     if (key != null)
@@ -1695,7 +1663,7 @@ namespace Library.Net.Amoeba
                         {
                             foreach (var key in messageManager.PullBlocksRequest
                                 .ToArray()
-                                .OrderBy(n => _random.Next()))
+                                .Randomize())
                             {
                                 if (!_cacheManager.Contains(key)) continue;
 
@@ -1741,41 +1709,47 @@ namespace Library.Net.Amoeba
 
                         // PushSeed
                         {
-                            List<string> signatures = new List<string>(messageManager.PullSeedsRequest);
+                            List<string> signatures = new List<string>(messageManager.PullSeedsRequest.Randomize());
 
-                            Seed seed = null;
-
-                            lock (this.ThisLock)
+                            if (signatures.Count > 0)
                             {
-                                lock (_settings.ThisLock)
+                                List<Seed> seeds = new List<Seed>();
+
+                                lock (this.ThisLock)
                                 {
-                                    foreach (var signature in signatures.OrderBy(n => _random.Next()))
+                                    lock (_settings.ThisLock)
                                     {
-                                        Seed tempSeed;
-
-                                        if (_settings.StoreSeeds.TryGetValue(signature, out tempSeed))
+                                        foreach (var signature in signatures)
                                         {
-                                            DateTime creationTime;
+                                            Seed tempSeed;
 
-                                            if (!messageManager.PushStoreSeeds.TryGetValue(signature, out creationTime)
-                                                || tempSeed.CreationTime > creationTime)
+                                            if (_settings.StoreSeeds.TryGetValue(signature, out tempSeed))
                                             {
-                                                seed = tempSeed;
-                                                break;
+                                                DateTime creationTime;
+
+                                                if (!messageManager.PushStoreSeeds.TryGetValue(signature, out creationTime)
+                                                    || tempSeed.CreationTime > creationTime)
+                                                {
+                                                    seeds.Add(tempSeed);
+
+                                                    if (seeds.Count >= 4) goto End;
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            if (seed != null)
-                            {
-                                connectionManager.PushSeed(seed);
+                            End: ;
 
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Seed {0} ({1})", seed.Keywords[0], seed.Certificate.ToString()));
-                                _pushSeedCount++;
+                                foreach (var seed in seeds.Randomize().Take(4))
+                                {
+                                    connectionManager.PushSeed(seed);
 
-                                messageManager.PushStoreSeeds[seed.Certificate.ToString()] = seed.CreationTime;
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Seed {0} ({1})", seed.Keywords[0], seed.Certificate.ToString()));
+                                    _pushSeedCount++;
+
+                                    messageManager.PushStoreSeeds[seed.Certificate.ToString()] = seed.CreationTime;
+                                }
                             }
                         }
                     }
@@ -1821,7 +1795,7 @@ namespace Library.Net.Amoeba
                             _messagesManager[connectionManager.Node].SurroundingNodes.Clear();
                             _messagesManager[connectionManager.Node].SurroundingNodes.UnionWith(e.Nodes
                                 .Where(n => n != null && n.Id != null)
-                                .OrderBy(n => _random.Next())
+                                .Randomize()
                                 .Take(12));
                         }
                     }
@@ -2045,10 +2019,10 @@ namespace Library.Net.Amoeba
 
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 foreach (var node in nodes)
                 {
                     if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
@@ -2060,10 +2034,10 @@ namespace Library.Net.Amoeba
 
         public bool DownloadWaiting(Key key)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 if (_downloadBlocks.Contains(key))
                     return true;
 
@@ -2081,20 +2055,20 @@ namespace Library.Net.Amoeba
 
         public void Download(Key key)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _downloadBlocks.Add(key);
             }
         }
 
         public bool UploadWaiting(Key key)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 if (_settings.UploadBlocksRequest.Contains(key))
                     return true;
 
@@ -2104,10 +2078,10 @@ namespace Library.Net.Amoeba
 
         public void Upload(Key key)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 _settings.UploadBlocksRequest.Add(key);
             }
         }
@@ -2151,10 +2125,10 @@ namespace Library.Net.Amoeba
 
         public void Upload(Seed seed)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                 var now = DateTime.UtcNow;
 
                 if (seed == null || seed.Name != null || seed.Comment != null || seed.Keywords.Count == 0
@@ -2186,10 +2160,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
                     return _state;
                 }
             }
@@ -2465,13 +2439,12 @@ namespace Library.Net.Amoeba
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
 
             if (disposing)
             {
 
             }
-
-            _disposed = true;
         }
 
         #region IThisLock

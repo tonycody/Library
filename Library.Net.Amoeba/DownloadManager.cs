@@ -1237,6 +1237,7 @@ namespace Library.Net.Amoeba
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
 
             if (disposing)
             {
@@ -1246,8 +1247,6 @@ namespace Library.Net.Amoeba
                 _setThread.Join();
                 _removeThread.Join();
             }
-
-            _disposed = true;
         }
 
         #region IThisLock

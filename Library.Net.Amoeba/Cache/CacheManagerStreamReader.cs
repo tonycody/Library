@@ -159,6 +159,7 @@ namespace Library.Net.Amoeba
             try
             {
                 if (_disposed) return;
+                _disposed = true;
 
                 if (disposing)
                 {
@@ -168,8 +169,6 @@ namespace Library.Net.Amoeba
                         _blockBuffer = new ArraySegment<byte>();
                     }
                 }
-
-                _disposed = true;
             }
             finally
             {

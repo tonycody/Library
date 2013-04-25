@@ -417,10 +417,10 @@ namespace Library.Net.Connection
 
         public override void Close(TimeSpan timeout)
         {
+            if (_disposed) throw new ObjectDisposedException("SecureServerConnection");
+
             lock (this.ThisLock)
             {
-                if (_disposed) throw new ObjectDisposedException("SecureServerConnection");
-
                 try
                 {
                     _connection.Close(timeout);
@@ -630,6 +630,7 @@ namespace Library.Net.Connection
         protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
 
             if (disposing)
             {
@@ -647,8 +648,6 @@ namespace Library.Net.Connection
                     _connection = null;
                 }
             }
-
-            _disposed = true;
         }
 
         #region IThisLock
