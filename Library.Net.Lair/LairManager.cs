@@ -346,6 +346,22 @@ namespace Library.Net.Lair
             }
         }
 
+        public void SendRequest(Section section)
+        {
+            lock (this.ThisLock)
+            {
+                _connectionsManager.SendRequest(section);
+            }
+        }
+
+        public void SendRequest(Channel channel)
+        {
+            lock (this.ThisLock)
+            {
+                _connectionsManager.SendRequest(channel);
+            }
+        }
+
         public IEnumerable<Section> GetSections()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);

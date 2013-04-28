@@ -2340,6 +2340,22 @@ namespace Library.Net.Lair
             }
         }
 
+        public void SendRequest(Section section)
+        {
+            lock (this.ThisLock)
+            {
+                _pushSectionsRequestList.Add(section);
+            }
+        }
+
+        public void SendRequest(Channel channel)
+        {
+            lock (this.ThisLock)
+            {
+                _pushChannelsRequestList.Add(channel);
+            }
+        }
+
         public IEnumerable<Section> GetSections()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -2362,8 +2378,6 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _pushSectionsRequestList.Add(section);
-
                 var list = new List<Leader>();
 
                 lock (this.ThisLock)
@@ -2389,8 +2403,6 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _pushSectionsRequestList.Add(section);
-
                 var list = new List<Creator>();
 
                 lock (this.ThisLock)
@@ -2416,8 +2428,6 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _pushSectionsRequestList.Add(section);
-
                 var list = new List<Manager>();
 
                 lock (this.ThisLock)
@@ -2458,8 +2468,6 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _pushChannelsRequestList.Add(channel);
-
                 var list = new List<Topic>();
 
                 lock (this.ThisLock)
@@ -2485,8 +2493,6 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _pushChannelsRequestList.Add(channel);
-
                 var list = new List<Message>();
 
                 lock (this.ThisLock)
