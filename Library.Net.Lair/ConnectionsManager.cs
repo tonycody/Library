@@ -1082,7 +1082,7 @@ namespace Library.Net.Lair
 
                                 foreach (var m in list.ToArray())
                                 {
-                                    if ((now - m.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                                    if ((now - m.CreationTime) > new TimeSpan(32, 0, 0, 0))
                                     {
                                         list.Remove(m);
                                     }
@@ -1654,94 +1654,93 @@ namespace Library.Net.Lair
                     {
                         updateTime.Restart();
 
-                        // PushSectionsRequest
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
-                            SectionCollection tempList = null;
-                            int count = (int)(128 * this.ResponseTimePriority(connectionManager.Node));
-
-                            lock (_pushSectionsRequestDictionary.ThisLock)
+                            // PushSectionsRequest
                             {
-                                if (_pushSectionsRequestDictionary.ContainsKey(connectionManager.Node))
-                                {
-                                    tempList = new SectionCollection(_pushSectionsRequestDictionary[connectionManager.Node]
-                                        .ToArray()
-                                        .Randomize()
-                                        .Take(count));
+                                SectionCollection tempList = null;
+                                int count = (int)(_maxRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
-                                    _pushSectionsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
-                                    _messagesManager[connectionManager.Node].PushSectionsRequest.AddRange(tempList);
+                                lock (_pushSectionsRequestDictionary.ThisLock)
+                                {
+                                    LockedHashSet<Section> sectionHashset;
+
+                                    if (_pushSectionsRequestDictionary.TryGetValue(connectionManager.Node, out sectionHashset))
+                                    {
+                                        tempList = new SectionCollection(sectionHashset.ToArray().Randomize().Take(count));
+
+                                        _pushSectionsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
+                                        _messagesManager[connectionManager.Node].PushSectionsRequest.AddRange(tempList);
+                                    }
+                                }
+
+                                if (tempList != null && tempList.Count > 0)
+                                {
+                                    try
+                                    {
+                                        connectionManager.PushSectionsRequest(tempList);
+
+                                        foreach (var item in tempList)
+                                        {
+                                            _pushSectionsRequestList.Remove(item);
+                                        }
+
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push SectionsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                        _pushSectionRequestCount += tempList.Count;
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        foreach (var item in tempList)
+                                        {
+                                            _messagesManager[connectionManager.Node].PushSectionsRequest.Remove(item);
+                                        }
+
+                                        throw e;
+                                    }
                                 }
                             }
 
-                            if (tempList != null && tempList.Count != 0)
+                            // PushChannelsRequest
                             {
-                                try
-                                {
-                                    connectionManager.PushSectionsRequest(tempList);
+                                ChannelCollection tempList = null;
+                                int count = (int)(_maxRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
-                                    foreach (var item in tempList)
+                                lock (_pushChannelsRequestDictionary.ThisLock)
+                                {
+                                    LockedHashSet<Channel> channelHashset;
+
+                                    if (_pushChannelsRequestDictionary.TryGetValue(connectionManager.Node, out channelHashset))
                                     {
-                                        _pushSectionsRequestList.Remove(item);
-                                    }
+                                        tempList = new ChannelCollection(channelHashset.ToArray().Randomize().Take(count));
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push SectionsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
-                                    _pushSectionRequestCount += tempList.Count;
+                                        _pushChannelsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
+                                        _messagesManager[connectionManager.Node].PushChannelsRequest.AddRange(tempList);
+                                    }
                                 }
-                                catch (Exception e)
+
+                                if (tempList != null && tempList.Count > 0)
                                 {
-                                    foreach (var item in tempList)
+                                    try
                                     {
-                                        _messagesManager[connectionManager.Node].PushSectionsRequest.Remove(item);
+                                        connectionManager.PushChannelsRequest(tempList);
+
+                                        foreach (var item in tempList)
+                                        {
+                                            _pushChannelsRequestList.Remove(item);
+                                        }
+
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push ChannelsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                        _pushChannelRequestCount += tempList.Count;
                                     }
-
-                                    throw e;
-                                }
-                            }
-                        }
-
-                        // PushChannelsRequest
-                        if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
-                        {
-                            ChannelCollection tempList = null;
-                            int count = (int)(128 * this.ResponseTimePriority(connectionManager.Node));
-
-                            lock (_pushChannelsRequestDictionary.ThisLock)
-                            {
-                                if (_pushChannelsRequestDictionary.ContainsKey(connectionManager.Node))
-                                {
-                                    tempList = new ChannelCollection(_pushChannelsRequestDictionary[connectionManager.Node]
-                                        .ToArray()
-                                        .Randomize()
-                                        .Take(count));
-
-                                    _pushChannelsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
-                                    _messagesManager[connectionManager.Node].PushChannelsRequest.AddRange(tempList);
-                                }
-                            }
-
-                            if (tempList != null && tempList.Count != 0)
-                            {
-                                try
-                                {
-                                    connectionManager.PushChannelsRequest(tempList);
-
-                                    foreach (var item in tempList)
+                                    catch (Exception e)
                                     {
-                                        _pushChannelsRequestList.Remove(item);
-                                    }
+                                        foreach (var item in tempList)
+                                        {
+                                            _messagesManager[connectionManager.Node].PushChannelsRequest.Remove(item);
+                                        }
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push ChannelsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
-                                    _pushChannelRequestCount += tempList.Count;
-                                }
-                                catch (Exception e)
-                                {
-                                    foreach (var item in tempList)
-                                    {
-                                        _messagesManager[connectionManager.Node].PushChannelsRequest.Remove(item);
+                                        throw e;
                                     }
-
-                                    throw e;
                                 }
                             }
                         }
@@ -1815,7 +1814,7 @@ namespace Library.Net.Lair
                                                         {
                                                             managers.Add(m);
 
-                                                            if (managers.Count >= 8) goto End;
+                                                            if (managers.Count >= 2) goto End;
                                                         }
                                                     }
                                                 }
@@ -1825,7 +1824,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var manager in managers.Randomize().Take(8))
+                                    foreach (var manager in managers.Randomize().Take(2))
                                     {
                                         connectionManager.PushManager(manager);
 
@@ -1856,7 +1855,7 @@ namespace Library.Net.Lair
                                                         {
                                                             creators.Add(c);
 
-                                                            if (creators.Count >= 8) goto End;
+                                                            if (creators.Count >= 2) goto End;
                                                         }
                                                     }
                                                 }
@@ -1866,7 +1865,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var creator in creators.Randomize().Take(8))
+                                    foreach (var creator in creators.Randomize().Take(2))
                                     {
                                         connectionManager.PushCreator(creator);
 
@@ -1904,7 +1903,7 @@ namespace Library.Net.Lair
                                                         {
                                                             topics.Add(t);
 
-                                                            if (topics.Count >= 8) goto End;
+                                                            if (topics.Count >= 2) goto End;
                                                         }
                                                     }
                                                 }
@@ -1914,7 +1913,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var topic in topics.Randomize().Take(8))
+                                    foreach (var topic in topics.Randomize().Take(2))
                                     {
                                         connectionManager.PushTopic(topic);
 
@@ -1945,7 +1944,7 @@ namespace Library.Net.Lair
                                                         {
                                                             messages.Add(m);
 
-                                                            if (messages.Count >= 32) goto End;
+                                                            if (messages.Count >= 8) goto End;
                                                         }
                                                     }
                                                 }
@@ -1955,7 +1954,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var message in messages.Randomize().Take(32))
+                                    foreach (var message in messages.Randomize().Take(8))
                                     {
                                         connectionManager.PushMessage(message);
 
@@ -2236,7 +2235,7 @@ namespace Library.Net.Lair
 
             if (e.Message == null || e.Message.Channel == null || e.Message.Channel.Id == null || string.IsNullOrWhiteSpace(e.Message.Channel.Name)
                 || string.IsNullOrWhiteSpace(e.Message.Content)
-                || (now - e.Message.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                || (now - e.Message.CreationTime) > new TimeSpan(32, 0, 0, 0)
                 || (e.Message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || e.Message.Certificate == null || !e.Message.VerifyCertificate()) return;
 

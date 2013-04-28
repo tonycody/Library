@@ -1468,19 +1468,18 @@ namespace Library.Net.Amoeba
 
                             lock (_pushBlocksLinkDictionary.ThisLock)
                             {
-                                if (_pushBlocksLinkDictionary.ContainsKey(connectionManager.Node))
+                                LockedHashSet<Key> keyHashset;
+
+                                if (_pushBlocksLinkDictionary.TryGetValue(connectionManager.Node, out keyHashset))
                                 {
-                                    tempList = new KeyCollection(_pushBlocksLinkDictionary[connectionManager.Node]
-                                        .ToArray()
-                                        .Randomize()
-                                        .Take(2048));
+                                    tempList = new KeyCollection(keyHashset.ToArray().Randomize().Take(2048));
 
                                     _pushBlocksLinkDictionary[connectionManager.Node].ExceptWith(tempList);
                                     _messagesManager[connectionManager.Node].PushBlocksLink.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count != 0)
+                            if (tempList != null && tempList.Count > 0)
                             {
                                 try
                                 {
@@ -1508,19 +1507,18 @@ namespace Library.Net.Amoeba
 
                             lock (_pushBlocksRequestDictionary.ThisLock)
                             {
-                                if (_pushBlocksRequestDictionary.ContainsKey(connectionManager.Node))
+                                LockedHashSet<Key> keyHashset;
+
+                                if (_pushBlocksRequestDictionary.TryGetValue(connectionManager.Node, out keyHashset))
                                 {
-                                    tempList = new KeyCollection(_pushBlocksRequestDictionary[connectionManager.Node]
-                                        .ToArray()
-                                        .Randomize()
-                                        .Take(2048));
+                                    tempList = new KeyCollection(keyHashset.ToArray().Randomize().Take(2048));
 
                                     _pushBlocksRequestDictionary[connectionManager.Node].ExceptWith(tempList);
                                     _messagesManager[connectionManager.Node].PushBlocksRequest.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count != 0)
+                            if (tempList != null && tempList.Count > 0)
                             {
                                 try
                                 {
@@ -1550,23 +1548,22 @@ namespace Library.Net.Amoeba
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
                             SignatureCollection tempList = null;
-                            int count = (int)(128 * this.ResponseTimePriority(connectionManager.Node));
+                            int count = (int)(_maxSeedRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (_pushSeedsRequestDictionary.ThisLock)
                             {
-                                if (_pushSeedsRequestDictionary.ContainsKey(connectionManager.Node))
+                                LockedHashSet<string> signatureHashset;
+
+                                if (_pushSeedsRequestDictionary.TryGetValue(connectionManager.Node, out signatureHashset))
                                 {
-                                    tempList = new SignatureCollection(_pushSeedsRequestDictionary[connectionManager.Node]
-                                        .ToArray()
-                                        .Randomize()
-                                        .Take(count));
+                                    tempList = new SignatureCollection(signatureHashset.ToArray().Randomize().Take(count));
 
                                     _pushSeedsRequestDictionary[connectionManager.Node].ExceptWith(tempList);
                                     _messagesManager[connectionManager.Node].PushSeedsRequest.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count != 0)
+                            if (tempList != null && tempList.Count > 0)
                             {
                                 try
                                 {
