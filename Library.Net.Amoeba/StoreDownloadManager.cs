@@ -135,11 +135,12 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private static bool CheckStoreDigitalSignature(Store store)
+        private static bool CheckBoxDigitalSignature(ref Box box)
         {
+            bool flag = true;
             var seedList = new List<Seed>();
             var boxList = new List<Box>();
-            boxList.AddRange(store.Boxes);
+            boxList.Add(box);
 
             for (int i = 0; i < boxList.Count; i++)
             {
@@ -147,23 +148,27 @@ namespace Library.Net.Amoeba
                 seedList.AddRange(boxList[i].Seeds);
             }
 
-            foreach (var item in seedList)
+            foreach (var item in seedList.Reverse<Seed>())
             {
                 if (!item.VerifyCertificate())
                 {
-                    return false;
+                    flag = false;
+
+                    item.CreateCertificate(null);
                 }
             }
 
-            foreach (var item in boxList)
+            foreach (var item in boxList.Reverse<Box>())
             {
                 if (!item.VerifyCertificate())
                 {
-                    return false;
+                    flag = false;
+
+                    item.CreateCertificate(null);
                 }
             }
 
-            return true;
+            return flag;
         }
 
         private static FileStream GetUniqueFileStream(string path)
@@ -524,10 +529,14 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        if (StoreDownloadManager.CheckStoreDigitalSignature(store))
+                                        for (int i = 0; i < store.Boxes.Count; i++)
                                         {
-                                            item.Store = store;
+                                            var box = store.Boxes[i];
+                                            StoreDownloadManager.CheckBoxDigitalSignature(ref box);
+                                            store.Boxes[i] = box;
                                         }
+
+                                        item.Store = store;
 
                                         if (item.Seed != null)
                                         {
@@ -700,10 +709,14 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        if (StoreDownloadManager.CheckStoreDigitalSignature(store))
+                                        for (int i = 0; i < store.Boxes.Count; i++)
                                         {
-                                            item.Store = store;
+                                            var box = store.Boxes[i];
+                                            StoreDownloadManager.CheckBoxDigitalSignature(ref box);
+                                            store.Boxes[i] = box;
                                         }
+
+                                        item.Store = store;
 
                                         if (item.Seed != null)
                                         {
@@ -816,7 +829,7 @@ namespace Library.Net.Amoeba
                             foreach (var signature in this.Signatures)
                             {
                                 var seed = _connectionsManager.GetStoreSeed(signature);
-                                if (seed == null) continue;
+                                if (seed == null || seed.Length > 1024 * 1024 * 32) continue;
 
                                 var item = _settings.StoreDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
 

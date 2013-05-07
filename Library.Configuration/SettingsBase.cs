@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Xml;
+using Library.Io;
 
 namespace Library.Configuration
 {
@@ -55,6 +56,7 @@ namespace Library.Configuration
     public abstract class SettingsBase : ISettings
     {
         private IList<ISettingsContext> _contextList;
+        private const int _cacheSize = 1024 * 64;
 
         protected SettingsBase(IEnumerable<ISettingsContext> contextList)
         {
@@ -100,7 +102,8 @@ namespace Library.Configuration
                 try
                 {
                     using (FileStream stream = new FileStream(configPath, FileMode.Open))
-                    using (GZipStream decompressStream = new GZipStream(stream, CompressionMode.Decompress))
+                    using (CacheStream cacheStream = new CacheStream(stream, _cacheSize, BufferManager.Instance))
+                    using (GZipStream decompressStream = new GZipStream(cacheStream, CompressionMode.Decompress))
                     {
                         using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
                         {
@@ -130,7 +133,8 @@ namespace Library.Configuration
                 try
                 {
                     using (FileStream stream = new FileStream(configPath, FileMode.Open))
-                    using (GZipStream decompressStream = new GZipStream(stream, CompressionMode.Decompress))
+                    using (CacheStream cacheStream = new CacheStream(stream, _cacheSize, BufferManager.Instance))
+                    using (GZipStream decompressStream = new GZipStream(cacheStream, CompressionMode.Decompress))
                     {
                         using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
                         {
@@ -157,10 +161,11 @@ namespace Library.Configuration
                     string uniquePath = null;
 
                     using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, value.Name + ".temp")))
+                    using (CacheStream cacheStream = new CacheStream(stream, _cacheSize, BufferManager.Instance))
                     {
                         uniquePath = stream.Name;
 
-                        using (GZipStream compressStream = new GZipStream(stream, CompressionMode.Compress))
+                        using (GZipStream compressStream = new GZipStream(cacheStream, CompressionMode.Compress))
                         using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(compressStream, new UTF8Encoding(false)))
                         {
                             var ds = new DataContractSerializer(value.Type);

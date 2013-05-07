@@ -18,7 +18,7 @@ namespace Library.Net.Amoeba
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        private const int MaxReceiveCount = 1024 * 1024 * 16;
+        private const int _maxReceiveCount = 1024 * 1024 * 16;
 
         public ClientManager(BufferManager bufferManager)
         {
@@ -328,7 +328,7 @@ namespace Library.Net.Amoeba
                     }
 #endif
                     socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
-                    connection = new TcpConnection(socket, ClientManager.MaxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(socket, _maxReceiveCount, _bufferManager);
                 }
                 else
                 {
@@ -399,7 +399,7 @@ namespace Library.Net.Amoeba
                         proxy = new HttpProxyClient(socket, host, port);
                     }
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), ClientManager.MaxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), _maxReceiveCount, _bufferManager);
                 }
 
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);
@@ -415,7 +415,7 @@ namespace Library.Net.Amoeba
                     throw;
                 }
 
-                var compressConnection = new CompressConnection(secureConnection, ClientManager.MaxReceiveCount, _bufferManager);
+                var compressConnection = new CompressConnection(secureConnection, _maxReceiveCount, _bufferManager);
 
                 try
                 {

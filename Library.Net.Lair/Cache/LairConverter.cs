@@ -340,41 +340,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToMessageString(Message item)
-        {
-            if (item == null) throw new ArgumentNullException("Message");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Message>(item))
-                {
-                    return "Message@" + LairConverter.ToBase64String(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Message FromMessageString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Message@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
-                {
-                    return LairConverter.FromStream<Message>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
         public static Stream ToMessagesStream(IEnumerable<Message> collection)
         {
             if (collection == null) throw new ArgumentNullException("collection");

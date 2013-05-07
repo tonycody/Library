@@ -23,7 +23,7 @@ namespace Library.Net.Amoeba
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        private const int MaxReceiveCount = 1024 * 1024 * 16;
+        private const int _maxReceiveCount = 1024 * 1024 * 16;
 
         public ServerManager(BufferManager bufferManager)
         {
@@ -63,7 +63,7 @@ namespace Library.Net.Amoeba
                             var socket = item.Value.AcceptTcpClient().Client;
 
                             uri = item.Key;
-                            connection = new TcpConnection(socket, ServerManager.MaxReceiveCount, _bufferManager);
+                            connection = new TcpConnection(socket, _maxReceiveCount, _bufferManager);
                             break;
                         }
                     }
@@ -84,7 +84,7 @@ namespace Library.Net.Amoeba
                     throw;
                 }
 
-                var compressConnection = new CompressConnection(secureConnection, ServerManager.MaxReceiveCount, _bufferManager);
+                var compressConnection = new CompressConnection(secureConnection, _maxReceiveCount, _bufferManager);
 
                 try
                 {
