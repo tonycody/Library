@@ -259,7 +259,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public long BandWidthLimit
+        public int BandWidthLimit
         {
             get
             {

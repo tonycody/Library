@@ -220,9 +220,7 @@ namespace Library.Net.Amoeba
         private void DownloadManagerThread()
         {
             Random random = new Random();
-            List<StoreDownloadItem> compList = new List<StoreDownloadItem>();
             int round = 0;
-            int compRound = 0;
 
             for (; ; )
             {
@@ -239,33 +237,31 @@ namespace Library.Net.Amoeba
                         {
                             if (_settings.StoreDownloadItems.Count > 0)
                             {
-                                var items = _settings.StoreDownloadItems
-                                    .Where(n => n.State == StoreDownloadState.Downloading)
-                                    .ToList();
-
-                                if (compRound == 0 && compList.Count == 0)
                                 {
-                                    compList.AddRange(items.Where(x =>
+                                    var items = _settings.StoreDownloadItems
+                                       .Where(n => n.State == StoreDownloadState.Downloading)
+                                       .Where(x =>
+                                       {
+                                           if (x.Rank == 1) return 0 == (!_cacheManager.Contains(x.Seed.Key) ? 1 : 0);
+                                           else return 0 == (x.Index.Groups.Sum(n => n.InformationLength) - x.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n))));
+                                       })
+                                       .ToList();
+
+                                    item = items.FirstOrDefault();
+                                }
+
+                                if (item == null)
+                                {
+                                    var items = _settings.StoreDownloadItems
+                                        .Where(n => n.State == StoreDownloadState.Downloading)
+                                        .ToList();
+
+                                    if (items.Count > 0)
                                     {
-                                        if (x.Rank == 1) return 0 == (!_cacheManager.Contains(x.Seed.Key) ? 1 : 0);
-                                        else return 0 == (x.Index.Groups.Sum(n => n.InformationLength) - x.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n))));
-                                    }));
+                                        round = (round >= items.Count) ? 0 : round;
+                                        item = items[round++];
+                                    }
                                 }
-
-                                if (compList.Count != 0)
-                                {
-                                    item = compList[0];
-                                    compList.RemoveAt(0);
-                                }
-                                else
-                                {
-                                    item = items.ElementAtOrDefault(round);
-                                }
-
-                                round++;
-                                round = (round >= items.Count) ? 0 : round;
-                                compRound++;
-                                compRound = (compRound >= 10) ? 0 : compRound;
                             }
                         }
                     }

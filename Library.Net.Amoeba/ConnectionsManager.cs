@@ -237,7 +237,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public long BandWidthLimit
+        public int BandWidthLimit
         {
             get
             {
@@ -634,13 +634,6 @@ namespace Library.Net.Amoeba
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 
-                var limit = connectionManager.Connection.GetLayers().OfType<IBandwidthLimit>().FirstOrDefault();
-
-                if (limit != null)
-                {
-                    limit.BandwidthLimit = _bandwidthLimit;
-                }
-
                 _nodeToUri.Add(connectionManager.Node, uri);
                 _connectionManagers.Add(connectionManager);
 
@@ -754,7 +747,7 @@ namespace Library.Net.Amoeba
                     {
                         if (this.State == ManagerState.Stop) return;
 
-                        var connection = _clientManager.CreateConnection(uri);
+                        var connection = _clientManager.CreateConnection(uri, _bandwidthLimit);
 
                         if (connection != null)
                         {
@@ -831,7 +824,7 @@ namespace Library.Net.Amoeba
                 }
 
                 string uri;
-                var connection = _serverManager.AcceptConnection(out uri);
+                var connection = _serverManager.AcceptConnection(out uri, _bandwidthLimit);
 
                 if (connection != null)
                 {
@@ -2297,7 +2290,7 @@ namespace Library.Net.Amoeba
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
-                    new Library.Configuration.SettingsContext<long>() { Name = "BandwidthLimit", Value = 0 },
+                    new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<string, Seed>>() { Name = "StoreSeeds", Value = new LockedDictionary<string, Seed>() },
@@ -2369,13 +2362,13 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public long BandwidthLimit
+            public int BandwidthLimit
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (long)this["BandwidthLimit"];
+                        return (int)this["BandwidthLimit"];
                     }
                 }
                 set

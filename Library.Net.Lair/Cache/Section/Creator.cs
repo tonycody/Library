@@ -185,21 +185,7 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Section != other.Section
-                || this.CreationTime != other.CreationTime
-                || this.Comment != other.Comment
-
-                || this.Certificate != other.Certificate)
-            {
-                return false;
-            }
-
-            if (this.ProtectedChannels != null && other.ProtectedChannels != null)
-            {
-                if (this.ProtectedChannels.Count != other.ProtectedChannels.Count) return false;
-
-                for (int i = 0; i < this.ProtectedChannels.Count; i++) if (this.ProtectedChannels[i] != other.ProtectedChannels[i]) return false;
-            }
+            if (!Collection.Equals(this.GetHash(HashAlgorithm.Sha512), other.GetHash(HashAlgorithm.Sha512))) return false;
 
             return true;
         }

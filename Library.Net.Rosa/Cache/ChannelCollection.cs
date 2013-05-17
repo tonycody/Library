@@ -1,24 +1,24 @@
 ﻿using System.Collections.Generic;
 using Library.Collections;
 
-namespace Library.Net.Lair
+namespace Library.Net.Rosa
 {
-    public sealed class LeaderCollection : FilterList<Leader>, IEnumerable<Leader>
+    public sealed class ChannelCollection : FilterList<Channel>, IEnumerable<Channel>
     {
-        public LeaderCollection() : base() { }
-        public LeaderCollection(int capacity) : base(capacity) { }
-        public LeaderCollection(IEnumerable<Leader> collections) : base(collections) { }
+        public ChannelCollection() : base() { }
+        public ChannelCollection(int capacity) : base(capacity) { }
+        public ChannelCollection(IEnumerable<Channel> collections) : base(collections) { }
 
-        protected override bool Filter(Leader item)
+        protected override bool Filter(Channel item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Leader>
+        #region IEnumerable<Channel>
 
-        IEnumerator<Leader> IEnumerable<Leader>.GetEnumerator()
+        IEnumerator<Channel> IEnumerable<Channel>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

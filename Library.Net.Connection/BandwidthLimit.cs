@@ -8,30 +8,23 @@ using System.Xml;
 
 namespace Library.Net.Connection
 {
-    public interface IBandwidthLimit
-    {
-        BandwidthLimit BandwidthLimit { get; set; }
-    }
-
     [DataContract(Name = "BandwidthLimit", Namespace = "http://Library/Net/Connection")]
-    public sealed class BandwidthLimit : IDeepCloneable<BandwidthLimit>, IEquatable<BandwidthLimit>, IThisLock
+    public sealed class BandwidthLimit : IDeepCloneable<BandwidthLimit>, IEquatable<BandwidthLimit>
     {
         private System.Timers.Timer _refreshTimer = new System.Timers.Timer();
-        private ManualResetEvent _outManualResetEvent = new ManualResetEvent(false);
-        private ManualResetEvent _inManualResetEvent = new ManualResetEvent(false);
-        private long _totalOutSize = 0;
-        private long _totalInSize = 0;
+        private Random _random = new Random();
+
+        private Dictionary<ConnectionBase, ManualResetEvent> _outResetEvents = new Dictionary<ConnectionBase, ManualResetEvent>();
+        private Dictionary<ConnectionBase, ManualResetEvent> _inResetEvents = new Dictionary<ConnectionBase, ManualResetEvent>();
+
+        private volatile int _out;
+        private volatile int _in;
+
+        private volatile int _totalOutSize = 0;
+        private volatile int _totalInSize = 0;
+
         private object _outLockObject = new object();
         private object _inLockObject = new object();
-
-        private HashSet<ConnectionBase> _leaveConnection = new HashSet<ConnectionBase>();
-        private object _leaveConnectionLockObject = new object();
-
-        private long _out;
-        private long _in;
-
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
 
         public BandwidthLimit()
         {
@@ -47,13 +40,21 @@ namespace Library.Net.Connection
             lock (_outLockObject)
             {
                 _totalOutSize = 0;
-                _outManualResetEvent.Set();
+
+                foreach (var item in _outResetEvents.Values.Randomize(_random))
+                {
+                    item.Set();
+                }
             }
 
             lock (_inLockObject)
             {
                 _totalInSize = 0;
-                _inManualResetEvent.Set();
+
+                foreach (var item in _inResetEvents.Values.Randomize(_random))
+                {
+                    item.Set();
+                }
             }
         }
 
@@ -78,10 +79,7 @@ namespace Library.Net.Connection
 
         public override int GetHashCode()
         {
-            lock (this.ThisLock)
-            {
-                return (int)(this.In ^ this.Out);
-            }
+            return (int)(this.In ^ this.Out);
         }
 
         public override bool Equals(object obj)
@@ -106,123 +104,133 @@ namespace Library.Net.Connection
             return true;
         }
 
-        public int GetOutBandwidth(ConnectionBase connection, int size)
+        public void Join(ConnectionBase connection)
         {
-            if (_out == 0) return size;
-
-            for (; ; )
+            lock (_outLockObject)
             {
-                lock (_outLockObject)
-                {
-                    if (_out <= _totalOutSize)
-                    {
-                        _outManualResetEvent.Reset();
-                    }
-                    else if (_out < (_totalOutSize + size))
-                    {
-                        int s = (int)(_out - _totalOutSize);
-
-                        _totalOutSize += s;
-
-                        return s;
-                    }
-                    else
-                    {
-                        _totalOutSize += size;
-
-                        return size;
-                    }
-                }
-
-                _outManualResetEvent.WaitOne();
-
-                lock (_leaveConnectionLockObject)
-                {
-                    if (_leaveConnection.Remove(connection)) return -1;
-                }
+                _outResetEvents[connection] = new ManualResetEvent(false);
             }
-        }
 
-        public int GetInBandwidth(ConnectionBase connection, int size)
-        {
-            if (_in == 0) return size;
-
-            for (; ; )
+            lock (_inLockObject)
             {
-                lock (_inLockObject)
-                {
-                    if (_in <= _totalInSize)
-                    {
-                        _inManualResetEvent.Reset();
-                    }
-                    else if (_in < (_totalInSize + size))
-                    {
-                        int s = (int)(_in - _totalInSize);
-
-                        _totalInSize += s;
-
-                        return s;
-                    }
-                    else
-                    {
-                        _totalInSize += size;
-
-                        return size;
-                    }
-                }
-
-                _inManualResetEvent.WaitOne();
-
-                lock (_leaveConnectionLockObject)
-                {
-                    if (_leaveConnection.Remove(connection)) return -1;
-                }
+                _inResetEvents[connection] = new ManualResetEvent(false);
             }
         }
 
         public void Leave(ConnectionBase connection)
         {
-            lock (_leaveConnectionLockObject)
+            lock (_outLockObject)
             {
-                _leaveConnection.Add(connection);
+                _outResetEvents.Remove(connection);
+            }
+
+            lock (_inLockObject)
+            {
+                _inResetEvents.Remove(connection);
             }
         }
 
-        [DataMember(Name = "In")]
-        public long In
+        public int GetOutBandwidth(ConnectionBase connection, int size)
         {
-            get
+            for (; ; )
             {
-                lock (this.ThisLock)
+                if (_out == 0) return size;
+
+                ManualResetEvent resetEvent;
+
+                lock (_outLockObject)
                 {
-                    return _in;
+                    if (_outResetEvents.TryGetValue(connection, out resetEvent))
+                    {
+                        if (_out <= _totalOutSize)
+                        {
+                            resetEvent.Reset();
+                        }
+                        else if (_out < (_totalOutSize + size))
+                        {
+                            int s = (int)(_out - _totalOutSize);
+
+                            _totalOutSize += s;
+
+                            return s;
+                        }
+                        else
+                        {
+                            _totalOutSize += size;
+
+                            return size;
+                        }
+                    }
                 }
+
+                if (resetEvent == null) return -1;
+
+                resetEvent.WaitOne();
             }
-            set
+        }
+
+        public int GetInBandwidth(ConnectionBase connection, int size)
+        {
+            for (; ; )
             {
-                lock (this.ThisLock)
+                if (_in == 0) return size;
+
+                ManualResetEvent resetEvent;
+
+                lock (_inLockObject)
                 {
-                    _in = value;
+                    if (_inResetEvents.TryGetValue(connection, out resetEvent))
+                    {
+                        if (_in <= _totalInSize)
+                        {
+                            resetEvent.Reset();
+                        }
+                        else if (_in < (_totalInSize + size))
+                        {
+                            int s = (int)(_in - _totalInSize);
+
+                            _totalInSize += s;
+
+                            return s;
+                        }
+                        else
+                        {
+                            _totalInSize += size;
+
+                            return size;
+                        }
+                    }
                 }
+
+                if (resetEvent == null) return -1;
+
+                resetEvent.WaitOne();
             }
         }
 
         [DataMember(Name = "Out")]
-        public long Out
+        public int Out
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _out;
-                }
+                return _out;
             }
             set
             {
-                lock (this.ThisLock)
-                {
-                    _out = value;
-                }
+                _out = value;
+            }
+        }
+
+        [DataMember(Name = "In")]
+        public int In
+        {
+            get
+            {
+                return _in;
+            }
+            set
+            {
+                _in = value;
             }
         }
 
@@ -230,41 +238,20 @@ namespace Library.Net.Connection
 
         public BandwidthLimit DeepClone()
         {
-            lock (this.ThisLock)
+            var ds = new DataContractSerializer(typeof(BandwidthLimit));
+
+            using (MemoryStream ms = new MemoryStream())
             {
-                var ds = new DataContractSerializer(typeof(BandwidthLimit));
-
-                using (MemoryStream ms = new MemoryStream())
+                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
-                    {
-                        ds.WriteObject(textDictionaryWriter, this);
-                    }
-
-                    ms.Position = 0;
-
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
-                    {
-                        return (BandwidthLimit)ds.ReadObject(textDictionaryReader);
-                    }
+                    ds.WriteObject(textDictionaryWriter, this);
                 }
-            }
-        }
 
-        #endregion
+                ms.Position = 0;
 
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                lock (_thisStaticLock)
+                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    return (BandwidthLimit)ds.ReadObject(textDictionaryReader);
                 }
             }
         }

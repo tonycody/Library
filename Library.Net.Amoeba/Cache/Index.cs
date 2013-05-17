@@ -192,16 +192,12 @@ namespace Library.Net.Amoeba
 
             if (this.Groups != null && other.Groups != null)
             {
-                if (this.Groups.Count != other.Groups.Count) return false;
-
-                for (int i = 0; i < this.Groups.Count; i++) if (this.Groups[i] != other.Groups[i]) return false;
+                if (!Collection.Equals(this.Groups, other.Groups)) return false;
             }
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {
-                if (this.CryptoKey.Length != other.CryptoKey.Length) return false;
-
-                for (int i = 0; i < this.CryptoKey.Length; i++) if (this.CryptoKey[i] != other.CryptoKey[i]) return false;
+                if (!Collection.Equals(this.CryptoKey, other.CryptoKey)) return false;
             }
 
             return true;

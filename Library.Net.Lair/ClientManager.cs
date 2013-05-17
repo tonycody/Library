@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
@@ -17,7 +18,7 @@ namespace Library.Net.Lair
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        private const int _maxReceiveCount = 1024 * 1024 * 1;
+        private const int _maxReceiveCount = 1024 * 1024 * 16;
 
         public ClientManager(BufferManager bufferManager)
         {
@@ -34,6 +35,107 @@ namespace Library.Net.Lair
                 {
                     return _settings.ConnectionFilters;
                 }
+            }
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> DecodeCommand(string option)
+        {
+            try
+            {
+                Dictionary<string, string> pair = new Dictionary<string, string>();
+                List<char> kl = new List<char>();
+                List<char> vl = new List<char>();
+                bool keyFlag = true;
+                bool wordFlag = false;
+
+                for (int i = 0; i < option.Length; i++)
+                {
+                    char w1;
+                    char? w2 = null;
+
+                    w1 = option[i];
+                    if (option.Length > i + 1) w2 = option[i + 1];
+
+                    if (keyFlag)
+                    {
+                        if (w1 == '=')
+                        {
+                            keyFlag = false;
+                        }
+                        else
+                        {
+                            kl.Add(w1);
+                        }
+                    }
+                    else
+                    {
+                        if (w1 == '\\' && w2.HasValue)
+                        {
+                            if (w2.Value == '\"' || w2.Value == '\\')
+                            {
+                                vl.Add(w2.Value);
+                                i++;
+                            }
+                        }
+                        else
+                        {
+                            if (wordFlag)
+                            {
+                                if (w1 == '\"')
+                                {
+                                    wordFlag = false;
+                                }
+                                else
+                                {
+                                    vl.Add(w1);
+                                }
+                            }
+                            else
+                            {
+                                if (w1 == '\"')
+                                {
+                                    wordFlag = true;
+                                }
+                                else if (w1 == ' ')
+                                {
+                                    var key = new string(kl.ToArray());
+                                    var value = new string(vl.ToArray());
+
+                                    if (!string.IsNullOrWhiteSpace(key))
+                                    {
+                                        pair[key.Trim()] = value;
+                                    }
+
+                                    kl.Clear();
+                                    vl.Clear();
+
+                                    keyFlag = true;
+                                }
+                                else
+                                {
+                                    vl.Add(w1);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!keyFlag)
+                {
+                    var key = new string(kl.ToArray());
+                    var value = new string(vl.ToArray());
+
+                    if (!string.IsNullOrWhiteSpace(key))
+                    {
+                        pair[key.Trim()] = value;
+                    }
+                }
+
+                return pair;
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 
@@ -111,7 +213,7 @@ namespace Library.Net.Lair
             return !(connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None);
         }
 
-        public ConnectionBase CreateConnection(string uri)
+        public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
             Socket socket = null;
             ConnectionBase connection = null;
@@ -163,6 +265,13 @@ namespace Library.Net.Lair
                 }
 
                 if (host == null) return null;
+
+                IList<KeyValuePair<string, string>> options = null;
+
+                if (!string.IsNullOrWhiteSpace(connectionFilter.Option))
+                {
+                    options = ClientManager.DecodeCommand(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
+                }
 
                 if (connectionFilter.ConnectionType == ConnectionType.Tcp)
                 {
@@ -219,7 +328,7 @@ namespace Library.Net.Lair
                     }
 #endif
                     socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
-                    connection = new TcpConnection(socket, _maxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(socket, bandwidthLimit, _maxReceiveCount, _bufferManager);
                 }
                 else
                 {
@@ -268,22 +377,29 @@ namespace Library.Net.Lair
 
                     if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
                     {
-                        proxy = new Socks4ProxyClient(socket, host, port);
+                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+
+                        proxy = new Socks4ProxyClient(socket, user, host, port);
                     }
                     else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
                     {
-                        proxy = new Socks4aProxyClient(socket, host, port);
+                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+
+                        proxy = new Socks4aProxyClient(socket, user, host, port);
                     }
                     else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
                     {
-                        proxy = new Socks5ProxyClient(socket, host, port);
+                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                        var pass = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("pass")).Select(n => n.Value).FirstOrDefault() : null;
+
+                        proxy = new Socks5ProxyClient(socket, user, pass, host, port);
                     }
                     else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
                     {
                         proxy = new HttpProxyClient(socket, host, port);
                     }
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), _maxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), bandwidthLimit, _maxReceiveCount, _bufferManager);
                 }
 
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);

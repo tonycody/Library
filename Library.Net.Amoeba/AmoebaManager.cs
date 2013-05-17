@@ -306,7 +306,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public long BandWidthLimit
+        public int BandWidthLimit
         {
             get
             {

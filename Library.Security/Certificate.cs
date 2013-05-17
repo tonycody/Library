@@ -206,16 +206,12 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (this.PublicKey.Length != other.PublicKey.Length) return false;
-
-                for (int i = 0; i < this.PublicKey.Length; i++) if (this.PublicKey[i] != other.PublicKey[i]) return false;
+                if (!Collection.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             if (this.Signature != null && other.Signature != null)
             {
-                if (this.Signature.Length != other.Signature.Length) return false;
-
-                for (int i = 0; i < this.Signature.Length; i++) if (this.Signature[i] != other.Signature[i]) return false;
+                if (!Collection.Equals(this.Signature, other.Signature)) return false;
             }
 
             return true;

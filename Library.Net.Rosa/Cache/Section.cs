@@ -5,9 +5,9 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 
-namespace Library.Net.Lair
+namespace Library.Net.Rosa
 {
-    [DataContract(Name = "Section", Namespace = "http://Library/Net/Lair")]
+    [DataContract(Name = "Section", Namespace = "http://Library/Net/Rosa")]
     public sealed class Section : ItemBase<Section>, ISection
     {
         private enum SerializeId : byte
@@ -168,16 +168,9 @@ namespace Library.Net.Lair
 
                 if (value != null && value.Length != 0)
                 {
-                    try
-                    {
-                        if (value.Length >= 4) _hashCode = Math.Abs(BitConverter.ToInt32(value, 0));
-                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                        else _hashCode = value[0];
-                    }
-                    catch
-                    {
-                        _hashCode = 0;
-                    }
+                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                    else _hashCode = value[0];
                 }
                 else
                 {

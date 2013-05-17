@@ -212,16 +212,12 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (this.PublicKey.Length != other.PublicKey.Length) return false;
-
-                for (int i = 0; i < this.PublicKey.Length; i++) if (this.PublicKey[i] != other.PublicKey[i]) return false;
+                if (!Collection.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             if (this.PrivateKey != null && other.PrivateKey != null)
             {
-                if (this.PrivateKey.Length != other.PrivateKey.Length) return false;
-
-                for (int i = 0; i < this.PrivateKey.Length; i++) if (this.PrivateKey[i] != other.PrivateKey[i]) return false;
+                if (!Collection.Equals(this.PrivateKey, other.PrivateKey)) return false;
             }
 
             return true;
@@ -416,16 +412,9 @@ namespace Library.Security
 
                     if (value != null && value.Length != 0)
                     {
-                        try
-                        {
-                            if (value.Length >= 4) _hashCode = Math.Abs(BitConverter.ToInt32(value, 0));
-                            else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                            else _hashCode = value[0];
-                        }
-                        catch
-                        {
-                            _hashCode = 0;
-                        }
+                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                        else _hashCode = value[0];
                     }
                     else
                     {

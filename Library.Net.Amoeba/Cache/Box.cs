@@ -235,16 +235,12 @@ namespace Library.Net.Amoeba
 
             if (this.Seeds != null && other.Seeds != null)
             {
-                if (this.Seeds.Count != other.Seeds.Count) return false;
-
-                for (int i = 0; i < this.Seeds.Count; i++) if (this.Seeds[i] != other.Seeds[i]) return false;
+                if (!Collection.Equals(this.Seeds, other.Seeds)) return false;
             }
 
             if (this.Boxes != null && other.Boxes != null)
             {
-                if (this.Boxes.Count != other.Boxes.Count) return false;
-
-                for (int i = 0; i < this.Boxes.Count; i++) if (this.Boxes[i] != other.Boxes[i]) return false;
+                if (!Collection.Equals(this.Boxes, other.Boxes)) return false;
             }
 
             return true;

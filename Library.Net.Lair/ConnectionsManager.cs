@@ -288,7 +288,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public long BandWidthLimit
+        public int BandWidthLimit
         {
             get
             {
@@ -749,13 +749,6 @@ namespace Library.Net.Lair
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 
-                var limit = connectionManager.Connection.GetLayers().OfType<IBandwidthLimit>().FirstOrDefault();
-
-                if (limit != null)
-                {
-                    limit.BandwidthLimit = _bandwidthLimit;
-                }
-
                 _nodeToUri.Add(connectionManager.Node, uri);
                 _connectionManagers.Add(connectionManager);
 
@@ -869,7 +862,7 @@ namespace Library.Net.Lair
                     {
                         if (this.State == ManagerState.Stop) return;
 
-                        var connection = _clientManager.CreateConnection(uri);
+                        var connection = _clientManager.CreateConnection(uri, _bandwidthLimit);
 
                         if (connection != null)
                         {
@@ -946,7 +939,7 @@ namespace Library.Net.Lair
                 }
 
                 string uri;
-                var connection = _serverManager.AcceptConnection(out uri);
+                var connection = _serverManager.AcceptConnection(out uri, _bandwidthLimit);
 
                 if (connection != null)
                 {
@@ -2848,7 +2841,7 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
-                    new Library.Configuration.SettingsContext<long>() { Name = "BandwidthLimit", Value = 0 },
+                    new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Leader>>>() { Name = "Leaders", Value = new LockedDictionary<Section, LockedDictionary<string, Leader>>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Manager>>>() { Name = "Managers", Value = new LockedDictionary<Section, LockedDictionary<string, Manager>>() },
                     new Library.Configuration.SettingsContext<LockedDictionary<Section, LockedDictionary<string, Creator>>>() { Name = "Creators", Value = new LockedDictionary<Section, LockedDictionary<string, Creator>>() },
@@ -2922,13 +2915,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public long BandwidthLimit
+            public int BandwidthLimit
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        return (long)this["BandwidthLimit"];
+                        return (int)this["BandwidthLimit"];
                     }
                 }
                 set

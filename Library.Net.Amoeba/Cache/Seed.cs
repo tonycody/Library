@@ -386,16 +386,12 @@ namespace Library.Net.Amoeba
 
             if (this.Keywords != null && other.Keywords != null)
             {
-                if (this.Keywords.Count != other.Keywords.Count) return false;
-
-                for (int i = 0; i < this.Keywords.Count; i++) if (this.Keywords[i] != other.Keywords[i]) return false;
+                if (!Collection.Equals(this.Keywords, other.Keywords)) return false;
             }
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {
-                if (this.CryptoKey.Length != other.CryptoKey.Length) return false;
-
-                for (int i = 0; i < this.CryptoKey.Length; i++) if (this.CryptoKey[i] != other.CryptoKey[i]) return false;
+                if (!Collection.Equals(this.CryptoKey, other.CryptoKey)) return false;
             }
 
             return true;

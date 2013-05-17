@@ -100,9 +100,7 @@ namespace Library.Net.Amoeba
 
             if (this.Boxes != null && other.Boxes != null)
             {
-                if (this.Boxes.Count != other.Boxes.Count) return false;
-
-                for (int i = 0; i < this.Boxes.Count; i++) if (this.Boxes[i] != other.Boxes[i]) return false;
+                if (!Collection.Equals(this.Boxes, other.Boxes)) return false;
             }
 
             return true;

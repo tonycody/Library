@@ -213,7 +213,7 @@ namespace Library.Net.Amoeba
             return !(connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None);
         }
 
-        public ConnectionBase CreateConnection(string uri)
+        public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
             Socket socket = null;
             ConnectionBase connection = null;
@@ -328,7 +328,7 @@ namespace Library.Net.Amoeba
                     }
 #endif
                     socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
-                    connection = new TcpConnection(socket, _maxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(socket, bandwidthLimit, _maxReceiveCount, _bufferManager);
                 }
                 else
                 {
@@ -399,7 +399,7 @@ namespace Library.Net.Amoeba
                         proxy = new HttpProxyClient(socket, host, port);
                     }
 
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), _maxReceiveCount, _bufferManager);
+                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), bandwidthLimit, _maxReceiveCount, _bufferManager);
                 }
 
                 var secureConnection = new SecureClientConnection(connection, null, _bufferManager);

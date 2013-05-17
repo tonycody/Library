@@ -9,7 +9,7 @@ using Library.Io;
 
 namespace Library.Net.Connection
 {
-    public class TcpConnection : ConnectionBase, IBandwidthLimit, IThisLock
+    public class TcpConnection : ConnectionBase, IThisLock
     {
         private Socket _socket;
         private IPEndPoint _remoteEndPoint;
@@ -48,11 +48,16 @@ namespace Library.Net.Connection
             : this(maxReceiveCount, bufferManager)
         {
             _socket = socket;
-            //_socket.ReceiveBufferSize = 1024 * 1024;
-            //_socket.SendBufferSize = 1024 * 1024;
 
-            ThreadPool.QueueUserWorkItem(new WaitCallback(this.AliveTimer));
-            _sendUpdateTime = DateTime.UtcNow;
+            _connect = true;
+        }
+
+        public TcpConnection(Socket socket, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
+            : this(maxReceiveCount, bufferManager)
+        {
+            _socket = socket;
+            _bandwidthLimit = bandwidthLimit;
+            _bandwidthLimit.Join(this);
 
             _connect = true;
         }
@@ -62,8 +67,15 @@ namespace Library.Net.Connection
         {
             _remoteEndPoint = remoteEndPoint;
             _socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            //_socket.ReceiveBufferSize = 1024 * 1024;
-            //_socket.SendBufferSize = 1024 * 1024;
+        }
+
+        public TcpConnection(IPEndPoint remoteEndPoint, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
+            : this(maxReceiveCount, bufferManager)
+        {
+            _remoteEndPoint = remoteEndPoint;
+            _socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            _bandwidthLimit = bandwidthLimit;
+            _bandwidthLimit.Join(this);
         }
 
         public BandwidthLimit BandwidthLimit

@@ -1,24 +1,24 @@
 ﻿using System.Collections.Generic;
 using Library.Collections;
 
-namespace Library.Net.Lair
+namespace Library.Net.Rosa
 {
-    public sealed class KeyCollection : FilterList<Key>, IEnumerable<Key>
+    public sealed class SectionCollection : FilterList<Section>, IEnumerable<Section>
     {
-        public KeyCollection() : base() { }
-        public KeyCollection(int capacity) : base(capacity) { }
-        public KeyCollection(IEnumerable<Key> collections) : base(collections) { }
+        public SectionCollection() : base() { }
+        public SectionCollection(int capacity) : base(capacity) { }
+        public SectionCollection(IEnumerable<Section> collections) : base(collections) { }
 
-        protected override bool Filter(Key item)
+        protected override bool Filter(Section item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Key>
+        #region IEnumerable<Section>
 
-        IEnumerator<Key> IEnumerable<Key>.GetEnumerator()
+        IEnumerator<Section> IEnumerable<Section>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

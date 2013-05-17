@@ -1,7 +1,7 @@
 ﻿
-namespace Library.Net.Lair
+namespace Library.Net.Rosa
 {
-    interface ISection
+    interface IChannel
     {
         byte[] Id { get; }
         string Name { get; }

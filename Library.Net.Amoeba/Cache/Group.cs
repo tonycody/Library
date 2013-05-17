@@ -201,9 +201,7 @@ namespace Library.Net.Amoeba
 
             if (this.Keys != null && other.Keys != null)
             {
-                if (this.Keys.Count != other.Keys.Count) return false;
-
-                for (int i = 0; i < this.Keys.Count; i++) if (this.Keys[i] != other.Keys[i]) return false;
+                if (!Collection.Equals(this.Keys, other.Keys)) return false;
             }
 
             return true;

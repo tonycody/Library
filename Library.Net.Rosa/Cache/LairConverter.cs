@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using Library.Io;
 using Library.Security;
 
-namespace Library.Net.Lair
+namespace Library.Net.Rosa
 {
     public static class LairConverter
     {
