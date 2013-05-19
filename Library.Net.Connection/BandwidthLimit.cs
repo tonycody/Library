@@ -121,12 +121,24 @@ namespace Library.Net.Connection
         {
             lock (_outLockObject)
             {
-                _outResetEvents.Remove(connection);
+                ManualResetEvent resetEvent;
+
+                if (_outResetEvents.TryGetValue(connection, out resetEvent))
+                {
+                    _outResetEvents.Remove(connection);
+                    resetEvent.Set();
+                }
             }
 
             lock (_inLockObject)
             {
-                _inResetEvents.Remove(connection);
+                ManualResetEvent resetEvent;
+
+                if (_inResetEvents.TryGetValue(connection, out resetEvent))
+                {
+                    _inResetEvents.Remove(connection);
+                    resetEvent.Set();
+                }
             }
         }
 
@@ -165,7 +177,7 @@ namespace Library.Net.Connection
 
                 if (resetEvent == null) return -1;
 
-                resetEvent.WaitOne();
+                resetEvent.WaitOne(3000);
             }
         }
 
@@ -204,7 +216,7 @@ namespace Library.Net.Connection
 
                 if (resetEvent == null) return -1;
 
-                resetEvent.WaitOne();
+                resetEvent.WaitOne(3000);
             }
         }
 

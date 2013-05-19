@@ -40,22 +40,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cache\Channel\Channel.cs" />
-    <Compile Include="Cache\Channel\ChannelCollection.cs" />
-    <Compile Include="Cache\Channel\IChannel.cs" />
-    <Compile Include="Cache\IComputeHash.cs" />
-    <Compile Include="Cache\IHashAlgorithm.cs" />
+    <Compile Include="Cache\Channel.cs" />
+    <Compile Include="Cache\ChannelCollection.cs" />
+    <Compile Include="Cache\IChannel.cs" />
     <Compile Include="Cache\LairConverter.cs" />
-    <Compile Include="Cache\Section\ICreator.cs" />
-    <Compile Include="Cache\Section\ILeader.cs" />
-    <Compile Include="Cache\Section\IManager.cs" />
-    <Compile Include="Cache\Section\ISection.cs" />
-    <Compile Include="Cache\Section\Leader.cs" />
-    <Compile Include="Cache\Section\LeaderCollection.cs" />
-    <Compile Include="Cache\Section\Manager.cs" />
-    <Compile Include="Cache\Section\ManagerCollection.cs" />
-    <Compile Include="Cache\Section\Section.cs" />
-    <Compile Include="Cache\Section\SectionCollection.cs" />
+    <Compile Include="Cache\ISection.cs" />
+    <Compile Include="Cache\Section.cs" />
+    <Compile Include="Cache\SectionCollection.cs" />
     <Compile Include="CommandMessage.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionType.cs" />

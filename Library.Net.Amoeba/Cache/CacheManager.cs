@@ -924,11 +924,12 @@ namespace Library.Net.Amoeba
                     {
                         this.Unlock(key);
                     }
+
+                    throw;
                 }
 
                 return new KeyCollection(keys);
             }
-
             else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
             {
                 IList<Key> keys = new List<Key>();
@@ -960,6 +961,8 @@ namespace Library.Net.Amoeba
                     {
                         this.Unlock(key);
                     }
+
+                    throw;
                 }
 
                 return new KeyCollection(keys);
