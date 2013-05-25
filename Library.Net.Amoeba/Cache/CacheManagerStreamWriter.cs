@@ -184,7 +184,7 @@ namespace Library.Net.Amoeba
                 _blockBufferPosition = 0;
             }
 
-            this.Dispose(true);
+            base.Close();
         }
 
         protected override void Dispose(bool disposing)
@@ -201,8 +201,6 @@ namespace Library.Net.Amoeba
                         _bufferManager.ReturnBuffer(_blockBuffer);
                         _blockBuffer = null;
                     }
-
-                    _disposed = true;
                 }
             }
             finally

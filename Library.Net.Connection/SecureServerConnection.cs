@@ -117,35 +117,6 @@ namespace Library.Net.Connection
                     Stopwatch stopwatch = new Stopwatch();
                     stopwatch.Start();
 
-                    using (BufferStream stream = new BufferStream(_bufferManager))
-                    using (XmlTextWriter xml = new XmlTextWriter(stream, new UTF8Encoding(false)))
-                    {
-                        xml.WriteStartDocument();
-
-                        xml.WriteStartElement("Protocol");
-
-                        if (_myProtocolVersion == SecureProtocolVersion.Version1)
-                        {
-                            xml.WriteStartElement("SecureConnection");
-                            xml.WriteAttributeString("Version", "1");
-
-                            xml.WriteElementString("KeyExchangeAlgorithm", _myProtocol1.KeyExchangeAlgorithm.ToString());
-                            xml.WriteElementString("CryptoAlgorithm", _myProtocol1.CryptoAlgorithm.ToString());
-                            xml.WriteElementString("HashAlgorithm", _myProtocol1.HashAlgorithm.ToString());
-
-                            xml.WriteEndElement(); //Protocol
-                        }
-
-                        xml.WriteEndElement(); //Configuration
-
-                        xml.WriteEndDocument();
-                        xml.Flush();
-                        stream.Flush();
-
-                        stream.Seek(0, SeekOrigin.Begin);
-                        _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
-                    }
-
                     _otherProtocol1 = new SecureVersion1.Protocol();
 
                     using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
@@ -224,6 +195,35 @@ namespace Library.Net.Connection
                         }
                     }
 
+                    using (BufferStream stream = new BufferStream(_bufferManager))
+                    using (XmlTextWriter xml = new XmlTextWriter(stream, new UTF8Encoding(false)))
+                    {
+                        xml.WriteStartDocument();
+
+                        xml.WriteStartElement("Protocol");
+
+                        if (_myProtocolVersion == SecureProtocolVersion.Version1)
+                        {
+                            xml.WriteStartElement("SecureConnection");
+                            xml.WriteAttributeString("Version", "1");
+
+                            xml.WriteElementString("KeyExchangeAlgorithm", _myProtocol1.KeyExchangeAlgorithm.ToString());
+                            xml.WriteElementString("CryptoAlgorithm", _myProtocol1.CryptoAlgorithm.ToString());
+                            xml.WriteElementString("HashAlgorithm", _myProtocol1.HashAlgorithm.ToString());
+
+                            xml.WriteEndElement(); //Protocol
+                        }
+
+                        xml.WriteEndElement(); //Configuration
+
+                        xml.WriteEndDocument();
+                        xml.Flush();
+                        stream.Flush();
+
+                        stream.Seek(0, SeekOrigin.Begin);
+                        _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
+                    }
+
                     _protocolVersion = _myProtocolVersion & _otherProtocolVersion;
 
                     if (_protocolVersion.HasFlag(SecureProtocolVersion.Version1))
@@ -234,22 +234,6 @@ namespace Library.Net.Connection
                         {
                             byte[] publicKey, privateKey;
                             ECDiffieHellmanP521_Sha512.CreateKeys(out publicKey, out privateKey);
-
-                            {
-                                SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
-                                connectionSignature.Key = publicKey;
-
-                                if (_digitalSignature != null)
-                                {
-                                    connectionSignature.CreationTime = DateTime.UtcNow;
-                                    connectionSignature.CreateCertificate(_digitalSignature);
-                                }
-
-                                using (Stream stream = connectionSignature.Export(_bufferManager))
-                                {
-                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
-                                }
-                            }
 
                             byte[] otherPublicKey = null;
 
@@ -273,6 +257,22 @@ namespace Library.Net.Connection
                                 else
                                 {
                                     throw new ConnectionException();
+                                }
+                            }
+
+                            {
+                                SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
+                                connectionSignature.Key = publicKey;
+
+                                if (_digitalSignature != null)
+                                {
+                                    connectionSignature.CreationTime = DateTime.UtcNow;
+                                    connectionSignature.CreateCertificate(_digitalSignature);
+                                }
+
+                                using (Stream stream = connectionSignature.Export(_bufferManager))
+                                {
+                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
                                 }
                             }
 
@@ -307,22 +307,6 @@ namespace Library.Net.Connection
                             byte[] publicKey, privateKey;
                             Rsa2048.CreateKeys(out publicKey, out privateKey);
 
-                            {
-                                SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
-                                connectionSignature.Key = publicKey;
-
-                                if (_digitalSignature != null)
-                                {
-                                    connectionSignature.CreationTime = DateTime.UtcNow;
-                                    connectionSignature.CreateCertificate(_digitalSignature);
-                                }
-
-                                using (Stream stream = connectionSignature.Export(_bufferManager))
-                                {
-                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
-                                }
-                            }
-
                             byte[] otherPublicKey;
 
                             using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
@@ -345,6 +329,22 @@ namespace Library.Net.Connection
                                 else
                                 {
                                     throw new ConnectionException();
+                                }
+                            }
+
+                            {
+                                SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
+                                connectionSignature.Key = publicKey;
+
+                                if (_digitalSignature != null)
+                                {
+                                    connectionSignature.CreationTime = DateTime.UtcNow;
+                                    connectionSignature.CreateCertificate(_digitalSignature);
+                                }
+
+                                using (Stream stream = connectionSignature.Export(_bufferManager))
+                                {
+                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
                                 }
                             }
 

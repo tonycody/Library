@@ -35,8 +35,10 @@ namespace Library.Net.Connection
         private volatile bool _connect = false;
         private volatile bool _disposed = false;
 
-        private TcpConnection(int maxReceiveCount, BufferManager bufferManager)
+        private TcpConnection(BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
         {
+            _bandwidthLimit = bandwidthLimit;
+            if (_bandwidthLimit != null) _bandwidthLimit.Join(this);
             _maxReceiveCount = maxReceiveCount;
             _bufferManager = bufferManager;
 
@@ -44,38 +46,19 @@ namespace Library.Net.Connection
             _sendUpdateTime = DateTime.UtcNow;
         }
 
-        public TcpConnection(Socket socket, int maxReceiveCount, BufferManager bufferManager)
-            : this(maxReceiveCount, bufferManager)
-        {
-            _socket = socket;
-
-            _connect = true;
-        }
-
         public TcpConnection(Socket socket, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
-            : this(maxReceiveCount, bufferManager)
+            : this(bandwidthLimit, maxReceiveCount, bufferManager)
         {
             _socket = socket;
-            _bandwidthLimit = bandwidthLimit;
-            _bandwidthLimit.Join(this);
 
             _connect = true;
-        }
-
-        public TcpConnection(IPEndPoint remoteEndPoint, int maxReceiveCount, BufferManager bufferManager)
-            : this(maxReceiveCount, bufferManager)
-        {
-            _remoteEndPoint = remoteEndPoint;
-            _socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
 
         public TcpConnection(IPEndPoint remoteEndPoint, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
-            : this(maxReceiveCount, bufferManager)
+            : this(bandwidthLimit, maxReceiveCount, bufferManager)
         {
             _remoteEndPoint = remoteEndPoint;
             _socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            _bandwidthLimit = bandwidthLimit;
-            _bandwidthLimit.Join(this);
         }
 
         public BandwidthLimit BandwidthLimit
@@ -85,13 +68,6 @@ namespace Library.Net.Connection
                 lock (this.ThisLock)
                 {
                     return _bandwidthLimit;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _bandwidthLimit = value;
                 }
             }
         }
@@ -387,7 +363,7 @@ namespace Library.Net.Connection
 
             if (disposing)
             {
-                if (_socket != null)
+                if (_aliveTimer != null)
                 {
                     try
                     {
@@ -398,6 +374,11 @@ namespace Library.Net.Connection
 
                     }
 
+                    _aliveTimer = null;
+                }
+
+                if (_socket != null)
+                {
                     try
                     {
                         _socket.Close();
@@ -408,11 +389,20 @@ namespace Library.Net.Connection
                     }
 
                     _socket = null;
+                }
 
-                    if (_bandwidthLimit != null)
+                if (_bandwidthLimit != null)
+                {
+                    try
                     {
                         _bandwidthLimit.Leave(this);
                     }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _bandwidthLimit = null;
                 }
             }
         }

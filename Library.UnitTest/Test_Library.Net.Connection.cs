@@ -27,8 +27,8 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            var tcpClient = new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-            var tcpServer = new TcpConnection(server, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
+            var tcpClient = new TcpConnection(client.Client,null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
+            var tcpServer = new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
 
             using (MemoryStream stream = new MemoryStream())
             {
@@ -87,8 +87,8 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            var crcClient = new CrcConnection(new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
-            var crcServer = new CrcConnection(new TcpConnection(server, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
+            var crcClient = new CrcConnection(new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
+            var crcServer = new CrcConnection(new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
 
             using (MemoryStream stream = new MemoryStream())
             {
@@ -147,8 +147,8 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            using (var compressClient = new CompressConnection(new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
-            using (var compressServer = new CompressConnection(new TcpConnection(server, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
+            using (var compressClient = new CompressConnection(new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
+            using (var compressServer = new CompressConnection(new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
             {
                 var compressClientConnect = compressClient.BeginConnect(new TimeSpan(0, 0, 20), null, null);
                 var compressServerConnect = compressServer.BeginConnect(new TimeSpan(0, 0, 20), null, null);
@@ -220,8 +220,8 @@ namespace Library.UnitTest
             DigitalSignature serverDigitalSignature = null;
 
             ////var TcpClient = new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-            using (var secureClient = new SecureClientConnection(new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
-            using (var secureServer = new SecureServerConnection(new TcpConnection(server, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
+            using (var secureClient = new SecureClientConnection(new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
+            using (var secureServer = new SecureServerConnection(new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
             {
                 var secureClientConnect = secureClient.BeginConnect(new TimeSpan(0, 0, 20), null, null);
                 var secureServerConnect = secureServer.BeginConnect(new TimeSpan(0, 0, 20), null, null);

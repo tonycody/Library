@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Library
 {
@@ -10,16 +11,42 @@ namespace Library
 
     public class BufferManager : ManagerBase, IThisLock
     {
-        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 32);
+        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 1024, 1024 * 1024 * 32);
 
-        private System.ServiceModel.Channels.BufferManager _bufferManager;
+        //private System.ServiceModel.Channels.BufferManager _bufferManager;
+
+        private long _maxBufferPoolSize;
+        private int _maxBufferSize;
+
+        private int[] _sizes;
+        private List<byte[]>[] _buffers;
+        private long[] _callCounts;
 
         private object _thisLock = new object();
         private volatile bool _disposed = false;
 
         public BufferManager(long maxBufferPoolSize, int maxBufferSize)
         {
-            _bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(maxBufferPoolSize, maxBufferSize);
+            //_bufferManager = System.ServiceModel.Channels.BufferManager.CreateBufferManager(maxBufferPoolSize, maxBufferSize);
+
+            if (maxBufferPoolSize < maxBufferSize) throw new ArgumentOutOfRangeException();
+            if (maxBufferPoolSize == 0) throw new ArgumentOutOfRangeException();
+
+            _maxBufferPoolSize = maxBufferPoolSize;
+            _maxBufferSize = maxBufferSize;
+
+            List<int> sizes = new List<int>();
+            List<List<byte[]>> buffers = new List<List<byte[]>>();
+
+            for (int i = 128; i < _maxBufferSize; i *= 2)
+            {
+                sizes.Add(i);
+                buffers.Add(new List<byte[]>());
+            }
+
+            _sizes = sizes.ToArray();
+            _buffers = buffers.ToArray();
+            _callCounts = new long[sizes.Count];
         }
 
         public static BufferManager Instance
@@ -36,7 +63,27 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                return _bufferManager.TakeBuffer(bufferSize);
+                for (int i = 0; i < _sizes.Length; i++)
+                {
+                    if (bufferSize <= _sizes[i])
+                    {
+                        _callCounts[i]++;
+
+                        if (_buffers[i].Count > 0)
+                        {
+                            byte[] buffer = _buffers[i][0];
+                            _buffers[i].RemoveAt(0);
+
+                            return buffer;
+                        }
+                        else
+                        {
+                            return new byte[_sizes[i]];
+                        }
+                    }
+                }
+
+                return new byte[bufferSize];
             }
         }
 
@@ -46,17 +93,55 @@ namespace Library
 
             lock (this.ThisLock)
             {
-                _bufferManager.ReturnBuffer(buffer);
-            }
-        }
+                if (buffer.Length > _maxBufferSize) return;
 
-        public void Clear()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                for (; ; )
+                {
+                    long memorySize = 0;
 
-            lock (this.ThisLock)
-            {
-                _bufferManager.Clear();
+                    memorySize += buffer.Length;
+
+                    for (int i = 0; i < _sizes.Length; i++)
+                    {
+                        memorySize += (_sizes[i] * _buffers[i].Count);
+                    }
+
+                    if (_maxBufferPoolSize > memorySize) break;
+
+                    {
+                        var sortItems = new List<KeyValuePair<BigInteger, int>>();
+
+                        for (int i = 0; i < _callCounts.Length; i++)
+                        {
+                            sortItems.Add(new KeyValuePair<BigInteger, int>(BigInteger.Multiply(_callCounts[i], _sizes[i]), i));
+                        }
+
+                        sortItems.Sort((x, y) =>
+                        {
+                            return x.Key.CompareTo(y.Key);
+                        });
+
+                        for (int i = 0; i < sortItems.Count; i++)
+                        {
+                            int index = sortItems[i].Value;
+
+                            if (_buffers[index].Count > 0)
+                            {
+                                _buffers[index].RemoveAt(0);
+
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                for (int i = 0; i < _sizes.Length; i++)
+                {
+                    if (buffer.Length == _sizes[i])
+                    {
+                        _buffers[i].Add(buffer);
+                    }
+                }
             }
         }
 
@@ -67,7 +152,7 @@ namespace Library
 
             if (disposing)
             {
-                _bufferManager.Clear();
+
             }
         }
 
@@ -196,7 +281,7 @@ namespace Library
             }
         }
 
-        #endregion
+    #endregion
     }
 
     [Serializable]

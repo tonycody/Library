@@ -104,7 +104,7 @@ namespace Library.Net.Connection
             return true;
         }
 
-        public void Join(ConnectionBase connection)
+        internal void Join(ConnectionBase connection)
         {
             lock (_outLockObject)
             {
@@ -117,7 +117,7 @@ namespace Library.Net.Connection
             }
         }
 
-        public void Leave(ConnectionBase connection)
+        internal void Leave(ConnectionBase connection)
         {
             lock (_outLockObject)
             {
@@ -142,7 +142,7 @@ namespace Library.Net.Connection
             }
         }
 
-        public int GetOutBandwidth(ConnectionBase connection, int size)
+        internal int GetOutBandwidth(ConnectionBase connection, int size)
         {
             for (; ; )
             {
@@ -181,7 +181,7 @@ namespace Library.Net.Connection
             }
         }
 
-        public int GetInBandwidth(ConnectionBase connection, int size)
+        internal int GetInBandwidth(ConnectionBase connection, int size)
         {
             for (; ; )
             {

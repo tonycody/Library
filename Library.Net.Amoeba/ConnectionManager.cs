@@ -1496,7 +1496,7 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
-                if (_connection != null)
+                if (_aliveTimer != null)
                 {
                     try
                     {
@@ -1507,6 +1507,11 @@ namespace Library.Net.Amoeba
 
                     }
 
+                    _aliveTimer = null;
+                }
+
+                if (_connection != null)
+                {
                     try
                     {
                         _connection.Dispose();

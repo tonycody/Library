@@ -4,6 +4,7 @@ using Library.Io;
 using Library.Net.Lair;
 using Library.Security;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace Library.UnitTest
 {
@@ -28,6 +29,24 @@ namespace Library.UnitTest
         }
 
         [Test]
+        public void Test_LairConverter_Section()
+        {
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+            var id = new byte[64];
+            new Random().NextBytes(id);
+
+            var section = new Section(id, "aoeui");
+
+            var stream = LairConverter.ToSectionString(section, digitalSignature.ToString());
+
+            string sectionSignature;
+            var value = LairConverter.FromSectionString(stream, out sectionSignature);
+
+            Assert.AreEqual(section, value, "LairConverter #2");
+            Assert.AreEqual(digitalSignature.ToString(), sectionSignature, "LairConverter #3");
+        }
+
+        [Test]
         public void Test_LairConverter_Channel()
         {
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
@@ -39,22 +58,27 @@ namespace Library.UnitTest
             var stream = LairConverter.ToChannelString(channel);
             var value = LairConverter.FromChannelString(stream);
 
-            Assert.AreEqual(channel, value, "LairConverter #2");
+            Assert.AreEqual(channel, value, "LairConverter #4");
         }
 
         [Test]
-        public void Test_LairConverter_Message()
+        public void Test_LairConverter_Messages()
         {
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             var id = new byte[64];
             new Random().NextBytes(id);
 
-            var message = new Message(new Channel(id, "aoeui"), "aoeui", null, digitalSignature);
+            List<Message> messages = new List<Message>();
 
-            var stream = LairConverter.ToMessageString(message);
-            var value = LairConverter.FromMessageString(stream);
+            for (int i = 0; i < 100; i++)
+            {
+                messages.Add(new Message(new Channel(id, "aoeui"), "aoeui", null, digitalSignature));
+            }
 
-            Assert.AreEqual(message, value, "LairConverter #3");
+            var stream = LairConverter.ToMessagesStream(messages);
+            var value = LairConverter.FromMessagesStream(stream);
+
+            Assert.IsTrue(Collection.Equals(messages, value), "LairConverter #4");
         }
 
         [Test]

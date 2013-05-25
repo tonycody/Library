@@ -1339,7 +1339,7 @@ namespace Library.Net.Lair
 
             if (disposing)
             {
-                if (_connection != null)
+                if (_aliveTimer != null)
                 {
                     try
                     {
@@ -1350,6 +1350,11 @@ namespace Library.Net.Lair
 
                     }
 
+                    _aliveTimer = null;
+                }
+
+                if (_connection != null)
+                {
                     try
                     {
                         _connection.Dispose();
