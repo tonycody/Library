@@ -1038,7 +1038,7 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                var requestNodes = this.GetSearchNode(item.Hash, 1).ToList();
+                                var requestNodes = this.GetSearchNode(item.Hash, 2).ToList();
 
                                 if (requestNodes.Count == 0)
                                 {
@@ -1050,24 +1050,14 @@ namespace Library.Net.Amoeba
                                     return;
                                 }
 
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < 2 && i < requestNodes.Count; i++)
                                 {
-                                    if (!_messagesManager[requestNodes[i]].PushBlocks.Contains(item))
+                                    lock (pushBlocksDictionary.ThisLock)
                                     {
-                                        lock (pushBlocksDictionary.ThisLock)
-                                        {
-                                            if (!pushBlocksDictionary.ContainsKey(requestNodes[i]))
-                                                pushBlocksDictionary[requestNodes[i]] = new LockedHashSet<Key>();
+                                        if (!pushBlocksDictionary.ContainsKey(requestNodes[i]))
+                                            pushBlocksDictionary[requestNodes[i]] = new LockedHashSet<Key>();
 
-                                            pushBlocksDictionary[requestNodes[i]].Add(item);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        _settings.UploadBlocksRequest.Remove(item);
-                                        _settings.DiffusionBlocksRequest.Remove(item);
-
-                                        this.OnUploadedEvent(new Key[] { item });
+                                        pushBlocksDictionary[requestNodes[i]].Add(item);
                                     }
                                 }
                             }
@@ -1131,7 +1121,7 @@ namespace Library.Net.Amoeba
                                 .Randomize()
                                 .ToList();
 
-                            for (int i = 0, j = 0; j < 256 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 2048 && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushBlocksLink.Contains(list[i])))
                                 {
@@ -1148,7 +1138,7 @@ namespace Library.Net.Amoeba
                                 .Randomize()
                                 .ToList();
 
-                            for (int i = 0, j = 0; j < 256 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 2048 && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushBlocksRequest.Contains(list[i])) && !_cacheManager.Contains(list[i]))
                                 {
@@ -1168,7 +1158,7 @@ namespace Library.Net.Amoeba
                                 .Randomize()
                                 .ToList();
 
-                            for (int i = 0, j = 0; j < 256 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 2048 && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushBlocksLink.Contains(list[i])))
                                 {
@@ -1188,7 +1178,7 @@ namespace Library.Net.Amoeba
 
                             if (list.Any(n => _cacheManager.Contains(n))) continue;
 
-                            for (int i = 0, j = 0; j < 256 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 2048 && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushBlocksRequest.Contains(list[i])) && !_cacheManager.Contains(list[i]))
                                 {
