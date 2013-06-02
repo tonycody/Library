@@ -25,6 +25,7 @@ namespace Library.Net.Amoeba
         private Dictionary<int, DownloadItem> _ids = new Dictionary<int, DownloadItem>();
         private int _id = 0;
         private ManagerState _state = ManagerState.Stop;
+        private ManagerState _decodeState = ManagerState.Stop;
 
         private Thread _setThread;
         private Thread _removeThread;
@@ -460,7 +461,7 @@ namespace Library.Net.Amoeba
             for (; ; )
             {
                 Thread.Sleep(1000 * 1);
-                if (this.State == ManagerState.Stop) return;
+                if (this.DecodeState == ManagerState.Stop) return;
 
                 DownloadItem item = null;
 
@@ -513,7 +514,7 @@ namespace Library.Net.Amoeba
                                         using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
+                                            isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
                                             {
@@ -582,18 +583,39 @@ namespace Library.Net.Amoeba
                                 }
                                 else
                                 {
+                                    item.State = DownloadState.Decoding;
+
                                     string fileName = "";
                                     bool largeFlag = false;
+                                    string downloadDirectory;
+
+                                    if (item.Path == null)
+                                    {
+                                        downloadDirectory = this.BaseDirectory;
+                                    }
+                                    else
+                                    {
+                                        if (System.IO.Path.IsPathRooted(item.Path))
+                                        {
+                                            downloadDirectory = item.Path;
+                                        }
+                                        else
+                                        {
+                                            downloadDirectory = Path.Combine(this.BaseDirectory, item.Path);
+                                        }
+                                    }
+
+                                    Directory.CreateDirectory(downloadDirectory);
 
                                     try
                                     {
                                         item.DecodingBytes = 0;
                                         item.DecodeBytes = _cacheManager.GetLength(item.Seed.Key);
 
-                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(downloadDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
+                                            isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Seed.Length))
                                             {
@@ -632,25 +654,6 @@ namespace Library.Net.Amoeba
                                         throw;
                                     }
 
-                                    string downloadDirectory;
-
-                                    if (item.Path == null)
-                                    {
-                                        downloadDirectory = this.BaseDirectory;
-                                    }
-                                    else
-                                    {
-                                        if (System.IO.Path.IsPathRooted(item.Path))
-                                        {
-                                            downloadDirectory = item.Path;
-                                        }
-                                        else
-                                        {
-                                            downloadDirectory = Path.Combine(this.BaseDirectory, item.Path);
-                                        }
-                                    }
-
-                                    Directory.CreateDirectory(downloadDirectory);
                                     File.Move(fileName, DownloadManager.GetUniqueFilePath(Path.Combine(downloadDirectory, DownloadManager.GetNormalizedPath(item.Seed.Name))));
 
                                     lock (this.ThisLock)
@@ -701,7 +704,7 @@ namespace Library.Net.Amoeba
                                     {
                                         headers.AddRange(_cacheManager.ParityDecoding(group, (object state2) =>
                                         {
-                                            return (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
+                                            return (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
                                         }));
 
                                         item.DecodingBytes += group.Length;
@@ -726,7 +729,7 @@ namespace Library.Net.Amoeba
                                         using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
+                                            isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
                                             {
@@ -799,15 +802,34 @@ namespace Library.Net.Amoeba
 
                                     string fileName = "";
                                     bool largeFlag = false;
+                                    string downloadDirectory;
+
+                                    if (item.Path == null)
+                                    {
+                                        downloadDirectory = this.BaseDirectory;
+                                    }
+                                    else
+                                    {
+                                        if (System.IO.Path.IsPathRooted(item.Path))
+                                        {
+                                            downloadDirectory = item.Path;
+                                        }
+                                        else
+                                        {
+                                            downloadDirectory = Path.Combine(this.BaseDirectory, item.Path);
+                                        }
+                                    }
+
+                                    Directory.CreateDirectory(downloadDirectory);
 
                                     try
                                     {
                                         item.DecodingBytes = 0;
 
-                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(this.BaseDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
+                                        using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(downloadDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
+                                            isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Seed.Length))
                                             {
@@ -846,25 +868,6 @@ namespace Library.Net.Amoeba
                                         throw;
                                     }
 
-                                    string downloadDirectory;
-
-                                    if (item.Path == null)
-                                    {
-                                        downloadDirectory = this.BaseDirectory;
-                                    }
-                                    else
-                                    {
-                                        if (System.IO.Path.IsPathRooted(item.Path))
-                                        {
-                                            downloadDirectory = item.Path;
-                                        }
-                                        else
-                                        {
-                                            downloadDirectory = Path.Combine(this.BaseDirectory, item.Path);
-                                        }
-                                    }
-
-                                    Directory.CreateDirectory(downloadDirectory);
                                     File.Move(fileName, DownloadManager.GetUniqueFilePath(Path.Combine(downloadDirectory, DownloadManager.GetNormalizedPath(item.Seed.Name))));
 
                                     lock (this.ThisLock)
@@ -1051,10 +1054,20 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public ManagerState DecodeState
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _decodeState;
+                }
+            }
+        }
+
         public override void Start()
         {
             while (_downloadManagerThread != null) Thread.Sleep(1000);
-            while (_decodeManagerThread != null) Thread.Sleep(1000);
 
             lock (this.ThisLock)
             {
@@ -1065,11 +1078,6 @@ namespace Library.Net.Amoeba
                 _downloadManagerThread.Priority = ThreadPriority.Lowest;
                 _downloadManagerThread.Name = "DownloadManager_DownloadManagerThread";
                 _downloadManagerThread.Start();
-
-                _decodeManagerThread = new Thread(this.DecodeManagerThread);
-                _decodeManagerThread.Priority = ThreadPriority.Lowest;
-                _decodeManagerThread.Name = "DownloadManager_DecodeManagerThread";
-                _decodeManagerThread.Start();
             }
         }
 
@@ -1083,6 +1091,31 @@ namespace Library.Net.Amoeba
 
             _downloadManagerThread.Join();
             _downloadManagerThread = null;
+        }
+
+        public void DecodeStart()
+        {
+            while (_decodeManagerThread != null) Thread.Sleep(1000);
+
+            lock (this.ThisLock)
+            {
+                if (this.DecodeState == ManagerState.Start) return;
+                _decodeState = ManagerState.Start;
+
+                _decodeManagerThread = new Thread(this.DecodeManagerThread);
+                _decodeManagerThread.Priority = ThreadPriority.Lowest;
+                _decodeManagerThread.Name = "DownloadManager_DecodeManagerThread";
+                _decodeManagerThread.Start();
+            }
+        }
+
+        public void DecodeStop()
+        {
+            lock (this.ThisLock)
+            {
+                if (this.DecodeState == ManagerState.Stop) return;
+                _decodeState = ManagerState.Stop;
+            }
 
             _decodeManagerThread.Join();
             _decodeManagerThread = null;

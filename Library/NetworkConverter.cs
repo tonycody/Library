@@ -157,9 +157,33 @@ namespace Library
             List<string> u = new List<string> { "Byte", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
             int i = 0;
 
-            while (b >= 1024 && (b / 1024) >= 1)
+            while (b >= 1024)
             {
                 b /= (decimal)1024;
+                i++;
+            }
+
+            var value = Math.Round(b, 2).ToString().Trim();
+
+            if (value.Contains("."))
+            {
+                value = value.TrimEnd('0').TrimEnd('.');
+            }
+
+            return f + value + " " + u[i];
+        }
+
+        public static string ToSizeString(decimal b, string unit)
+        {
+            string f = (b < 0) ? "-" : "";
+            b = Math.Abs(b);
+
+            List<string> u = new List<string> { "Byte", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+            int i = 0;
+
+            while (u[i] != unit)
+            {
+                if (b != 0) b /= (decimal)1024;
                 i++;
             }
 

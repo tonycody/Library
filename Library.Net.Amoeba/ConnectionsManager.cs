@@ -89,8 +89,8 @@ namespace Library.Net.Amoeba
         private object _thisLock = new object();
 
         private const int _maxNodeCount = 128;
-        private const int _maxBlockLinkCount = 8192;
-        private const int _maxBlockRequestCount = 8192;
+        private const int _maxBlockLinkCount = 2048;
+        private const int _maxBlockRequestCount = 2048;
         private const int _maxSeedRequestCount = 128;
         private const int _routeTableMinCount = 100;
 
@@ -103,7 +103,8 @@ namespace Library.Net.Amoeba
         private const int _downloadingConnectionCountLowerLimit = 3;
         private const int _uploadingConnectionCountLowerLimit = 3;
 #endif
-        private int _threadCount = 2;
+
+        //private int _threadCount = 2;
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
         {
@@ -140,10 +141,10 @@ namespace Library.Net.Amoeba
 
 #if !MONO
             {
-                SYSTEM_INFO info = new SYSTEM_INFO();
-                NativeMethods.GetSystemInfo(ref info);
+                //SYSTEM_INFO info = new SYSTEM_INFO();
+                //NativeMethods.GetSystemInfo(ref info);
 
-                _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
+                //_threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
             }
 #endif
         }
@@ -1031,10 +1032,9 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        LockedDictionary<Node, LockedHashSet<Key>> pushBlocksDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
+                        Dictionary<Node, HashSet<Key>> pushBlocksDictionary = new Dictionary<Node, HashSet<Key>>();
 
-                        //foreach (var item in pushBlocksList)
-                        Parallel.ForEach(pushBlocksList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        foreach (var item in pushBlocksList)
                         {
                             try
                             {
@@ -1047,25 +1047,22 @@ namespace Library.Net.Amoeba
 
                                     this.OnUploadedEvent(new Key[] { item });
 
-                                    return;
+                                    continue;
                                 }
 
                                 for (int i = 0; i < 2 && i < requestNodes.Count; i++)
                                 {
-                                    lock (pushBlocksDictionary.ThisLock)
-                                    {
-                                        if (!pushBlocksDictionary.ContainsKey(requestNodes[i]))
-                                            pushBlocksDictionary[requestNodes[i]] = new LockedHashSet<Key>();
+                                    if (!pushBlocksDictionary.ContainsKey(requestNodes[i]))
+                                        pushBlocksDictionary[requestNodes[i]] = new HashSet<Key>();
 
-                                        pushBlocksDictionary[requestNodes[i]].Add(item);
-                                    }
+                                    pushBlocksDictionary[requestNodes[i]].Add(item);
                                 }
                             }
                             catch (Exception e)
                             {
                                 Log.Error(e);
                             }
-                        });
+                        }
 
                         lock (_pushBlocksDictionary.ThisLock)
                         {
@@ -1073,12 +1070,12 @@ namespace Library.Net.Amoeba
 
                             foreach (var item in pushBlocksDictionary)
                             {
-                                _pushBlocksDictionary.Add(item.Key, item.Value);
+                                _pushBlocksDictionary.Add(item.Key, new LockedHashSet<Key>(item.Value));
                             }
                         }
                     }
 
-                    Parallel.ForEach(this.GetSignatures(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                    foreach (var item in this.GetSignatures())
                     {
                         try
                         {
@@ -1096,7 +1093,7 @@ namespace Library.Net.Amoeba
                         {
                             Log.Error(e);
                         }
-                    });
+                    }
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
@@ -1218,10 +1215,9 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        LockedDictionary<Node, LockedHashSet<Key>> pushBlocksLinkDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
+                        Dictionary<Node, HashSet<Key>> pushBlocksLinkDictionary = new Dictionary<Node, HashSet<Key>>();
 
-                        //foreach (var item in pushBlocksLinkList)
-                        Parallel.ForEach(pushBlocksLinkList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        foreach (var item in pushBlocksLinkList)
                         {
                             try
                             {
@@ -1231,13 +1227,10 @@ namespace Library.Net.Amoeba
                                 {
                                     if (!_messagesManager[requestNodes[i]].PullBlocksLink.Contains(item))
                                     {
-                                        lock (pushBlocksLinkDictionary.ThisLock)
-                                        {
-                                            if (!pushBlocksLinkDictionary.ContainsKey(requestNodes[i]))
-                                                pushBlocksLinkDictionary[requestNodes[i]] = new LockedHashSet<Key>();
+                                        if (!pushBlocksLinkDictionary.ContainsKey(requestNodes[i]))
+                                            pushBlocksLinkDictionary[requestNodes[i]] = new HashSet<Key>();
 
-                                            pushBlocksLinkDictionary[requestNodes[i]].Add(item);
-                                        }
+                                        pushBlocksLinkDictionary[requestNodes[i]].Add(item);
                                     }
                                 }
                             }
@@ -1245,7 +1238,7 @@ namespace Library.Net.Amoeba
                             {
                                 Log.Error(e);
                             }
-                        });
+                        }
 
                         lock (_pushBlocksLinkDictionary.ThisLock)
                         {
@@ -1253,16 +1246,15 @@ namespace Library.Net.Amoeba
 
                             foreach (var item in pushBlocksLinkDictionary)
                             {
-                                _pushBlocksLinkDictionary.Add(item.Key, item.Value);
+                                _pushBlocksLinkDictionary.Add(item.Key, new LockedHashSet<Key>(item.Value));
                             }
                         }
                     }
 
                     {
-                        LockedDictionary<Node, LockedHashSet<Key>> pushBlocksRequestDictionary = new LockedDictionary<Node, LockedHashSet<Key>>();
+                        Dictionary<Node, HashSet<Key>> pushBlocksRequestDictionary = new Dictionary<Node, HashSet<Key>>();
 
-                        //foreach (var item in pushBlocksRequestList)
-                        Parallel.ForEach(pushBlocksRequestList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        foreach (var item in pushBlocksRequestList)
                         {
                             try
                             {
@@ -1287,13 +1279,10 @@ namespace Library.Net.Amoeba
                                 {
                                     if (!_messagesManager[requestNodes[i]].PullBlocksRequest.Contains(item))
                                     {
-                                        lock (pushBlocksRequestDictionary.ThisLock)
-                                        {
-                                            if (!pushBlocksRequestDictionary.ContainsKey(requestNodes[i]))
-                                                pushBlocksRequestDictionary[requestNodes[i]] = new LockedHashSet<Key>();
+                                        if (!pushBlocksRequestDictionary.ContainsKey(requestNodes[i]))
+                                            pushBlocksRequestDictionary[requestNodes[i]] = new HashSet<Key>();
 
-                                            pushBlocksRequestDictionary[requestNodes[i]].Add(item);
-                                        }
+                                        pushBlocksRequestDictionary[requestNodes[i]].Add(item);
                                     }
                                 }
                             }
@@ -1301,7 +1290,7 @@ namespace Library.Net.Amoeba
                             {
                                 Log.Error(e);
                             }
-                        });
+                        }
 
                         lock (_pushBlocksRequestDictionary.ThisLock)
                         {
@@ -1309,15 +1298,15 @@ namespace Library.Net.Amoeba
 
                             foreach (var item in pushBlocksRequestDictionary)
                             {
-                                _pushBlocksRequestDictionary.Add(item.Key, item.Value);
+                                _pushBlocksRequestDictionary.Add(item.Key, new LockedHashSet<Key>(item.Value));
                             }
                         }
                     }
 
                     {
-                        LockedDictionary<Node, LockedHashSet<string>> pushSeedsRequestDictionary = new LockedDictionary<Node, LockedHashSet<string>>();
+                        Dictionary<Node, HashSet<string>> pushSeedsRequestDictionary = new Dictionary<Node, HashSet<string>>();
 
-                        Parallel.ForEach(pushSeedsRequestList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        foreach (var item in pushSeedsRequestList)
                         {
                             try
                             {
@@ -1326,20 +1315,17 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    lock (pushSeedsRequestDictionary.ThisLock)
-                                    {
-                                        if (!pushSeedsRequestDictionary.ContainsKey(requestNodes[i]))
-                                            pushSeedsRequestDictionary[requestNodes[i]] = new LockedHashSet<string>();
+                                    if (!pushSeedsRequestDictionary.ContainsKey(requestNodes[i]))
+                                        pushSeedsRequestDictionary[requestNodes[i]] = new HashSet<string>();
 
-                                        pushSeedsRequestDictionary[requestNodes[i]].Add(item);
-                                    }
+                                    pushSeedsRequestDictionary[requestNodes[i]].Add(item);
                                 }
                             }
                             catch (Exception e)
                             {
                                 Log.Error(e);
                             }
-                        });
+                        }
 
                         lock (_pushSeedsRequestDictionary.ThisLock)
                         {
@@ -1347,7 +1333,7 @@ namespace Library.Net.Amoeba
 
                             foreach (var item in pushSeedsRequestDictionary)
                             {
-                                _pushSeedsRequestDictionary.Add(item.Key, item.Value);
+                                _pushSeedsRequestDictionary.Add(item.Key, new LockedHashSet<string>(item.Value));
                             }
                         }
                     }
@@ -1712,7 +1698,7 @@ namespace Library.Net.Amoeba
                                                 {
                                                     seeds.Add(tempSeed);
 
-                                                    if (seeds.Count >= 4) goto End;
+                                                    if (seeds.Count >= 1) goto End;
                                                 }
                                             }
                                         }
@@ -1721,7 +1707,7 @@ namespace Library.Net.Amoeba
 
                             End: ;
 
-                                foreach (var seed in seeds.Randomize().Take(4))
+                                foreach (var seed in seeds.Randomize())
                                 {
                                     connectionManager.PushSeed(seed);
 
@@ -1788,7 +1774,7 @@ namespace Library.Net.Amoeba
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
-            if (e.Keys == null) return;
+            if (e.Keys == null || _messagesManager[connectionManager.Node].PullBlocksLink.Count > _maxBlockLinkCount * 60) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksLink ({0})", e.Keys.Count()));
 
@@ -1806,7 +1792,7 @@ namespace Library.Net.Amoeba
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
-            if (e.Keys == null) return;
+            if (e.Keys == null || _messagesManager[connectionManager.Node].PullBlocksRequest.Count > _maxBlockRequestCount * 60) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksRequest ({0})", e.Keys.Count()));
 
@@ -1871,7 +1857,7 @@ namespace Library.Net.Amoeba
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
-            if (e.Signatures == null) return;
+            if (e.Signatures == null || _messagesManager[connectionManager.Node].PullSeedsRequest.Count > _maxSeedRequestCount * 6) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull SeedsRequest {0} ({1})", String.Join(", ", e.Signatures), e.Signatures.Count));
 

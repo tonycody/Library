@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Collections.Generic;
-using System.Numerics;
 
 namespace Library
 {
@@ -11,7 +10,7 @@ namespace Library
 
     public class BufferManager : ManagerBase, IThisLock
     {
-        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 1024, 1024 * 1024 * 32);
+        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 1024, 1024 * 1024 * 256);
 
         //private System.ServiceModel.Channels.BufferManager _bufferManager;
 
@@ -109,11 +108,11 @@ namespace Library
                     if (_maxBufferPoolSize > memorySize) break;
 
                     {
-                        var sortItems = new List<KeyValuePair<BigInteger, int>>();
+                        var sortItems = new List<KeyValuePair<long, int>>();
 
                         for (int i = 0; i < _callCounts.Length; i++)
                         {
-                            sortItems.Add(new KeyValuePair<BigInteger, int>(BigInteger.Multiply(_callCounts[i], _sizes[i]), i));
+                            sortItems.Add(new KeyValuePair<long, int>(_callCounts[i], i));
                         }
 
                         sortItems.Sort((x, y) =>
@@ -140,6 +139,8 @@ namespace Library
                     if (buffer.Length == _sizes[i])
                     {
                         _buffers[i].Add(buffer);
+
+                        break;
                     }
                 }
             }

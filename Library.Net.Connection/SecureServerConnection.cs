@@ -489,7 +489,7 @@ namespace Library.Net.Connection
 
                                 try
                                 {
-                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                                     using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
                                     using (CryptoStream cs = new CryptoStream(stream,
@@ -557,7 +557,7 @@ namespace Library.Net.Connection
 
                                 try
                                 {
-                                    sendBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                                    sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                                     using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
                                     using (CryptoStream cs = new CryptoStream(new RangeStream(stream, true),

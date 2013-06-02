@@ -109,7 +109,7 @@ namespace Library.Net.Lair
         private const int _uploadingConnectionCountLowerLimit = 3;
 #endif
 
-        private int _threadCount = 2;
+        //private int _threadCount = 2;
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, BufferManager bufferManager)
         {
@@ -143,10 +143,10 @@ namespace Library.Net.Lair
 
 #if !MONO
             {
-                SYSTEM_INFO info = new SYSTEM_INFO();
-                NativeMethods.GetSystemInfo(ref info);
+                //SYSTEM_INFO info = new SYSTEM_INFO();
+                //NativeMethods.GetSystemInfo(ref info);
 
-                _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
+                //_threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
             }
 #endif
         }
@@ -1059,7 +1059,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalSeconds >= 30)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     refreshStopwatch.Restart();
 
@@ -1372,7 +1372,7 @@ namespace Library.Net.Lair
                 {
                     pushUploadStopwatch.Restart();
 
-                    Parallel.ForEach(this.GetSections(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                    foreach (var item in this.GetSections())
                     {
                         try
                         {
@@ -1390,9 +1390,9 @@ namespace Library.Net.Lair
                         {
                             Log.Error(e);
                         }
-                    });
+                    }
 
-                    Parallel.ForEach(this.GetChannels(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                    foreach (var item in this.GetChannels())
                     {
                         try
                         {
@@ -1410,7 +1410,7 @@ namespace Library.Net.Lair
                         {
                             Log.Error(e);
                         }
-                    });
+                    }
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit && pushDownloadStopwatch.Elapsed.TotalSeconds > 60)
@@ -1483,9 +1483,9 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        LockedDictionary<Node, LockedHashSet<Section>> pushSectionsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Section>>();
+                        Dictionary<Node, HashSet<Section>> pushSectionsRequestDictionary = new Dictionary<Node, HashSet<Section>>();
 
-                        Parallel.ForEach(pushSectionsRequestList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        foreach (var item in pushSectionsRequestList.Randomize())
                         {
                             try
                             {
@@ -1494,20 +1494,17 @@ namespace Library.Net.Lair
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    lock (pushSectionsRequestDictionary.ThisLock)
-                                    {
-                                        if (!pushSectionsRequestDictionary.ContainsKey(requestNodes[i]))
-                                            pushSectionsRequestDictionary[requestNodes[i]] = new LockedHashSet<Section>();
+                                    if (!pushSectionsRequestDictionary.ContainsKey(requestNodes[i]))
+                                        pushSectionsRequestDictionary[requestNodes[i]] = new HashSet<Section>();
 
-                                        pushSectionsRequestDictionary[requestNodes[i]].Add(item);
-                                    }
+                                    pushSectionsRequestDictionary[requestNodes[i]].Add(item);
                                 }
                             }
                             catch (Exception e)
                             {
                                 Log.Error(e);
                             }
-                        });
+                        }
 
                         lock (_pushSectionsRequestDictionary.ThisLock)
                         {
@@ -1515,15 +1512,15 @@ namespace Library.Net.Lair
 
                             foreach (var item in pushSectionsRequestDictionary)
                             {
-                                _pushSectionsRequestDictionary.Add(item.Key, item.Value);
+                                _pushSectionsRequestDictionary.Add(item.Key, new LockedHashSet<Section>(item.Value));
                             }
                         }
                     }
 
                     {
-                        LockedDictionary<Node, LockedHashSet<Channel>> pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
+                        Dictionary<Node, HashSet<Channel>> pushChannelsRequestDictionary = new Dictionary<Node, HashSet<Channel>>();
 
-                        Parallel.ForEach(pushChannelsRequestList.Randomize(), new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, item =>
+                        foreach (var item in pushChannelsRequestList)
                         {
                             try
                             {
@@ -1532,20 +1529,17 @@ namespace Library.Net.Lair
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    lock (pushChannelsRequestDictionary.ThisLock)
-                                    {
-                                        if (!pushChannelsRequestDictionary.ContainsKey(requestNodes[i]))
-                                            pushChannelsRequestDictionary[requestNodes[i]] = new LockedHashSet<Channel>();
+                                    if (!pushChannelsRequestDictionary.ContainsKey(requestNodes[i]))
+                                        pushChannelsRequestDictionary[requestNodes[i]] = new HashSet<Channel>();
 
-                                        pushChannelsRequestDictionary[requestNodes[i]].Add(item);
-                                    }
+                                    pushChannelsRequestDictionary[requestNodes[i]].Add(item);
                                 }
                             }
                             catch (Exception e)
                             {
                                 Log.Error(e);
                             }
-                        });
+                        }
 
                         lock (_pushChannelsRequestDictionary.ThisLock)
                         {
@@ -1553,7 +1547,7 @@ namespace Library.Net.Lair
 
                             foreach (var item in pushChannelsRequestDictionary)
                             {
-                                _pushChannelsRequestDictionary.Add(item.Key, item.Value);
+                                _pushChannelsRequestDictionary.Add(item.Key, new LockedHashSet<Channel>(item.Value));
                             }
                         }
                     }
@@ -1766,7 +1760,7 @@ namespace Library.Net.Lair
                                                         {
                                                             leaders.Add(l);
 
-                                                            if (leaders.Count >= 2) goto End;
+                                                            if (leaders.Count >= 1) goto End;
                                                         }
                                                     }
                                                 }
@@ -1776,7 +1770,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var leader in leaders.Randomize().Take(2))
+                                    foreach (var leader in leaders.Randomize())
                                     {
                                         connectionManager.PushLeader(leader);
 
@@ -1807,7 +1801,7 @@ namespace Library.Net.Lair
                                                         {
                                                             managers.Add(m);
 
-                                                            if (managers.Count >= 2) goto End;
+                                                            if (managers.Count >= 1) goto End;
                                                         }
                                                     }
                                                 }
@@ -1817,7 +1811,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var manager in managers.Randomize().Take(2))
+                                    foreach (var manager in managers.Randomize())
                                     {
                                         connectionManager.PushManager(manager);
 
@@ -1848,7 +1842,7 @@ namespace Library.Net.Lair
                                                         {
                                                             creators.Add(c);
 
-                                                            if (creators.Count >= 2) goto End;
+                                                            if (creators.Count >= 1) goto End;
                                                         }
                                                     }
                                                 }
@@ -1858,7 +1852,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var creator in creators.Randomize().Take(2))
+                                    foreach (var creator in creators.Randomize())
                                     {
                                         connectionManager.PushCreator(creator);
 
@@ -1896,7 +1890,7 @@ namespace Library.Net.Lair
                                                         {
                                                             topics.Add(t);
 
-                                                            if (topics.Count >= 2) goto End;
+                                                            if (topics.Count >= 1) goto End;
                                                         }
                                                     }
                                                 }
@@ -1906,7 +1900,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var topic in topics.Randomize().Take(2))
+                                    foreach (var topic in topics.Randomize())
                                     {
                                         connectionManager.PushTopic(topic);
 
@@ -1937,7 +1931,7 @@ namespace Library.Net.Lair
                                                         {
                                                             messages.Add(m);
 
-                                                            if (messages.Count >= 8) goto End;
+                                                            if (messages.Count >= 1) goto End;
                                                         }
                                                     }
                                                 }
@@ -1947,7 +1941,7 @@ namespace Library.Net.Lair
 
                                 End: ;
 
-                                    foreach (var message in messages.Randomize().Take(8))
+                                    foreach (var message in messages.Randomize())
                                     {
                                         connectionManager.PushMessage(message);
 

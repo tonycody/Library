@@ -7,7 +7,7 @@ using Library.Io;
 
 namespace Library.Net.Rosa
 {
-    [DataContract(Name = "Section", Namespace = "http://Library/Net/Rosa")]
+    [DataContract(Name = "Section", Namespace = "http://Library/Net/Lair")]
     public sealed class Section : ItemBase<Section>, ISection
     {
         private enum SerializeId : byte
@@ -83,8 +83,8 @@ namespace Library.Net.Rosa
                 bufferStream.SetLength(5);
                 bufferStream.Seek(5, SeekOrigin.Begin);
 
-                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
-                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
                     writer.Write(this.Name);
                 }
@@ -125,9 +125,7 @@ namespace Library.Net.Rosa
 
             if (this.Id != null && other.Id != null)
             {
-                if (this.Id.Length != other.Id.Length) return false;
-
-                for (int i = 0; i < this.Id.Length; i++) if (this.Id[i] != other.Id[i]) return false;
+                if (!Collection.Equals(this.Id, other.Id)) return false;
             }
 
             return true;

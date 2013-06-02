@@ -9,7 +9,7 @@ using Library.Security;
 
 namespace Library.Net.Rosa
 {
-    public static class LairConverter
+    public static class RosaConverter
     {
         private enum CompressionAlgorithm
         {
@@ -72,7 +72,7 @@ namespace Library.Net.Rosa
 #if DEBUG
                 if (list[0].Value.Length != stream.Length)
                 {
-                    Debug.WriteLine("LairConverter ToStream : {0}→{1} {2}",
+                    Debug.WriteLine("RosaConverter ToStream : {0}→{1} {2}",
                         NetworkConverter.ToSizeString(stream.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
@@ -155,7 +155,7 @@ namespace Library.Net.Rosa
                             }
 
 #if DEBUG
-                            Debug.WriteLine("LairConverter FromStream : {0}→{1} {2}",
+                            Debug.WriteLine("RosaConverter FromStream : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));
@@ -207,203 +207,6 @@ namespace Library.Net.Rosa
             value = match.Groups[1].Value;
 
             return new MemoryStream(NetworkConverter.FromBase64UrlString(value));
-        }
-
-        public static string ToNodeString(Node item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Node>(item))
-                {
-                    return "Node@" + LairConverter.ToBase64String(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Node FromNodeString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 5)))
-                {
-                    return LairConverter.FromStream<Node>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToSectionString(Section item, string leaderSignature)
-        {
-            if (item == null) throw new ArgumentNullException("Section");
-
-            try
-            {
-                if (leaderSignature != null && Signature.HasSignature(leaderSignature))
-                {
-                    using (Stream stream = LairConverter.ToStream<Section>(item))
-                    {
-                        return "Section@" + LairConverter.ToBase64String(stream) + "," + leaderSignature;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = LairConverter.ToStream<Section>(item))
-                    {
-                        return "Section@" + LairConverter.ToBase64String(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Section FromSectionString(string item, out string leaderSignature)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Section@")) throw new ArgumentException("item");
-
-            leaderSignature = null;
-
-            try
-            {
-                if (item.Contains(","))
-                {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    leaderSignature = list[1];
-
-                    using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, 8)))
-                    {
-                        return LairConverter.FromStream<Section>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
-                    {
-                        return LairConverter.FromStream<Section>(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToChannelString(Channel item)
-        {
-            if (item == null) throw new ArgumentNullException("Channel");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Channel>(item))
-                {
-                    return "Channel@" + LairConverter.ToBase64String(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Channel FromChannelString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Channel@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
-                {
-                    return LairConverter.FromStream<Channel>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToMessageString(Message item)
-        {
-            if (item == null) throw new ArgumentNullException("Message");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Message>(item))
-                {
-                    return "Message@" + LairConverter.ToBase64String(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Message FromMessageString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Message@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
-                {
-                    return LairConverter.FromStream<Message>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Stream ToMessagesStream(IEnumerable<Message> collection)
-        {
-            if (collection == null) throw new ArgumentNullException("collection");
-
-            try
-            {
-                var items = new ItemCollection<Message>();
-                items.Items.AddRange(collection);
-
-                return LairConverter.ToStream<ItemCollection<Message>>(items);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static IEnumerable<Message> FromMessagesStream(Stream stream)
-        {
-            if (stream == null) throw new ArgumentNullException("stream");
-
-            try
-            {
-                return LairConverter.FromStream<ItemCollection<Message>>(stream).Items;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
         }
     }
 }

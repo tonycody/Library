@@ -43,7 +43,7 @@
     <Compile Include="Cache\Channel.cs" />
     <Compile Include="Cache\ChannelCollection.cs" />
     <Compile Include="Cache\IChannel.cs" />
-    <Compile Include="Cache\LairConverter.cs" />
+    <Compile Include="Cache\RosaConverter.cs" />
     <Compile Include="Cache\ISection.cs" />
     <Compile Include="Cache\Section.cs" />
     <Compile Include="Cache\SectionCollection.cs" />

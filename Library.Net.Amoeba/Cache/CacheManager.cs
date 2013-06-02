@@ -22,7 +22,7 @@ namespace Library.Net.Amoeba
     {
         private Settings _settings;
         private FileStream _fileStream = null;
-        private BufferManager _bufferManager;
+        private volatile BufferManager _bufferManager;
         private HashSet<long> _spaceClusters;
         private Dictionary<int, string> _ids = new Dictionary<int, string>();
         private volatile Dictionary<Key, string> _shareIndexLink = null;
@@ -61,8 +61,6 @@ namespace Library.Net.Amoeba
             _watchThread.Name = "CacheManager_WatchThread";
             _watchThread.Start();
 
-            _resetEvent.Reset();
-
 #if !MONO
             {
                 SYSTEM_INFO info = new SYSTEM_INFO();
@@ -79,7 +77,7 @@ namespace Library.Net.Amoeba
             {
                 for (; ; )
                 {
-                    _resetEvent.WaitOne(1000 * 60, false);
+                    _resetEvent.WaitOne(1000 * 60 * 5);
 
                     var usingHeaders = new HashSet<Key>();
                     usingHeaders.UnionWith(_lockedKeys.Keys);
@@ -327,14 +325,24 @@ namespace Library.Net.Amoeba
                 {
                     foreach (var cluster in clusters.Indexes)
                     {
-                        while (i < cluster)
+                        if (i < cluster)
                         {
-                            spaceList.Add(i);
+                            while (i < cluster)
+                            {
+                                spaceList.Add(i);
+                                i++;
+                            }
+
                             i++;
                         }
-
-                        spaceList.Remove(cluster);
-                        i++;
+                        else if (cluster < i)
+                        {
+                            spaceList.Remove(cluster);
+                        }
+                        else
+                        {
+                            i++;
+                        }
                     }
                 }
 
@@ -344,14 +352,14 @@ namespace Library.Net.Amoeba
                     long j = endCluster + 1;
                     long count = fileEndCluster - endCluster;
 
-                    for (int k = 0; k < count && k < 8192; k++, j++)
+                    for (int k = 0; k < count && k < 1024 * 8; k++, j++)
                     {
                         spaceList.Add(j);
                     }
                 }
 
                 _spaceClusters.Clear();
-                _spaceClusters.UnionWith(spaceList.Take(8192));
+                _spaceClusters.UnionWith(spaceList.Take(1024 * 8));
             }
         }
 
@@ -618,8 +626,10 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
+                size = (long)Math.Min(size, NetworkConverter.FromSizeString("16TB"));
+
                 long cc = 256 * 1024 * 1024;
-                size = ((size + (cc - 1)) / cc) * cc;
+                size = (long)((size + (cc - 1)) / cc) * cc;
 
                 foreach (var header in _settings.ClustersIndex.Keys.ToArray()
                     .Where(n => _settings.ClustersIndex[n].Indexes.Any(o => size < ((o + 1) * CacheManager.ClusterSize)))
@@ -633,6 +643,8 @@ namespace Library.Net.Amoeba
                 _fileStream.SetLength(Math.Min(_settings.Size, _fileStream.Length));
 
                 _spaceClusters.Clear();
+
+                _resetEvent.Set();
             }
         }
 

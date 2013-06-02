@@ -25,6 +25,7 @@ namespace Library.Net.Amoeba
         private Dictionary<string, List<int>> _shareLink = new Dictionary<string, List<int>>();
         private int _id = 0;
         private ManagerState _state = ManagerState.Stop;
+        private ManagerState _encodeState = ManagerState.Stop;
 
         private Thread _uploadedThread;
         private Thread _removeShareThread;
@@ -241,7 +242,7 @@ namespace Library.Net.Amoeba
             for (; ; )
             {
                 Thread.Sleep(1000 * 1);
-                if (this.State == ManagerState.Stop) return;
+                if (this.EncodeState == ManagerState.Stop) return;
 
                 UploadItem item = null;
 
@@ -285,13 +286,13 @@ namespace Library.Net.Amoeba
                                     using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                                     using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
                                         item.EncodingBytes = Math.Min(readSize, stream.Length);
                                     }, 1024 * 1024, true))
                                     using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
                                         item.EncodingBytes = Math.Min(readSize, stream.Length);
                                     }, 1024 * 1024, true))
@@ -407,7 +408,7 @@ namespace Library.Net.Amoeba
                                 {
                                     group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
                                     {
-                                        return (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        return (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
                                     });
                                 }
                                 catch (StopException)
@@ -466,13 +467,13 @@ namespace Library.Net.Amoeba
                                     using (var stream = index.Export(_bufferManager))
                                     using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
                                         item.EncodingBytes = Math.Min(readSize, stream.Length);
                                     }, 1024 * 1024, true))
                                     using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
                                         item.EncodingBytes = Math.Min(readSize, stream.Length);
                                     }, 1024 * 1024, true))
@@ -525,7 +526,7 @@ namespace Library.Net.Amoeba
                                     using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                                     using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
                                         item.EncodingBytes = Math.Min(readSize, stream.Length);
                                     }, 1024 * 1024, true))
@@ -651,7 +652,7 @@ namespace Library.Net.Amoeba
                                 {
                                     group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
                                     {
-                                        return (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        return (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
                                     });
                                 }
                                 catch (StopException)
@@ -715,13 +716,13 @@ namespace Library.Net.Amoeba
                                     using (var stream = index.Export(_bufferManager))
                                     using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
                                         item.EncodingBytes = Math.Min(readSize, stream.Length);
                                     }, 1024 * 1024, true))
                                     using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
-                                        isStop = (this.State == ManagerState.Stop || !_settings.UploadItems.Contains(item));
+                                        isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
                                         item.EncodingBytes = Math.Min(readSize, stream.Length);
                                     }, 1024 * 1024, true))
@@ -941,19 +942,23 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public ManagerState EncodeState
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _encodeState;
+                }
+            }
+        }
+
         public override void Start()
         {
-            while (_uploadManagerThread != null) Thread.Sleep(1000);
-
             lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
-
-                _uploadManagerThread = new Thread(this.UploadManagerThread);
-                _uploadManagerThread.Priority = ThreadPriority.Lowest;
-                _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
-                _uploadManagerThread.Start();
             }
         }
 
@@ -963,6 +968,31 @@ namespace Library.Net.Amoeba
             {
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
+            }
+        }
+
+        public void EncodeStart()
+        {
+            while (_uploadManagerThread != null) Thread.Sleep(1000);
+
+            lock (this.ThisLock)
+            {
+                if (this.EncodeState == ManagerState.Start) return;
+                _encodeState = ManagerState.Start;
+
+                _uploadManagerThread = new Thread(this.UploadManagerThread);
+                _uploadManagerThread.Priority = ThreadPriority.Lowest;
+                _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
+                _uploadManagerThread.Start();
+            }
+        }
+
+        public void EncodeStop()
+        {
+            lock (this.ThisLock)
+            {
+                if (this.EncodeState == ManagerState.Stop) return;
+                _encodeState = ManagerState.Stop;
             }
 
             _uploadManagerThread.Join();

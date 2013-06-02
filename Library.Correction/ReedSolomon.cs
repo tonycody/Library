@@ -8,15 +8,15 @@ using System.Runtime.InteropServices;
 
 namespace Library.Correction
 {
-    public class ReedSolomon
+    public class ReedSolomon : IThisLock
     {
-        private ReedSolomon.Math _fecMath;
-        private int _k;
-        private int _n;
-        private int _threadCount;
-        private BufferManager _bufferManager;
+        private volatile ReedSolomon.Math _fecMath;
+        private volatile int _k;
+        private volatile int _n;
+        private volatile int _threadCount;
+        private volatile BufferManager _bufferManager;
 
-        private byte[] _encMatrix;
+        private volatile byte[] _encMatrix;
 
         private object _thisLock = new object();
 
@@ -33,24 +33,27 @@ namespace Library.Correction
 
         public void Encode(IList<ArraySegment<byte>> src, IList<ArraySegment<byte>> repair, int[] index)
         {
-            byte[][] srcBufs = new byte[src.Count][];
-            int[] srcOffs = new int[src.Count];
-            byte[][] repairBufs = new byte[repair.Count][];
-            int[] repairOffs = new int[repair.Count];
-
-            for (int i = 0; i < srcBufs.Length; i++)
+            lock (this.ThisLock)
             {
-                srcBufs[i] = src[i].Array;
-                srcOffs[i] = src[i].Offset;
-            }
+                byte[][] srcBufs = new byte[src.Count][];
+                int[] srcOffs = new int[src.Count];
+                byte[][] repairBufs = new byte[repair.Count][];
+                int[] repairOffs = new int[repair.Count];
 
-            for (int i = 0; i < repairBufs.Length; i++)
-            {
-                repairBufs[i] = repair[i].Array;
-                repairOffs[i] = repair[i].Offset;
-            }
+                for (int i = 0; i < srcBufs.Length; i++)
+                {
+                    srcBufs[i] = src[i].Array;
+                    srcOffs[i] = src[i].Offset;
+                }
 
-            this.Encode(srcBufs, srcOffs, repairBufs, repairOffs, index, src[0].Count);
+                for (int i = 0; i < repairBufs.Length; i++)
+                {
+                    repairBufs[i] = repair[i].Array;
+                    repairOffs[i] = repair[i].Offset;
+                }
+
+                this.Encode(srcBufs, srcOffs, repairBufs, repairOffs, index, src[0].Count);
+            }
         }
 
         private void Encode(byte[][] src, int[] srcOff, byte[][] repair, int[] repairOff, int[] index, int packetLength)
@@ -82,18 +85,21 @@ namespace Library.Correction
 
         public void Decode(ref IList<ArraySegment<byte>> pkts, int[] index)
         {
-            ReedSolomon.Shuffle(ref pkts, index, _k);
-
-            byte[][] bufs = new byte[pkts.Count][];
-            int[] offs = new int[pkts.Count];
-
-            for (int i = 0; i < bufs.Length; i++)
+            lock (this.ThisLock)
             {
-                bufs[i] = pkts[i].Array;
-                offs[i] = pkts[i].Offset;
-            }
+                ReedSolomon.Shuffle(ref pkts, index, _k);
 
-            this.Decode(bufs, offs, index, pkts[0].Count);
+                byte[][] bufs = new byte[pkts.Count][];
+                int[] offs = new int[pkts.Count];
+
+                for (int i = 0; i < bufs.Length; i++)
+                {
+                    bufs[i] = pkts[i].Array;
+                    offs[i] = pkts[i].Offset;
+                }
+
+                this.Decode(bufs, offs, index, pkts[0].Count);
+            }
         }
 
         private void Decode(byte[][] pkts, int[] pktsOff, int[] index, int packetLength)
@@ -201,7 +207,19 @@ namespace Library.Correction
         //        }
         //    }
         //}
-        
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                return _thisLock;
+            }
+        }
+
+        #endregion
+
         private class Math
         {
             private int _gfBits;

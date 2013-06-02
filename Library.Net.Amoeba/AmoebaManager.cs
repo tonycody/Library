@@ -21,6 +21,8 @@ namespace Library.Net.Amoeba
         private StoreUploadManager _storeUploadManager;
 
         private ManagerState _state = ManagerState.Stop;
+        private ManagerState _encodeState = ManagerState.Stop;
+        private ManagerState _decodeState = ManagerState.Stop;
 
         private RemoveSeedSignaturesEventHandler _removeSeedSignaturesEvent;
 
@@ -638,6 +640,32 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public ManagerState EncodeState
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _encodeState;
+                }
+            }
+        }
+
+        public ManagerState DecodeState
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _decodeState;
+                }
+            }
+        }
+
         public override void Start()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -669,6 +697,58 @@ namespace Library.Net.Amoeba
                 _uploadManager.Stop();
                 _downloadManager.Stop();
                 _connectionsManager.Stop();
+            }
+        }
+
+        public void EncodeStart()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                if (this.EncodeState == ManagerState.Start) return;
+                _encodeState = ManagerState.Start;
+
+                _uploadManager.EncodeStart();
+            }
+        }
+
+        public void EncodeStop()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                if (this.EncodeState == ManagerState.Stop) return;
+                _encodeState = ManagerState.Stop;
+
+                _uploadManager.EncodeStop();
+            }
+        }
+
+        public void DecodeStart()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                if (this.DecodeState == ManagerState.Start) return;
+                _decodeState = ManagerState.Start;
+
+                _downloadManager.DecodeStart();
+            }
+        }
+
+        public void DecodeStop()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                if (this.DecodeState == ManagerState.Stop) return;
+                _decodeState = ManagerState.Stop;
+
+                _downloadManager.DecodeStop();
             }
         }
 

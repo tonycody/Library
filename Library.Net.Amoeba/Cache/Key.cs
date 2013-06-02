@@ -82,8 +82,8 @@ namespace Library.Net.Amoeba
                 bufferStream.SetLength(5);
                 bufferStream.Seek(5, SeekOrigin.Begin);
 
-                using (CacheStream cacheStream = new CacheStream(bufferStream, 1024, true, bufferManager))
-                using (StreamWriter writer = new StreamWriter(cacheStream, encoding))
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
                     writer.Write(this.HashAlgorithm.ToString());
                 }

@@ -235,8 +235,7 @@ namespace Library.Io
                         }
 
                         _readerBufferPosition = 0;
-                        if (_readerBufferLength == 0)
-                            break;
+                        if (_readerBufferLength == 0) break;
                     }
 
                     int length = Math.Min(_readerBufferLength - _readerBufferPosition, count);
