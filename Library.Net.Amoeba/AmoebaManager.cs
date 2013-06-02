@@ -593,12 +593,32 @@ namespace Library.Net.Amoeba
                     _downloadManager.Stop();
                 }
 
+                if (this.EncodeState == ManagerState.Start)
+                {
+                    _uploadManager.EncodeStop();
+                }
+
+                if (this.DecodeState == ManagerState.Start)
+                {
+                    _downloadManager.DecodeStop();
+                }
+
                 _cacheManager.Resize(size);
 
                 if (this.State == ManagerState.Start)
                 {
                     _uploadManager.Start();
                     _downloadManager.Start();
+                }
+
+                if (this.EncodeState == ManagerState.Start)
+                {
+                    _uploadManager.EncodeStart();
+                }
+
+                if (this.DecodeState == ManagerState.Start)
+                {
+                    _downloadManager.DecodeStart();
                 }
             }
         }

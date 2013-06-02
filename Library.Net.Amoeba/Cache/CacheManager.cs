@@ -30,7 +30,6 @@ namespace Library.Net.Amoeba
 
         private volatile AutoResetEvent _resetEvent = new AutoResetEvent(false);
         private long _freeSpace = 0;
-        private long _usingSpace = 0;
         private long _lockSpace = 0;
 
         private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
@@ -109,7 +108,6 @@ namespace Library.Net.Amoeba
 
                     _lockSpace = size;
                     _freeSpace = this.Size - size;
-                    _usingSpace = _fileStream.Length;
                 }
             }
             catch (Exception)
@@ -210,7 +208,7 @@ namespace Library.Net.Amoeba
 
                     contexts.Add(new InformationContext("SeedCount", _settings.SeedInformation.Count));
                     contexts.Add(new InformationContext("ShareCount", _settings.ShareIndex.Count));
-                    contexts.Add(new InformationContext("UsingSpace", _usingSpace));
+                    contexts.Add(new InformationContext("UsingSpace", _fileStream.Length));
                     contexts.Add(new InformationContext("LockSpace", _lockSpace));
                     contexts.Add(new InformationContext("FreeSpace", _freeSpace));
 
