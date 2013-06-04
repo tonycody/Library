@@ -274,7 +274,7 @@ namespace Library.Security
             }
 
             {
-                Stream exportStream = new RangeStream(stream, true);
+                Stream exportStream = new WrapperStream(stream, true);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
@@ -320,7 +320,7 @@ namespace Library.Security
             }
             // Stream
             {
-                Stream exportStream = new RangeStream(stream, true);
+                Stream exportStream = new WrapperStream(stream, true);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);

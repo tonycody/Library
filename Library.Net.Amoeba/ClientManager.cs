@@ -186,7 +186,7 @@ namespace Library.Net.Amoeba
             }
             catch (Exception)
             {
-                if (socket != null) socket.Close();
+                if (socket != null) socket.Dispose();
             }
 
             throw new ClientManagerException();
@@ -432,7 +432,7 @@ namespace Library.Net.Amoeba
             }
             catch (Exception)
             {
-                if (socket != null) socket.Close();
+                if (socket != null) socket.Dispose();
                 if (connection != null) connection.Dispose();
             }
 

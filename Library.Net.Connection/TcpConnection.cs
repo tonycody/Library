@@ -316,7 +316,7 @@ namespace Library.Net.Connection
                     {
                         sendBuffer = _bufferManager.TakeBuffer(1024 * 8);
 
-                        using (Stream dataStream = new JoinStream(headerStream, new RangeStream(stream, true)))
+                        using (Stream dataStream = new JoinStream(headerStream, new WrapperStream(stream, true)))
                         {
                             int i = -1;
 
@@ -381,7 +381,9 @@ namespace Library.Net.Connection
                 {
                     try
                     {
+                        _socket.Shutdown(SocketShutdown.Both);
                         _socket.Close();
+                        _socket.Dispose();
                     }
                     catch (Exception)
                     {

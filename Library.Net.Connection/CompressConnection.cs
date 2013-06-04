@@ -284,7 +284,7 @@ namespace Library.Net.Connection
                         }
                     }
 
-                    list.Add(new KeyValuePair<int, Stream>(0, new RangeStream(stream, true)));
+                    list.Add(new KeyValuePair<int, Stream>(0, new WrapperStream(stream, true)));
 
                     list.Sort((x, y) =>
                     {

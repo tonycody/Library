@@ -974,6 +974,8 @@ namespace Library.Net.Lair
             public TimeSpan ResponseTime { get; set; }
         }
 
+        private volatile bool _refreshThreadRunning = false;
+
         private void ConnectionsManagerThread()
         {
             Stopwatch connectionCheckStopwatch = new Stopwatch();
@@ -1088,7 +1090,8 @@ namespace Library.Net.Lair
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
                     {
-                        Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                        if (_refreshThreadRunning) return;
+                        _refreshThreadRunning = true;
 
                         try
                         {
@@ -1364,6 +1367,10 @@ namespace Library.Net.Lair
                         catch (Exception e)
                         {
                             Log.Error(e);
+                        }
+                        finally
+                        {
+                            _refreshThreadRunning = false;
                         }
                     }));
                 }

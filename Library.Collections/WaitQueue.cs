@@ -378,14 +378,32 @@ namespace Library.Collections
             {
                 if (_lowerResetEvent != null)
                 {
-                    _lowerResetEvent.Set();
-                    _lowerResetEvent.Close();
+                    try
+                    {
+                        _lowerResetEvent.Set();
+                        _lowerResetEvent.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _lowerResetEvent = null;
                 }
 
                 if (_upperResetEvent != null)
                 {
-                    _upperResetEvent.Set();
-                    _upperResetEvent.Close();
+                    try
+                    {
+                        _upperResetEvent.Set();
+                        _upperResetEvent.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _upperResetEvent = null;
                 }
             }
         }

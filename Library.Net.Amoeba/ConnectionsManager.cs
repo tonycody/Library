@@ -861,6 +861,8 @@ namespace Library.Net.Amoeba
             public DateTime LastPullTime { get; set; }
         }
 
+        private volatile bool _refreshThreadRunning = false;
+
         private void ConnectionsManagerThread()
         {
             Stopwatch connectionCheckStopwatch = new Stopwatch();
@@ -966,6 +968,9 @@ namespace Library.Net.Amoeba
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
                     {
+                        if (_refreshThreadRunning) return;
+                        _refreshThreadRunning = true;
+
                         try
                         {
                             {
@@ -989,6 +994,10 @@ namespace Library.Net.Amoeba
                         catch (Exception e)
                         {
                             Log.Error(e);
+                        }
+                        finally
+                        {
+                            _refreshThreadRunning = false;
                         }
                     }));
                 }

@@ -560,7 +560,7 @@ namespace Library.Net.Connection
                                     sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                                     using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                    using (CryptoStream cs = new CryptoStream(new RangeStream(stream, true),
+                                    using (CryptoStream cs = new CryptoStream(new WrapperStream(stream, true),
                                         rijndael.CreateEncryptor(_myCryptoKey.Take(32).ToArray(), _myCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                                     {
                                         int i = -1;

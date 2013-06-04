@@ -35,12 +35,6 @@ namespace Library.Io
 
         }
 
-        public RangeStream(Stream stream, bool leaveInnerStreamOpen)
-            : this(stream, 0, stream.Length, leaveInnerStreamOpen)
-        {
-
-        }
-
         public override bool CanRead
         {
             get
