@@ -24,6 +24,7 @@ namespace Library.Net.Amoeba
         private FileStream _fileStream = null;
         private volatile BufferManager _bufferManager;
         private HashSet<long> _spaceClusters;
+        private bool _spaceClustersInitialized = false;
         private Dictionary<int, string> _ids = new Dictionary<int, string>();
         private volatile Dictionary<Key, string> _shareIndexLink = null;
         private int _id = 0;
@@ -316,32 +317,36 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                HashSet<long> spaceList = new HashSet<long>();
-                long i = 0;
-
-                foreach (var clusters in _settings.ClustersIndex.Values)
+                if (!_spaceClustersInitialized)
                 {
-                    foreach (var cluster in clusters.Indexes)
+                    long i = 0;
+
+                    foreach (var clusters in _settings.ClustersIndex.Values)
                     {
-                        if (i < cluster)
+                        foreach (var cluster in clusters.Indexes)
                         {
-                            while (i < cluster)
+                            if (i < cluster)
                             {
-                                spaceList.Add(i);
+                                while (i < cluster)
+                                {
+                                    _spaceClusters.Add(i);
+                                    i++;
+                                }
+
                                 i++;
                             }
-
-                            i++;
-                        }
-                        else if (cluster < i)
-                        {
-                            spaceList.Remove(cluster);
-                        }
-                        else
-                        {
-                            i++;
+                            else if (cluster < i)
+                            {
+                                _spaceClusters.Remove(cluster);
+                            }
+                            else
+                            {
+                                i++;
+                            }
                         }
                     }
+
+                    _spaceClustersInitialized = true;
                 }
 
                 {
@@ -350,14 +355,11 @@ namespace Library.Net.Amoeba
                     long j = endCluster + 1;
                     long count = fileEndCluster - endCluster;
 
-                    for (int k = 0; k < count && k < 1024 * 8; k++, j++)
+                    for (int k = _spaceClusters.Count; k < count && k < 8192; k++, j++)
                     {
-                        spaceList.Add(j);
+                        _spaceClusters.Add(j);
                     }
                 }
-
-                _spaceClusters.Clear();
-                _spaceClusters.UnionWith(spaceList.Take(1024 * 8));
             }
         }
 
@@ -640,6 +642,7 @@ namespace Library.Net.Amoeba
                 _settings.Size = count * CacheManager.ClusterSize;
                 _fileStream.SetLength(Math.Min(_settings.Size, _fileStream.Length));
 
+                _spaceClustersInitialized = false;
                 _spaceClusters.Clear();
 
                 _resetEvent.Set();
@@ -1060,25 +1063,39 @@ namespace Library.Net.Amoeba
 
                     for (int i = 0; i < keys.Count; i++)
                     {
-                        ArraySegment<byte> buffer = this[keys[i]];
-                        int bufferLength = buffer.Count;
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                        sumLength += bufferLength;
-
-                        if (bufferLength > blockLength)
+                        try
                         {
-                            throw new ArgumentOutOfRangeException("blockLength");
-                        }
-                        else if (bufferLength < blockLength)
-                        {
-                            ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                            Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                            Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                            buffer = tbuffer;
-                        }
+                            buffer = this[keys[i]];
+                            int bufferLength = buffer.Count;
 
-                        bufferList.Add(buffer);
+                            sumLength += bufferLength;
+
+                            if (bufferLength > blockLength)
+                            {
+                                throw new ArgumentOutOfRangeException("blockLength");
+                            }
+                            else if (bufferLength < blockLength)
+                            {
+                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
+                                Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                                buffer = tbuffer;
+                            }
+
+                            bufferList.Add(buffer);
+                        }
+                        catch (Exception)
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+
+                            throw;
+                        }
                     }
 
                     for (int i = 0; i < keys.Count; i++)
@@ -1193,9 +1210,11 @@ namespace Library.Net.Amoeba
 
                     for (int i = 0; i < group.Keys.Count; i++)
                     {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
                         try
                         {
-                            ArraySegment<byte> buffer = this[group.Keys[i]];
+                            buffer = this[group.Keys[i]];
                             int bufferLength = buffer.Count;
 
                             if (bufferLength > group.BlockLength)
@@ -1214,14 +1233,18 @@ namespace Library.Net.Amoeba
                             intList.Add(i);
                             bufferList.Add(buffer);
                         }
-                        catch (BlockNotFoundException)
+                        catch (Exception)
                         {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
 
+                            throw;
                         }
                     }
 
-                    if (bufferList.Count < group.InformationLength)
-                        throw new BlockNotFoundException();
+                    if (bufferList.Count < group.InformationLength) throw new BlockNotFoundException();
 
                     Exception exception = null;
 
@@ -1496,8 +1519,6 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
-
-                this.CheckSpace();
 
                 _ids.Clear();
                 _id = 0;

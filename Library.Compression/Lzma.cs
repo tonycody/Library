@@ -6,7 +6,7 @@ namespace Library.Compression
 {
     public static class Lzma
     {
-        public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
+        private static Lazy<LzmaEncoder> _lzmaEncoder = new Lazy<LzmaEncoder>(() =>
         {
             Int32 dictionary = 1 << 20;
             Int32 posStateBits = 2;
@@ -45,12 +45,23 @@ namespace Library.Compression
 
             var encoder = new LzmaEncoder();
             encoder.SetCoderProperties(propIDs, properties);
+
+            return encoder;
+        });
+
+        private static Lazy<LzmaDecoder> _lzmaDecoder = new Lazy<LzmaDecoder>(() =>
+        {
+            var decoder = new LzmaDecoder();
+
+            return decoder;
+        });
+
+        public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
+        {
+            var encoder = _lzmaEncoder.Value;
             encoder.WriteCoderProperties(outStream);
 
-            Int64 fileSize;
-
-            if (eos || stdInMode) fileSize = -1;
-            else fileSize = inStream.Length;
+            Int64 fileSize = -1;
 
             for (int i = 0; i < 8; i++)
                 outStream.WriteByte((Byte)(fileSize >> (8 * i)));
@@ -64,7 +75,7 @@ namespace Library.Compression
 
         public static void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            var decoder = new LzmaDecoder();
+            var decoder = _lzmaDecoder.Value;
 
             byte[] properties = new byte[5];
             if (inStream.Read(properties, 0, 5) != 5)
