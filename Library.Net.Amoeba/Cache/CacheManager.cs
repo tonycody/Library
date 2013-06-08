@@ -1233,6 +1233,10 @@ namespace Library.Net.Amoeba
                             intList.Add(i);
                             bufferList.Add(buffer);
                         }
+                        catch (BlockNotFoundException)
+                        {
+
+                        }
                         catch (Exception)
                         {
                             if (buffer.Array != null)
