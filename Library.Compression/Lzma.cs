@@ -6,6 +6,9 @@ namespace Library.Compression
 {
     public static class Lzma
     {
+        private static object _encodeLockObject = new object();
+        private static object _decodeLockObject = new object();
+
         private static Lazy<LzmaEncoder> _lzmaEncoder = new Lazy<LzmaEncoder>(() =>
         {
             Int32 dictionary = 1 << 20;
@@ -19,7 +22,7 @@ namespace Library.Compression
 
             string mf = "bt4";
             bool eos = true;
-            bool stdInMode = false;
+            //bool stdInMode = false;
 
             CoderPropID[] propIDs =  {
                 CoderPropID.DictionarySize,
@@ -58,45 +61,51 @@ namespace Library.Compression
 
         public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            var encoder = _lzmaEncoder.Value;
-            encoder.WriteCoderProperties(outStream);
-
-            Int64 fileSize = -1;
-
-            for (int i = 0; i < 8; i++)
-                outStream.WriteByte((Byte)(fileSize >> (8 * i)));
-
-            using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
-            using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
+            lock (_lzmaEncoder)
             {
-                encoder.Code(cis, new LzmaStreamWriter(cos), -1, -1, null);
+                var encoder = _lzmaEncoder.Value;
+                encoder.WriteCoderProperties(outStream);
+
+                Int64 fileSize = -1;
+
+                for (int i = 0; i < 8; i++)
+                    outStream.WriteByte((Byte)(fileSize >> (8 * i)));
+
+                using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
+                using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
+                {
+                    encoder.Code(cis, new LzmaStreamWriter(cos), -1, -1, null);
+                }
             }
         }
 
         public static void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            var decoder = _lzmaDecoder.Value;
-
-            byte[] properties = new byte[5];
-            if (inStream.Read(properties, 0, 5) != 5)
-                throw (new Exception("input .lzma is too short"));
-
-            decoder.SetDecoderProperties(properties);
-
-            long outSize = 0;
-
-            for (int i = 0; i < 8; i++)
+            lock (_lzmaDecoder)
             {
-                int v = inStream.ReadByte();
-                if (v < 0) throw (new Exception("Can't Read 1"));
+                var decoder = _lzmaDecoder.Value;
 
-                outSize |= ((long)(byte)v) << (8 * i);
-            }
+                byte[] properties = new byte[5];
+                if (inStream.Read(properties, 0, 5) != 5)
+                    throw (new Exception("input .lzma is too short"));
 
-            using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
-            using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
-            {
-                decoder.Code(cis, new LzmaStreamWriter(cos), -1, outSize, null);
+                decoder.SetDecoderProperties(properties);
+
+                long outSize = 0;
+
+                for (int i = 0; i < 8; i++)
+                {
+                    int v = inStream.ReadByte();
+                    if (v < 0) throw (new Exception("Can't Read 1"));
+
+                    outSize |= ((long)(byte)v) << (8 * i);
+                }
+
+                using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
+                using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
+                {
+                    decoder.Code(cis, new LzmaStreamWriter(cos), -1, outSize, null);
+                }
             }
         }
     }
