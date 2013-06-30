@@ -346,6 +346,8 @@ namespace Library.Net.Amoeba
                         }
                     }
 
+                    _spaceClusters.TrimExcess();
+
                     _spaceClustersInitialized = true;
                 }
 
