@@ -174,8 +174,8 @@ namespace Library.Net.Amoeba
             _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
             _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
-            _pullSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
+            _pushSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 60, 0));
+            _pullSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 30, 0));
         }
 
         public int Id

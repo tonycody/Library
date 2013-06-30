@@ -61,7 +61,7 @@ namespace Library.Compression
 
         public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            lock (_lzmaEncoder)
+            lock (_encodeLockObject)
             {
                 var encoder = _lzmaEncoder.Value;
                 encoder.WriteCoderProperties(outStream);
@@ -81,13 +81,22 @@ namespace Library.Compression
 
         public static void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            lock (_lzmaDecoder)
+            lock (_decodeLockObject)
             {
                 var decoder = _lzmaDecoder.Value;
 
                 byte[] properties = new byte[5];
                 if (inStream.Read(properties, 0, 5) != 5)
                     throw (new Exception("input .lzma is too short"));
+
+                // Check
+                {
+                    UInt32 dictionarySize = 0;
+                    for (int i = 0; i < 4; i++)
+                        dictionarySize += ((UInt32)(properties[1 + i])) << (i * 8);
+
+                    if (dictionarySize > (1 << 20)) throw new Exception("dictionarySize is too large.");
+                }
 
                 decoder.SetDecoderProperties(properties);
 

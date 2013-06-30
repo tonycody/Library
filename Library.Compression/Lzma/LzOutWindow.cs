@@ -26,7 +26,7 @@ namespace Library.Compression
 
         public void Init(System.IO.Stream stream, bool solid)
         {
-            ReleaseStream();
+            //ReleaseStream();
             _stream = stream;
             if (!solid)
             {
