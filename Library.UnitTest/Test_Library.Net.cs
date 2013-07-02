@@ -9,16 +9,17 @@ namespace Library.UnitTest
     [TestFixture, Category("Library.Net")]
     public class Test_Library_Net
     {
+        private Random _random = new Random();
+
         [Test]
         public void Test_Kademlia()
         {
             var kademlia = new Kademlia<Node>(512, 20);
-            var random = new Random();
 
             {
                 var node = new Node();
                 var id = new byte[64];
-                random.NextBytes(id);
+                _random.NextBytes(id);
                 node.Id = id;
 
                 kademlia.BaseNode = node;
@@ -28,7 +29,7 @@ namespace Library.UnitTest
             {
                 var node = new Node();
                 var id = new byte[64];
-                random.NextBytes(id);
+                _random.NextBytes(id);
                 node.Id = id;
 
                 kademlia.Add(node);
@@ -38,7 +39,7 @@ namespace Library.UnitTest
             {
                 var node = new Node();
                 var id = new byte[64];
-                random.NextBytes(id);
+                _random.NextBytes(id);
                 node.Id = id;
 
                 kademlia.Live(node);
@@ -60,7 +61,7 @@ namespace Library.UnitTest
             {
                 var tnode = new Node();
                 var id = new byte[64];
-                random.NextBytes(id);
+                _random.NextBytes(id);
                 tnode.Id = id;
 
                 var slist = Kademlia<Node>.Sort(kademlia.BaseNode, tnode.Id, kademlia.ToArray());

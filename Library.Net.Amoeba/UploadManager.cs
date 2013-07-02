@@ -24,6 +24,7 @@ namespace Library.Net.Amoeba
         private Dictionary<int, UploadItem> _ids = new Dictionary<int, UploadItem>();
         private Dictionary<string, List<int>> _shareLink = new Dictionary<string, List<int>>();
         private int _id = 0;
+
         private ManagerState _state = ManagerState.Stop;
         private ManagerState _encodeState = ManagerState.Stop;
 

@@ -10,23 +10,22 @@ namespace Library.UnitTest
     public class Test_Library_Io
     {
         private BufferManager _bufferManager = BufferManager.Instance;
+        private Random _random = new Random();
 
         [Test]
         public void Test_BufferStream()
         {
-            Random rand = new Random();
-
             //for (int i = 0; i < 10; i++)
-            var p = Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
+            Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
             {
                 ////using (MemoryStream stream = new MemoryStream())
                 using (BufferStream stream = new BufferStream(_bufferManager))
                 {
-                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
-                    long seek = rand.Next(64, buffer.Length);
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[_random.Next(128, 1024 * 1024 * 10)];
+                    long seek = _random.Next(64, buffer.Length);
                     //long seek = 0;
 
-                    rand.NextBytes(buffer);
+                    _random.NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Position = seek;
@@ -47,11 +46,9 @@ namespace Library.UnitTest
             using (MemoryStream mstream = new MemoryStream())
             using (BufferStream stream = new BufferStream(_bufferManager))
             {
-                Random random = new Random();
-
                 for (int i = 0; i < 1024 * 1024; i++)
                 {
-                    var v = (byte)rand.Next(0, 255);
+                    var v = (byte)_random.Next(0, 255);
                     mstream.WriteByte(v);
                     stream.WriteByte(v);
                 }
@@ -71,8 +68,6 @@ namespace Library.UnitTest
         [Test]
         public void Test_CacheStream()
         {
-            Random rand = new Random();
-
             //for (int i = 0; i < 10; i++)
             Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
             {
@@ -80,11 +75,11 @@ namespace Library.UnitTest
                 using (BufferStream bufferStream = new BufferStream(_bufferManager))
                 using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))
                 {
-                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[rand.Next(128, 1024 * 1024 * 10)];
-                    long seek = rand.Next(64, buffer.Length);
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[_random.Next(128, 1024 * 1024 * 10)];
+                    long seek = _random.Next(64, buffer.Length);
                     //long seek = 0;
 
-                    rand.NextBytes(buffer);
+                    _random.NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Position = seek;
@@ -107,11 +102,9 @@ namespace Library.UnitTest
             using (BufferStream bufferStream = new BufferStream(_bufferManager))
             using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))
             {
-                Random random = new Random();
-
                 for (int i = 0; i < 1024 * 1024; i++)
                 {
-                    var v = (byte)rand.Next(0, 255);
+                    var v = (byte)_random.Next(0, 255);
                     mstream.WriteByte(v);
                     stream.WriteByte(v);
                 }

@@ -12,6 +12,7 @@ namespace Library.UnitTest
     public class Test_Library_Net_Connection
     {
         private BufferManager _bufferManager = BufferManager.Instance;
+        private Random _random = new Random();
         private const int MaxReceiveCount = 1 * 1024 * 1024;
 
         [Test]
@@ -27,13 +28,13 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            var tcpClient = new TcpConnection(client.Client,null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
+            var tcpClient = new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
             var tcpServer = new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
 
             using (MemoryStream stream = new MemoryStream())
             {
                 var buffer = new byte[1024 * 8];
-                new Random().NextBytes(buffer);
+                _random.NextBytes(buffer);
 
                 stream.Write(buffer, 0, buffer.Length);
                 stream.Seek(0, SeekOrigin.Begin);
@@ -53,7 +54,7 @@ namespace Library.UnitTest
             using (MemoryStream stream = new MemoryStream())
             {
                 var buffer = new byte[1024 * 8];
-                new Random().NextBytes(buffer);
+                _random.NextBytes(buffer);
 
                 stream.Write(buffer, 0, buffer.Length);
                 stream.Seek(0, SeekOrigin.Begin);
@@ -93,7 +94,7 @@ namespace Library.UnitTest
             using (MemoryStream stream = new MemoryStream())
             {
                 var buffer = new byte[1024 * 8];
-                new Random().NextBytes(buffer);
+                _random.NextBytes(buffer);
 
                 stream.Write(buffer, 0, buffer.Length);
                 stream.Seek(0, SeekOrigin.Begin);
@@ -113,7 +114,7 @@ namespace Library.UnitTest
             using (MemoryStream stream = new MemoryStream())
             {
                 var buffer = new byte[1024 * 8];
-                new Random().NextBytes(buffer);
+                _random.NextBytes(buffer);
 
                 stream.Write(buffer, 0, buffer.Length);
                 stream.Seek(0, SeekOrigin.Begin);
@@ -159,7 +160,7 @@ namespace Library.UnitTest
                 using (MemoryStream stream = new MemoryStream())
                 {
                     var buffer = new byte[1024 * 8];
-                    //new Random().NextBytes(buffer);
+                    //_random.NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Seek(0, SeekOrigin.Begin);
@@ -179,7 +180,7 @@ namespace Library.UnitTest
                 using (MemoryStream stream = new MemoryStream())
                 {
                     var buffer = new byte[1024 * 8];
-                    //new Random().NextBytes(buffer);
+                    //_random.NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Seek(0, SeekOrigin.Begin);
@@ -235,7 +236,7 @@ namespace Library.UnitTest
                 using (MemoryStream stream = new MemoryStream())
                 {
                     var buffer = new byte[1024 * 8];
-                    new Random().NextBytes(buffer);
+                    _random.NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Seek(0, SeekOrigin.Begin);
@@ -255,7 +256,7 @@ namespace Library.UnitTest
                 using (MemoryStream stream = new MemoryStream())
                 {
                     var buffer = new byte[1024 * 8];
-                    new Random().NextBytes(buffer);
+                    _random.NextBytes(buffer);
 
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Seek(0, SeekOrigin.Begin);

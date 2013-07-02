@@ -10,17 +10,17 @@ namespace Library.UnitTest
     public class Test_Library_Correction
     {
         private BufferManager _bufferManager = BufferManager.Instance;
+        private Random _random = new Random();
 
         [Test]
         public void Test_ReedSolomon()
         {
             ReedSolomon pc = new ReedSolomon(8, 128, 256, 4, _bufferManager);
-            Random rand = new Random();
 
             IList<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();
             for (int i = 0; i < 128; i++)
             {
-                buffList.Add(new ArraySegment<byte>(NetworkConverter.GetBytes(rand.Next()), 0, 4));
+                buffList.Add(new ArraySegment<byte>(NetworkConverter.GetBytes(_random.Next()), 0, 4));
             }
 
             IList<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
@@ -61,12 +61,11 @@ namespace Library.UnitTest
             }
 
             {
-                Random random = new Random();
                 int n = buffList3.Count;
 
                 while (n > 1)
                 {
-                    int k = random.Next(n--);
+                    int k = _random.Next(n--);
 
                     var temp = buffList3[n];
                     buffList3[n] = buffList3[k];

@@ -33,8 +33,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Update", "Library.U
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Compression", "Library.Compression\Library.Compression.csproj", "{51ECCC57-56CB-44A0-9A43-DB596F982FC8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.Rosa", "Library.Net.Rosa\Library.Net.Rosa.csproj", "{5FC132BA-75E0-4167-9258-3D2B23DE4E31}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -339,24 +337,6 @@ Global
 		{51ECCC57-56CB-44A0-9A43-DB596F982FC8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{51ECCC57-56CB-44A0-9A43-DB596F982FC8}.Release|Win32.ActiveCfg = Release|Any CPU
 		{51ECCC57-56CB-44A0-9A43-DB596F982FC8}.Release|x86.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release Mono|Any CPU.Build.0 = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release Mono|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release Mono|Mixed Platforms.Build.0 = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release Mono|Win32.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release Mono|x86.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release|Win32.ActiveCfg = Release|Any CPU
-		{5FC132BA-75E0-4167-9258-3D2B23DE4E31}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

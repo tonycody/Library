@@ -96,6 +96,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BytesEqualityComparer.cs" />
+    <Compile Include="Cache\Archive.cs" />
+    <Compile Include="Cache\ArchiveCollection.cs" />
+    <Compile Include="Cache\Mail.cs" />
+    <Compile Include="Cache\MailCollection.cs" />
+    <Compile Include="Cache\DocumentCollection.cs" />
+    <Compile Include="Cache\Document.cs" />
     <Compile Include="Cache\TopicCollection.cs" />
     <Compile Include="Cache\Topic.cs" />
     <Compile Include="Cache\_Interface\IMail.cs" />

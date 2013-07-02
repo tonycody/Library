@@ -8,46 +8,34 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Profile", Namespace = "http://Library/Net/Lair")]
-    public sealed class Profile : ReadOnlyCertificateItemBase<Profile>, IProfile<Section, Channel, Archive>
+    [DataContract(Name = "Document", Namespace = "http://Library/Net/Lair")]
+    public sealed class Document : ReadOnlyCertificateItemBase<Document>, IDocument<Archive>
     {
         private enum SerializeId : byte
         {
-            Section = 0,
+            Archive = 0,
             CreationTime = 1,
-            TrustSignature = 2,
-            CryptoAlgorithm = 3,
-            CryptoKey = 4,
-            Channel = 5,
-            Archive = 6,
+            FormatType = 2,
+            Content = 3,
 
-            Certificate = 7,
+            Certificate = 4,
         }
 
-        private Section _section = null;
+        private Archive _archive = null;
         private DateTime _creationTime = DateTime.MinValue;
-        private SignatureCollection _trustSignatures = null;
-        private CryptoAlgorithm _cryptoAlgorithm = 0;
-        private byte[] _cryptoKey = null;
-        private ChannelCollection _channels = null;
-        private ArchiveCollection _archives = null;
+        private DocumentFormatType _formatType;
+        private string _content = null;
 
         private Certificate _certificate;
 
-        public static readonly int MaxTrustSignaturesCount = 1024;
-        public static readonly int MaxCryptoKeyLength = 64;
-        public static readonly int MaxChannelsCount = 1024;
-        public static readonly int MaxArchivesCount = 1024;
+        public static readonly int MaxContentLength = 1024 * 4;
 
-        public Profile(Section section, SignatureCollection trustSignatures, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, ChannelCollection channels, ArchiveCollection archives, DigitalSignature digitalSignature)
+        public Document(Archive archive, DocumentFormatType formatType, string content, DigitalSignature digitalSignature)
         {
-            this.Section = section;
+            this.Archive = archive;
             this.CreationTime = DateTime.UtcNow;
-            if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            _cryptoAlgorithm = cryptoAlgorithm;
-            _cryptoKey = cryptoKey;
-            if (channels != null) this.ProtectedChannels.AddRange(channels);
-            if (archives != null) this.ProtectedArchives.AddRange(archives);
+            this.FormatType = formatType;
+            this.Content = content;
 
             this.CreateCertificate(digitalSignature);
         }
@@ -65,9 +53,9 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Section)
+                    if (id == (byte)SerializeId.Archive)
                     {
-                        this.Section = Section.Import(rangeStream, bufferManager);
+                        this.Archive = Archive.Import(rangeStream, bufferManager);
                     }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
@@ -76,34 +64,19 @@ namespace Library.Net.Lair
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                     }
-                    else if (id == (byte)SerializeId.TrustSignature)
+                    else if (id == (byte)SerializeId.FormatType)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
+                            this.FormatType = (DocumentFormatType)Enum.Parse(typeof(DocumentFormatType), reader.ReadToEnd());
                         }
                     }
-                    else if (id == (byte)SerializeId.Channel)
-                    {
-                        this.ProtectedChannels.Add(Channel.Import(rangeStream, bufferManager));
-                    }
-                    else if (id == (byte)SerializeId.Archive)
-                    {
-                        this.ProtectedArchives.Add(Archive.Import(rangeStream, bufferManager));
-                    }
-                    else if (id == (byte)SerializeId.CryptoAlgorithm)
+                    else if (id == (byte)SerializeId.Content)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), reader.ReadToEnd());
+                            this.Content = reader.ReadToEnd();
                         }
-                    }
-                    else if (id == (byte)SerializeId.CryptoKey)
-                    {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.CryptoKey = buffer;
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -119,14 +92,14 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Section
-            if (this.Section != null)
+            // Channel
+            if (this.Archive != null)
             {
-                Stream exportStream = this.Section.Export(bufferManager);
+                Stream exportStream = this.Archive.Export(bufferManager);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Section);
+                bufferStream.WriteByte((byte)SerializeId.Archive);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
@@ -149,8 +122,8 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // TurstSignatures
-            foreach (var t in this.TrustSignatures)
+            // Content
+            if (this.Content != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -159,39 +132,17 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(t);
+                    writer.Write(this.Content);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.TrustSignature);
+                bufferStream.WriteByte((byte)SerializeId.Content);
 
                 streams.Add(bufferStream);
             }
-            // Channels
-            foreach (var c in this.ProtectedChannels)
-            {
-                Stream exportStream = c.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Channel);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-            // Archives
-            foreach (var a in this.ProtectedArchives)
-            {
-                Stream exportStream = a.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Archive);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-            // CryptoAlgorithm
-            if (this.CryptoAlgorithm != 0)
+            // FormatType
+            if (this.FormatType != 0)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -200,22 +151,12 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(this.CryptoAlgorithm.ToString());
+                    writer.Write(this.FormatType.ToString());
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CryptoAlgorithm);
-
-                streams.Add(bufferStream);
-            }
-            // CryptoKey
-            if (this.CryptoKey != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.CryptoKey.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CryptoKey);
-                bufferStream.Write(this.CryptoKey, 0, this.CryptoKey.Length);
+                bufferStream.WriteByte((byte)SerializeId.FormatType);
 
                 streams.Add(bufferStream);
             }
@@ -237,18 +178,18 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (this.Certificate == null) return 0;
-            else return this.Certificate.GetHashCode();
+            if (_content == null) return 0;
+            else return _content.GetHashCode();
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Profile)) return false;
+            if ((object)obj == null || !(obj is Document)) return false;
 
-            return this.Equals((Profile)obj);
+            return this.Equals((Document)obj);
         }
 
-        public override bool Equals(Profile other)
+        public override bool Equals(Document other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -261,15 +202,14 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            if (this.Certificate == null) return "";
-            else return this.Certificate.ToString();
+            return this.Content;
         }
 
-        public override Profile DeepClone()
+        public override Document DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return Profile.Import(stream, BufferManager.Instance);
+                return Document.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -300,18 +240,18 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IProfile<Section>
+        #region IDocument<Archive>
 
-        [DataMember(Name = "Section")]
-        public Section Section
+        [DataMember(Name = "Archive")]
+        public Archive Archive
         {
             get
             {
-                return _section;
+                return _archive;
             }
             private set
             {
-                _section = value;
+                _archive = value;
             }
         }
 
@@ -329,103 +269,43 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<string> TrustSignatures
+        [DataMember(Name = "FormatType")]
+        public DocumentFormatType FormatType
         {
             get
             {
-                return this.ProtectedTrustSignatures;
-            }
-        }
-
-        [DataMember(Name = "TrustSignatures")]
-        private SignatureCollection ProtectedTrustSignatures
-        {
-            get
-            {
-                if (_trustSignatures == null)
-                    _trustSignatures = new SignatureCollection(Profile.MaxTrustSignaturesCount);
-
-                return _trustSignatures;
-            }
-        }
-
-        [DataMember(Name = "CryptoAlgorithm")]
-        public CryptoAlgorithm CryptoAlgorithm
-        {
-            get
-            {
-                return _cryptoAlgorithm;
+                return _formatType;
             }
             set
             {
-                if (!Enum.IsDefined(typeof(CryptoAlgorithm), value))
+                if (!Enum.IsDefined(typeof(DocumentFormatType), value))
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _cryptoAlgorithm = value;
+                    _formatType = value;
                 }
             }
         }
 
-        [DataMember(Name = "CryptoKey")]
-        public byte[] CryptoKey
+        [DataMember(Name = "Content")]
+        public string Content
         {
             get
             {
-                return _cryptoKey;
+                return _content;
             }
-            set
+            private set
             {
-                if (value != null && value.Length > Profile.MaxCryptoKeyLength)
+                if (value != null && value.Length > Document.MaxContentLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _cryptoKey = value;
+                    _content = value;
                 }
-            }
-        }
-
-        public IEnumerable<Channel> Channels
-        {
-            get
-            {
-                return this.ProtectedChannels;
-            }
-        }
-
-        [DataMember(Name = "Channels")]
-        private ChannelCollection ProtectedChannels
-        {
-            get
-            {
-                if (_channels == null)
-                    _channels = new ChannelCollection(Profile.MaxChannelsCount);
-
-                return _channels;
-            }
-        }
-
-        public IEnumerable<Archive> Archives
-        {
-            get
-            {
-                return this.ProtectedArchives;
-            }
-        }
-
-        [DataMember(Name = "Archives")]
-        private ArchiveCollection ProtectedArchives
-        {
-            get
-            {
-                if (_archives == null)
-                    _archives = new ArchiveCollection(Profile.MaxArchivesCount);
-
-                return _archives;
             }
         }
 

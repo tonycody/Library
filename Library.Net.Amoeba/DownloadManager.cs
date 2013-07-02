@@ -24,6 +24,7 @@ namespace Library.Net.Amoeba
         private CountCache _countCache = new CountCache();
         private Dictionary<int, DownloadItem> _ids = new Dictionary<int, DownloadItem>();
         private int _id = 0;
+
         private ManagerState _state = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 

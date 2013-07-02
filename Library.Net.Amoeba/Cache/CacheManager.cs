@@ -20,9 +20,11 @@ namespace Library.Net.Amoeba
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
     {
-        private Settings _settings;
         private FileStream _fileStream = null;
-        private volatile BufferManager _bufferManager;
+        private BufferManager _bufferManager;
+
+        private Settings _settings;
+
         private HashSet<long> _spaceClusters;
         private bool _spaceClustersInitialized = false;
         private Dictionary<int, string> _ids = new Dictionary<int, string>();
@@ -50,9 +52,10 @@ namespace Library.Net.Amoeba
         public CacheManager(string cachePath, BufferManager bufferManager)
         {
             _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            _bufferManager = bufferManager;
 
             _settings = new Settings();
-            _bufferManager = bufferManager;
+
             _spaceClusters = new HashSet<long>();
 
             _watchThread = new Thread(new ThreadStart(this.Watch));

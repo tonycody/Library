@@ -12,13 +12,14 @@ namespace Library.UnitTest
     public class Test_Library_Net_Lair
     {
         private BufferManager _bufferManager = BufferManager.Instance;
+        private Random _random = new Random();
 
         [Test]
         public void Test_LairConverter_Node()
         {
             var node = new Node();
             var id = new byte[64];
-            new Random().NextBytes(id);
+            _random.NextBytes(id);
             node.Id = id;
             node.Uris.AddRange(new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" });
 
@@ -33,7 +34,7 @@ namespace Library.UnitTest
         {
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             var id = new byte[64];
-            new Random().NextBytes(id);
+            _random.NextBytes(id);
 
             var section = new Section(id, "aoeui");
 
@@ -51,7 +52,7 @@ namespace Library.UnitTest
         {
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             var id = new byte[64];
-            new Random().NextBytes(id);
+            _random.NextBytes(id);
 
             var channel = new Channel(id, "aoeui");
 
@@ -66,7 +67,7 @@ namespace Library.UnitTest
         {
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             var id = new byte[64];
-            new Random().NextBytes(id);
+            _random.NextBytes(id);
 
             List<Message> messages = new List<Message>();
 
@@ -86,7 +87,7 @@ namespace Library.UnitTest
         {
             var node = new Node();
             var id = new byte[64];
-            new Random().NextBytes(id);
+            _random.NextBytes(id);
             node.Id = id;
             node.Uris.AddRange(new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" });
 
@@ -135,9 +136,9 @@ namespace Library.UnitTest
                     var channelNameBuffer = new byte[256];
                     var contentBuffer = new byte[1024 * 2];
 
-                    new Random().NextBytes(id);
-                    new Random().NextBytes(channelNameBuffer);
-                    new Random().NextBytes(contentBuffer);
+                    _random.NextBytes(id);
+                    _random.NextBytes(channelNameBuffer);
+                    _random.NextBytes(contentBuffer);
 
                     var channel = new Channel(id, NetworkConverter.ToBase64UrlString(channelNameBuffer).Substring(0, 256));
                     var message = new Message(channel, NetworkConverter.ToBase64UrlString(contentBuffer).Substring(0, 1024 * 2), null, null);
