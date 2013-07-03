@@ -64,14 +64,7 @@ namespace Library.Net.Amoeba
             _watchThread.Name = "CacheManager_WatchThread";
             _watchThread.Start();
 
-#if !MONO
-            {
-                SYSTEM_INFO info = new SYSTEM_INFO();
-                NativeMethods.GetSystemInfo(ref info);
-
-                _threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
-            }
-#endif
+            _threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
         }
 
         private void Watch()

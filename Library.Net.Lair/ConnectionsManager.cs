@@ -34,8 +34,8 @@ namespace Library.Net.Lair
         private LockedList<ConnectionManager> _connectionManagers;
         private MessagesManager _messagesManager;
 
-        private LockedDictionary<Node, LockedHashSet<Channel>> _pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
         private LockedDictionary<Node, LockedHashSet<Section>> _pushSectionsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Section>>();
+        private LockedDictionary<Node, LockedHashSet<Channel>> _pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
 
         private LockedList<Node> _creatingNodes;
         private CirculationCollection<Node> _cuttingNodes;
@@ -109,8 +109,6 @@ namespace Library.Net.Lair
         private const int _uploadingConnectionCountLowerLimit = 3;
 #endif
 
-        //private int _threadCount = 2;
-
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, BufferManager bufferManager)
         {
             _clientManager = clientManager;
@@ -140,15 +138,6 @@ namespace Library.Net.Lair
             _pushChannelsRequestList = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
 
             this.UpdateSessionId();
-
-#if !MONO
-            {
-                //SYSTEM_INFO info = new SYSTEM_INFO();
-                //NativeMethods.GetSystemInfo(ref info);
-
-                //_threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
-            }
-#endif
         }
 
         public RemoveSectionsEventHandler RemoveSectionsEvent
@@ -1987,7 +1976,7 @@ namespace Library.Net.Lair
 
             foreach (var node in e.Nodes.Take(_maxNodeCount))
             {
-                if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
+                if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n)) || _removeNodes.Contains(node)) continue;
 
                 _routeTable.Add(node);
                 _pullNodeCount++;
@@ -2327,7 +2316,7 @@ namespace Library.Net.Lair
             {
                 foreach (var node in nodes)
                 {
-                    if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
+                    if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n)) || _removeNodes.Contains(node)) continue;
 
                     _routeTable.Live(node);
                 }
@@ -2792,7 +2781,7 @@ namespace Library.Net.Lair
 
                 foreach (var node in _settings.OtherNodes)
                 {
-                    if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0) continue;
+                    if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n))) continue;
 
                     _routeTable.Add(node);
                 }

@@ -104,8 +104,6 @@ namespace Library.Net.Amoeba
         private const int _uploadingConnectionCountLowerLimit = 3;
 #endif
 
-        //private int _threadCount = 2;
-
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _clientManager = clientManager;
@@ -138,15 +136,6 @@ namespace Library.Net.Amoeba
             _relayBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
             this.UpdateSessionId();
-
-#if !MONO
-            {
-                //SYSTEM_INFO info = new SYSTEM_INFO();
-                //NativeMethods.GetSystemInfo(ref info);
-
-                //_threadCount = Math.Max(1, Math.Min(info.dwNumberOfProcessors, 32) / 2);
-            }
-#endif
         }
 
         public RemoveSeedSignaturesEventHandler RemoveSeedSignaturesEvent
@@ -2021,7 +2010,7 @@ namespace Library.Net.Amoeba
             {
                 foreach (var node in nodes)
                 {
-                    if (node == null || node.Id == null || node.Uris.Where(n => _clientManager.CheckUri(n)).Count() == 0 || _removeNodes.Contains(node)) continue;
+                    if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n)) || _removeNodes.Contains(node)) continue;
 
                     _routeTable.Live(node);
                 }
@@ -2259,7 +2248,7 @@ namespace Library.Net.Amoeba
 
                 foreach (var node in _settings.OtherNodes)
                 {
-                    if (node == null || node.Id == null || node.Uris.Count == 0) return;
+                    if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n))) continue;
 
                     _routeTable.Add(node);
                 }

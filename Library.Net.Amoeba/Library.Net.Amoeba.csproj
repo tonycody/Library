@@ -74,7 +74,6 @@
     <Compile Include="StoreDownloadManager.cs" />
     <Compile Include="StoreUploadItem.cs" />
     <Compile Include="StoreUploadManager.cs" />
-    <Compile Include="NativeMethods.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />
