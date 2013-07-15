@@ -12,21 +12,21 @@ namespace Library.Net.Amoeba
     {
         private enum SerializeId : byte
         {
-            Hash = 0,
             HashAlgorithm = 1,
+            Hash = 0,
         }
 
-        private byte[] _hash;
         private HashAlgorithm _hashAlgorithm = 0;
+        private byte[] _hash;
 
         private int _hashCode = 0;
 
         public static readonly int MaxHashLength = 64;
 
-        public Key(byte[] hash, HashAlgorithm hashAlgorithm)
+        public Key(HashAlgorithm hashAlgorithm, byte[] hash)
         {
-            this.Hash = hash;
             this.HashAlgorithm = hashAlgorithm;
+            this.Hash = hash;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -42,19 +42,19 @@ namespace Library.Net.Amoeba
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Hash)
-                    {
-                        byte[] buffer = new byte[rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.Hash = buffer;
-                    }
-                    else if (id == (byte)SerializeId.HashAlgorithm)
+                    if (id == (byte)SerializeId.HashAlgorithm)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
                             this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
                         }
+                    }
+                    else if (id == (byte)SerializeId.Hash)
+                    {
+                        byte[] buffer = new byte[rangeStream.Length];
+                        rangeStream.Read(buffer, 0, buffer.Length);
+
+                        this.Hash = buffer;
                     }
                 }
             }
@@ -65,16 +65,6 @@ namespace Library.Net.Amoeba
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Hash
-            if (this.Hash != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Hash);
-                bufferStream.Write(this.Hash, 0, this.Hash.Length);
-
-                streams.Add(bufferStream);
-            }
             // HashAlgorithm
             if (this.HashAlgorithm != 0)
             {
@@ -91,6 +81,16 @@ namespace Library.Net.Amoeba
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.HashAlgorithm);
+
+                streams.Add(bufferStream);
+            }
+            // Hash
+            if (this.Hash != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Hash);
+                bufferStream.Write(this.Hash, 0, this.Hash.Length);
 
                 streams.Add(bufferStream);
             }
@@ -116,8 +116,8 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Hash == null) != (other.Hash == null)
-                || this.HashAlgorithm != other.HashAlgorithm)
+            if (this.HashAlgorithm != other.HashAlgorithm
+                || (this.Hash == null) != (other.Hash == null))
             {
                 return false;
             }
@@ -138,7 +138,27 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IKey
+        #region IHashAlgorithm
+
+        [DataMember(Name = "HashAlgorithm")]
+        public HashAlgorithm HashAlgorithm
+        {
+            get
+            {
+                return _hashAlgorithm;
+            }
+            private set
+            {
+                if (!Enum.IsDefined(typeof(HashAlgorithm), value))
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _hashAlgorithm = value;
+                }
+            }
+        }
 
         [DataMember(Name = "Hash")]
         public byte[] Hash
@@ -167,30 +187,6 @@ namespace Library.Net.Amoeba
                 else
                 {
                     _hashCode = 0;
-                }
-            }
-        }
-
-        #endregion
-
-        #region IHashAlgorithm
-
-        [DataMember(Name = "HashAlgorithm")]
-        public HashAlgorithm HashAlgorithm
-        {
-            get
-            {
-                return _hashAlgorithm;
-            }
-            private set
-            {
-                if (!Enum.IsDefined(typeof(HashAlgorithm), value))
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _hashAlgorithm = value;
                 }
             }
         }

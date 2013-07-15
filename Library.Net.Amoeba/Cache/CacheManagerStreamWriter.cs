@@ -129,7 +129,7 @@ namespace Library.Net.Amoeba
 
                     if (_hashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        key = new Key(Sha512.ComputeHash(_blockBuffer, 0, _blockBufferPosition), _hashAlgorithm);
+                        key = new Key(_hashAlgorithm, Sha512.ComputeHash(_blockBuffer, 0, _blockBufferPosition));
                     }
                     else
                     {
@@ -166,7 +166,7 @@ namespace Library.Net.Amoeba
 
                 if (_hashAlgorithm == HashAlgorithm.Sha512)
                 {
-                    key = new Key(Sha512.ComputeHash(_blockBuffer, 0, _blockBufferPosition), _hashAlgorithm);
+                    key = new Key(_hashAlgorithm, Sha512.ComputeHash(_blockBuffer, 0, _blockBufferPosition));
                 }
                 else
                 {

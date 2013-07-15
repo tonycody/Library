@@ -34,12 +34,6 @@ namespace Library.Net.Lair
 
                     foreach (var node in _messageManagerDictionary.Keys.ToArray())
                     {
-                        _messageManagerDictionary[node].PushLeaders.TrimExcess();
-                        _messageManagerDictionary[node].PushCreators.TrimExcess();
-                        _messageManagerDictionary[node].PushManagers.TrimExcess();
-                        _messageManagerDictionary[node].PushTopics.TrimExcess();
-                        _messageManagerDictionary[node].PushMessages.TrimExcess();
-
                         _messageManagerDictionary[node].PushSectionsRequest.TrimExcess();
                         _messageManagerDictionary[node].PushChannelsRequest.TrimExcess();
 
@@ -147,18 +141,20 @@ namespace Library.Net.Lair
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
 
+        private CirculationDictionary<string, DateTime> _pushProfiles;
+        private CirculationCollection<Key> _pushMails;
+        private CirculationDictionary<string, DateTime> _pushTopics;
+        private CirculationCollection<Key> _pushMessages;
+        private CirculationDictionary<string, DateTime> _pushDocuments;
+
         private CirculationCollection<Section> _pushSectionsRequest;
         private CirculationCollection<Section> _pullSectionsRequest;
-
-        private CirculationCollection<byte[]> _pushLeaders;
-        private CirculationCollection<byte[]> _pushManagers;
-        private CirculationCollection<byte[]> _pushCreators;
 
         private CirculationCollection<Channel> _pushChannelsRequest;
         private CirculationCollection<Channel> _pullChannelsRequest;
 
-        private CirculationCollection<byte[]> _pushTopics;
-        private CirculationCollection<byte[]> _pushMessages;
+        private CirculationCollection<Archive> _pushArchivesRequest;
+        private CirculationCollection<Archive> _pullArchivesRequest;
 
         private object _thisLock = new object();
 
@@ -171,15 +167,11 @@ namespace Library.Net.Lair
             _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
             _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
 
-            _pushLeaders = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
-            _pushManagers = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
-            _pushCreators = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
-
             _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
             _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
 
-            _pushMessages = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
-            _pushTopics = new CirculationCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new BytesEqualityComparer());
+            _pushArchivesRequest = new CirculationCollection<Archive>(new TimeSpan(0, 3, 0));
+            _pullArchivesRequest = new CirculationCollection<Archive>(new TimeSpan(0, 3, 0));
         }
 
         public int Id
@@ -316,39 +308,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<byte[]> PushLeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushLeaders;
-                }
-            }
-        }
-
-        public CirculationCollection<byte[]> PushCreators
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushCreators;
-                }
-            }
-        }
-
-        public CirculationCollection<byte[]> PushManagers
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushManagers;
-                }
-            }
-        }
-
         public CirculationCollection<Channel> PushChannelsRequest
         {
             get
@@ -371,24 +330,24 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<byte[]> PushTopics
+        public CirculationCollection<Archive> PushArchivesRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushTopics;
+                    return _pushArchivesRequest;
                 }
             }
         }
 
-        public CirculationCollection<byte[]> PushMessages
+        public CirculationCollection<Archive> PullArchivesRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushMessages;
+                    return _pullArchivesRequest;
                 }
             }
         }

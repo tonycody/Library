@@ -927,6 +927,7 @@ namespace Library.Net.Amoeba
             }
 
             private NodeCollection _nodes;
+
             private object _thisLock;
             private static object _thisStaticLock = new object();
 
@@ -1028,6 +1029,7 @@ namespace Library.Net.Amoeba
             }
 
             private KeyCollection _keys;
+
             private object _thisLock;
             private static object _thisStaticLock = new object();
 
@@ -1132,6 +1134,7 @@ namespace Library.Net.Amoeba
             }
 
             private KeyCollection _keys;
+
             private object _thisLock;
             private static object _thisStaticLock = new object();
 
@@ -1238,6 +1241,7 @@ namespace Library.Net.Amoeba
 
             private Key _key;
             private ArraySegment<byte> _value;
+
             private object _thisLock;
             private static object _thisStaticLock = new object();
 
@@ -1381,6 +1385,7 @@ namespace Library.Net.Amoeba
             }
 
             private SignatureCollection _signatures;
+
             private object _thisLock;
             private static object _thisStaticLock = new object();
 

@@ -69,7 +69,6 @@
     <Compile Include="Cache\StoreCollection.cs" />
     <Compile Include="Cache\_Interface\IStore.cs" />
     <Compile Include="Cache\_Interface\IBox.cs" />
-    <Compile Include="Cache\_Interface\IKeywords.cs" />
     <Compile Include="StoreDownloadItem.cs" />
     <Compile Include="StoreDownloadManager.cs" />
     <Compile Include="StoreUploadItem.cs" />

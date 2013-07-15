@@ -7,8 +7,8 @@ namespace Library.Net.Lair
         where TSection : ISection
     {
         TSection Section { get; }
-        string RecipientSignature { get; }
         DateTime CreationTime { get; }
+        string RecipientSignature { get; }
         byte[] Content { get; }
     }
 }

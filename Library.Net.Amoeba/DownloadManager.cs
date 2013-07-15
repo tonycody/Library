@@ -71,7 +71,7 @@ namespace Library.Net.Amoeba
 
                         lock (this.ThisLock)
                         {
-                            _countCache.SetKey(key, true);
+                            _countCache.SetState(key, true);
                         }
                     }
                 }
@@ -94,7 +94,7 @@ namespace Library.Net.Amoeba
 
                         lock (this.ThisLock)
                         {
-                            _countCache.SetKey(key, false);
+                            _countCache.SetState(key, false);
                         }
                     }
                 }
@@ -221,7 +221,7 @@ namespace Library.Net.Amoeba
 
                     foreach (var key in group.Keys)
                     {
-                        _countCache.SetKey(key, _cacheManager.Contains(key));
+                        _countCache.SetState(key, _cacheManager.Contains(key));
                     }
                 }
             }

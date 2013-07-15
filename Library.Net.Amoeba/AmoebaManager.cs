@@ -173,7 +173,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public SignatureCollection Signatures
+        public SignatureCollection SearchSignatures
         {
             get
             {
@@ -181,7 +181,7 @@ namespace Library.Net.Amoeba
 
                 lock (this.ThisLock)
                 {
-                    return _storeDownloadManager.Signatures;
+                    return _storeDownloadManager.SearchSignatures;
                 }
             }
         }
@@ -369,13 +369,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<string> GetSignatures()
+        public IEnumerable<string> GetStoreSignatures()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetSignatures();
+                return _connectionsManager.GetStoreSignatures();
             }
         }
 

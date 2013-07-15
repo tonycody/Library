@@ -16,10 +16,11 @@ namespace Library.Net.Lair
             Section = 0,
             CreationTime = 1,
             TrustSignature = 2,
-            CryptoAlgorithm = 3,
-            CryptoKey = 4,
-            Channel = 5,
-            Archive = 6,
+            Channel = 3,
+            Archive = 4,
+
+            CryptoAlgorithm = 5,
+            CryptoKey = 6,
 
             Certificate = 7,
         }
@@ -27,25 +28,27 @@ namespace Library.Net.Lair
         private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private SignatureCollection _trustSignatures = null;
-        private CryptoAlgorithm _cryptoAlgorithm = 0;
-        private byte[] _cryptoKey = null;
         private ChannelCollection _channels = null;
         private ArchiveCollection _archives = null;
+
+        private CryptoAlgorithm _cryptoAlgorithm = 0;
+        private byte[] _cryptoKey = null;
 
         private Certificate _certificate;
 
         public static readonly int MaxTrustSignaturesCount = 1024;
-        public static readonly int MaxCryptoKeyLength = 64;
         public static readonly int MaxChannelsCount = 1024;
         public static readonly int MaxArchivesCount = 1024;
+
+        public static readonly int MaxCryptoKeyLength = 64;
 
         public Profile(Section section, SignatureCollection trustSignatures, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, ChannelCollection channels, ArchiveCollection archives, DigitalSignature digitalSignature)
         {
             this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            _cryptoAlgorithm = cryptoAlgorithm;
-            _cryptoKey = cryptoKey;
+            this.CryptoAlgorithm = cryptoAlgorithm;
+            this.CryptoKey = cryptoKey;
             if (channels != null) this.ProtectedChannels.AddRange(channels);
             if (archives != null) this.ProtectedArchives.AddRange(archives);
 
@@ -91,6 +94,7 @@ namespace Library.Net.Lair
                     {
                         this.ProtectedArchives.Add(Archive.Import(rangeStream, bufferManager));
                     }
+
                     else if (id == (byte)SerializeId.CryptoAlgorithm)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
@@ -190,6 +194,7 @@ namespace Library.Net.Lair
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
+
             // CryptoAlgorithm
             if (this.CryptoAlgorithm != 0)
             {
@@ -349,46 +354,6 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "CryptoAlgorithm")]
-        public CryptoAlgorithm CryptoAlgorithm
-        {
-            get
-            {
-                return _cryptoAlgorithm;
-            }
-            set
-            {
-                if (!Enum.IsDefined(typeof(CryptoAlgorithm), value))
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _cryptoAlgorithm = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "CryptoKey")]
-        public byte[] CryptoKey
-        {
-            get
-            {
-                return _cryptoKey;
-            }
-            set
-            {
-                if (value != null && value.Length > Profile.MaxCryptoKeyLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _cryptoKey = value;
-                }
-            }
-        }
-
         public IEnumerable<Channel> Channels
         {
             get
@@ -431,6 +396,50 @@ namespace Library.Net.Lair
 
         #endregion
 
+        #region ICryptoAlgorithm
+
+        [DataMember(Name = "CryptoAlgorithm")]
+        public CryptoAlgorithm CryptoAlgorithm
+        {
+            get
+            {
+                return _cryptoAlgorithm;
+            }
+            set
+            {
+                if (!Enum.IsDefined(typeof(CryptoAlgorithm), value))
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _cryptoAlgorithm = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "CryptoKey")]
+        public byte[] CryptoKey
+        {
+            get
+            {
+                return _cryptoKey;
+            }
+            set
+            {
+                if (value != null && value.Length > Profile.MaxCryptoKeyLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _cryptoKey = value;
+                }
+            }
+        }
+
+        #endregion
+
         #region IComputeHash
 
         private byte[] _sha512_hash = null;
@@ -453,7 +462,7 @@ namespace Library.Net.Lair
             return null;
         }
 
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
         {
             return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }

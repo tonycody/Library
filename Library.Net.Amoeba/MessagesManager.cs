@@ -37,13 +37,14 @@ namespace Library.Net.Amoeba
                         _messageManagerDictionary[node].PushBlocks.TrimExcess();
                         _messageManagerDictionary[node].PushStoreSeeds.TrimExcess();
 
-                        _messageManagerDictionary[node].PullBlocksLink.TrimExcess();
-                        _messageManagerDictionary[node].PullBlocksRequest.TrimExcess();
-                        _messageManagerDictionary[node].PullSeedsRequest.TrimExcess();
-
                         _messageManagerDictionary[node].PushBlocksLink.TrimExcess();
+                        _messageManagerDictionary[node].PullBlocksLink.TrimExcess();
+
                         _messageManagerDictionary[node].PushBlocksRequest.TrimExcess();
-                        _messageManagerDictionary[node].PushStoreSeeds.TrimExcess();
+                        _messageManagerDictionary[node].PullBlocksRequest.TrimExcess();
+
+                        _messageManagerDictionary[node].PushSeedsRequest.TrimExcess();
+                        _messageManagerDictionary[node].PullSeedsRequest.TrimExcess();
                     }
 
                     _lastCircularTime = now;
@@ -146,6 +147,7 @@ namespace Library.Net.Amoeba
 
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
+
         private CirculationCollection<Key> _pushBlocks;
         private CirculationDictionary<string, DateTime> _pushStoreSeeds;
 
@@ -165,6 +167,7 @@ namespace Library.Net.Amoeba
             _id = id;
 
             _surroundingNodes = new LockedHashSet<Node>(128);
+
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
             _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(3, 0, 0));
 

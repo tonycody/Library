@@ -4,22 +4,12 @@ using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentFormatType", Namespace = "http://Library/Net/Lair")]
-    public enum DocumentFormatType
-    {
-        [EnumMember(Value = "Raw")]
-        Raw = 0,
-
-        [EnumMember(Value = "MiniWiki")]
-        MiniWiki = 1,
-    }
-
-    interface IDocument<TArchive> : IComputeHash
+    interface IDocument<TArchive, TPage> : IComputeHash
         where TArchive : IArchive
+        where TPage : IPage
     {
         TArchive Archive { get; }
         DateTime CreationTime { get; }
-        DocumentFormatType FormatType { get; }
-        string Content { get; }
+        IEnumerable<Page> Pages { get; }
     }
 }

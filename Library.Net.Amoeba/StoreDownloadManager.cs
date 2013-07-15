@@ -69,7 +69,7 @@ namespace Library.Net.Amoeba
 
                         lock (this.ThisLock)
                         {
-                            _countCache.SetKey(key, true);
+                            _countCache.SetState(key, true);
                         }
                     }
                 }
@@ -92,7 +92,7 @@ namespace Library.Net.Amoeba
 
                         lock (this.ThisLock)
                         {
-                            _countCache.SetKey(key, false);
+                            _countCache.SetState(key, false);
                         }
                     }
                 }
@@ -106,7 +106,7 @@ namespace Library.Net.Amoeba
             _removeThread.Start();
         }
 
-        public SignatureCollection Signatures
+        public SignatureCollection SearchSignatures
         {
             get
             {
@@ -129,7 +129,7 @@ namespace Library.Net.Amoeba
 
                     foreach (var key in group.Keys)
                     {
-                        _countCache.SetKey(key, _cacheManager.Contains(key));
+                        _countCache.SetState(key, _cacheManager.Contains(key));
                     }
                 }
             }
@@ -817,12 +817,12 @@ namespace Library.Net.Amoeba
                         {
                             foreach (var item in _settings.StoreDownloadItems.ToArray())
                             {
-                                if (this.Signatures.Contains(item.Seed.Certificate.ToString())) continue;
+                                if (this.SearchSignatures.Contains(item.Seed.Certificate.ToString())) continue;
 
                                 this.Remove(item);
                             }
 
-                            foreach (var signature in this.Signatures)
+                            foreach (var signature in this.SearchSignatures)
                             {
                                 var seed = _connectionsManager.GetStoreSeed(signature);
                                 if (seed == null || seed.Length > 1024 * 1024 * 32) continue;

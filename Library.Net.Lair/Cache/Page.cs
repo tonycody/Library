@@ -8,39 +8,32 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Topic", Namespace = "http://Library/Net/Lair")]
-    public sealed class Topic : ReadOnlyCertificateItemBase<Topic>, ITopic<Channel>
+    [DataContract(Name = "Page", Namespace = "http://Library/Net/Lair")]
+    public sealed class Page : ReadOnlyCertificateItemBase<Page>, IPage
     {
         private enum SerializeId : byte
         {
-            Channel = 0,
-            CreationTime = 1,
+            Name = 0,
 
-            FormatType = 2,
-            Content = 3,
-
-            Certificate = 4,
+            FormatType = 1,
+            Content = 2,
         }
 
-        private Channel _channel = null;
-        private DateTime _creationTime = DateTime.MinValue;
+        private string _name = null;
 
         private ContentFormatType _formatType;
         private string _content = null;
 
-        private Certificate _certificate;
+        public static readonly int MaxNameLength = 256;
 
         public static readonly int MaxContentLength = 1024 * 4;
 
-        public Topic(Channel channel, ContentFormatType formatType, string content, DigitalSignature digitalSignature)
+        public Page(string name, ContentFormatType formatType, string content)
         {
-            this.Channel = channel;
-            this.CreationTime = DateTime.UtcNow;
+            this.Name = name;
 
             this.FormatType = formatType;
             this.Content = content;
-
-            this.CreateCertificate(digitalSignature);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -56,15 +49,11 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Channel)
-                    {
-                        this.Channel = Channel.Import(rangeStream, bufferManager);
-                    }
-                    else if (id == (byte)SerializeId.CreationTime)
+                    if (id == (byte)SerializeId.Name)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                            this.Name = reader.ReadToEnd();
                         }
                     }
 
@@ -82,11 +71,6 @@ namespace Library.Net.Lair
                             this.Content = reader.ReadToEnd();
                         }
                     }
-
-                    else if (id == (byte)SerializeId.Certificate)
-                    {
-                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
-                    }
                 }
             }
         }
@@ -96,19 +80,8 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Channel
-            if (this.Channel != null)
-            {
-                Stream exportStream = this.Channel.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Channel);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-            // CreationTime
-            if (this.CreationTime != DateTime.MinValue)
+            // Name
+            if (this.Name != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -117,12 +90,12 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                    writer.Write(this.Name);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CreationTime);
+                bufferStream.WriteByte((byte)SerializeId.Name);
 
                 streams.Add(bufferStream);
             }
@@ -166,18 +139,6 @@ namespace Library.Net.Lair
                 streams.Add(bufferStream);
             }
 
-            // Certificate
-            if (this.Certificate != null)
-            {
-                Stream exportStream = this.Certificate.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Certificate);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-
             return new JoinStream(streams);
         }
 
@@ -189,18 +150,23 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Topic)) return false;
+            if ((object)obj == null || !(obj is Page)) return false;
 
-            return this.Equals((Topic)obj);
+            return this.Equals((Page)obj);
         }
 
-        public override bool Equals(Topic other)
+        public override bool Equals(Page other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (!Collection.Equals(this.GetHash(HashAlgorithm.Sha512), other.GetHash(HashAlgorithm.Sha512))) return false;
+            if (this.Name != other.Name
+                || this.FormatType != other.FormatType
+                || this.Content != other.Content)
+            {
+                return false;
+            }
 
             return true;
         }
@@ -210,67 +176,33 @@ namespace Library.Net.Lair
             return this.Content;
         }
 
-        public override Topic DeepClone()
+        public override Page DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return Topic.Import(stream, BufferManager.Instance);
+                return Page.Import(stream, BufferManager.Instance);
             }
         }
 
-        protected override Stream GetCertificateStream()
-        {
-            var temp = this.Certificate;
-            this.Certificate = null;
+        #region IPage
 
-            try
-            {
-                return this.Export(BufferManager.Instance);
-            }
-            finally
-            {
-                this.Certificate = temp;
-            }
-        }
-
-        public override Certificate Certificate
+        [DataMember(Name = "Name")]
+        public string Name
         {
             get
             {
-                return _certificate;
+                return _name;
             }
-            protected set
+            set
             {
-                _certificate = value;
-            }
-        }
-
-        #region ITopic<Channel>
-
-        [DataMember(Name = "Channel")]
-        public Channel Channel
-        {
-            get
-            {
-                return _channel;
-            }
-            private set
-            {
-                _channel = value;
-            }
-        }
-
-        [DataMember(Name = "CreationTime")]
-        public DateTime CreationTime
-        {
-            get
-            {
-                return _creationTime;
-            }
-            private set
-            {
-                var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                if (value != null && value.Length > Page.MaxNameLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _name = value;
+                }
             }
         }
 
@@ -307,7 +239,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > Topic.MaxContentLength)
+                if (value != null && value.Length > Page.MaxContentLength)
                 {
                     throw new ArgumentException();
                 }
@@ -316,35 +248,6 @@ namespace Library.Net.Lair
                     _content = value;
                 }
             }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private byte[] _sha512_hash = null;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    _sha512_hash = Sha512.ComputeHash(stream);
-                }
-            }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
-        }
-
-        public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
-        {
-            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion

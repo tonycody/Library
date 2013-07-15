@@ -14,9 +14,6 @@ namespace Library.Net.Lair
         private ManagerState _state = ManagerState.Stop;
 
         private RemoveSectionsEventHandler _removeSectionsEvent;
-        private RemoveLeadersEventHandler _removeLeadersEvent;
-        private RemoveCreatorsEventHandler _removeCreatorsEvent;
-        private RemoveManagersEventHandler _removeManagersEvent;
 
         private RemoveChannelsEventHandler _removeChannelsEvent;
         private RemoveTopicsEventHandler _removeTopicsEvent;
@@ -37,36 +34,6 @@ namespace Library.Net.Lair
                 if (_removeSectionsEvent != null)
                 {
                     return _removeSectionsEvent(this);
-                }
-
-                return null;
-            };
-
-            _connectionsManager.RemoveLeadersEvent = (object sender, Section section) =>
-            {
-                if (_removeLeadersEvent != null)
-                {
-                    return _removeLeadersEvent(this, section);
-                }
-
-                return null;
-            };
-
-            _connectionsManager.RemoveManagersEvent = (object sender, Section section) =>
-            {
-                if (_removeManagersEvent != null)
-                {
-                    return _removeManagersEvent(this, section);
-                }
-
-                return null;
-            };
-
-            _connectionsManager.RemoveCreatorsEvent = (object sender, Section section) =>
-            {
-                if (_removeCreatorsEvent != null)
-                {
-                    return _removeCreatorsEvent(this, section);
                 }
 
                 return null;
@@ -110,39 +77,6 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     _removeSectionsEvent = value;
-                }
-            }
-        }
-
-        public RemoveLeadersEventHandler RemoveLeadersEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeLeadersEvent = value;
-                }
-            }
-        }
-
-        public RemoveCreatorsEventHandler RemoveCreatorsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeCreatorsEvent = value;
-                }
-            }
-        }
-
-        public RemoveManagersEventHandler RemoveManagersEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeManagersEvent = value;
                 }
             }
         }
@@ -369,66 +303,6 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 return _connectionsManager.GetSections();
-            }
-        }
-
-        public IEnumerable<Leader> GetLeaders(Section section)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetLeaders(section);
-            }
-        }
-
-        public IEnumerable<Creator> GetCreators(Section section)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetCreators(section);
-            }
-        }
-
-        public IEnumerable<Manager> GetManagers(Section section)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetManagers(section);
-            }
-        }
-
-        public void Upload(Leader leader)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.Upload(leader);
-            }
-        }
-
-        public void Upload(Manager manager)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.Upload(manager);
-            }
-        }
-
-        public void Upload(Creator creator)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.Upload(creator);
             }
         }
 

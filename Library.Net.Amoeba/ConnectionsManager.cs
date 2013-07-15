@@ -1073,7 +1073,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    foreach (var item in this.GetSignatures())
+                    foreach (var item in this.GetStoreSignatures())
                     {
                         try
                         {
@@ -1896,15 +1896,15 @@ namespace Library.Net.Amoeba
 
             var now = DateTime.UtcNow;
 
-            if (e.Seed == null || e.Seed.Name != null || e.Seed.Comment != null || e.Seed.Keywords.Count == 0
+            if (e.Seed == null || e.Seed.Name != null || e.Seed.Keywords.Count == 0 || e.Seed.Comment != null
                 || (e.Seed.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                 || e.Seed.Certificate == null || !e.Seed.VerifyCertificate()) return;
 
             var signature = e.Seed.Certificate.ToString();
 
-            if ((e.Seed.Keywords[0] == Keyword_Store && e.Seed.Keywords.Count == 1))
+            if ((e.Seed.Keywords[0] == ConnectionsManager.Keyword_Store && e.Seed.Keywords.Count == 1))
             {
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed {0} ({1})", Keyword_Store, signature));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed {0} ({1})", ConnectionsManager.Keyword_Store, signature));
 
                 lock (this.ThisLock)
                 {
@@ -2071,7 +2071,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<string> GetSignatures()
+        public IEnumerable<string> GetStoreSignatures()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -2122,7 +2122,7 @@ namespace Library.Net.Amoeba
 
                 var signature = seed.Certificate.ToString();
 
-                if ((seed.Keywords[0] == Keyword_Store && seed.Keywords.Count == 1))
+                if ((seed.Keywords[0] == ConnectionsManager.Keyword_Store && seed.Keywords.Count == 1))
                 {
                     lock (this.ThisLock)
                     {

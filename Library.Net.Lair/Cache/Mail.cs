@@ -14,16 +14,16 @@ namespace Library.Net.Lair
         private enum SerializeId : byte
         {
             Section = 0,
-            RecipientSignature = 1,
-            CreationTime = 2,
+            CreationTime = 1,
+            RecipientSignature = 2,
             Content = 3,
 
             Certificate = 4,
         }
 
         private Section _section = null;
-        private string _recipientSignature = null;
         private DateTime _creationTime = DateTime.MinValue;
+        private string _recipientSignature = null;
         private byte[] _content = null;
 
         private Certificate _certificate;
@@ -34,8 +34,8 @@ namespace Library.Net.Lair
         public Mail(Section section, string recipientSignature, byte[] content, DigitalSignature digitalSignature)
         {
             this.Section = section;
-            this.RecipientSignature = recipientSignature;
             this.CreationTime = DateTime.UtcNow;
+            this.RecipientSignature = recipientSignature;
             this.Content = content;
 
             this.CreateCertificate(digitalSignature);
@@ -58,18 +58,18 @@ namespace Library.Net.Lair
                     {
                         this.Section = Section.Import(rangeStream, bufferManager);
                     }
-                    else if (id == (byte)SerializeId.RecipientSignature)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.RecipientSignature = reader.ReadToEnd();
-                        }
-                    }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                        }
+                    }
+                    else if (id == (byte)SerializeId.RecipientSignature)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.RecipientSignature = reader.ReadToEnd();
                         }
                     }
                     else if (id == (byte)SerializeId.Content)
@@ -104,25 +104,6 @@ namespace Library.Net.Lair
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
-            // RecipientSignature
-            if (this.RecipientSignature != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.RecipientSignature);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.RecipientSignature);
-
-                streams.Add(bufferStream);
-            }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
             {
@@ -139,6 +120,25 @@ namespace Library.Net.Lair
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.CreationTime);
+
+                streams.Add(bufferStream);
+            }
+            // RecipientSignature
+            if (this.RecipientSignature != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.RecipientSignature);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.RecipientSignature);
 
                 streams.Add(bufferStream);
             }
@@ -248,6 +248,20 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "CreationTime")]
+        public DateTime CreationTime
+        {
+            get
+            {
+                return _creationTime;
+            }
+            private set
+            {
+                var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+            }
+        }
+
         [DataMember(Name = "RecipientSignature")]
         public string RecipientSignature
         {
@@ -265,20 +279,6 @@ namespace Library.Net.Lair
                 {
                     _recipientSignature = value;
                 }
-            }
-        }
-
-        [DataMember(Name = "CreationTime")]
-        public DateTime CreationTime
-        {
-            get
-            {
-                return _creationTime;
-            }
-            private set
-            {
-                var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
             }
         }
 
@@ -326,7 +326,7 @@ namespace Library.Net.Lair
             return null;
         }
 
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
         {
             return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }

@@ -9,33 +9,30 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Document", Namespace = "http://Library/Net/Lair")]
-    public sealed class Document : ReadOnlyCertificateItemBase<Document>, IDocument<Archive>
+    public sealed class Document : ReadOnlyCertificateItemBase<Document>, IDocument<Archive, Page>
     {
         private enum SerializeId : byte
         {
             Archive = 0,
             CreationTime = 1,
-            FormatType = 2,
-            Content = 3,
+            Page = 2,
 
-            Certificate = 4,
+            Certificate = 3,
         }
 
         private Archive _archive = null;
         private DateTime _creationTime = DateTime.MinValue;
-        private DocumentFormatType _formatType;
-        private string _content = null;
+        private PageCollection _pages = null;
 
         private Certificate _certificate;
 
-        public static readonly int MaxContentLength = 1024 * 4;
+        public static readonly int MaxPagesCount = 1024;
 
-        public Document(Archive archive, DocumentFormatType formatType, string content, DigitalSignature digitalSignature)
+        public Document(Archive archive, IEnumerable<Page> pages, DigitalSignature digitalSignature)
         {
             this.Archive = archive;
             this.CreationTime = DateTime.UtcNow;
-            this.FormatType = formatType;
-            this.Content = content;
+            if (pages != null) this.ProtectedPages.AddRange(pages);
 
             this.CreateCertificate(digitalSignature);
         }
@@ -64,19 +61,9 @@ namespace Library.Net.Lair
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                     }
-                    else if (id == (byte)SerializeId.FormatType)
+                    else if (id == (byte)SerializeId.Page)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.FormatType = (DocumentFormatType)Enum.Parse(typeof(DocumentFormatType), reader.ReadToEnd());
-                        }
-                    }
-                    else if (id == (byte)SerializeId.Content)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.Content = reader.ReadToEnd();
-                        }
+                        this.ProtectedPages.Add(Page.Import(rangeStream, bufferManager));
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -92,7 +79,7 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Channel
+            // Archive
             if (this.Archive != null)
             {
                 Stream exportStream = this.Archive.Export(bufferManager);
@@ -122,43 +109,16 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Content
-            if (this.Content != null)
+            // Pages
+            foreach (var p in this.ProtectedPages)
             {
+                Stream exportStream = p.Export(bufferManager);
+
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Page);
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.Content);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Content);
-
-                streams.Add(bufferStream);
-            }
-            // FormatType
-            if (this.FormatType != 0)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.FormatType.ToString());
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.FormatType);
-
-                streams.Add(bufferStream);
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
             // Certificate
@@ -178,8 +138,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (_content == null) return 0;
-            else return _content.GetHashCode();
+            if (this.ProtectedPages.Count == 0) return 0;
+            else return this.ProtectedPages[0].GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -269,43 +229,23 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "FormatType")]
-        public DocumentFormatType FormatType
+        public IEnumerable<Page> Pages
         {
             get
             {
-                return _formatType;
-            }
-            set
-            {
-                if (!Enum.IsDefined(typeof(DocumentFormatType), value))
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _formatType = value;
-                }
+                return this.ProtectedPages;
             }
         }
 
-        [DataMember(Name = "Content")]
-        public string Content
+        [DataMember(Name = "Pages")]
+        private PageCollection ProtectedPages
         {
             get
             {
-                return _content;
-            }
-            private set
-            {
-                if (value != null && value.Length > Document.MaxContentLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _content = value;
-                }
+                if (_pages == null)
+                    _pages = new PageCollection(Document.MaxPagesCount);
+
+                return _pages;
             }
         }
 
@@ -333,7 +273,7 @@ namespace Library.Net.Lair
             return null;
         }
 
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
         {
             return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }

@@ -12,5 +12,6 @@ namespace Library.Net.Amoeba
     interface IHashAlgorithm
     {
         HashAlgorithm HashAlgorithm { get; }
+        byte[] Hash { get; }
     }
 }

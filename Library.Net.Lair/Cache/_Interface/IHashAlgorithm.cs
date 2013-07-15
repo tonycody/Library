@@ -12,5 +12,6 @@ namespace Library.Net.Lair
     interface IHashAlgorithm
     {
         HashAlgorithm HashAlgorithm { get; }
+        byte[] Hash { get; }
     }
 }

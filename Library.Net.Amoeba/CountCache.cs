@@ -7,12 +7,7 @@ namespace Library.Net.Amoeba
 
     sealed class CountCache
     {
-        private Dictionary<Group, HashSet<Key>> _keyTrueList = new Dictionary<Group, HashSet<Key>>();
-        private Dictionary<Group, HashSet<Key>> _keyFalseList = new Dictionary<Group, HashSet<Key>>();
-
-        private Dictionary<Group, List<Key>> _getTrueKeys = new Dictionary<Group, List<Key>>();
-        private Dictionary<Group, List<Key>> _getFalseKeys = new Dictionary<Group, List<Key>>();
-        private Dictionary<Group, int> _getCount = new Dictionary<Group, int>();
+        private Dictionary<Group, GroupManager> _groupManagers = new Dictionary<Group, GroupManager>();
 
         private object _thisLock = new object();
 
@@ -20,82 +15,30 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (!_keyTrueList.ContainsKey(group))
-                {
-                    _keyTrueList.Add(group, new HashSet<Key>());
-                }
+                _groupManagers[group] = new GroupManager(group);
+            }
+        }
 
-                if (!_keyFalseList.ContainsKey(group))
+        public void SetState(Key key, bool state)
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var m in _groupManagers.Values)
                 {
-                    _keyFalseList.Add(group, new HashSet<Key>(group.Keys));
+                    m.SetState(key, state);
                 }
             }
         }
 
-        public void SetKey(Key key, bool flag)
+        public IEnumerable<Key> GetKeys(Group group, bool state)
         {
             lock (this.ThisLock)
             {
-                if (flag)
+                GroupManager groupManager;
+
+                if (_groupManagers.TryGetValue(group, out groupManager))
                 {
-                    var groups = _keyFalseList.Where(n => n.Value.Contains(key)).Select(n => n.Key);
-
-                    foreach (var group in groups)
-                    {
-                        _keyTrueList[group].Add(key);
-                        _keyFalseList[group].Remove(key);
-
-                        _getCount.Remove(group);
-                        _getTrueKeys.Remove(group);
-                        _getFalseKeys.Remove(group);
-                    }
-                }
-                else
-                {
-                    var groups = _keyTrueList.Where(n => n.Value.Contains(key)).Select(n => n.Key);
-
-                    foreach (var group in groups)
-                    {
-                        _keyFalseList[group].Add(key);
-                        _keyTrueList[group].Remove(key);
-
-                        _getCount.Remove(group);
-                        _getTrueKeys.Remove(group);
-                        _getFalseKeys.Remove(group);
-                    }
-                }
-            }
-        }
-
-        public IEnumerable<Key> GetKeys(Group group, bool flag)
-        {
-            lock (this.ThisLock)
-            {
-                if (flag)
-                {
-                    if (_getTrueKeys.ContainsKey(group))
-                    {
-                        return _getTrueKeys[group];
-                    }
-                    else if (_keyTrueList.ContainsKey(group))
-                    {
-                        _getTrueKeys[group] = new List<Key>(group.Keys.Where(n => _keyTrueList[group].Contains(n)));
-
-                        return _getTrueKeys[group];
-                    }
-                }
-                else
-                {
-                    if (_getFalseKeys.ContainsKey(group))
-                    {
-                        return _getFalseKeys[group];
-                    }
-                    else if (_keyTrueList.ContainsKey(group))
-                    {
-                        _getFalseKeys[group] = new List<Key>(group.Keys.Where(n => _keyFalseList[group].Contains(n)));
-
-                        return _getFalseKeys[group];
-                    }
+                    return groupManager.GetKeys(state);
                 }
 
                 return new KeyCollection();
@@ -106,18 +49,93 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (_getCount.ContainsKey(group))
-                {
-                    return _getCount[group];
-                }
-                else if (_keyTrueList.ContainsKey(group))
-                {
-                    _getCount[group] = group.Keys.Where(n => _keyTrueList[group].Contains(n)).Count();
+                GroupManager groupManager;
 
-                    return _getCount[group];
+                if (_groupManagers.TryGetValue(group, out groupManager))
+                {
+                    return groupManager.GetCount(true);
                 }
 
                 return 0;
+            }
+        }
+
+        private class GroupManager
+        {
+            private Group _group;
+
+            private HashSet<Key> _KeyHashset = new HashSet<Key>();
+
+            private HashSet<Key> _trueKeyHashset = new HashSet<Key>();
+
+            private List<Key> _cacheTrueKeys;
+            private List<Key> _cacheFalseKeys;
+
+            public GroupManager(Group group)
+            {
+                _group = group;
+                _KeyHashset.UnionWith(_group.Keys);
+            }
+
+            public void SetState(Key key, bool state)
+            {
+                if (!_KeyHashset.Contains(key)) return;
+
+                if (state)
+                {
+                    _trueKeyHashset.Add(key);
+                }
+                else
+                {
+                    _trueKeyHashset.Remove(key);
+                }
+
+                _cacheTrueKeys = null;
+                _cacheFalseKeys = null;
+            }
+
+            public IEnumerable<Key> GetKeys(bool state)
+            {
+                if (state)
+                {
+                    if (_cacheTrueKeys == null)
+                    {
+                        _cacheTrueKeys = new List<Key>(_group.Keys.Where(n => _trueKeyHashset.Contains(n)));
+                    }
+
+                    return _cacheTrueKeys;
+                }
+                else
+                {
+                    if (_cacheFalseKeys == null)
+                    {
+                        _cacheFalseKeys = new List<Key>(_group.Keys.Where(n => !_trueKeyHashset.Contains(n)));
+                    }
+
+                    return _cacheFalseKeys;
+                }
+            }
+
+            public int GetCount(bool state)
+            {
+                if (state)
+                {
+                    if (_cacheTrueKeys == null)
+                    {
+                        _cacheTrueKeys = new List<Key>(_group.Keys.Where(n => _trueKeyHashset.Contains(n)));
+                    }
+
+                    return _cacheTrueKeys.Count;
+                }
+                else
+                {
+                    if (_cacheFalseKeys == null)
+                    {
+                        _cacheFalseKeys = new List<Key>(_group.Keys.Where(n => !_trueKeyHashset.Contains(n)));
+                    }
+
+                    return _cacheFalseKeys.Count;
+                }
             }
         }
 
