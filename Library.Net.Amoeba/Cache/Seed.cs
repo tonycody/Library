@@ -16,10 +16,11 @@ namespace Library.Net.Amoeba
             Name = 0,
             Length = 1,
             CreationTime = 2,
-            Keyword = 6,
             Comment = 3,
             Rank = 4,
             Key = 5,
+
+            Keyword = 6,
 
             CompressionAlgorithm = 7,
 
@@ -32,10 +33,11 @@ namespace Library.Net.Amoeba
         private string _name = null;
         private long _length = 0;
         private DateTime _creationTime = DateTime.MinValue;
-        private KeywordCollection _keywords = null;
         private string _comment = null;
         private int _rank = 0;
         private Key _key = null;
+
+        private KeywordCollection _keywords = null;
 
         private CompressionAlgorithm _compressionAlgorithm = 0;
 
@@ -50,8 +52,9 @@ namespace Library.Net.Amoeba
         private static object _thisStaticLock = new object();
 
         public static readonly int MaxNameLength = 256;
-        public static readonly int MaxKeywordsLength = 3;
         public static readonly int MaxCommentLength = 1024;
+
+        public static readonly int MaxKeywordsLength = 3;
 
         public static readonly int MaxCryptoKeyLength = 64;
 
@@ -98,13 +101,6 @@ namespace Library.Net.Amoeba
                                 this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                             }
                         }
-                        else if (id == (byte)SerializeId.Keyword)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Keywords.Add(reader.ReadToEnd());
-                            }
-                        }
                         else if (id == (byte)SerializeId.Comment)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
@@ -124,6 +120,14 @@ namespace Library.Net.Amoeba
                         else if (id == (byte)SerializeId.Key)
                         {
                             this.Key = Key.Import(rangeStream, bufferManager);
+                        }
+
+                        else if (id == (byte)SerializeId.Keyword)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Keywords.Add(reader.ReadToEnd());
+                            }
                         }
 
                         else if (id == (byte)SerializeId.CompressionAlgorithm)
@@ -213,25 +217,6 @@ namespace Library.Net.Amoeba
 
                     streams.Add(bufferStream);
                 }
-                // Keywords
-                foreach (var k in this.Keywords)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(k);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Keyword);
-
-                    streams.Add(bufferStream);
-                }
                 // Comment
                 if (this.Comment != null)
                 {
@@ -271,6 +256,26 @@ namespace Library.Net.Amoeba
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+
+                // Keywords
+                foreach (var k in this.Keywords)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(k);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Keyword);
+
+                    streams.Add(bufferStream);
                 }
 
                 // CompressionAlgorithm
@@ -363,10 +368,11 @@ namespace Library.Net.Amoeba
             if (this.Name != other.Name
                 || this.Length != other.Length
                 || this.CreationTime != other.CreationTime
-                || (this.Keywords == null) != (other.Keywords == null)
                 || this.Comment != other.Comment
                 || this.Rank != other.Rank
                 || this.Key != other.Key
+
+                || (this.Keywords == null) != (other.Keywords == null)
 
                 || this.CompressionAlgorithm != other.CompressionAlgorithm
 
@@ -513,32 +519,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        IList<string> ISeed<Key>.Keywords
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return this.Keywords;
-                }
-            }
-        }
-
-        [DataMember(Name = "Keywords")]
-        public KeywordCollection Keywords
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_keywords == null)
-                        _keywords = new KeywordCollection(Seed.MaxKeywordsLength);
-
-                    return _keywords;
-                }
-            }
-        }
-
         [DataMember(Name = "Comment")]
         public string Comment
         {
@@ -608,6 +588,36 @@ namespace Library.Net.Amoeba
                     {
                         _hashCode = _key.GetHashCode();
                     }
+                }
+            }
+        }
+
+        #endregion
+
+        #region IKeywords
+
+        IList<string> IKeywords.Keywords
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this.Keywords;
+                }
+            }
+        }
+
+        [DataMember(Name = "Keywords")]
+        public KeywordCollection Keywords
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_keywords == null)
+                        _keywords = new KeywordCollection(Seed.MaxKeywordsLength);
+
+                    return _keywords;
                 }
             }
         }

@@ -851,7 +851,7 @@ namespace Library.Net.Amoeba
                 int length = (int)Math.Min(inStream.Length - inStream.Position, blockLength);
                 inStream.Read(buffer, 0, length);
 
-                var key = new Key(HashAlgorithm.Sha512, Sha512.ComputeHash(buffer, 0, length));
+                var key = new Key(Sha512.ComputeHash(buffer, 0, length), HashAlgorithm.Sha512);
 
                 if (!shareIndex.KeyAndCluster.ContainsKey(key))
                     shareIndex.KeyAndCluster.Add(key, keys.Count);
@@ -1144,7 +1144,7 @@ namespace Library.Net.Amoeba
                     {
                         if (hashAlgorithm == HashAlgorithm.Sha512)
                         {
-                            var key = new Key(hashAlgorithm, Sha512.ComputeHash(parityBufferList[i]));
+                            var key = new Key(Sha512.ComputeHash(parityBufferList[i]), hashAlgorithm);
 
                             lock (this.ThisLock)
                             {
