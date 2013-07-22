@@ -12,21 +12,24 @@ namespace Library.Net.Lair
     {
         private enum SerializeId : byte
         {
-            HashAlgorithm = 1,
             Hash = 0,
+
+            HashAlgorithm = 1,
         }
 
-        private HashAlgorithm _hashAlgorithm = 0;
         private byte[] _hash;
+
+        private HashAlgorithm _hashAlgorithm = 0;
 
         private int _hashCode = 0;
 
         public static readonly int MaxHashLength = 64;
 
-        public Key(HashAlgorithm hashAlgorithm, byte[] hash)
+        public Key(byte[] hash, HashAlgorithm hashAlgorithm)
         {
-            this.HashAlgorithm = hashAlgorithm;
             this.Hash = hash;
+
+            this.HashAlgorithm = hashAlgorithm;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -42,19 +45,20 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.HashAlgorithm)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
-                        }
-                    }
-                    else if (id == (byte)SerializeId.Hash)
+                    if (id == (byte)SerializeId.Hash)
                     {
                         byte[] buffer = new byte[rangeStream.Length];
                         rangeStream.Read(buffer, 0, buffer.Length);
 
                         this.Hash = buffer;
+                    }
+
+                    else if (id == (byte)SerializeId.HashAlgorithm)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
+                        }
                     }
                 }
             }
@@ -64,6 +68,17 @@ namespace Library.Net.Lair
         {
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
+
+            // Hash
+            if (this.Hash != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Hash);
+                bufferStream.Write(this.Hash, 0, this.Hash.Length);
+
+                streams.Add(bufferStream);
+            }
 
             // HashAlgorithm
             if (this.HashAlgorithm != 0)
@@ -81,16 +96,6 @@ namespace Library.Net.Lair
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.HashAlgorithm);
-
-                streams.Add(bufferStream);
-            }
-            // Hash
-            if (this.Hash != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Hash);
-                bufferStream.Write(this.Hash, 0, this.Hash.Length);
 
                 streams.Add(bufferStream);
             }
@@ -116,8 +121,9 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.HashAlgorithm != other.HashAlgorithm
-                || (this.Hash == null) != (other.Hash == null))
+            if ((this.Hash == null) != (other.Hash == null)
+
+                || this.HashAlgorithm != other.HashAlgorithm)
             {
                 return false;
             }
@@ -138,27 +144,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IHashAlgorithm
-
-        [DataMember(Name = "HashAlgorithm")]
-        public HashAlgorithm HashAlgorithm
-        {
-            get
-            {
-                return _hashAlgorithm;
-            }
-            private set
-            {
-                if (!Enum.IsDefined(typeof(HashAlgorithm), value))
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _hashAlgorithm = value;
-                }
-            }
-        }
+        #region IKey
 
         [DataMember(Name = "Hash")]
         public byte[] Hash
@@ -187,6 +173,30 @@ namespace Library.Net.Lair
                 else
                 {
                     _hashCode = 0;
+                }
+            }
+        }
+
+        #endregion
+
+        #region IHashAlgorithm
+
+        [DataMember(Name = "HashAlgorithm")]
+        public HashAlgorithm HashAlgorithm
+        {
+            get
+            {
+                return _hashAlgorithm;
+            }
+            private set
+            {
+                if (!Enum.IsDefined(typeof(HashAlgorithm), value))
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _hashAlgorithm = value;
                 }
             }
         }

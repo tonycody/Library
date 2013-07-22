@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface IMail<TSection> : IComputeHash
+    interface IDocumentHeader<TSection, TKey> : IComputeHash
         where TSection : ISection
+        where TKey : IKey
     {
         TSection Section { get; }
         DateTime CreationTime { get; }
-        string RecipientSignature { get; }
-        byte[] Content { get; }
+        TKey Content { get; }
     }
 }

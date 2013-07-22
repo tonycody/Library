@@ -13,10 +13,12 @@ namespace Library.Net.Amoeba
         private enum SerializeId : byte
         {
             Hash = 0,
+
             HashAlgorithm = 1,
         }
 
         private byte[] _hash;
+
         private HashAlgorithm _hashAlgorithm = 0;
 
         private int _hashCode = 0;
@@ -26,6 +28,7 @@ namespace Library.Net.Amoeba
         public Key(byte[] hash, HashAlgorithm hashAlgorithm)
         {
             this.Hash = hash;
+
             this.HashAlgorithm = hashAlgorithm;
         }
 
@@ -49,6 +52,7 @@ namespace Library.Net.Amoeba
 
                         this.Hash = buffer;
                     }
+
                     else if (id == (byte)SerializeId.HashAlgorithm)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
@@ -75,6 +79,7 @@ namespace Library.Net.Amoeba
 
                 streams.Add(bufferStream);
             }
+
             // HashAlgorithm
             if (this.HashAlgorithm != 0)
             {
@@ -117,6 +122,7 @@ namespace Library.Net.Amoeba
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if ((this.Hash == null) != (other.Hash == null)
+
                 || this.HashAlgorithm != other.HashAlgorithm)
             {
                 return false;

@@ -3,9 +3,8 @@ using System.Collections.Generic;
 
 namespace Library.Net.Lair
 {
-    interface IArchive : IComputeHash
+    interface IMailContent
     {
-        byte[] Id { get; }
-        string Name { get; }
+        string Content { get; }
     }
 }

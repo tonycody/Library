@@ -249,11 +249,25 @@ namespace Library.Collections
             }
         }
 
+        public bool DequeueWait()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            return _lowerResetEvent.WaitOne();
+        }
+
         public bool DequeueWait(TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             return _lowerResetEvent.WaitOne(timeout, false);
+        }
+
+        public bool EnqueueWait()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            return _upperResetEvent.WaitOne();
         }
 
         public bool EnqueueWait(TimeSpan timeout)

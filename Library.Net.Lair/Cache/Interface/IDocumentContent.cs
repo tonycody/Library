@@ -16,8 +16,9 @@ namespace Library.Net.Lair
         MiniWiki = 1,
     }
 
-    interface IContent
+    interface IDocumentContent
     {
+        string Name { get; }
         ContentFormatType FormatType { get; }
         string Content { get; }
     }

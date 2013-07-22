@@ -98,39 +98,38 @@
     <Compile Include="BytesEqualityComparer.cs" />
     <Compile Include="Cache\Archive.cs" />
     <Compile Include="Cache\ArchiveCollection.cs" />
-    <Compile Include="Cache\PageCollection.cs" />
-    <Compile Include="Cache\Page.cs" />
-    <Compile Include="Cache\KeywordCollection.cs" />
+    <Compile Include="Cache\CacheManager.cs" />
+    <Compile Include="Cache\CacheManagerStreamReader.cs" />
+    <Compile Include="Cache\CacheManagerStreamWriter.cs" />
+    <Compile Include="Cache\ChannelCollection.cs" />
+    <Compile Include="Cache\Interface\IChannel.cs" />
+    <Compile Include="Cache\Interface\IComputeHash.cs" />
+    <Compile Include="Cache\Interface\ICryptoAlgorithm.cs" />
+    <Compile Include="Cache\Interface\IDocumentContent.cs" />
+    <Compile Include="Cache\Interface\IDocumentHeader.cs" />
+    <Compile Include="Cache\Interface\IExchangeAlgorithm.cs" />
+    <Compile Include="Cache\Interface\IHashAlgorithm.cs" />
+    <Compile Include="Cache\Interface\IKey.cs" />
+    <Compile Include="Cache\Interface\IMailContent.cs" />
+    <Compile Include="Cache\Interface\IMailHeader.cs" />
+    <Compile Include="Cache\Interface\IMessageContent.cs" />
+    <Compile Include="Cache\Interface\IMessageHeader.cs" />
+    <Compile Include="Cache\Interface\IProfileContent.cs" />
+    <Compile Include="Cache\Interface\IProfileHeader.cs" />
+    <Compile Include="Cache\Interface\ISection.cs" />
+    <Compile Include="Cache\Interface\ITopicContent.cs" />
+    <Compile Include="Cache\Interface\ITopicHeader.cs" />
+    <Compile Include="Cache\KeyCollection.cs" />
     <Compile Include="Cache\Mail.cs" />
-    <Compile Include="Cache\MailCollection.cs" />
-    <Compile Include="Cache\DocumentCollection.cs" />
     <Compile Include="Cache\Document.cs" />
-    <Compile Include="Cache\TopicCollection.cs" />
+    <Compile Include="Cache\SectionCollection.cs" />
     <Compile Include="Cache\Topic.cs" />
-    <Compile Include="Cache\_Interface\IContent.cs" />
-    <Compile Include="Cache\_Interface\IPage.cs" />
-    <Compile Include="Cache\_Interface\ICryptoAlgorithm.cs" />
-    <Compile Include="Cache\_Interface\IMail.cs" />
-    <Compile Include="Cache\_Interface\IDocument.cs" />
-    <Compile Include="Cache\_Interface\IArchive.cs" />
-    <Compile Include="Cache\_Interface\ITopic.cs" />
-    <Compile Include="Cache\_Interface\IProfile.cs" />
-    <Compile Include="Cache\ProfileCollection.cs" />
-    <Compile Include="Cache\_Interface\IComputeHash.cs" />
-    <Compile Include="Cache\_Interface\ISection.cs" />
     <Compile Include="Cache\Profile.cs" />
     <Compile Include="Cache\Section.cs" />
-    <Compile Include="Cache\SectionCollection.cs" />
     <Compile Include="ItemCollection.cs" />
     <Compile Include="LairManager.cs" />
     <Compile Include="Cache\Channel.cs" />
-    <Compile Include="Cache\ChannelCollection.cs" />
-    <Compile Include="Cache\MessageCollection.cs" />
-    <Compile Include="Cache\_Interface\IChannel.cs" />
-    <Compile Include="Cache\_Interface\IKey.cs" />
-    <Compile Include="Cache\_Interface\IMessage.cs" />
     <Compile Include="Cache\Key.cs" />
-    <Compile Include="Cache\KeyCollection.cs" />
     <Compile Include="Cache\LairConverter.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
@@ -142,7 +141,6 @@
     <Compile Include="MessagesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerManager.cs" />
-    <Compile Include="Cache\_Interface\IHashAlgorithm.cs" />
     <Compile Include="Cache\Message.cs" />
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
@@ -203,6 +201,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

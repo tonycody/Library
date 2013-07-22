@@ -634,6 +634,7 @@ namespace Library.Net.Amoeba
                 }
 
                 _messagesManager[connectionManager.Node].SessionId = connectionManager.SesstionId;
+                _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
 
                 ThreadPool.QueueUserWorkItem(new WaitCallback(this.ConnectionManagerThread), connectionManager);
             }
@@ -967,16 +968,7 @@ namespace Library.Net.Amoeba
 
                                 if (removeSeedSignatures != null && removeSeedSignatures.Count() > 0)
                                 {
-                                    lock (this.ThisLock)
-                                    {
-                                        lock (_settings.ThisLock)
-                                        {
-                                            foreach (var signature in removeSeedSignatures)
-                                            {
-                                                _settings.StoreSeeds.Remove(signature);
-                                            }
-                                        }
-                                    }
+                                    _settings.RemoveStoreSeed(removeSeedSignatures);
                                 }
                             }
                         }
@@ -1700,27 +1692,19 @@ namespace Library.Net.Amoeba
                             {
                                 List<Seed> seeds = new List<Seed>();
 
-                                lock (this.ThisLock)
+                                foreach (var signature in signatures)
                                 {
-                                    lock (_settings.ThisLock)
+                                    Seed tempSeed = this.GetStoreSeed(signature);
+                                    if (tempSeed == null) continue;
+
+                                    DateTime creationTime;
+
+                                    if (!messageManager.PushStoreSeeds.TryGetValue(signature, out creationTime)
+                                        || tempSeed.CreationTime > creationTime)
                                     {
-                                        foreach (var signature in signatures)
-                                        {
-                                            Seed tempSeed;
+                                        seeds.Add(tempSeed);
 
-                                            if (_settings.StoreSeeds.TryGetValue(signature, out tempSeed))
-                                            {
-                                                DateTime creationTime;
-
-                                                if (!messageManager.PushStoreSeeds.TryGetValue(signature, out creationTime)
-                                                    || tempSeed.CreationTime > creationTime)
-                                                {
-                                                    seeds.Add(tempSeed);
-
-                                                    if (seeds.Count >= 1) goto End;
-                                                }
-                                            }
-                                        }
+                                        if (seeds.Count >= 1) goto End;
                                     }
                                 }
 
@@ -1894,36 +1878,13 @@ namespace Library.Net.Amoeba
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
-            var now = DateTime.UtcNow;
-
-            if (e.Seed == null || e.Seed.Name != null || e.Seed.Keywords.Count == 0 || e.Seed.Comment != null
-                || (e.Seed.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                || e.Seed.Certificate == null || !e.Seed.VerifyCertificate()) return;
-
-            var signature = e.Seed.Certificate.ToString();
-
-            if ((e.Seed.Keywords[0] == ConnectionsManager.Keyword_Store && e.Seed.Keywords.Count == 1))
+            if (_settings.SetStoreSeed(e.Seed))
             {
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed {0} ({1})", ConnectionsManager.Keyword_Store, signature));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed {0}", ConnectionsManager.Keyword_Store));
 
-                lock (this.ThisLock)
-                {
-                    lock (_settings.ThisLock)
-                    {
-                        Seed tempSeed;
-
-                        if (!_settings.StoreSeeds.TryGetValue(signature, out tempSeed)
-                            || e.Seed.CreationTime > tempSeed.CreationTime)
-                        {
-                            _settings.StoreSeeds[signature] = e.Seed;
-                        }
-                    }
-                }
-
-                _messagesManager[connectionManager.Node].PushStoreSeeds[signature] = e.Seed.CreationTime;
+                _messagesManager[connectionManager.Node].PushStoreSeeds[e.Seed.Certificate.ToString()] = e.Seed.CreationTime;
+                _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
             }
-
-            _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
 
             _pullSeedCount++;
         }
@@ -2077,7 +2038,7 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                return _settings.StoreSeeds.Keys.ToArray();
+                return _settings.GetStoreSignatures();
             }
         }
 
@@ -2090,21 +2051,7 @@ namespace Library.Net.Amoeba
                 if (!Signature.HasSignature(signature)) return null;
 
                 _pushSeedsRequestList.Add(signature);
-
-                lock (this.ThisLock)
-                {
-                    lock (_settings.ThisLock)
-                    {
-                        Seed seed;
-
-                        if (_settings.StoreSeeds.TryGetValue(signature, out seed))
-                        {
-                            return seed;
-                        }
-                    }
-                }
-
-                return null;
+                return _settings.GetStoreSeed(signature);
             }
         }
 
@@ -2114,30 +2061,7 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                var now = DateTime.UtcNow;
-
-                if (seed == null || seed.Name != null || seed.Comment != null || seed.Keywords.Count == 0
-                    || (seed.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                    || seed.Certificate == null || !seed.VerifyCertificate()) return;
-
-                var signature = seed.Certificate.ToString();
-
-                if ((seed.Keywords[0] == ConnectionsManager.Keyword_Store && seed.Keywords.Count == 1))
-                {
-                    lock (this.ThisLock)
-                    {
-                        lock (_settings.ThisLock)
-                        {
-                            Seed tempSeed;
-
-                            if (!_settings.StoreSeeds.TryGetValue(signature, out tempSeed)
-                                || seed.CreationTime > tempSeed.CreationTime)
-                            {
-                                _settings.StoreSeeds[signature] = seed;
-                            }
-                        }
-                    }
-                }
+                _settings.SetStoreSeed(seed);
             }
         }
 
@@ -2310,6 +2234,71 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            public IEnumerable<string> GetStoreSignatures()
+            {
+                lock (this.ThisLock)
+                {
+                    return this.StoreSeeds.Keys.ToArray();
+                }
+            }
+
+            public Seed GetStoreSeed(string signature)
+            {
+                lock (this.ThisLock)
+                {
+                    if (!Signature.HasSignature(signature)) return null;
+
+                    Seed seed;
+
+                    if (this.StoreSeeds.TryGetValue(signature, out seed))
+                    {
+                        return seed;
+                    }
+
+                    return null;
+                }
+            }
+
+            public bool SetStoreSeed(Seed seed)
+            {
+                lock (this.ThisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (seed == null || seed.Name != null || seed.Comment != null
+                        || (seed.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || seed.Certificate == null || !seed.VerifyCertificate()) return false;
+
+                    var signature = seed.Certificate.ToString();
+
+                    if ((seed.Keywords[0] == ConnectionsManager.Keyword_Store && seed.Keywords.Count == 1))
+                    {
+                        Seed tempSeed;
+
+                        if (!this.StoreSeeds.TryGetValue(signature, out tempSeed)
+                            || seed.CreationTime > tempSeed.CreationTime)
+                        {
+                            this.StoreSeeds[signature] = seed;
+
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+            }
+
+            public void RemoveStoreSeed(IEnumerable<string> signatures)
+            {
+                lock (this.ThisLock)
+                {
+                    foreach (var signature in signatures)
+                    {
+                        this.StoreSeeds.Remove(signature);
+                    }
+                }
+            }
+
             public NodeCollection OtherNodes
             {
                 get
@@ -2397,7 +2386,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public LockedDictionary<string, Seed> StoreSeeds
+            private LockedDictionary<string, Seed> StoreSeeds
             {
                 get
                 {

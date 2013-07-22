@@ -2,10 +2,12 @@
 
 namespace Library.Net.Lair
 {
-    interface ITopic<TChannel> : IContent, IComputeHash
+    interface ITopicHeader<TChannel, TKey> : IComputeHash
         where TChannel : IChannel
+        where TKey : IKey
     {
         TChannel Channel { get; }
         DateTime CreationTime { get; }
+        TKey Content { get; }
     }
 }

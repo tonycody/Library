@@ -8,34 +8,30 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Mail", Namespace = "http://Library/Net/Lair")]
-    public sealed class Mail : ReadOnlyCertificateItemBase<Mail>, IMail<Section>
+    [DataContract(Name = "MailHeader", Namespace = "http://Library/Net/Lair")]
+    public sealed class MailHeader : ReadOnlyCertificateItemBase<MailHeader>, IMailHeader<Key>
     {
         private enum SerializeId : byte
         {
-            Section = 0,
+            RecipientSignature = 0,
             CreationTime = 1,
-            RecipientSignature = 2,
-            Content = 3,
+            Content = 2,
 
-            Certificate = 4,
+            Certificate = 3,
         }
 
-        private Section _section = null;
-        private DateTime _creationTime = DateTime.MinValue;
         private string _recipientSignature = null;
-        private byte[] _content = null;
+        private DateTime _creationTime = DateTime.MinValue;
+        private Key _content = null;
 
         private Certificate _certificate;
 
         public static readonly int MaxRecipientSignatureLength = 1024;
-        public static readonly int MaxContentLength = 1024 * 8;
 
-        public Mail(Section section, string recipientSignature, byte[] content, DigitalSignature digitalSignature)
+        public MailHeader(string recipientSignature, Key content, DigitalSignature digitalSignature)
         {
-            this.Section = section;
-            this.CreationTime = DateTime.UtcNow;
             this.RecipientSignature = recipientSignature;
+            this.CreationTime = DateTime.UtcNow;
             this.Content = content;
 
             this.CreateCertificate(digitalSignature);
@@ -54,9 +50,12 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Section)
+                    if (id == (byte)SerializeId.RecipientSignature)
                     {
-                        this.Section = Section.Import(rangeStream, bufferManager);
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.RecipientSignature = reader.ReadToEnd();
+                        }
                     }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
@@ -65,19 +64,9 @@ namespace Library.Net.Lair
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                     }
-                    else if (id == (byte)SerializeId.RecipientSignature)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.RecipientSignature = reader.ReadToEnd();
-                        }
-                    }
                     else if (id == (byte)SerializeId.Content)
                     {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.Content = buffer;
+                        this.Content = Key.Import(rangeStream, bufferManager);
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -93,16 +82,24 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Section
-            if (this.Section != null)
+            // RecipientSignature
+            if (this.RecipientSignature != null)
             {
-                Stream exportStream = this.Section.Export(bufferManager);
-
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Section);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
 
-                streams.Add(new JoinStream(bufferStream, exportStream));
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.RecipientSignature);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.RecipientSignature);
+
+                streams.Add(bufferStream);
             }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
@@ -123,34 +120,16 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // RecipientSignature
-            if (this.RecipientSignature != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.RecipientSignature);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.RecipientSignature);
-
-                streams.Add(bufferStream);
-            }
             // Content
             if (this.Content != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Content.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Content);
-                bufferStream.Write(this.Content, 0, this.Content.Length);
+                Stream exportStream = this.Content.Export(bufferManager);
 
-                streams.Add(bufferStream);
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Content);
+
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
             // Certificate
@@ -170,18 +149,18 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (this.Certificate == null) return 0;
-            else return this.Certificate.GetHashCode();
+            if (_content == null) return 0;
+            else return _content.GetHashCode();
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Mail)) return false;
+            if ((object)obj == null || !(obj is MailHeader)) return false;
 
-            return this.Equals((Mail)obj);
+            return this.Equals((MailHeader)obj);
         }
 
-        public override bool Equals(Mail other)
+        public override bool Equals(MailHeader other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -192,17 +171,11 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override string ToString()
-        {
-            if (this.Certificate == null) return "";
-            else return this.Certificate.ToString();
-        }
-
-        public override Mail DeepClone()
+        public override MailHeader DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return Mail.Import(stream, BufferManager.Instance);
+                return MailHeader.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -233,18 +206,25 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IMail<Section>
+        #region IMailHeader<Key>
 
-        [DataMember(Name = "Section")]
-        public Section Section
+        [DataMember(Name = "RecipientSignature")]
+        public string RecipientSignature
         {
             get
             {
-                return _section;
+                return _recipientSignature;
             }
             private set
             {
-                _section = value;
+                if (value != null && value.Length > MailHeader.MaxRecipientSignatureLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _recipientSignature = value;
+                }
             }
         }
 
@@ -262,43 +242,16 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "RecipientSignature")]
-        public string RecipientSignature
-        {
-            get
-            {
-                return _recipientSignature;
-            }
-            private set
-            {
-                if (value != null && value.Length > Mail.MaxRecipientSignatureLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _recipientSignature = value;
-                }
-            }
-        }
-
         [DataMember(Name = "Content")]
-        public byte[] Content
+        public Key Content
         {
             get
             {
                 return _content;
             }
-            set
+            private set
             {
-                if (value != null && value.Length > Mail.MaxContentLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _content = value;
-                }
+                _content = value;
             }
         }
 
@@ -329,6 +282,135 @@ namespace Library.Net.Lair
         public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
         {
             return Collection.Equals(this.GetHash(hashAlgorithm), hash);
+        }
+
+        #endregion
+    }
+
+    [DataContract(Name = "MailContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class MailContent : ItemBase<MailContent>, IMailContent
+    {
+        private enum SerializeId : byte
+        {
+            Content = 0,
+        }
+
+        private string _content = null;
+
+        public static readonly int MaxContentLength = 1024 * 4;
+
+        public MailContent(string content)
+        {
+            this.Content = content;
+        }
+
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        {
+            Encoding encoding = new UTF8Encoding(false);
+            byte[] lengthBuffer = new byte[4];
+
+            for (; ; )
+            {
+                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                int length = NetworkConverter.ToInt32(lengthBuffer);
+                byte id = (byte)stream.ReadByte();
+
+                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                {
+                    if (id == (byte)SerializeId.Content)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.Content = reader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+
+        public override Stream Export(BufferManager bufferManager)
+        {
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            // Content
+            if (this.Content != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.Content);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Content);
+
+                streams.Add(bufferStream);
+            }
+
+            return new JoinStream(streams);
+        }
+
+        public override int GetHashCode()
+        {
+            if (_content == null) return 0;
+            else return _content.GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            if ((object)obj == null || !(obj is MailContent)) return false;
+
+            return this.Equals((MailContent)obj);
+        }
+
+        public override bool Equals(MailContent other)
+        {
+            if ((object)other == null) return false;
+            if (object.ReferenceEquals(this, other)) return true;
+            if (this.GetHashCode() != other.GetHashCode()) return false;
+
+            if (this.Content != other.Content)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public override MailContent DeepClone()
+        {
+            using (var stream = this.Export(BufferManager.Instance))
+            {
+                return MailContent.Import(stream, BufferManager.Instance);
+            }
+        }
+
+        #region IMailContent
+
+        [DataMember(Name = "Content")]
+        public string Content
+        {
+            get
+            {
+                return _content;
+            }
+            private set
+            {
+                if (value != null && value.Length > MailContent.MaxContentLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _content = value;
+                }
+            }
         }
 
         #endregion

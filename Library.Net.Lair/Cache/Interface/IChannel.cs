@@ -1,7 +1,7 @@
 ﻿
 namespace Library.Net.Lair
 {
-    interface IChannel : IComputeHash
+    interface IChannel
     {
         byte[] Id { get; }
         string Name { get; }

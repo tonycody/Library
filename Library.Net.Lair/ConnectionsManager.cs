@@ -769,6 +769,7 @@ namespace Library.Net.Lair
                 }
 
                 _messagesManager[connectionManager.Node].SessionId = connectionManager.SesstionId;
+                _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
 
                 ThreadPool.QueueUserWorkItem(new WaitCallback(this.ConnectionManagerThread), connectionManager);
             }
