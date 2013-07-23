@@ -20,15 +20,15 @@ namespace Library.Net.Lair
             Certificate = 3,
         }
 
-        private Section _Section = null;
+        private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private Key _content = null;
 
         private Certificate _certificate;
 
-        public DocumentHeader(Section Section, Key content, DigitalSignature digitalSignature)
+        public DocumentHeader(Section section, Key content, DigitalSignature digitalSignature)
         {
-            this.Section = Section;
+            this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             this.Content = content;
 
@@ -200,11 +200,11 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _Section;
+                return _section;
             }
             private set
             {
-                _Section = value;
+                _section = value;
             }
         }
 

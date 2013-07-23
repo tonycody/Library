@@ -96,12 +96,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BytesEqualityComparer.cs" />
-    <Compile Include="Cache\Archive.cs" />
-    <Compile Include="Cache\ArchiveCollection.cs" />
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\CacheManagerStreamReader.cs" />
     <Compile Include="Cache\CacheManagerStreamWriter.cs" />
     <Compile Include="Cache\ChannelCollection.cs" />
+    <Compile Include="Cache\MessageHeaderCollection.cs" />
+    <Compile Include="Cache\TopicHeaderCollection.cs" />
+    <Compile Include="Cache\ProfileHeaderCollection.cs" />
+    <Compile Include="Cache\DocumentHeaderCollection.cs" />
+    <Compile Include="Cache\MessageContentCollection.cs" />
+    <Compile Include="Cache\TopicContentCollection.cs" />
+    <Compile Include="Cache\DocumentContentCollection.cs" />
+    <Compile Include="Cache\ProfileContentCollection.cs" />
+    <Compile Include="Cache\MailContentCollection.cs" />
+    <Compile Include="Cache\MailHeaderCollection.cs" />
     <Compile Include="Cache\Interface\IChannel.cs" />
     <Compile Include="Cache\Interface\IComputeHash.cs" />
     <Compile Include="Cache\Interface\ICryptoAlgorithm.cs" />

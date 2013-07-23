@@ -16,15 +16,27 @@ namespace Library.Net.Lair
         public IEnumerable<Node> Nodes { get; set; }
     }
 
+    class PullMailsEventArgs : EventArgs
+    {
+        public IEnumerable<MailHeader> MailHeaders { get; set; }
+        public IEnumerable<MailContent> MailContents { get; set; }
+    }
+
     class PullSectionsRequestEventArgs : EventArgs
     {
         public IEnumerable<Section> Sections { get; set; }
     }
 
-    class PullSectionContentsEventArgs : EventArgs
+    class PullProfilesEventArgs : EventArgs
     {
-        public IEnumerable<Profile> Profiles { get; set; }
-        public IEnumerable<Mail> Mails { get; set; }
+        public IEnumerable<ProfileHeader> ProfileHeaders { get; set; }
+        public IEnumerable<ProfileContent> ProfileContents { get; set; }
+    }
+
+    class PullDocumentsEventArgs : EventArgs
+    {
+        public IEnumerable<DocumentHeader> DocumentHeaders { get; set; }
+        public IEnumerable<DocumentContent> DocumentContents { get; set; }
     }
 
     class PullChannelsRequestEventArgs : EventArgs
@@ -32,32 +44,29 @@ namespace Library.Net.Lair
         public IEnumerable<Channel> Channels { get; set; }
     }
 
-    class PullChannelContentsEventArgs : EventArgs
+    class PullTopicsEventArgs : EventArgs
     {
-        public IEnumerable<Topic> Topics { get; set; }
-        public IEnumerable<Message> Messages { get; set; }
+        public IEnumerable<TopicHeader> TopicHeaders { get; set; }
+        public IEnumerable<TopicContent> TopicContents { get; set; }
     }
 
-    class PullArchivesRequestEventArgs : EventArgs
+    class PullMessagesEventArgs : EventArgs
     {
-        public IEnumerable<Archive> Archives { get; set; }
-    }
-
-    class PullArchiveContentsEventArgs : EventArgs
-    {
-        public IEnumerable<Document> Documents { get; set; }
+        public IEnumerable<MessageHeader> MessageHeaders { get; set; }
+        public IEnumerable<MessageContent> MessageContents { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
 
+    delegate void PullMailsEventHandler(object sender, PullMailsEventArgs e);
+
     delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
-    delegate void PullSectionContentsEventHandler(object sender, PullSectionContentsEventArgs e);
+    delegate void PullProfilesEventHandler(object sender, PullProfilesEventArgs e);
+    delegate void PullDocumentsEventHandler(object sender, PullDocumentsEventArgs e);
 
     delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
-    delegate void PullChannelContentsEventHandler(object sender, PullChannelContentsEventArgs e);
-
-    delegate void PullArchivesRequestEventHandler(object sender, PullArchivesRequestEventArgs e);
-    delegate void PullArchiveContentsEventHandler(object sender, PullArchiveContentsEventArgs e);
+    delegate void PullTopicsEventHandler(object sender, PullTopicsEventArgs e);
+    delegate void PullMessagesEventHandler(object sender, PullMessagesEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
 
@@ -81,14 +90,15 @@ namespace Library.Net.Lair
 
             Nodes = 4,
 
-            SectionsRequest = 5,
-            SectionContents = 6,
+            Mails = 5,
 
-            ChannelsRequest = 7,
-            ChannelContents = 8,
+            SectionsRequest = 6,
+            Profiles = 7,
+            Documents = 8,
 
-            ArchivesRequest = 9,
-            ArchiveContents = 10,
+            ChannelsRequest = 9,
+            Topics = 10,
+            Messages = 11,
         }
 
         private byte[] _mySessionId;
@@ -120,14 +130,15 @@ namespace Library.Net.Lair
 
         public event PullNodesEventHandler PullNodesEvent;
 
+        public event PullMailsEventHandler PullMailsEvent;
+
         public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
-        public event PullSectionContentsEventHandler PullSectionContentsEvent;
+        public event PullProfilesEventHandler PullProfilesEvent;
+        public event PullDocumentsEventHandler PullDocumentsEvent;
 
         public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
-        public event PullChannelContentsEventHandler PullChannelContentsEvent;
-
-        public event PullArchivesRequestEventHandler PullArchivesRequestEvent;
-        public event PullArchiveContentsEventHandler PullArchiveContentsEvent;
+        public event PullTopicsEventHandler PullTopicsEvent;
+        public event PullMessagesEventHandler PullMessagesEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
 
@@ -555,35 +566,40 @@ namespace Library.Net.Lair
                                     var message = NodesMessage.Import(stream2, _bufferManager);
                                     this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
                                 }
+                                else if (type == (byte)SerializeId.Mails)
+                                {
+                                    var message = MailsMessage.Import(stream2, _bufferManager);
+                                    this.OnPullMails(new PullMailsEventArgs() { MailHeaders = message.MailHeaders, MailContents = message.MailContents });
+                                }
                                 else if (type == (byte)SerializeId.SectionsRequest)
                                 {
                                     var message = SectionsRequestMessage.Import(stream2, _bufferManager);
                                     this.OnPullSectionsRequest(new PullSectionsRequestEventArgs() { Sections = message.Sections });
                                 }
-                                else if (type == (byte)SerializeId.SectionContents)
+                                else if (type == (byte)SerializeId.Profiles)
                                 {
-                                    var message = SectionContentsMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSectionContents(new PullSectionContentsEventArgs() { Profiles = message.Profiles, Mails = message.Mails });
+                                    var message = ProfilesMessage.Import(stream2, _bufferManager);
+                                    this.OnPullProfiles(new PullProfilesEventArgs() { ProfileHeaders = message.ProfileHeaders, ProfileContents = message.ProfileContents });
+                                }
+                                else if (type == (byte)SerializeId.Documents)
+                                {
+                                    var message = DocumentsMessage.Import(stream2, _bufferManager);
+                                    this.OnPullDocuments(new PullDocumentsEventArgs() { DocumentHeaders = message.DocumentHeaders, DocumentContents = message.DocumentContents });
                                 }
                                 else if (type == (byte)SerializeId.ChannelsRequest)
                                 {
                                     var message = ChannelsRequestMessage.Import(stream2, _bufferManager);
                                     this.OnPullChannelsRequest(new PullChannelsRequestEventArgs() { Channels = message.Channels });
                                 }
-                                else if (type == (byte)SerializeId.ChannelContents)
+                                else if (type == (byte)SerializeId.Topics)
                                 {
-                                    var message = ChannelContentsMessage.Import(stream2, _bufferManager);
-                                    this.OnPullChannelContents(new PullChannelContentsEventArgs() { Topics = message.Topics, Messages = message.Messages });
+                                    var message = TopicsMessage.Import(stream2, _bufferManager);
+                                    this.OnPullTopics(new PullTopicsEventArgs() { TopicHeaders = message.TopicHeaders, TopicContents = message.TopicContents });
                                 }
-                                else if (type == (byte)SerializeId.ArchivesRequest)
+                                else if (type == (byte)SerializeId.Messages)
                                 {
-                                    var message = ArchivesRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullArchivesRequest(new PullArchivesRequestEventArgs() { Archives = message.Archives });
-                                }
-                                else if (type == (byte)SerializeId.ArchiveContents)
-                                {
-                                    var message = ArchiveContentsMessage.Import(stream2, _bufferManager);
-                                    this.OnPullArchiveContents(new PullArchiveContentsEventArgs() { Documents = message.Documents });
+                                    var message = MessagesMessage.Import(stream2, _bufferManager);
+                                    this.OnPullMessages(new PullMessagesEventArgs() { MessageHeaders = message.MessageHeaders, MessageContents = message.MessageContents });
                                 }
                             }
                         }
@@ -615,6 +631,14 @@ namespace Library.Net.Lair
             }
         }
 
+        protected virtual void OnPullMails(PullMailsEventArgs e)
+        {
+            if (this.PullMailsEvent != null)
+            {
+                this.PullMailsEvent(this, e);
+            }
+        }
+
         protected virtual void OnPullSectionsRequest(PullSectionsRequestEventArgs e)
         {
             if (this.PullSectionsRequestEvent != null)
@@ -623,11 +647,19 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnPullSectionContents(PullSectionContentsEventArgs e)
+        protected virtual void OnPullProfiles(PullProfilesEventArgs e)
         {
-            if (this.PullSectionContentsEvent != null)
+            if (this.PullProfilesEvent != null)
             {
-                this.PullSectionContentsEvent(this, e);
+                this.PullProfilesEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullDocuments(PullDocumentsEventArgs e)
+        {
+            if (this.PullDocumentsEvent != null)
+            {
+                this.PullDocumentsEvent(this, e);
             }
         }
 
@@ -639,27 +671,19 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnPullChannelContents(PullChannelContentsEventArgs e)
+        protected virtual void OnPullTopics(PullTopicsEventArgs e)
         {
-            if (this.PullChannelContentsEvent != null)
+            if (this.PullTopicsEvent != null)
             {
-                this.PullChannelContentsEvent(this, e);
+                this.PullTopicsEvent(this, e);
             }
         }
 
-        protected virtual void OnPullArchivesRequest(PullArchivesRequestEventArgs e)
+        protected virtual void OnPullMessages(PullMessagesEventArgs e)
         {
-            if (this.PullArchivesRequestEvent != null)
+            if (this.PullMessagesEvent != null)
             {
-                this.PullArchivesRequestEvent(this, e);
-            }
-        }
-
-        protected virtual void OnPullArchiveContents(PullArchiveContentsEventArgs e)
-        {
-            if (this.PullArchiveContentsEvent != null)
-            {
-                this.PullArchiveContentsEvent(this, e);
+                this.PullMessagesEvent(this, e);
             }
         }
 
@@ -697,6 +721,45 @@ namespace Library.Net.Lair
 
                     var message = new NodesMessage();
                     message.Nodes.AddRange(nodes);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushMails(IEnumerable<MailHeader> mailHeaders , IEnumerable<MailContent> mailContents)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version3)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.Flush();
+
+                    var message = new MailsMessage();
+                    message.MailHeaders.AddRange(mailHeaders);
+                    message.MailContents.AddRange(mailContents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -758,7 +821,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushSectionContents(IEnumerable<Profile> profiles, IEnumerable<Mail> mails)
+        public void PushProfiles(IEnumerable<ProfileHeader> profileHeaders, IEnumerable<ProfileContent> profileContents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -768,12 +831,12 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.SectionsRequest);
+                    stream.WriteByte((byte)SerializeId.Nodes);
                     stream.Flush();
 
-                    var message = new SectionContentsMessage();
-                    message.Profiles.AddRange(profiles);
-                    message.Mails.AddRange(mails);
+                    var message = new ProfilesMessage();
+                    message.ProfileHeaders.AddRange(profileHeaders);
+                    message.ProfileContents.AddRange(profileContents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -796,7 +859,46 @@ namespace Library.Net.Lair
                 throw new ConnectionManagerException();
             }
         }
+    
+        public void PushDocuments(IEnumerable<DocumentHeader> documentHeaders, IEnumerable<DocumentContent> documentContents)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
+            if (_protocolVersion == ProtocolVersion.Version3)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.Flush();
+
+                    var message = new DocumentsMessage();
+                    message.DocumentHeaders.AddRange(documentHeaders);
+                    message.DocumentContents.AddRange(documentContents);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+        
         public void PushChannelsRequest(IEnumerable<Channel> channels)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -835,7 +937,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushChannelContents(IEnumerable<Topic> topics, IEnumerable<Message> messages)
+        public void PushTopics(IEnumerable<TopicHeader> topicHeaders, IEnumerable<TopicContent> topicContents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -845,12 +947,12 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.ChannelsRequest);
+                    stream.WriteByte((byte)SerializeId.Nodes);
                     stream.Flush();
 
-                    var message = new ChannelContentsMessage();
-                    message.Topics.AddRange(topics);
-                    message.Messages.AddRange(messages);
+                    var message = new TopicsMessage();
+                    message.TopicHeaders.AddRange(topicHeaders);
+                    message.TopicContents.AddRange(topicContents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -873,8 +975,8 @@ namespace Library.Net.Lair
                 throw new ConnectionManagerException();
             }
         }
-
-        public void PushArchivesRequest(IEnumerable<Archive> archives)
+       
+        public void PushMessages(IEnumerable<MessageHeader> messageHeaders, IEnumerable<MessageContent> messageContents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -884,11 +986,12 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.ArchivesRequest);
+                    stream.WriteByte((byte)SerializeId.Nodes);
                     stream.Flush();
 
-                    var message = new ArchivesRequestMessage();
-                    message.Archives.AddRange(archives);
+                    var message = new MessagesMessage();
+                    message.MessageHeaders.AddRange(messageHeaders);
+                    message.MessageContents.AddRange(messageContents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -911,45 +1014,7 @@ namespace Library.Net.Lair
                 throw new ConnectionManagerException();
             }
         }
-
-        public void PushArchiveContents(IEnumerable<Document> documents)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            if (_protocolVersion == ProtocolVersion.Version3)
-            {
-                Stream stream = new BufferStream(_bufferManager);
-
-                try
-                {
-                    stream.WriteByte((byte)SerializeId.ArchivesRequest);
-                    stream.Flush();
-
-                    var message = new ArchiveContentsMessage();
-                    message.Documents.AddRange(documents);
-
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
-
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
-                }
-                catch (ConnectionException)
-                {
-                    this.OnClose(new EventArgs());
-
-                    throw;
-                }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            else
-            {
-                throw new ConnectionManagerException();
-            }
-        }
-
+        
         public void PushCancel()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -1085,6 +1150,140 @@ namespace Library.Net.Lair
             #endregion
         }
 
+        [DataContract(Name = "MailsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class MailsMessage : ItemBase<MailsMessage>, IThisLock
+        {
+            private enum SerializeId : byte
+            {
+                MailHeader = 0,
+                MailContent = 1,
+            }
+
+            private MailHeaderCollection _mailHeaders;
+            private MailContentCollection _mailContents;
+
+            private object _thisLock;
+            private static object _thisStaticLock = new object();
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    Encoding encoding = new UTF8Encoding(false);
+                    byte[] lengthBuffer = new byte[4];
+
+                    for (; ; )
+                    {
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+                        byte id = (byte)stream.ReadByte();
+
+                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        {
+                            if (id == (byte)SerializeId.MailHeader)
+                            {
+                                this.MailHeaders.Add(MailHeader.Import(rangeStream, bufferManager));
+                            }
+                            else if (id == (byte)SerializeId.MailContent)
+                            {
+                                this.MailContents.Add(MailContent.Import(rangeStream, bufferManager));
+                            }
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // MailHeaders
+                foreach (var m in this.MailContents)
+                {
+                    Stream exportStream = m.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.MailContent);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // MailContent
+                foreach (var m in this.MailContents)
+                {
+                    Stream exportStream = m.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.MailContent);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+
+                return new JoinStream(streams);
+            }
+
+            public override MailsMessage DeepClone()
+            {
+                lock (this.ThisLock)
+                {
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        return MailsMessage.Import(stream, BufferManager.Instance);
+                    }
+                }
+            }
+
+            [DataMember(Name = "MailHeaders")]
+            public MailHeaderCollection MailHeaders
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_mailHeaders == null)
+                            _mailHeaders = new MailHeaderCollection();
+
+                        return _mailHeaders;
+                    }
+                }
+            }
+
+            [DataMember(Name = "MailContents")]
+            public MailContentCollection MailContents
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_mailContents == null)
+                            _mailContents = new MailContentCollection();
+
+                        return _mailContents;
+                    }
+                }
+            }
+
+            #region IThisLock
+
+            public object ThisLock
+            {
+                get
+                {
+                    lock (_thisStaticLock)
+                    {
+                        if (_thisLock == null)
+                            _thisLock = new object();
+
+                        return _thisLock;
+                    }
+                }
+            }
+
+            #endregion
+        }
+
         [DataContract(Name = "SectionsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
         private sealed class SectionsRequestMessage : ItemBase<SectionsRequestMessage>, IThisLock
         {
@@ -1093,7 +1292,7 @@ namespace Library.Net.Lair
                 Section = 0,
             }
 
-            private SectionCollection _channels;
+            private SectionCollection _sections;
 
             private object _thisLock;
             private static object _thisStaticLock = new object();
@@ -1130,9 +1329,9 @@ namespace Library.Net.Lair
                     Encoding encoding = new UTF8Encoding(false);
 
                     // Sections
-                    foreach (var c in this.Sections)
+                    foreach (var s in this.Sections)
                     {
-                        Stream exportStream = c.Export(bufferManager);
+                        Stream exportStream = s.Export(bufferManager);
 
                         BufferStream bufferStream = new BufferStream(bufferManager);
                         bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
@@ -1163,10 +1362,10 @@ namespace Library.Net.Lair
                 {
                     lock (this.ThisLock)
                     {
-                        if (_channels == null)
-                            _channels = new SectionCollection(128);
+                        if (_sections == null)
+                            _sections = new SectionCollection(128);
 
-                        return _channels;
+                        return _sections;
                     }
                 }
             }
@@ -1190,17 +1389,17 @@ namespace Library.Net.Lair
             #endregion
         }
 
-        [DataContract(Name = "SectionContentsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class SectionContentsMessage : ItemBase<SectionContentsMessage>, IThisLock
+        [DataContract(Name = "ProfilesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class ProfilesMessage : ItemBase<ProfilesMessage>, IThisLock
         {
             private enum SerializeId : byte
             {
-                Profile = 0,
-                Mail = 1,
+                ProfileHeader = 0,
+                ProfileContent = 1,
             }
 
-            private ProfileCollection _profiles;
-            private MailCollection _mails;
+            private ProfileHeaderCollection _profileHeaders;
+            private ProfileContentCollection _profileContents;
 
             private object _thisLock;
             private static object _thisStaticLock = new object();
@@ -1220,13 +1419,13 @@ namespace Library.Net.Lair
 
                         using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                         {
-                            if (id == (byte)SerializeId.Profile)
+                            if (id == (byte)SerializeId.ProfileHeader)
                             {
-                                this.Profiles.Add(Profile.Import(rangeStream, bufferManager));
+                                this.ProfileHeaders.Add(ProfileHeader.Import(rangeStream, bufferManager));
                             }
-                            else if (id == (byte)SerializeId.Mail)
+                            else if (id == (byte)SerializeId.ProfileContent)
                             {
-                                this.Mails.Add(Mail.Import(rangeStream, bufferManager));
+                                this.ProfileContents.Add(ProfileContent.Import(rangeStream, bufferManager));
                             }
                         }
                     }
@@ -1235,75 +1434,206 @@ namespace Library.Net.Lair
 
             public override Stream Export(BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // ProfileHeaders
+                foreach (var p in this.ProfileContents)
                 {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
+                    Stream exportStream = p.Export(bufferManager);
 
-                    // Profile
-                    foreach (var p in this.Profiles)
-                    {
-                        Stream exportStream = p.Export(bufferManager);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.ProfileContent);
 
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Profile);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-                    // Mail
-                    foreach (var m in this.Mails)
-                    {
-                        Stream exportStream = m.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Profile);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
+                // ProfileContent
+                foreach (var p in this.ProfileContents)
+                {
+                    Stream exportStream = p.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.ProfileContent);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+
+                return new JoinStream(streams);
             }
 
-            public override SectionContentsMessage DeepClone()
+            public override ProfilesMessage DeepClone()
             {
                 lock (this.ThisLock)
                 {
                     using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return SectionContentsMessage.Import(stream, BufferManager.Instance);
+                        return ProfilesMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
 
-            [DataMember(Name = "Profiles")]
-            public ProfileCollection Profiles
+            [DataMember(Name = "ProfileHeaders")]
+            public ProfileHeaderCollection ProfileHeaders
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        if (_profiles == null)
-                            _profiles = new ProfileCollection();
+                        if (_profileHeaders == null)
+                            _profileHeaders = new ProfileHeaderCollection();
 
-                        return _profiles;
+                        return _profileHeaders;
                     }
                 }
             }
 
-            [DataMember(Name = "Mails")]
-            public MailCollection Mails
+            [DataMember(Name = "ProfileContents")]
+            public ProfileContentCollection ProfileContents
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        if (_mails == null)
-                            _mails = new MailCollection();
+                        if (_profileContents == null)
+                            _profileContents = new ProfileContentCollection();
 
-                        return _mails;
+                        return _profileContents;
+                    }
+                }
+            }
+
+            #region IThisLock
+
+            public object ThisLock
+            {
+                get
+                {
+                    lock (_thisStaticLock)
+                    {
+                        if (_thisLock == null)
+                            _thisLock = new object();
+
+                        return _thisLock;
+                    }
+                }
+            }
+
+            #endregion
+        }
+
+        [DataContract(Name = "DocumentsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class DocumentsMessage : ItemBase<DocumentsMessage>, IThisLock
+        {
+            private enum SerializeId : byte
+            {
+                DocumentHeader = 0,
+                DocumentContent = 1,
+            }
+
+            private DocumentHeaderCollection _documentHeaders;
+            private DocumentContentCollection _documentContents;
+
+            private object _thisLock;
+            private static object _thisStaticLock = new object();
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    Encoding encoding = new UTF8Encoding(false);
+                    byte[] lengthBuffer = new byte[4];
+
+                    for (; ; )
+                    {
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+                        byte id = (byte)stream.ReadByte();
+
+                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        {
+                            if (id == (byte)SerializeId.DocumentHeader)
+                            {
+                                this.DocumentHeaders.Add(DocumentHeader.Import(rangeStream, bufferManager));
+                            }
+                            else if (id == (byte)SerializeId.DocumentContent)
+                            {
+                                this.DocumentContents.Add(DocumentContent.Import(rangeStream, bufferManager));
+                            }
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // DocumentHeaders
+                foreach (var d in this.DocumentContents)
+                {
+                    Stream exportStream = d.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.DocumentContent);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // DocumentContent
+                foreach (var d in this.DocumentContents)
+                {
+                    Stream exportStream = d.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.DocumentContent);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+
+                return new JoinStream(streams);
+            }
+
+            public override DocumentsMessage DeepClone()
+            {
+                lock (this.ThisLock)
+                {
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        return DocumentsMessage.Import(stream, BufferManager.Instance);
+                    }
+                }
+            }
+
+            [DataMember(Name = "DocumentHeaders")]
+            public DocumentHeaderCollection DocumentHeaders
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_documentHeaders == null)
+                            _documentHeaders = new DocumentHeaderCollection();
+
+                        return _documentHeaders;
+                    }
+                }
+            }
+
+            [DataMember(Name = "DocumentContents")]
+            public DocumentContentCollection DocumentContents
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_documentContents == null)
+                            _documentContents = new DocumentContentCollection();
+
+                        return _documentContents;
                     }
                 }
             }
@@ -1432,17 +1762,17 @@ namespace Library.Net.Lair
             #endregion
         }
 
-        [DataContract(Name = "ChannelContentsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class ChannelContentsMessage : ItemBase<ChannelContentsMessage>, IThisLock
+        [DataContract(Name = "TopicsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class TopicsMessage : ItemBase<TopicsMessage>, IThisLock
         {
             private enum SerializeId : byte
             {
-                Topic = 0,
-                Message = 1,
+                TopicHeader = 0,
+                TopicContent = 1,
             }
 
-            private TopicCollection _topics;
-            private MessageCollection _messages;
+            private TopicHeaderCollection _topicHeaders;
+            private TopicContentCollection _topicContents;
 
             private object _thisLock;
             private static object _thisStaticLock = new object();
@@ -1462,13 +1792,13 @@ namespace Library.Net.Lair
 
                         using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                         {
-                            if (id == (byte)SerializeId.Topic)
+                            if (id == (byte)SerializeId.TopicHeader)
                             {
-                                this.Topics.Add(Topic.Import(rangeStream, bufferManager));
+                                this.TopicHeaders.Add(TopicHeader.Import(rangeStream, bufferManager));
                             }
-                            else if (id == (byte)SerializeId.Message)
+                            else if (id == (byte)SerializeId.TopicContent)
                             {
-                                this.Messages.Add(Message.Import(rangeStream, bufferManager));
+                                this.TopicContents.Add(TopicContent.Import(rangeStream, bufferManager));
                             }
                         }
                     }
@@ -1477,75 +1807,72 @@ namespace Library.Net.Lair
 
             public override Stream Export(BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // TopicHeaders
+                foreach (var t in this.TopicContents)
                 {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
+                    Stream exportStream = t.Export(bufferManager);
 
-                    // Topic
-                    foreach (var t in this.Topics)
-                    {
-                        Stream exportStream = t.Export(bufferManager);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.TopicContent);
 
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Topic);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-                    // Message
-                    foreach (var m in this.Messages)
-                    {
-                        Stream exportStream = m.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Topic);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
+                // TopicContent
+                foreach (var t in this.TopicContents)
+                {
+                    Stream exportStream = t.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.TopicContent);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+
+                return new JoinStream(streams);
             }
 
-            public override ChannelContentsMessage DeepClone()
+            public override TopicsMessage DeepClone()
             {
                 lock (this.ThisLock)
                 {
                     using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return ChannelContentsMessage.Import(stream, BufferManager.Instance);
+                        return TopicsMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
 
-            [DataMember(Name = "Topics")]
-            public TopicCollection Topics
+            [DataMember(Name = "TopicHeaders")]
+            public TopicHeaderCollection TopicHeaders
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        if (_topics == null)
-                            _topics = new TopicCollection();
+                        if (_topicHeaders == null)
+                            _topicHeaders = new TopicHeaderCollection();
 
-                        return _topics;
+                        return _topicHeaders;
                     }
                 }
             }
 
-            [DataMember(Name = "Messages")]
-            public MessageCollection Messages
+            [DataMember(Name = "TopicContents")]
+            public TopicContentCollection TopicContents
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        if (_messages == null)
-                            _messages = new MessageCollection();
+                        if (_topicContents == null)
+                            _topicContents = new TopicContentCollection();
 
-                        return _messages;
+                        return _topicContents;
                     }
                 }
             }
@@ -1569,15 +1896,17 @@ namespace Library.Net.Lair
             #endregion
         }
 
-        [DataContract(Name = "ArchivesRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class ArchivesRequestMessage : ItemBase<ArchivesRequestMessage>, IThisLock
+        [DataContract(Name = "MessagesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class MessagesMessage : ItemBase<MessagesMessage>, IThisLock
         {
             private enum SerializeId : byte
             {
-                Archive = 0,
+                MessageHeader = 0,
+                MessageContent = 1,
             }
 
-            private ArchiveCollection _archives;
+            private MessageHeaderCollection _messageHeaders;
+            private MessageContentCollection _messageContents;
 
             private object _thisLock;
             private static object _thisStaticLock = new object();
@@ -1597,9 +1926,13 @@ namespace Library.Net.Lair
 
                         using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                         {
-                            if (id == (byte)SerializeId.Archive)
+                            if (id == (byte)SerializeId.MessageHeader)
                             {
-                                this.Archives.Add(Archive.Import(rangeStream, bufferManager));
+                                this.MessageHeaders.Add(MessageHeader.Import(rangeStream, bufferManager));
+                            }
+                            else if (id == (byte)SerializeId.MessageContent)
+                            {
+                                this.MessageContents.Add(MessageContent.Import(rangeStream, bufferManager));
                             }
                         }
                     }
@@ -1608,154 +1941,72 @@ namespace Library.Net.Lair
 
             public override Stream Export(BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // MessageHeaders
+                foreach (var m in this.MessageContents)
                 {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
+                    Stream exportStream = m.Export(bufferManager);
 
-                    // Archives
-                    foreach (var c in this.Archives)
-                    {
-                        Stream exportStream = c.Export(bufferManager);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.MessageContent);
 
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Archive);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
-            }
-
-            public override ArchivesRequestMessage DeepClone()
-            {
-                lock (this.ThisLock)
+                // MessageContent
+                foreach (var m in this.MessageContents)
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return ArchivesRequestMessage.Import(stream, BufferManager.Instance);
-                    }
+                    Stream exportStream = m.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.MessageContent);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
+
+                return new JoinStream(streams);
             }
 
-            [DataMember(Name = "Archives")]
-            public ArchiveCollection Archives
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_archives == null)
-                            _archives = new ArchiveCollection(128);
-
-                        return _archives;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "ArchiveContentsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class ArchiveContentsMessage : ItemBase<ArchiveContentsMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Document = 0,
-            }
-
-            private DocumentCollection _documents;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Document)
-                            {
-                                this.Documents.Add(Document.Import(rangeStream, bufferManager));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
-
-                    // Document
-                    foreach (var d in this.Documents)
-                    {
-                        Stream exportStream = d.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Document);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
-                }
-            }
-
-            public override ArchiveContentsMessage DeepClone()
+            public override MessagesMessage DeepClone()
             {
                 lock (this.ThisLock)
                 {
                     using (var stream = this.Export(BufferManager.Instance))
                     {
-                        return ArchiveContentsMessage.Import(stream, BufferManager.Instance);
+                        return MessagesMessage.Import(stream, BufferManager.Instance);
                     }
                 }
             }
 
-            [DataMember(Name = "Documents")]
-            public DocumentCollection Documents
+            [DataMember(Name = "MessageHeaders")]
+            public MessageHeaderCollection MessageHeaders
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
-                        if (_documents == null)
-                            _documents = new DocumentCollection(32);
+                        if (_messageHeaders == null)
+                            _messageHeaders = new MessageHeaderCollection();
 
-                        return _documents;
+                        return _messageHeaders;
+                    }
+                }
+            }
+
+            [DataMember(Name = "MessageContents")]
+            public MessageContentCollection MessageContents
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_messageContents == null)
+                            _messageContents = new MessageContentCollection();
+
+                        return _messageContents;
                     }
                 }
             }

@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class ArchiveCollection : FilterList<Archive>, IEnumerable<Archive>
+    public sealed class MailContentCollection : FilterList<MailContent>, IEnumerable<MailContent>
     {
-        public ArchiveCollection() : base() { }
-        public ArchiveCollection(int capacity) : base(capacity) { }
-        public ArchiveCollection(IEnumerable<Archive> collections) : base(collections) { }
+        public MailContentCollection() : base() { }
+        public MailContentCollection(int capacity) : base(capacity) { }
+        public MailContentCollection(IEnumerable<MailContent> collections) : base(collections) { }
 
-        protected override bool Filter(Archive item)
+        protected override bool Filter(MailContent item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Archive>
+        #region IEnumerable<MailContent>
 
-        IEnumerator<Archive> IEnumerable<Archive>.GetEnumerator()
+        IEnumerator<MailContent> IEnumerable<MailContent>.GetEnumerator()
         {
             lock (base.ThisLock)
             {
