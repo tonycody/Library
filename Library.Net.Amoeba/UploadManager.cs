@@ -280,7 +280,7 @@ namespace Library.Net.Amoeba
                                 item.State = UploadState.Encoding;
 
                                 KeyCollection keys = null;
-                                byte[] cryptoKey;
+                                byte[] cryptoKey = null;
 
                                 try
                                 {
@@ -304,8 +304,11 @@ namespace Library.Net.Amoeba
                                         if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
 
                                         item.State = UploadState.ComputeHash;
-                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
-                                        //cryptoKey = new byte[64];
+
+                                        if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                        {
+                                            cryptoKey = Sha512.ComputeHash(hashProgressStream);
+                                        }
 
                                         stream.Seek(0, SeekOrigin.Begin);
                                         item.EncodingBytes = 0;
@@ -460,7 +463,7 @@ namespace Library.Net.Amoeba
 
                                 item.Indexes.Add(index);
 
-                                byte[] cryptoKey;
+                                byte[] cryptoKey = null;
                                 KeyCollection keys = null;
 
                                 try
@@ -482,7 +485,11 @@ namespace Library.Net.Amoeba
                                         item.EncodeBytes = stream.Length;
 
                                         item.State = UploadState.ComputeHash;
-                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+
+                                        if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                        {
+                                            cryptoKey = Sha512.ComputeHash(hashProgressStream);
+                                        }
 
                                         stream.Seek(0, SeekOrigin.Begin);
                                         item.EncodingBytes = 0;
@@ -709,7 +716,7 @@ namespace Library.Net.Amoeba
                                     item.Indexes.Add(index);
                                 }
 
-                                byte[] cryptoKey;
+                                byte[] cryptoKey = null;
                                 KeyCollection keys = null;
 
                                 try
@@ -731,7 +738,11 @@ namespace Library.Net.Amoeba
                                         item.EncodeBytes = stream.Length;
 
                                         item.State = UploadState.ComputeHash;
-                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+
+                                        if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                        {
+                                            cryptoKey = Sha512.ComputeHash(hashProgressStream);
+                                        }
 
                                         stream.Seek(0, SeekOrigin.Begin);
                                         item.EncodingBytes = 0;

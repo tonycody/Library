@@ -10,15 +10,9 @@ using Library.Collections;
 using Library.Compression;
 using Library.Correction;
 
-namespace Library.Net.Amoeba
+namespace Library.Net.Lair
 {
-    public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
-    delegate void SetKeyEventHandler(object sender, IEnumerable<Key> keys);
-    delegate void RemoveShareEventHandler(object sender, string path);
-    delegate void RemoveKeyEventHandler(object sender, IEnumerable<Key> keys);
-    delegate bool WatchEventHandler(object sender);
-
-    class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
+    class CacheManager : ManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private FileStream _fileStream = null;
         private BufferManager _bufferManager;
@@ -27,9 +21,6 @@ namespace Library.Net.Amoeba
 
         private HashSet<long> _spaceClusters;
         private bool _spaceClustersInitialized = false;
-        private Dictionary<int, string> _ids = new Dictionary<int, string>();
-        private volatile Dictionary<Key, string> _shareIndexLink = null;
-        private int _id = 0;
 
         private volatile AutoResetEvent _resetEvent = new AutoResetEvent(false);
         private long _freeSpace = 0;
@@ -38,10 +29,6 @@ namespace Library.Net.Amoeba
         private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
 
         private Thread _watchThread = null;
-
-        private SetKeyEventHandler _setKeyEvent;
-        private RemoveShareEventHandler _removeShareEvent;
-        private RemoveKeyEventHandler _removeKeyEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();

@@ -274,41 +274,37 @@ namespace Library.Net.Lair
     }
 
     [DataContract(Name = "ProfileContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class ProfileContent : ItemBase<ProfileContent>, IProfileContent<Channel, Archive>
+    public sealed class ProfileContent : ItemBase<ProfileContent>, IProfileContent<Channel>
     {
         private enum SerializeId : byte
         {
             TrustSignature = 0,
             Channel = 1,
-            Archive = 2,
 
-            CryptoAlgorithm = 3,
-            CryptoKey = 4,
+            ExchangeAlgorithm = 2,
+            ExchangeKey = 3,
         }
 
         private SignatureCollection _trustSignatures = null;
         private ChannelCollection _channels = null;
-        private ArchiveCollection _archives = null;
 
-        private CryptoAlgorithm _cryptoAlgorithm = 0;
-        private byte[] _cryptoKey = null;
+        private ExchangeAlgorithm _exchangeAlgorithm = 0;
+        private byte[] _exchangeKey = null;
 
         private Certificate _certificate;
 
         public static readonly int MaxTrustSignaturesCount = 1024;
         public static readonly int MaxChannelsCount = 1024;
-        public static readonly int MaxArchivesCount = 1024;
 
-        public static readonly int MaxCryptoKeyLength = 64;
+        public static readonly int MaxExchangeKeyLength = 1024 * 8;
 
-        public ProfileContent(SignatureCollection trustSignatures, ChannelCollection channels, ArchiveCollection archives, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, DigitalSignature digitalSignature)
+        public ProfileContent(SignatureCollection trustSignatures, ChannelCollection channels, ExchangeAlgorithm exchangeAlgorithm, byte[] exchangeKey, DigitalSignature digitalSignature)
         {
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
             if (channels != null) this.ProtectedChannels.AddRange(channels);
-            if (archives != null) this.ProtectedArchives.AddRange(archives);
 
-            this.CryptoAlgorithm = cryptoAlgorithm;
-            this.CryptoKey = cryptoKey;
+            this.ExchangeAlgorithm = exchangeAlgorithm;
+            this.ExchangeKey = exchangeKey;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -335,24 +331,20 @@ namespace Library.Net.Lair
                     {
                         this.ProtectedChannels.Add(Channel.Import(rangeStream, bufferManager));
                     }
-                    else if (id == (byte)SerializeId.Archive)
-                    {
-                        this.ProtectedArchives.Add(Archive.Import(rangeStream, bufferManager));
-                    }
 
-                    else if (id == (byte)SerializeId.CryptoAlgorithm)
+                    else if (id == (byte)SerializeId.ExchangeAlgorithm)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), reader.ReadToEnd());
+                            this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
                         }
                     }
-                    else if (id == (byte)SerializeId.CryptoKey)
+                    else if (id == (byte)SerializeId.ExchangeKey)
                     {
                         byte[] buffer = new byte[(int)rangeStream.Length];
                         rangeStream.Read(buffer, 0, buffer.Length);
 
-                        this.CryptoKey = buffer;
+                        this.ExchangeKey = buffer;
                     }
                 }
             }
@@ -393,20 +385,9 @@ namespace Library.Net.Lair
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
-            // Archives
-            foreach (var a in this.ProtectedArchives)
-            {
-                Stream exportStream = a.Export(bufferManager);
 
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Archive);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-
-            // CryptoAlgorithm
-            if (this.CryptoAlgorithm != 0)
+            // ExchangeAlgorithm
+            if (this.ExchangeAlgorithm != 0)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -415,22 +396,22 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(this.CryptoAlgorithm.ToString());
+                    writer.Write(this.ExchangeAlgorithm.ToString());
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CryptoAlgorithm);
+                bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
 
                 streams.Add(bufferStream);
             }
-            // CryptoKey
-            if (this.CryptoKey != null)
+            // ExchangeKey
+            if (this.ExchangeKey != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.CryptoKey.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CryptoKey);
-                bufferStream.Write(this.CryptoKey, 0, this.CryptoKey.Length);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.ExchangeKey.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.ExchangeKey);
+                bufferStream.Write(this.ExchangeKey, 0, this.ExchangeKey.Length);
 
                 streams.Add(bufferStream);
             }
@@ -459,10 +440,9 @@ namespace Library.Net.Lair
 
             if ((this.TrustSignatures == null) != (other.TrustSignatures == null)
                 || (this.Channels == null) != (other.Channels == null)
-                || (this.Archives == null) != (other.Archives == null)
 
-                || this.CryptoAlgorithm != other.CryptoAlgorithm
-                || (this.CryptoKey == null) != (other.CryptoKey == null))
+                || this.ExchangeAlgorithm != other.ExchangeAlgorithm
+                || (this.ExchangeKey == null) != (other.ExchangeKey == null))
             {
                 return false;
             }
@@ -477,14 +457,9 @@ namespace Library.Net.Lair
                 if (!Collection.Equals(this.Channels, other.Channels)) return false;
             }
 
-            if (this.Archives != null && other.Archives != null)
+            if (this.ExchangeKey != null && other.ExchangeKey != null)
             {
-                if (!Collection.Equals(this.Archives, other.Archives)) return false;
-            }
-
-            if (this.CryptoKey != null && other.CryptoKey != null)
-            {
-                if (!Collection.Equals(this.CryptoKey, other.CryptoKey)) return false;
+                if (!Collection.Equals(this.ExchangeKey, other.ExchangeKey)) return false;
             }
 
             return true;
@@ -573,66 +548,46 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Archive> Archives
-        {
-            get
-            {
-                return this.ProtectedArchives;
-            }
-        }
-
-        [DataMember(Name = "Archives")]
-        private ArchiveCollection ProtectedArchives
-        {
-            get
-            {
-                if (_archives == null)
-                    _archives = new ArchiveCollection(ProfileContent.MaxArchivesCount);
-
-                return _archives;
-            }
-        }
-
         #endregion
 
-        #region ICryptoAlgorithm
+        #region IExchangeAlgorithm
 
-        [DataMember(Name = "CryptoAlgorithm")]
-        public CryptoAlgorithm CryptoAlgorithm
+        [DataMember(Name = "ExchangeAlgorithm")]
+        public ExchangeAlgorithm ExchangeAlgorithm
         {
             get
             {
-                return _cryptoAlgorithm;
+                return _exchangeAlgorithm;
             }
             set
             {
-                if (!Enum.IsDefined(typeof(CryptoAlgorithm), value))
+                if (!Enum.IsDefined(typeof(ExchangeAlgorithm), value))
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _cryptoAlgorithm = value;
+                    _exchangeAlgorithm = value;
                 }
             }
         }
 
-        [DataMember(Name = "CryptoKey")]
-        public byte[] CryptoKey
+        [DataMember(Name = "ExchangeKey")]
+        public byte[] ExchangeKey
         {
             get
             {
-                return _cryptoKey;
+                return _exchangeKey;
             }
             set
             {
-                if (value != null && value.Length > ProfileContent.MaxCryptoKeyLength)
+                if (value != null && value.Length > ProfileContent.MaxExchangeKeyLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _cryptoKey = value;
+                    _exchangeKey = value;
                 }
             }
         }

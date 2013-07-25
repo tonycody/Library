@@ -157,7 +157,7 @@ namespace Library.Net.Amoeba
                         if (item.Groups.Count == 0 && item.Keys.Count == 0)
                         {
                             KeyCollection keys = null;
-                            byte[] cryptoKey;
+                            byte[] cryptoKey = null;
 
                             try
                             {
@@ -171,8 +171,10 @@ namespace Library.Net.Amoeba
 
                                     if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
 
-                                    cryptoKey = Sha512.ComputeHash(encodingProgressStream);
-                                    //cryptoKey = new byte[64];
+                                    if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                    {
+                                        cryptoKey = Sha512.ComputeHash(encodingProgressStream);
+                                    }
 
                                     encodingProgressStream.Seek(0, SeekOrigin.Begin);
 
@@ -276,7 +278,7 @@ namespace Library.Net.Amoeba
                             index.CryptoAlgorithm = item.CryptoAlgorithm;
                             index.CryptoKey = item.CryptoKey;
 
-                            byte[] cryptoKey;
+                            byte[] cryptoKey = null;
                             KeyCollection keys = null;
 
                             try
@@ -287,7 +289,10 @@ namespace Library.Net.Amoeba
                                     isStop = (this.State == ManagerState.Stop || !_settings.StoreUploadItems.Contains(item));
                                 }, 1024 * 1024, true))
                                 {
-                                    cryptoKey = Sha512.ComputeHash(encodingProgressStream);
+                                    if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                    {
+                                        cryptoKey = Sha512.ComputeHash(encodingProgressStream);
+                                    }
 
                                     encodingProgressStream.Seek(0, SeekOrigin.Begin);
 
