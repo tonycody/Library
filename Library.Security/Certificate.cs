@@ -332,16 +332,7 @@ namespace Library.Security
 
                     if (value != null && value.Length != 0)
                     {
-                        try
-                        {
-                            if (value.Length >= 4) _hashCode = Math.Abs(NetworkConverter.ToInt32(value));
-                            else if (value.Length >= 2) _hashCode = NetworkConverter.ToUInt16(value);
-                            else _hashCode = value[0];
-                        }
-                        catch
-                        {
-                            _hashCode = 0;
-                        }
+                        _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
                     }
                     else
                     {

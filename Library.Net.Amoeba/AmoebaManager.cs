@@ -369,13 +369,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<string> GetStoreSignatures()
+        public IEnumerable<string> GetSignatures()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetStoreSignatures();
+                return _connectionsManager.GetSignatures();
             }
         }
 

@@ -567,19 +567,6 @@ namespace Library.Net.Amoeba
                     return;
                 }
 
-                //if (Collection.Equals(connectionManager.Node.Id, this.BaseNode.Id))
-                //{
-                //    connectionManager.Dispose();
-                //    return;
-                //}
-
-                //var oldConnectionManager = _connectionManagers.FirstOrDefault(n => Collection.Equals(n.Node.Id, connectionManager.Node.Id));
-
-                //if (oldConnectionManager != null)
-                //{
-                //    this.RemoveConnectionManager(oldConnectionManager);
-                //}
-
                 {
                     bool flag = false;
 
@@ -968,7 +955,7 @@ namespace Library.Net.Amoeba
 
                                 if (removeSeedSignatures != null && removeSeedSignatures.Count() > 0)
                                 {
-                                    _settings.RemoveStoreSeed(removeSeedSignatures);
+                                    _settings.RemoveStoreSeeds(removeSeedSignatures);
                                 }
                             }
                         }
@@ -1065,7 +1052,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    foreach (var item in this.GetStoreSignatures())
+                    foreach (var item in this.GetSignatures())
                     {
                         try
                         {
@@ -2032,13 +2019,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<string> GetStoreSignatures()
+        public IEnumerable<string> GetSignatures()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetStoreSignatures();
+                return _settings.GetSignatures();
             }
         }
 
@@ -2212,7 +2199,7 @@ namespace Library.Net.Amoeba
                     new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingsContext<LockedDictionary<string, Seed>>() { Name = "StoreSeeds", Value = new LockedDictionary<string, Seed>() },
+                    new Library.Configuration.SettingsContext<Dictionary<string, Seed>>() { Name = "StoreSeeds", Value = new Dictionary<string, Seed>() },
                 })
             {
 
@@ -2234,7 +2221,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public IEnumerable<string> GetStoreSignatures()
+            public IEnumerable<string> GetSignatures()
             {
                 lock (this.ThisLock)
                 {
@@ -2288,7 +2275,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public void RemoveStoreSeed(IEnumerable<string> signatures)
+            public void RemoveStoreSeeds(IEnumerable<string> signatures)
             {
                 lock (this.ThisLock)
                 {

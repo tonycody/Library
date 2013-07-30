@@ -12,14 +12,13 @@ namespace Library.Net.Lair
 {
     public delegate IEnumerable<Section> RemoveSectionsEventHandler(object sender);
     public delegate IEnumerable<string> RemoveProfilesEventHandler(object sender, Section section);
-    public delegate IEnumerable<Mail> RemoveMailsEventHandler(object sender, Section section);
+    public delegate IEnumerable<string> RemoveDocumentsEventHandler(object sender, Section section);
 
     public delegate IEnumerable<Channel> RemoveChannelsEventHandler(object sender);
     public delegate IEnumerable<string> RemoveTopicsEventHandler(object sender, Channel channel);
     public delegate IEnumerable<Message> RemoveMessagesEventHandler(object sender, Channel channel);
 
-    public delegate IEnumerable<Archive> RemoveArchivesEventHandler(object sender);
-    public delegate IEnumerable<Document> RemoveDocumentsEventHandler(object sender, Archive archive);
+    public delegate IEnumerable<Mail> RemoveMailsEventHandler(object sender, Section section);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -39,7 +38,7 @@ namespace Library.Net.Lair
 
         private LockedDictionary<Node, LockedHashSet<Section>> _pushSectionsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Section>>();
         private LockedDictionary<Node, LockedHashSet<Channel>> _pushChannelsRequestDictionary = new LockedDictionary<Node, LockedHashSet<Channel>>();
-        private LockedDictionary<Node, LockedHashSet<Archive>> _pushArchivesRequestDictionary = new LockedDictionary<Node, LockedHashSet<Archive>>();
+        private LockedDictionary<Node, LockedHashSet<string>> _pushSignaturesRequestDictionary = new LockedDictionary<Node, LockedHashSet<string>>();
 
         private LockedList<Node> _creatingNodes;
         private CirculationCollection<Node> _cuttingNodes;
@@ -48,7 +47,7 @@ namespace Library.Net.Lair
 
         private CirculationCollection<Section> _pushSectionsRequestList;
         private CirculationCollection<Channel> _pushChannelsRequestList;
-        private CirculationCollection<Archive> _pushArchivesRequestList;
+        private CirculationCollection<string> _pushSignaturesRequestList;
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
@@ -72,36 +71,33 @@ namespace Library.Net.Lair
         private volatile int _pushNodeCount;
         private volatile int _pushSectionRequestCount;
         private volatile int _pushProfileCount;
-        private volatile int _pushMailCount;
+        private volatile int _pushDocumentCount;
         private volatile int _pushChannelRequestCount;
         private volatile int _pushTopicCount;
         private volatile int _pushMessageCount;
-        private volatile int _pushArchiveRequestCount;
-        private volatile int _pushDocumentCount;
+        private volatile int _pushMailCount;
 
         private volatile int _pullNodeCount;
         private volatile int _pullSectionRequestCount;
         private volatile int _pullProfileCount;
-        private volatile int _pullMailCount;
+        private volatile int _pullDocumentCount;
         private volatile int _pullChannelRequestCount;
         private volatile int _pullTopicCount;
         private volatile int _pullMessageCount;
-        private volatile int _pullArchiveRequestCount;
-        private volatile int _pullDocumentCount;
+        private volatile int _pullMailCount;
 
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
         private RemoveSectionsEventHandler _removeSectionsEvent;
         private RemoveProfilesEventHandler _removeProfilesEvent;
-        private RemoveMailsEventHandler _removeMailsEvent;
+        private RemoveDocumentsEventHandler _removeDocumentsEvent;
 
         private RemoveChannelsEventHandler _removeChannelsEvent;
         private RemoveTopicsEventHandler _removeTopicsEvent;
         private RemoveMessagesEventHandler _removeMessagesEvent;
 
-        private RemoveArchivesEventHandler _removeArchivesEvent;
-        private RemoveDocumentsEventHandler _removeDocumentsEvent;
+        private RemoveMailsEventHandler _removeMailsEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -145,7 +141,7 @@ namespace Library.Net.Lair
 
             _pushSectionsRequestList = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
             _pushChannelsRequestList = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
-            _pushArchivesRequestList = new CirculationCollection<Archive>(new TimeSpan(0, 3, 0));
+            _pushSignaturesRequestList = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
 
             this.UpdateSessionId();
         }
@@ -172,13 +168,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public RemoveMailsEventHandler RemoveMailsEvent
+        public RemoveDocumentsEventHandler RemoveDocumentsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _removeMailsEvent = value;
+                    _removeDocumentsEvent = value;
                 }
             }
         }
@@ -216,24 +212,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public RemoveArchivesEventHandler RemoveArchivesEvent
+        public RemoveMailsEventHandler RemoveMailsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _removeArchivesEvent = value;
-                }
-            }
-        }
-
-        public RemoveDocumentsEventHandler RemoveDocumentsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeDocumentsEvent = value;
+                    _removeMailsEvent = value;
                 }
             }
         }
@@ -364,22 +349,20 @@ namespace Library.Net.Lair
                     contexts.Add(new InformationContext("PushNodeCount", _pushNodeCount));
                     contexts.Add(new InformationContext("PushSectionRequestCount", _pushSectionRequestCount));
                     contexts.Add(new InformationContext("PushProfileCount", _pushProfileCount));
-                    contexts.Add(new InformationContext("PushMailCount", _pushMailCount));
+                    contexts.Add(new InformationContext("PushDocumentCount", _pushDocumentCount));
                     contexts.Add(new InformationContext("PushChannelRequestCount", _pushChannelRequestCount));
                     contexts.Add(new InformationContext("PushTopicCount", _pushTopicCount));
                     contexts.Add(new InformationContext("PushMessageCount", _pushMessageCount));
-                    contexts.Add(new InformationContext("PushArchiveRequestCount", _pushArchiveRequestCount));
-                    contexts.Add(new InformationContext("PushDocumentCount", _pushDocumentCount));
+                    contexts.Add(new InformationContext("PushMailCount", _pushMailCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
                     contexts.Add(new InformationContext("PullSectionRequestCount", _pullSectionRequestCount));
                     contexts.Add(new InformationContext("PullProfileCount", _pullProfileCount));
-                    contexts.Add(new InformationContext("PullMailCount", _pullMailCount));
+                    contexts.Add(new InformationContext("PullDocumentCount", _pullDocumentCount));
                     contexts.Add(new InformationContext("PullChannelRequestCount", _pullChannelRequestCount));
                     contexts.Add(new InformationContext("PullTopicCount", _pullTopicCount));
                     contexts.Add(new InformationContext("PullMessageCount", _pullMessageCount));
-                    contexts.Add(new InformationContext("PullArchiveRequestCount", _pullArchiveRequestCount));
-                    contexts.Add(new InformationContext("PullDocumentCount", _pullDocumentCount));
+                    contexts.Add(new InformationContext("PullMailCount", _pullMailCount));
 
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
@@ -455,11 +438,11 @@ namespace Library.Net.Lair
             return null;
         }
 
-        protected virtual IEnumerable<Mail> OnRemoveMailsEvent(Section section)
+        protected virtual IEnumerable<string> OnRemoveDocumentsEvent(Section section)
         {
-            if (_removeMailsEvent != null)
+            if (_removeDocumentsEvent != null)
             {
-                return _removeMailsEvent(this, section);
+                return _removeDocumentsEvent(this, section);
             }
 
             return null;
@@ -495,21 +478,11 @@ namespace Library.Net.Lair
             return null;
         }
 
-        protected virtual IEnumerable<Archive> OnRemoveArchivesEvent()
+        protected virtual IEnumerable<Mail> OnRemoveMailsEvent(Section section)
         {
-            if (_removeArchivesEvent != null)
+            if (_removeMailsEvent != null)
             {
-                return _removeArchivesEvent(this);
-            }
-
-            return null;
-        }
-
-        protected virtual IEnumerable<Document> OnRemoveDocumentsEvent(Archive archive)
-        {
-            if (_removeDocumentsEvent != null)
-            {
-                return _removeDocumentsEvent(this, archive);
+                return _removeMailsEvent(this, section);
             }
 
             return null;
@@ -704,19 +677,6 @@ namespace Library.Net.Lair
                     connectionManager.Dispose();
                     return;
                 }
-
-                //if (Collection.Equals(connectionManager.Node.Id, this.BaseNode.Id))
-                //{
-                //    connectionManager.Dispose();
-                //    return;
-                //}
-
-                //var oldConnectionManager = _connectionManagers.FirstOrDefault(n => Collection.Equals(n.Node.Id, connectionManager.Node.Id));
-
-                //if (oldConnectionManager != null)
-                //{
-                //    this.RemoveConnectionManager(oldConnectionManager);
-                //}
 
                 {
                     bool flag = false;
@@ -2233,23 +2193,17 @@ namespace Library.Net.Lair
         {
             private object _thisLock = new object();
 
-            private Dictionary<Section, Dictionary<string, Profile>> _profiles;
-            private Dictionary<Section, HashSet<Mail>> _mails;
-            private Dictionary<Channel, Dictionary<string, Topic>> _topics;
-            private Dictionary<Channel, HashSet<Message>> _messages;
-            private Dictionary<Archive, Dictionary<string, HashSet<Document>>> _documents;
-
             public Settings()
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
-                    new Library.Configuration.SettingsContext<Dictionary<Section, List<Profile>>>() { Name = "Profiles", Value = new Dictionary<Section, List<Profile>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Section, List<Mail>>>() { Name = "Mails", Value = new Dictionary<Section, List<Mail>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Channel, List<Topic>>>() { Name = "Topics", Value = new Dictionary<Channel, List<Topic>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Channel, List<Message>>>() { Name = "Messages", Value = new Dictionary<Channel, List<Message>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Archive, List<Document>>>() { Name = "Documents", Value = new Dictionary<Archive, List<Document>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Section, Dictionary<string, Profile>>>() { Name = "Profiles", Value = new Dictionary<Section, Dictionary<string, Profile>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Section, Dictionary<string, Document>>>() { Name = "Documents", Value = new Dictionary<Section, Dictionary<string, Document>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Channel, Dictionary<string, Topic>>>() { Name = "Topics", Value = new Dictionary<Channel, Dictionary<string, Topic>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Channel, HashSet<Message>>>() { Name = "Messages", Value = new Dictionary<Channel, HashSet<Message>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<string, HashSet<Mail>>>() { Name = "Mails", Value = new Dictionary<string, HashSet<Mail>>() },
                 })
             {
 
@@ -2264,15 +2218,14 @@ namespace Library.Net.Lair
                         List<InformationContext> contexts = new List<InformationContext>();
 
                         contexts.Add(new InformationContext("SectionCount", this.GetSections().Count()));
-                        contexts.Add(new InformationContext("ProfileCount", _profiles.Values.Sum(n => n.Count)));
-                        contexts.Add(new InformationContext("MailCount", _mails.Sum(n => n.Value.Count)));
+                        contexts.Add(new InformationContext("ProfileCount", this.Profiles.Values.Sum(n => n.Count)));
+                        contexts.Add(new InformationContext("DocumentCount", this.Documents.Values.Sum(n => n.Count)));
 
                         contexts.Add(new InformationContext("ChannelCount", this.GetChannels().Count()));
-                        contexts.Add(new InformationContext("TopicCount", _topics.Values.Sum(n => n.Count)));
-                        contexts.Add(new InformationContext("MessageCount", _messages.Sum(n => n.Value.Count)));
+                        contexts.Add(new InformationContext("TopicCount", this.Topics.Values.Sum(n => n.Count)));
+                        contexts.Add(new InformationContext("MessageCount", this.Messages.Sum(n => n.Value.Count)));
 
-                        contexts.Add(new InformationContext("ArchiveCount", this.GetArchives().Count()));
-                        contexts.Add(new InformationContext("DocumentCount", _documents.Values.Sum(n => n.Values.Sum(m => m.Count))));
+                        contexts.Add(new InformationContext("MailCount", this.Mails.Sum(n => n.Value.Count)));
 
                         return new Information(contexts);
                     }
@@ -2284,67 +2237,6 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     base.Load(directoryPath);
-
-                    _profiles = new Dictionary<Section, Dictionary<string, Profile>>();
-                    _mails = new Dictionary<Section, HashSet<Mail>>();
-                    _topics = new Dictionary<Channel, Dictionary<string, Topic>>();
-                    _messages = new Dictionary<Channel, HashSet<Message>>();
-                    _documents = new Dictionary<Archive, Dictionary<string, HashSet<Document>>>();
-
-                    foreach (var item in (Dictionary<Section, List<Profile>>)this["Profiles"])
-                    {
-                        Dictionary<string, Profile> dic = new Dictionary<string, Profile>();
-
-                        foreach (var profile in item.Value)
-                        {
-                            dic[profile.Certificate.ToString()] = profile;
-                        }
-
-                        _profiles[item.Key] = dic;
-                    }
-
-                    foreach (var item in (Dictionary<Section, List<Mail>>)this["Mail"])
-                    {
-                        _mails[item.Key] = new HashSet<Mail>(item.Value);
-                    }
-
-                    foreach (var item in (Dictionary<Channel, List<Topic>>)this["Topics"])
-                    {
-                        Dictionary<string, Topic> dic = new Dictionary<string, Topic>();
-
-                        foreach (var topic in item.Value)
-                        {
-                            dic[topic.Certificate.ToString()] = topic;
-                        }
-
-                        _topics[item.Key] = dic;
-                    }
-
-                    foreach (var item in (Dictionary<Channel, List<Message>>)this["Message"])
-                    {
-                        _messages[item.Key] = new HashSet<Message>(item.Value);
-                    }
-
-                    foreach (var item in (Dictionary<Archive, List<Document>>)this["Documents"])
-                    {
-                        Dictionary<string, HashSet<Document>> dic = new Dictionary<string, HashSet<Document>>();
-
-                        foreach (var document in item.Value)
-                        {
-                            HashSet<Document> hashset = null;
-                            var signature = document.Certificate.ToString();
-
-                            if (!dic.TryGetValue(signature, out hashset))
-                            {
-                                hashset = new HashSet<Document>();
-                                dic[signature] = hashset;
-                            }
-
-                            hashset.Add(document);
-                        }
-
-                        _documents[item.Key] = dic;
-                    }
                 }
             }
 
@@ -2352,43 +2244,6 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    var profiles = new Dictionary<Section, List<Profile>>();
-                    var mails = new Dictionary<Section, List<Mail>>();
-                    var topics = new Dictionary<Channel, List<Topic>>();
-                    var messages = new Dictionary<Channel, List<Message>>();
-                    var documents = new Dictionary<Archive, List<Document>>();
-
-                    foreach (var item in _profiles)
-                    {
-                        profiles[item.Key] = item.Value.Values.ToList();
-                    }
-
-                    foreach (var item in _mails)
-                    {
-                        mails[item.Key] = item.Value.ToList();
-                    }
-
-                    foreach (var item in _topics)
-                    {
-                        topics[item.Key] = item.Value.Values.ToList();
-                    }
-
-                    foreach (var item in _messages)
-                    {
-                        messages[item.Key] = item.Value.ToList();
-                    }
-
-                    foreach (var item in _documents)
-                    {
-                        documents[item.Key] = item.Value.Values.ToList();
-                    }
-
-                    this["Profiles"] = profiles;
-                    this["Mails"] = mails;
-                    this["Topics"] = topics;
-                    this["Messages"] = messages;
-                    this["Documents"] = documents;
-
                     base.Save(directoryPath);
                 }
             }
@@ -2399,8 +2254,8 @@ namespace Library.Net.Lair
                 {
                     HashSet<Section> hashset = new HashSet<Section>();
 
-                    hashset.UnionWith(_profiles.Keys);
-                    hashset.UnionWith(_mails.Keys);
+                    hashset.UnionWith(this.Profiles.Keys);
+                    hashset.UnionWith(this.Documents.Keys);
 
                     return hashset;
                 }
@@ -2412,22 +2267,18 @@ namespace Library.Net.Lair
                 {
                     HashSet<Channel> hashset = new HashSet<Channel>();
 
-                    hashset.UnionWith(_topics.Keys);
-                    hashset.UnionWith(_messages.Keys);
+                    hashset.UnionWith(this.Topics.Keys);
+                    hashset.UnionWith(this.Messages.Keys);
 
                     return hashset;
                 }
             }
 
-            public IEnumerable<Archive> GetArchives()
+            public IEnumerable<string> GetSignatures()
             {
                 lock (this.ThisLock)
                 {
-                    HashSet<Archive> hashset = new HashSet<Archive>();
-
-                    hashset.UnionWith(_documents.Keys);
-
-                    return hashset;
+                    return this.Mails.Keys.ToArray();
                 }
             }
 
@@ -2435,15 +2286,15 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    return _profiles[section].Values;
+                    return this.Profiles[section].Values;
                 }
             }
 
-            public IEnumerable<Mail> GetMails(Section section)
+            public IEnumerable<Document> GetDocuments(Section section)
             {
                 lock (this.ThisLock)
                 {
-                    return _mails[section];
+                    return this.Documents[section].Values;
                 }
             }
 
@@ -2451,7 +2302,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    return _topics[channel].Values;
+                    return this.Topics[channel].Values;
                 }
             }
 
@@ -2459,15 +2310,15 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    return _messages[channel];
+                    return this.Messages[channel];
                 }
             }
 
-            public IEnumerable<Document> GetDocuments(Archive archive)
+            public IEnumerable<Mail> GetMails(string signature)
             {
                 lock (this.ThisLock)
                 {
-                    return _documents[archive].Values;
+                    return this.Mails[signature];
                 }
             }
 
@@ -2485,10 +2336,10 @@ namespace Library.Net.Lair
 
                     Dictionary<string, Profile> dic = null;
 
-                    if (!_profiles.TryGetValue(profile.Section, out dic))
+                    if (!this.Profiles.TryGetValue(profile.Section, out dic))
                     {
                         dic = new Dictionary<string, Profile>();
-                        _profiles[profile.Section] = dic;
+                        this.Profiles[profile.Section] = dic;
 
                         dic[signature] = profile;
 
@@ -2509,28 +2360,41 @@ namespace Library.Net.Lair
                 }
             }
 
-            public bool SetMails(Mail mail)
+            public bool SetDocuments(Document document)
             {
                 lock (this.ThisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (mail == null || mail.Section == null || mail.Section.Id == null || mail.Section.Id.Length == 0 || string.IsNullOrWhiteSpace(mail.Section.Name)
-                        || (now - mail.CreationTime) > new TimeSpan(64, 0, 0, 0)
-                        || (mail.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || !Signature.HasSignature(mail.RecipientSignature)
-                        || mail.Content == null || mail.Content.Length == 0
-                        || mail.Certificate == null || !mail.VerifyCertificate()) return false;
+                    if (document == null || document.Section == null || document.Section.Id == null || document.Section.Id.Length == 0 || string.IsNullOrWhiteSpace(document.Section.Name)
+                        || (document.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || document.Certificate == null || !document.VerifyCertificate()) return false;
 
-                    HashSet<Mail> hashset = null;
+                    var signature = document.Certificate.ToString();
 
-                    if (!_mails.TryGetValue(mail.Section, out hashset))
+                    Dictionary<string, Document> dic = null;
+
+                    if (!this.Documents.TryGetValue(document.Section, out dic))
                     {
-                        hashset = new HashSet<Mail>();
-                        _mails[mail.Section] = hashset;
+                        dic = new Dictionary<string, Document>();
+                        this.Documents[document.Section] = dic;
+
+                        dic[signature] = document;
+
+                        return true;
                     }
 
-                    return hashset.Add(mail);
+                    Document tempDocument = null;
+
+                    if (!dic.TryGetValue(signature, out tempDocument)
+                        || document.CreationTime > tempDocument.CreationTime)
+                    {
+                        dic[signature] = document;
+
+                        return true;
+                    }
+
+                    return false;
                 }
             }
 
@@ -2548,10 +2412,10 @@ namespace Library.Net.Lair
 
                     Dictionary<string, Topic> dic = null;
 
-                    if (!_topics.TryGetValue(topic.Channel, out dic))
+                    if (!this.Topics.TryGetValue(topic.Channel, out dic))
                     {
                         dic = new Dictionary<string, Topic>();
-                        _topics[topic.Channel] = dic;
+                        this.Topics[topic.Channel] = dic;
 
                         dic[signature] = topic;
 
@@ -2581,58 +2445,40 @@ namespace Library.Net.Lair
                     if (message == null || message.Channel == null || message.Channel.Id == null || message.Channel.Id.Length == 0 || string.IsNullOrWhiteSpace(message.Channel.Name)
                         || (now - message.CreationTime) > new TimeSpan(64, 0, 0, 0)
                         || (message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || string.IsNullOrWhiteSpace(message.Content)
                         || message.Certificate == null || !message.VerifyCertificate()) return false;
 
                     HashSet<Message> hashset = null;
 
-                    if (!_messages.TryGetValue(message.Channel, out hashset))
+                    if (!this.Messages.TryGetValue(message.Channel, out hashset))
                     {
                         hashset = new HashSet<Message>();
-                        _messages[message.Channel] = hashset;
+                        this.Messages[message.Channel] = hashset;
                     }
 
                     return hashset.Add(message);
                 }
             }
 
-            public bool SetDocuments(Document document)
+            public bool SetMails(Mail mail)
             {
                 lock (this.ThisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (document == null || document.Archive == null || document.Archive.Id == null || document.Archive.Id.Length == 0 || string.IsNullOrWhiteSpace(document.Archive.Name)
-                        || (document.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || string.IsNullOrWhiteSpace(document.Name)
-                        || string.IsNullOrWhiteSpace(document.Content)
-                        || document.Certificate == null || !document.VerifyCertificate()) return false;
+                    if (mail == null || !Signature.HasSignature(mail.RecipientSignature)
+                        || (now - mail.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                        || (mail.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || mail.Certificate == null || !mail.VerifyCertificate()) return false;
 
-                    var signature = document.Certificate.ToString();
+                    HashSet<Mail> hashset = null;
 
-                    Dictionary<string, Document> dic = null;
-
-                    if (!_documents.TryGetValue(document.Archive, out dic))
+                    if (!this.Mails.TryGetValue(mail.RecipientSignature, out hashset))
                     {
-                        dic = new Dictionary<string, Document>();
-                        _documents[document.Archive] = dic;
-
-                        dic[signature] = document;
-
-                        return true;
+                        hashset = new HashSet<Mail>();
+                        this.Mails[mail.RecipientSignature] = hashset;
                     }
 
-                    Document tempDocument = null;
-
-                    if (!dic.TryGetValue(signature, out tempDocument)
-                        || document.CreationTime > tempDocument.CreationTime)
-                    {
-                        dic[signature] = document;
-
-                        return true;
-                    }
-
-                    return false;
+                    return hashset.Add(mail);
                 }
             }
 
@@ -2697,6 +2543,61 @@ namespace Library.Net.Lair
                     lock (this.ThisLock)
                     {
                         this["BandwidthLimit"] = value;
+                    }
+                }
+            }
+
+            private Dictionary<Section, Dictionary<string, Profile>> Profiles
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return (Dictionary<Section, Dictionary<string, Profile>>)this["Profiles"];
+                    }
+                }
+            }
+
+            private Dictionary<Section, Dictionary<string, Document>> Documents
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return (Dictionary<Section, Dictionary<string, Document>>)this["Documents"];
+                    }
+                }
+            }
+
+            private Dictionary<Channel, Dictionary<string, Topic>> Topics
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return (Dictionary<Channel, Dictionary<string, Topic>>)this["Topics"];
+                    }
+                }
+            }
+
+            private Dictionary<Channel, HashSet<Message>> Messages
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return (Dictionary<Channel, HashSet<Message>>)this["Messages"];
+                    }
+                }
+            }
+
+            private Dictionary<string, HashSet<Mail>> Mails
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return (Dictionary<string, HashSet<Mail>>)this["Mails"];
                     }
                 }
             }

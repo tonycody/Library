@@ -36,7 +36,7 @@ namespace Library.Net.Amoeba
 
                     try
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                         using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
@@ -136,7 +136,7 @@ namespace Library.Net.Amoeba
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {

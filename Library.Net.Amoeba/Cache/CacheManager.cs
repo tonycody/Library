@@ -32,8 +32,8 @@ namespace Library.Net.Amoeba
         private int _id = 0;
 
         private volatile AutoResetEvent _resetEvent = new AutoResetEvent(false);
-        private long _freeSpace = 0;
         private long _lockSpace = 0;
+        private long _freeSpace = 0;
 
         private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
 
@@ -45,6 +45,7 @@ namespace Library.Net.Amoeba
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
+
         public static readonly int ClusterSize = 1024 * 32;
 
         private int _threadCount = 2;
@@ -262,105 +263,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private static FileStream GetUniqueFileStream(string path)
-        {
-            if (!File.Exists(path))
-            {
-                try
-                {
-                    FileStream fs = new FileStream(path, FileMode.CreateNew);
-                    return fs;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    throw;
-                }
-                catch (IOException)
-                {
-                    throw;
-                }
-            }
-
-            for (int index = 1; ; index++)
-            {
-                string text = string.Format(@"{0}\{1} ({2}){3}",
-                    Path.GetDirectoryName(path),
-                    Path.GetFileNameWithoutExtension(path),
-                    index,
-                    Path.GetExtension(path));
-
-                if (!File.Exists(text))
-                {
-                    try
-                    {
-                        FileStream fs = new FileStream(text, FileMode.CreateNew);
-                        return fs;
-                    }
-                    catch (DirectoryNotFoundException)
-                    {
-                        throw;
-                    }
-                    catch (IOException)
-                    {
-                        if (index > 100)
-                            throw;
-                    }
-                }
-            }
-        }
-
-        private void CheckSpace()
-        {
-            lock (this.ThisLock)
-            {
-                if (!_spaceClustersInitialized)
-                {
-                    long i = 0;
-
-                    foreach (var clusters in _settings.ClustersIndex.Values)
-                    {
-                        foreach (var cluster in clusters.Indexes)
-                        {
-                            if (i < cluster)
-                            {
-                                while (i < cluster)
-                                {
-                                    _spaceClusters.Add(i);
-                                    i++;
-                                }
-
-                                i++;
-                            }
-                            else if (cluster < i)
-                            {
-                                _spaceClusters.Remove(cluster);
-                            }
-                            else
-                            {
-                                i++;
-                            }
-                        }
-                    }
-
-                    _spaceClusters.TrimExcess();
-
-                    _spaceClustersInitialized = true;
-                }
-
-                {
-                    long fileEndCluster = ((this.Size + CacheManager.ClusterSize - 1) / CacheManager.ClusterSize) - 1;
-                    long endCluster = this.GetEndCluster();
-                    long j = endCluster + 1;
-                    long count = fileEndCluster - endCluster;
-
-                    for (int k = _spaceClusters.Count; k < count && k < 8192; k++, j++)
-                    {
-                        _spaceClusters.Add(j);
-                    }
-                }
-            }
-        }
-
         public void CheckSeeds()
         {
             lock (this.ThisLock)
@@ -431,11 +333,63 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private void CheckSpace(long clusterCount)
+        {
+            lock (this.ThisLock)
+            {
+                if (!_spaceClustersInitialized)
+                {
+                    long i = 0;
+
+                    foreach (var clusters in _settings.ClustersIndex.Values)
+                    {
+                        foreach (var cluster in clusters.Indexes)
+                        {
+                            if (i < cluster)
+                            {
+                                while (i < cluster)
+                                {
+                                    _spaceClusters.Add(i);
+                                    i++;
+                                }
+
+                                i++;
+                            }
+                            else if (cluster < i)
+                            {
+                                _spaceClusters.Remove(cluster);
+                            }
+                            else
+                            {
+                                i++;
+                            }
+                        }
+                    }
+
+                    _spaceClusters.TrimExcess();
+
+                    _spaceClustersInitialized = true;
+                }
+
+                {
+                    long fileEndCluster = ((this.Size + CacheManager.ClusterSize - 1) / CacheManager.ClusterSize) - 1;
+                    long endCluster = this.GetEndCluster();
+                    long j = endCluster + 1;
+                    long count = fileEndCluster - endCluster;
+
+                    for (int k = _spaceClusters.Count; k < count && k < clusterCount; k++, j++)
+                    {
+                        _spaceClusters.Add(j);
+                    }
+                }
+            }
+        }
+
         private void CreatingSpace(long clusterCount)
         {
             lock (this.ThisLock)
             {
-                this.CheckSpace();
+                this.CheckSpace(clusterCount);
                 if (clusterCount <= _spaceClusters.Count) return;
 
                 var usingHeaders = new HashSet<Key>();
@@ -759,8 +713,6 @@ namespace Library.Net.Amoeba
             }
 
             getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-            this.CheckSpace();
         }
 
         public void CheckExternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
@@ -814,8 +766,6 @@ namespace Library.Net.Amoeba
             }
 
             getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-            this.CheckSpace();
         }
 
         private void _shareIndexLinkUpdate()
@@ -916,15 +866,8 @@ namespace Library.Net.Amoeba
                 try
                 {
                     using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                    using (var rijndael = new RijndaelManaged()
-                    {
-                        KeySize = 256,
-                        BlockSize = 256,
-                        Mode = CipherMode.CBC,
-                        Padding = PaddingMode.PKCS7
-                    })
-                    using (CryptoStream cs = new CryptoStream(outStream,
-                        rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                    using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
                     {
                         Lzma.Compress(inStream, cs, _bufferManager);
                     }
@@ -994,15 +937,8 @@ namespace Library.Net.Amoeba
             if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
                 using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                using (var rijndael = new RijndaelManaged()
-                {
-                    KeySize = 256,
-                    BlockSize = 256,
-                    Mode = CipherMode.CBC,
-                    Padding = PaddingMode.PKCS7
-                })
-                using (CryptoStream cs = new CryptoStream(inStream,
-                    rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                 {
                     Lzma.Decompress(cs, outStream, _bufferManager);
                 }
@@ -1563,7 +1499,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IEnumerable<Header>
+        #region IEnumerable<Key>
 
         public IEnumerator<Key> GetEnumerator()
         {
@@ -1803,8 +1739,9 @@ namespace Library.Net.Amoeba
         {
             private long[] _indexes;
             private int _length;
-            private object _thisLock;
             private DateTime _updateTime = DateTime.UtcNow;
+
+            private object _thisLock;
             private static object _thisStaticLock = new object();
 
             [DataMember(Name = "Indexs")]
@@ -1888,6 +1825,7 @@ namespace Library.Net.Amoeba
         {
             private LockedDictionary<Key, int> _keyAndCluster;
             private int _blockLength;
+
             private object _thisLock;
             private static object _thisStaticLock = new object();
 

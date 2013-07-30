@@ -119,6 +119,7 @@ namespace Library.Security
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
+                // Nickname
                 if (this.Nickname != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
@@ -137,7 +138,7 @@ namespace Library.Security
 
                     streams.Add(bufferStream);
                 }
-
+                // DigitalSignatureAlgorithm
                 if (this.DigitalSignatureAlgorithm != 0)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
@@ -156,7 +157,7 @@ namespace Library.Security
 
                     streams.Add(bufferStream);
                 }
-
+                // PublicKey
                 if (this.PublicKey != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
@@ -166,7 +167,7 @@ namespace Library.Security
 
                     streams.Add(bufferStream);
                 }
-
+                // PrivateKey
                 if (this.PrivateKey != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
@@ -412,9 +413,7 @@ namespace Library.Security
 
                     if (value != null && value.Length != 0)
                     {
-                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                        else _hashCode = value[0];
+                        _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
                     }
                     else
                     {

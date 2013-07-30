@@ -17,7 +17,6 @@ namespace Library.Security
         }
 
         private static BufferManager _bufferManager = BufferManager.Instance;
-        private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
@@ -36,7 +35,7 @@ namespace Library.Security
 
                     try
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                         using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
@@ -136,7 +135,7 @@ namespace Library.Security
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {
@@ -175,37 +174,6 @@ namespace Library.Security
             {
                 throw new ArgumentException(e.Message, e);
             }
-        }
-
-        private static string ToBase64String(Stream stream)
-        {
-            byte[] buffer = null;
-
-            try
-            {
-                buffer = _bufferManager.TakeBuffer((int)stream.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-                stream.Read(buffer, 0, (int)stream.Length);
-
-                return NetworkConverter.ToBase64UrlString(buffer, 0, (int)stream.Length);
-            }
-            finally
-            {
-                if (buffer != null)
-                {
-                    _bufferManager.ReturnBuffer(buffer);
-                }
-            }
-        }
-
-        private static Stream FromBase64String(string value)
-        {
-            var match = _base64Regex.Match(value);
-            if (!match.Success) throw new ArgumentException();
-
-            value = match.Groups[1].Value;
-
-            return new MemoryStream(NetworkConverter.FromBase64UrlString(value));
         }
 
         public static Stream ToDigitalSignatureStream(DigitalSignature item)

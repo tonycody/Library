@@ -37,7 +37,7 @@ namespace Library.Net.Lair
 
                     try
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                         using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
@@ -137,7 +137,7 @@ namespace Library.Net.Lair
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 1024);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {
@@ -246,7 +246,7 @@ namespace Library.Net.Lair
 
         public static string ToSectionString(Section item, string leaderSignature)
         {
-            if (item == null) throw new ArgumentNullException("Section");
+            if (item == null) throw new ArgumentNullException("item");
 
             try
             {
@@ -307,7 +307,7 @@ namespace Library.Net.Lair
 
         public static string ToChannelString(Channel item)
         {
-            if (item == null) throw new ArgumentNullException("Channel");
+            if (item == null) throw new ArgumentNullException("item");
 
             try
             {
@@ -333,37 +333,6 @@ namespace Library.Net.Lair
                 {
                     return LairConverter.FromStream<Channel>(stream);
                 }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Stream ToMessagesStream(IEnumerable<Message> collection)
-        {
-            if (collection == null) throw new ArgumentNullException("collection");
-
-            try
-            {
-                var items = new ItemCollection<Message>();
-                items.Items.AddRange(collection);
-
-                return LairConverter.ToStream<ItemCollection<Message>>(items);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static IEnumerable<Message> FromMessagesStream(Stream stream)
-        {
-            if (stream == null) throw new ArgumentNullException("stream");
-
-            try
-            {
-                return LairConverter.FromStream<ItemCollection<Message>>(stream).Items;
             }
             catch (Exception)
             {
