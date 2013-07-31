@@ -308,7 +308,7 @@ namespace Library.Net.Amoeba
 
                                     foreach (var key in _countCache.GetKeys(group, false))
                                     {
-                                        if (_connectionsManager.DownloadWaiting(key))
+                                        if (_connectionsManager.IsDownloadWaiting(key))
                                         {
                                             downloadingCount++;
                                         }

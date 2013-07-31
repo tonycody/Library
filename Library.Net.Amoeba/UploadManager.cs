@@ -219,7 +219,7 @@ namespace Library.Net.Amoeba
             {
                 foreach (var key in item.UploadKeys.ToArray())
                 {
-                    if (!_connectionsManager.UploadWaiting(key))
+                    if (!_connectionsManager.IsUploadWaiting(key))
                     {
                         item.UploadedKeys.Add(key);
                         item.UploadKeys.Remove(key);
