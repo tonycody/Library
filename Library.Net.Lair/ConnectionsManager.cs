@@ -10,15 +10,9 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public delegate IEnumerable<Section> RemoveSectionsEventHandler(object sender);
-    public delegate IEnumerable<string> RemoveProfilesEventHandler(object sender, Section section);
-    public delegate IEnumerable<string> RemoveDocumentsEventHandler(object sender, Section section);
-
-    public delegate IEnumerable<Channel> RemoveChannelsEventHandler(object sender);
-    public delegate IEnumerable<string> RemoveTopicsEventHandler(object sender, Channel channel);
-    public delegate IEnumerable<Message> RemoveMessagesEventHandler(object sender, Channel channel);
-
-    public delegate IEnumerable<Mail> RemoveMailsEventHandler(object sender, Section section);
+    public delegate IEnumerable<string> TrustSignaturesEventHandler(object sender);
+    public delegate IEnumerable<Section> LockSectionsEventHandler(object sender);
+    public delegate IEnumerable<Channel> LockChannelsEventHandler(object sender);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -89,15 +83,9 @@ namespace Library.Net.Lair
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        private RemoveSectionsEventHandler _removeSectionsEvent;
-        private RemoveProfilesEventHandler _removeProfilesEvent;
-        private RemoveDocumentsEventHandler _removeDocumentsEvent;
-
-        private RemoveChannelsEventHandler _removeChannelsEvent;
-        private RemoveTopicsEventHandler _removeTopicsEvent;
-        private RemoveMessagesEventHandler _removeMessagesEvent;
-
-        private RemoveMailsEventHandler _removeMailsEvent;
+        private TrustSignaturesEventHandler _trustSignaturesEvent;
+        private LockSectionsEventHandler _lockSectionsEvent;
+        private LockChannelsEventHandler _lockChannelsEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -146,79 +134,35 @@ namespace Library.Net.Lair
             this.UpdateSessionId();
         }
 
-        public RemoveSectionsEventHandler RemoveSectionsEvent
+        public TrustSignaturesEventHandler TrustSignaturesEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _removeSectionsEvent = value;
+                    _trustSignaturesEvent = value;
                 }
             }
         }
 
-        public RemoveProfilesEventHandler RemoveProfilesEvent
+        public LockSectionsEventHandler LockSectionsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _removeProfilesEvent = value;
+                    _lockSectionsEvent = value;
                 }
             }
         }
 
-        public RemoveDocumentsEventHandler RemoveDocumentsEvent
+        public LockChannelsEventHandler LockchannelsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _removeDocumentsEvent = value;
-                }
-            }
-        }
-
-        public RemoveChannelsEventHandler RemoveChannelsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeChannelsEvent = value;
-                }
-            }
-        }
-
-        public RemoveTopicsEventHandler RemoveTopicsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeTopicsEvent = value;
-                }
-            }
-        }
-
-        public RemoveMessagesEventHandler RemoveMessagesEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeMessagesEvent = value;
-                }
-            }
-        }
-
-        public RemoveMailsEventHandler RemoveMailsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeMailsEvent = value;
+                    _lockChannelsEvent = value;
                 }
             }
         }
@@ -418,31 +362,21 @@ namespace Library.Net.Lair
             }
         }
 
+        protected virtual IEnumerable<string> OnRemoveTrustSignaturesEvent()
+        {
+            if (_trustSignaturesEvent != null)
+            {
+                return _trustSignaturesEvent(this);
+            }
+
+            return null;
+        }
+
         protected virtual IEnumerable<Section> OnRemoveSectionsEvent()
         {
-            if (_removeSectionsEvent != null)
+            if (_lockSectionsEvent != null)
             {
-                return _removeSectionsEvent(this);
-            }
-
-            return null;
-        }
-
-        protected virtual IEnumerable<string> OnRemoveProfilesEvent(Section section)
-        {
-            if (_removeProfilesEvent != null)
-            {
-                return _removeProfilesEvent(this, section);
-            }
-
-            return null;
-        }
-
-        protected virtual IEnumerable<string> OnRemoveDocumentsEvent(Section section)
-        {
-            if (_removeDocumentsEvent != null)
-            {
-                return _removeDocumentsEvent(this, section);
+                return _lockSectionsEvent(this);
             }
 
             return null;
@@ -450,39 +384,9 @@ namespace Library.Net.Lair
 
         protected virtual IEnumerable<Channel> OnRemoveChannelsEvent()
         {
-            if (_removeChannelsEvent != null)
+            if (_lockChannelsEvent != null)
             {
-                return _removeChannelsEvent(this);
-            }
-
-            return null;
-        }
-
-        protected virtual IEnumerable<string> OnRemoveTopicsEvent(Channel channel)
-        {
-            if (_removeTopicsEvent != null)
-            {
-                return _removeTopicsEvent(this, channel);
-            }
-
-            return null;
-        }
-
-        protected virtual IEnumerable<Message> OnRemoveMessagesEvent(Channel channel)
-        {
-            if (_removeMessagesEvent != null)
-            {
-                return _removeMessagesEvent(this, channel);
-            }
-
-            return null;
-        }
-
-        protected virtual IEnumerable<Mail> OnRemoveMailsEvent(Section section)
-        {
-            if (_removeMailsEvent != null)
-            {
-                return _removeMailsEvent(this, section);
+                return _lockChannelsEvent(this);
             }
 
             return null;
@@ -715,7 +619,13 @@ namespace Library.Net.Lair
 
                 connectionManager.PullNodesEvent += new PullNodesEventHandler(connectionManager_NodesEvent);
                 connectionManager.PullSectionsRequestEvent += new PullSectionsRequestEventHandler(connectionManager_PullSectionsRequestEvent);
+                connectionManager.PullProfilesEvent += new PullProfilesEventHandler(connectionManager_PullProfilesEvent);
+                connectionManager.PullDocumentsEvent += new PullDocumentsEventHandler(connectionManager_PullDocumentsEvent);
                 connectionManager.PullChannelsRequestEvent += new PullChannelsRequestEventHandler(connectionManager_PullChannelsRequestEvent);
+                connectionManager.PullTopicsEvent += new PullTopicsEventHandler(connectionManager_PullTopicsEvent);
+                connectionManager.PullMessagesEvent += new PullMessagesEventHandler(connectionManager_PullMessagesEvent);
+                connectionManager.PullSignaturesRequestEvent += new PullSignaturesRequestEventHandler(connectionManager_PullSignaturesRequestEvent);
+                connectionManager.PullMailsEvent += new PullMailsEventHandler(connectionManager_PullMailsEvent);
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 
@@ -1879,6 +1789,16 @@ namespace Library.Net.Lair
             }
         }
 
+        void connectionManager_PullProfilesEvent(object sender, PullProfilesEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        void connectionManager_PullDocumentsEvent(object sender, PullDocumentsEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+        
         private void connectionManager_PullChannelsRequestEvent(object sender, PullChannelsRequestEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
@@ -1895,6 +1815,39 @@ namespace Library.Net.Lair
                 _messagesManager[connectionManager.Node].PullChannelsRequest.Add(c);
                 _pullChannelRequestCount++;
             }
+        }
+
+        void connectionManager_PullTopicsEvent(object sender, PullTopicsEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        void connectionManager_PullMessagesEvent(object sender, PullMessagesEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        void connectionManager_PullSignaturesRequestEvent(object sender, PullSignaturesRequestEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            if (e.Signatures == null) return;
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull SignaturesRequest {0} ({1})", String.Join(", ", e.Signatures), e.Signatures.Count()));
+
+            foreach (var s in e.Signatures.Take(_maxRequestCount))
+            {
+                if (s == null || s.Id == null || string.IsNullOrWhiteSpace(s.Name)) continue;
+
+                _messagesManager[connectionManager.Node].PullSignaturesRequest.Add(s);
+                _pullChannelRequestCount++;
+            }
+        }
+
+        void connectionManager_PullMailsEvent(object sender, PullMailsEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private void connectionManager_PullCancelEvent(object sender, EventArgs e)

@@ -64,7 +64,6 @@
     <Compile Include="HttpProxyClient.cs" />
     <Compile Include="ProxyClientBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SamV3\SamV3Bridge.cs" />
     <Compile Include="Socks4aProxyClient.cs" />
     <Compile Include="Socks4ProxyClient.cs" />
     <Compile Include="Socks5ProxyClient.cs" />

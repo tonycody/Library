@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Page", Namespace = "http://Library/Net/Lair")]
-    public sealed class Page : ReadOnlyCertificateItemBase<Page>, IPage
+    public sealed class Page : ItemBase<Page>, IPage
     {
         private enum SerializeId : byte
         {

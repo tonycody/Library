@@ -402,7 +402,7 @@ namespace Library.Net.Lair
                     connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), bandwidthLimit, _maxReceiveCount, _bufferManager);
                 }
 
-                var secureConnection = new SecureClientConnection(connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version2, connection, null, _bufferManager);
 
                 try
                 {

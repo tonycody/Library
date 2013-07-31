@@ -247,11 +247,10 @@ namespace Library.Net.Amoeba
 
                         xml.WriteStartElement("Protocol");
 
-                        if (_myProtocolVersion == ProtocolVersion.Version1)
+                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version1))
                         {
                             xml.WriteStartElement("Amoeba");
                             xml.WriteAttributeString("Version", "1");
-
                             xml.WriteEndElement(); //Protocol
                         }
 

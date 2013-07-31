@@ -15,7 +15,7 @@ namespace Library.Net.Lair
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
     delegate bool WatchEventHandler(object sender);
 
-    class CacheManager : ManagerBase, Library.Configuration.ISettings, IThisLock
+    class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
     {
         private FileStream _fileStream = null;
         private BufferManager _bufferManager;

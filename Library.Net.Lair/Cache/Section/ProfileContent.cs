@@ -26,7 +26,7 @@ namespace Library.Net.Lair
         private ExchangeAlgorithm _exchangeAlgorithm = 0;
         private byte[] _publicKey = null;
 
-        private Certificate _certificate;
+        private int _hashCode = 0;
 
         public static readonly int MaxTrustSignaturesCount = 1024;
         public static readonly int MaxChannelsCount = 1024;
@@ -156,8 +156,7 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (this.Certificate == null) return 0;
-            else return this.Certificate.GetHashCode();
+            return _hashCode;
         }
 
         public override bool Equals(object obj)
@@ -200,44 +199,11 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override string ToString()
-        {
-            if (this.Certificate == null) return "";
-            else return this.Certificate.ToString();
-        }
-
         public override ProfileContent DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
                 return ProfileContent.Import(stream, BufferManager.Instance);
-            }
-        }
-
-        protected override Stream GetCertificateStream()
-        {
-            var temp = this.Certificate;
-            this.Certificate = null;
-
-            try
-            {
-                return this.Export(BufferManager.Instance);
-            }
-            finally
-            {
-                this.Certificate = temp;
-            }
-        }
-
-        public override Certificate Certificate
-        {
-            get
-            {
-                return _certificate;
-            }
-            protected set
-            {
-                _certificate = value;
             }
         }
 
@@ -323,6 +289,17 @@ namespace Library.Net.Lair
                 else
                 {
                     _publicKey = value;
+                }
+
+                if (value != null && value.Length != 0)
+                {
+                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                    else _hashCode = value[0];
+                }
+                else
+                {
+                    _hashCode = 0;
                 }
             }
         }

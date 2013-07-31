@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
         private ManagerState _encodeState = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 
-        private RemoveSeedSignaturesEventHandler _removeSeedSignaturesEvent;
+        private LockSeedSignaturesEventHandler _lockSeedSignaturesEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -43,18 +43,18 @@ namespace Library.Net.Amoeba
             _storeDownloadManager = new StoreDownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _storeUploadManager = new StoreUploadManager(_connectionsManager, _cacheManager, _bufferManager);
 
-            _connectionsManager.RemoveSeedSignaturesEvent = (object sender) =>
+            _connectionsManager.LockSeedSignaturesEvent = (object sender) =>
             {
-                if (_removeSeedSignaturesEvent != null)
+                if (_lockSeedSignaturesEvent != null)
                 {
-                    return _removeSeedSignaturesEvent(this);
+                    return _lockSeedSignaturesEvent(this);
                 }
 
                 return null;
             };
         }
 
-        public RemoveSeedSignaturesEventHandler RemoveSeedSignaturesEvent
+        public LockSeedSignaturesEventHandler LockSeedSignaturesEvent
         {
             set
             {
@@ -62,7 +62,7 @@ namespace Library.Net.Amoeba
 
                 lock (this.ThisLock)
                 {
-                    _removeSeedSignaturesEvent = value;
+                    _lockSeedSignaturesEvent = value;
                 }
             }
         }
@@ -366,16 +366,6 @@ namespace Library.Net.Amoeba
                 {
                     return _cacheManager.Size;
                 }
-            }
-        }
-
-        public IEnumerable<string> GetSignatures()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetSignatures();
             }
         }
 

@@ -18,8 +18,6 @@ namespace Library.Net.Lair
 
         private PageCollection _pages = null;
 
-        private Certificate _certificate;
-
         public static readonly int MaxPagesCount = 1024;
 
         public DocumentContent(IEnumerable<Page> pages)
@@ -105,33 +103,6 @@ namespace Library.Net.Lair
             using (var stream = this.Export(BufferManager.Instance))
             {
                 return DocumentContent.Import(stream, BufferManager.Instance);
-            }
-        }
-
-        protected override Stream GetCertificateStream()
-        {
-            var temp = this.Certificate;
-            this.Certificate = null;
-
-            try
-            {
-                return this.Export(BufferManager.Instance);
-            }
-            finally
-            {
-                this.Certificate = temp;
-            }
-        }
-
-        public override Certificate Certificate
-        {
-            get
-            {
-                return _certificate;
-            }
-            protected set
-            {
-                _certificate = value;
             }
         }
 

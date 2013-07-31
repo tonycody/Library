@@ -278,7 +278,7 @@ namespace Library.Net.Lair
 
                         xml.WriteStartElement("Protocol");
 
-                        if (_myProtocolVersion == ProtocolVersion.Version3)
+                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version3))
                         {
                             xml.WriteStartElement("Lair");
                             xml.WriteAttributeString("Version", "3");

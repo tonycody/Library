@@ -15,16 +15,16 @@ namespace Library.Net.Connection.SecureVersion2
         {
             CreationTime = 0,
             Key = 1,
-            MyProtocolInformationHash = 2,
-            OtherProtocolInformationHash = 3,
+            MyHash = 2,
+            OtherHash = 3,
 
             Certificate = 4,
         }
 
         private DateTime _creationTime = DateTime.MinValue;
         private byte[] _key = null;
-        private byte[] _myProtocolInformationHash = null;
-        private byte[] _otherProtocolInformationHash = null;
+        private byte[] _myHash = null;
+        private byte[] _otherHash = null;
 
         private Certificate _certificate;
 
@@ -32,6 +32,8 @@ namespace Library.Net.Connection.SecureVersion2
         private static object _thisStaticLock = new object();
 
         public static readonly int MaxKeyLength = 1024;
+        public static readonly int MaxMyHashLength = 64;
+        public static readonly int MaxOtherHashLength = 64;
 
         public ConnectionSignature()
         {
@@ -67,19 +69,19 @@ namespace Library.Net.Connection.SecureVersion2
 
                             this.Key = buffer;
                         }
-                        if (id == (byte)SerializeId.MyProtocolInformationHash)
+                        if (id == (byte)SerializeId.MyHash)
                         {
                             byte[] buffer = new byte[rangeStream.Length];
                             rangeStream.Read(buffer, 0, buffer.Length);
 
-                            this.MyProtocolInformationHash = buffer;
+                            this.MyHash = buffer;
                         }
-                        if (id == (byte)SerializeId.OtherProtocolInformationHash)
+                        if (id == (byte)SerializeId.OtherHash)
                         {
                             byte[] buffer = new byte[rangeStream.Length];
                             rangeStream.Read(buffer, 0, buffer.Length);
 
-                            this.OtherProtocolInformationHash = buffer;
+                            this.OtherHash = buffer;
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -127,23 +129,23 @@ namespace Library.Net.Connection.SecureVersion2
 
                     streams.Add(bufferStream);
                 }
-                // MyProtocolInformationHash
-                if (this.MyProtocolInformationHash != null)
+                // MyHash
+                if (this.MyHash != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.MyProtocolInformationHash.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.MyProtocolInformationHash);
-                    bufferStream.Write(this.MyProtocolInformationHash, 0, this.MyProtocolInformationHash.Length);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.MyHash.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.MyHash);
+                    bufferStream.Write(this.MyHash, 0, this.MyHash.Length);
 
                     streams.Add(bufferStream);
                 }
-                // OtherProtocolInformationHash
-                if (this.OtherProtocolInformationHash != null)
+                // OtherHash
+                if (this.OtherHash != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.OtherProtocolInformationHash.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.OtherProtocolInformationHash);
-                    bufferStream.Write(this.OtherProtocolInformationHash, 0, this.OtherProtocolInformationHash.Length);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.OtherHash.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.OtherHash);
+                    bufferStream.Write(this.OtherHash, 0, this.OtherHash.Length);
 
                     streams.Add(bufferStream);
                 }
@@ -187,8 +189,8 @@ namespace Library.Net.Connection.SecureVersion2
 
             if (this.CreationTime != other.CreationTime
                 || (this.Key == null) != (other.Key == null)
-                || (this.MyProtocolInformationHash == null) != (other.MyProtocolInformationHash == null)
-                || (this.OtherProtocolInformationHash == null) != (other.OtherProtocolInformationHash == null)
+                || (this.MyHash == null) != (other.MyHash == null)
+                || (this.OtherHash == null) != (other.OtherHash == null)
 
                 || this.Certificate != other.Certificate)
             {
@@ -200,14 +202,14 @@ namespace Library.Net.Connection.SecureVersion2
                 if (!Collection.Equals(this.Key, other.Key)) return false;
             }
 
-            if (this.MyProtocolInformationHash != null && other.MyProtocolInformationHash != null)
+            if (this.MyHash != null && other.MyHash != null)
             {
-                if (!Collection.Equals(this.MyProtocolInformationHash, other.MyProtocolInformationHash)) return false;
+                if (!Collection.Equals(this.MyHash, other.MyHash)) return false;
             }
 
-            if (this.OtherProtocolInformationHash != null && other.OtherProtocolInformationHash != null)
+            if (this.OtherHash != null && other.OtherHash != null)
             {
-                if (!Collection.Equals(this.OtherProtocolInformationHash, other.OtherProtocolInformationHash)) return false;
+                if (!Collection.Equals(this.OtherHash, other.OtherHash)) return false;
             }
 
             return true;
@@ -287,7 +289,7 @@ namespace Library.Net.Connection.SecureVersion2
             {
                 lock (this.ThisLock)
                 {
-                    return _myProtocolInformationHash;
+                    return _key;
                 }
             }
             set
@@ -300,59 +302,59 @@ namespace Library.Net.Connection.SecureVersion2
                     }
                     else
                     {
-                        _myProtocolInformationHash = value;
+                        _key = value;
                     }
                 }
             }
         }
 
-        [DataMember(Name = "MyProtocolInformationHash")]
-        public byte[] MyProtocolInformationHash
+        [DataMember(Name = "MyHash")]
+        public byte[] MyHash
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _myProtocolInformationHash;
+                    return _myHash;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > ConnectionSignature.MaxKeyLength)
+                    if (value != null && value.Length > ConnectionSignature.MaxMyHashLength)
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _myProtocolInformationHash = value;
+                        _myHash = value;
                     }
                 }
             }
         }
 
-        [DataMember(Name = "OtherProtocolInformationHash")]
-        public byte[] OtherProtocolInformationHash
+        [DataMember(Name = "OtherHash")]
+        public byte[] OtherHash
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _myProtocolInformationHash;
+                    return _otherHash;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > ConnectionSignature.MaxKeyLength)
+                    if (value != null && value.Length > ConnectionSignature.MaxOtherHashLength)
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _myProtocolInformationHash = value;
+                        _otherHash = value;
                     }
                 }
             }

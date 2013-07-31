@@ -10,7 +10,7 @@ using Library.Security;
 
 namespace Library.Net.Amoeba
 {
-    public delegate SignatureCollection RemoveSeedSignaturesEventHandler(object sender);
+    public delegate SignatureCollection LockSeedSignaturesEventHandler(object sender);
     delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -42,6 +42,9 @@ namespace Library.Net.Amoeba
 
         private CirculationCollection<string> _pushSeedsRequestList;
         private CirculationCollection<Key> _downloadBlocks;
+        private CirculationCollection<string> _uploadSeeds;
+
+        private LockedDictionary<string, DateTime> _lastUsedSeedTimes = new LockedDictionary<string, DateTime>();
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
@@ -82,7 +85,7 @@ namespace Library.Net.Amoeba
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        private RemoveSeedSignaturesEventHandler _removeSeedSignaturesEvent;
+        private LockSeedSignaturesEventHandler _lockSeedSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
 
         private volatile bool _disposed = false;
@@ -132,19 +135,20 @@ namespace Library.Net.Amoeba
 
             _downloadBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
             _pushSeedsRequestList = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
+            _uploadSeeds = new CirculationCollection<string>(new TimeSpan(1, 0, 0));
 
             _relayBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
             this.UpdateSessionId();
         }
 
-        public RemoveSeedSignaturesEventHandler RemoveSeedSignaturesEvent
+        public LockSeedSignaturesEventHandler LockSeedSignaturesEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _removeSeedSignaturesEvent = value;
+                    _lockSeedSignaturesEvent = value;
                 }
             }
         }
@@ -359,11 +363,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual IEnumerable<string> OnRemoveSeedSignaturesEvent()
+        protected virtual IEnumerable<string> OnLockSeedSignaturesEvent()
         {
-            if (_removeSeedSignaturesEvent != null)
+            if (_lockSeedSignaturesEvent != null)
             {
-                return _removeSeedSignaturesEvent(this);
+                return _lockSeedSignaturesEvent(this);
             }
 
             return null;
@@ -937,7 +941,7 @@ namespace Library.Net.Amoeba
                     _cacheManager.CheckSeeds();
                 }
 
-                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 1)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     refreshStopwatch.Restart();
 
@@ -951,11 +955,37 @@ namespace Library.Net.Amoeba
                         try
                         {
                             {
-                                var removeSeedSignatures = this.OnRemoveSeedSignaturesEvent();
+                                var lockSeedSignatures = this.OnLockSeedSignaturesEvent();
 
-                                if (removeSeedSignatures != null && removeSeedSignatures.Count() > 0)
+                                if (lockSeedSignatures != null)
                                 {
-                                    _settings.RemoveStoreSeeds(removeSeedSignatures);
+                                    var removeSignatures = new HashSet<string>();
+                                    removeSignatures.UnionWith(this.GetSeedSignatures());
+                                    removeSignatures.ExceptWith(lockSeedSignatures);
+
+                                    var sortList = removeSignatures.ToList();
+
+                                    sortList.Sort((x, y) =>
+                                    {
+                                        DateTime tx;
+                                        DateTime ty;
+
+                                        _lastUsedSeedTimes.TryGetValue(x, out tx);
+                                        _lastUsedSeedTimes.TryGetValue(y, out ty);
+
+                                        return x.CompareTo(y);
+                                    });
+
+                                    _settings.RemoveStoreSeeds(sortList.Take(sortList.Count - 1024));
+
+                                    var liveSignatures = new HashSet<string>(_settings.GetSeedSignatures());
+
+                                    foreach (var signature in _lastUsedSeedTimes.Keys.ToArray())
+                                    {
+                                        if (liveSignatures.Contains(signature)) continue;
+
+                                        _lastUsedSeedTimes.Remove(signature);
+                                    }
                                 }
                             }
                         }
@@ -1052,12 +1082,12 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    foreach (var item in this.GetSignatures())
+                    foreach (var item in _uploadSeeds)
                     {
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 2));
+                            requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 1));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
@@ -1296,7 +1326,7 @@ namespace Library.Net.Amoeba
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 2));
+                                requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 1));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
@@ -1666,7 +1696,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (seedUpdateTime.Elapsed.TotalSeconds > 30)
+                    if (seedUpdateTime.Elapsed.TotalSeconds > 10)
                     {
                         seedUpdateTime.Restart();
 
@@ -1699,12 +1729,16 @@ namespace Library.Net.Amoeba
 
                                 foreach (var seed in seeds.Randomize())
                                 {
+                                    var signature = seed.Certificate.ToString();
+
                                     connectionManager.PushSeed(seed);
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push Seed {0} ({1})", seed.Keywords[0], seed.Certificate.ToString()));
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Seed {0} ({1})", seed.Keywords[0], signature));
                                     _pushSeedCount++;
 
-                                    messageManager.PushStoreSeeds[seed.Certificate.ToString()] = seed.CreationTime;
+                                    messageManager.PushStoreSeeds[signature] = seed.CreationTime;
+
+                                    _uploadSeeds.Remove(signature);
                                 }
                             }
                         }
@@ -1857,6 +1891,8 @@ namespace Library.Net.Amoeba
 
                 _messagesManager[connectionManager.Node].PullSeedsRequest.Add(signature);
                 _pullSeedRequestCount++;
+
+                _lastUsedSeedTimes[signature] = DateTime.UtcNow;
             }
         }
 
@@ -1867,10 +1903,15 @@ namespace Library.Net.Amoeba
 
             if (_settings.SetStoreSeed(e.Seed))
             {
+                var signature = e.Seed.Certificate.ToString();
+
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Seed {0}", ConnectionsManager.Keyword_Store));
 
-                _messagesManager[connectionManager.Node].PushStoreSeeds[e.Seed.Certificate.ToString()] = e.Seed.CreationTime;
+                _messagesManager[connectionManager.Node].PushStoreSeeds[signature] = e.Seed.CreationTime;
                 _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
+
+                _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                _uploadSeeds.Add(signature);
             }
 
             _pullSeedCount++;
@@ -2019,13 +2060,21 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<string> GetSignatures()
+        public void SendSeedRequest(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                _pushSeedsRequestList.Add(signature);
+            }
+        }
+
+        public IEnumerable<string> GetSeedSignatures()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetSignatures();
+                return _settings.GetSeedSignatures();
             }
         }
 
@@ -2037,7 +2086,6 @@ namespace Library.Net.Amoeba
             {
                 if (!Signature.HasSignature(signature)) return null;
 
-                _pushSeedsRequestList.Add(signature);
                 return _settings.GetStoreSeed(signature);
             }
         }
@@ -2048,7 +2096,12 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _settings.SetStoreSeed(seed);
+                if (_settings.SetStoreSeed(seed))
+                {
+                    var signature = seed.Certificate.ToString();
+
+                    _uploadSeeds.Add(signature);
+                }
             }
         }
 
@@ -2166,6 +2219,13 @@ namespace Library.Net.Amoeba
 
                 _bandwidthLimit.In = _settings.BandwidthLimit;
                 _bandwidthLimit.Out = _settings.BandwidthLimit;
+
+                _lastUsedSeedTimes.Clear();
+
+                foreach (var signature in this.GetSeedSignatures())
+                {
+                    _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                }
             }
         }
 
@@ -2221,7 +2281,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public IEnumerable<string> GetSignatures()
+            public IEnumerable<string> GetSeedSignatures()
             {
                 lock (this.ThisLock)
                 {

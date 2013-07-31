@@ -221,7 +221,7 @@ namespace Library.Net.Lair
             return null;
         }
 
-        public bool VerifyHash(HashAlgorithm hashAlgorithm, byte[] hash)
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
         {
             return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }

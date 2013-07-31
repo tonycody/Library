@@ -169,7 +169,7 @@ namespace Library.Net.Lair
             if (stream == null) throw new ArgumentNullException("stream");
             if (exchangeEncrypt == null) throw new ArgumentNullException("exchangeEncrypt");
 
-            ArraySegment<byte> value;
+            ArraySegment<byte> value = new ArraySegment<byte>();
 
             try
             {
@@ -211,7 +211,10 @@ namespace Library.Net.Lair
             }
             finally
             {
-                _bufferManager.ReturnBuffer(value.Array);
+                if (value.Array != null)
+                {
+                    _bufferManager.ReturnBuffer(value.Array);
+                }
             }
         }
 
@@ -292,6 +295,102 @@ namespace Library.Net.Lair
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
                     return ContentConverter.FromStream<ProfileContent>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static ArraySegment<byte> ToDocumentContentBlock(DocumentContent content)
+        {
+            if (content == null) throw new ArgumentNullException("content");
+
+            ArraySegment<byte> value;
+
+            using (Stream stream = ContentConverter.ToStream<DocumentContent>(content))
+            {
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
+                stream.Read(value.Array, value.Offset, value.Count);
+            }
+
+            return value;
+        }
+
+        public static DocumentContent FromDocumentContentBlock(ArraySegment<byte> content)
+        {
+            if (content.Array == null) throw new ArgumentNullException("content.Array");
+
+            try
+            {
+                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                {
+                    return ContentConverter.FromStream<DocumentContent>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static ArraySegment<byte> ToTopicContentBlock(TopicContent content)
+        {
+            if (content == null) throw new ArgumentNullException("content");
+
+            ArraySegment<byte> value;
+
+            using (Stream stream = ContentConverter.ToStream<TopicContent>(content))
+            {
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
+                stream.Read(value.Array, value.Offset, value.Count);
+            }
+
+            return value;
+        }
+
+        public static TopicContent FromTopicContentBlock(ArraySegment<byte> content)
+        {
+            if (content.Array == null) throw new ArgumentNullException("content.Array");
+
+            try
+            {
+                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                {
+                    return ContentConverter.FromStream<TopicContent>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static ArraySegment<byte> ToMessageContentBlock(MessageContent content)
+        {
+            if (content == null) throw new ArgumentNullException("content");
+
+            ArraySegment<byte> value;
+
+            using (Stream stream = ContentConverter.ToStream<MessageContent>(content))
+            {
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
+                stream.Read(value.Array, value.Offset, value.Count);
+            }
+
+            return value;
+        }
+
+        public static MessageContent FromMessageContentBlock(ArraySegment<byte> content)
+        {
+            if (content.Array == null) throw new ArgumentNullException("content.Array");
+
+            try
+            {
+                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                {
+                    return ContentConverter.FromStream<MessageContent>(stream);
                 }
             }
             catch (Exception)

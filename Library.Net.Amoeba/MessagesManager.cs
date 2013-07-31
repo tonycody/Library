@@ -10,8 +10,8 @@ namespace Library.Net.Amoeba
 
     sealed class MessagesManager : IThisLock
     {
-        private LockedDictionary<Node, MessageManager> _messageManagerDictionary = new LockedDictionary<Node, MessageManager>();
-        private LockedDictionary<Node, DateTime> _updateTimeDictionary = new LockedDictionary<Node, DateTime>();
+        private Dictionary<Node, MessageManager> _messageManagerDictionary = new Dictionary<Node, MessageManager>();
+        private Dictionary<Node, DateTime> _updateTimeDictionary = new Dictionary<Node, DateTime>();
         private int _id = 0;
         private DateTime _lastCircularTime = DateTime.UtcNow;
         private object _thisLock = new object();
@@ -34,17 +34,19 @@ namespace Library.Net.Amoeba
 
                     foreach (var node in _messageManagerDictionary.Keys.ToArray())
                     {
-                        _messageManagerDictionary[node].PushBlocks.TrimExcess();
-                        _messageManagerDictionary[node].PushStoreSeeds.TrimExcess();
+                        var messageManager = _messageManagerDictionary[node];
 
-                        _messageManagerDictionary[node].PushBlocksLink.TrimExcess();
-                        _messageManagerDictionary[node].PullBlocksLink.TrimExcess();
+                        messageManager.PushBlocks.TrimExcess();
+                        messageManager.PushStoreSeeds.TrimExcess();
 
-                        _messageManagerDictionary[node].PushBlocksRequest.TrimExcess();
-                        _messageManagerDictionary[node].PullBlocksRequest.TrimExcess();
+                        messageManager.PushBlocksLink.TrimExcess();
+                        messageManager.PullBlocksLink.TrimExcess();
 
-                        _messageManagerDictionary[node].PushSeedsRequest.TrimExcess();
-                        _messageManagerDictionary[node].PullSeedsRequest.TrimExcess();
+                        messageManager.PushBlocksRequest.TrimExcess();
+                        messageManager.PullBlocksRequest.TrimExcess();
+
+                        messageManager.PushSeedsRequest.TrimExcess();
+                        messageManager.PullSeedsRequest.TrimExcess();
                     }
 
                     _lastCircularTime = now;
@@ -169,7 +171,7 @@ namespace Library.Net.Amoeba
             _surroundingNodes = new LockedHashSet<Node>(128);
 
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(3, 0, 0));
+            _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
             _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));

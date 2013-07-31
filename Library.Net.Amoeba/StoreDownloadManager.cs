@@ -824,6 +824,8 @@ namespace Library.Net.Amoeba
 
                             foreach (var signature in this.SearchSignatures)
                             {
+                                _connectionsManager.SendSeedRequest(signature);
+
                                 var seed = _connectionsManager.GetStoreSeed(signature);
                                 if (seed == null || seed.Length > 1024 * 1024 * 32) continue;
 

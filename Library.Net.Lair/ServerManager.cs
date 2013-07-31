@@ -71,7 +71,7 @@ namespace Library.Net.Lair
 
                 if (connection == null) return null;
 
-                var secureConnection = new SecureServerConnection(connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionType.Server, SecureConnectionVersion.Version2, connection, null, _bufferManager);
 
                 try
                 {

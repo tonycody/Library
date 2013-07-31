@@ -144,18 +144,6 @@ namespace Library.Net
             }
         }
 
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                return _thisLock;
-            }
-        }
-
-        #endregion
-
         private static int Distance(byte[] x, byte[] y)
         {
             if (x.Length != y.Length)
@@ -500,5 +488,17 @@ namespace Library.Net
                 return array;
             }
         }
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                return _thisLock;
+            }
+        }
+
+        #endregion
     }
 }
