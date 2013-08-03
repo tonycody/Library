@@ -27,7 +27,7 @@ namespace Library.Net.Connection.SecureVersion1
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public static readonly int MaxKeyLength = 1024;
+        public static readonly int MaxKeyLength = 8192;
 
         public ConnectionSignature()
         {

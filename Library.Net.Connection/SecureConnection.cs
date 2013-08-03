@@ -509,7 +509,7 @@ namespace Library.Net.Connection
                                 kdf = new ANSI_X963_KDF(hashFunction);
                             }
 
-                            if (_informationVersion1.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                            if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
                             {
                                 myCryptoKey = new byte[32];
                                 otherCryptoKey = new byte[32];
@@ -615,7 +615,7 @@ namespace Library.Net.Connection
 
                             if (seed == null) throw new ConnectionException();
 
-                            if (_informationVersion1.CryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
+                            if (cryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
                             {
                                 ANSI_X963_KDF kdf = new ANSI_X963_KDF(new SHA512Managed());
 

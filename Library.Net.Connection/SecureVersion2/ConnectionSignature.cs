@@ -31,7 +31,7 @@ namespace Library.Net.Connection.SecureVersion2
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public static readonly int MaxKeyLength = 1024;
+        public static readonly int MaxKeyLength = 8192;
         public static readonly int MaxMyHashLength = 64;
         public static readonly int MaxOtherHashLength = 64;
 

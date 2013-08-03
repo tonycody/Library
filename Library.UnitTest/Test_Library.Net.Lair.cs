@@ -63,26 +63,6 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_LairConverter_Messages()
-        {
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
-            var id = new byte[64];
-            _random.NextBytes(id);
-
-            List<Message> messages = new List<Message>();
-
-            for (int i = 0; i < 100; i++)
-            {
-                messages.Add(new Message(new Channel(id, "aoeui"), "aoeui", null, digitalSignature));
-            }
-
-            var stream = LairConverter.ToMessagesStream(messages);
-            var value = LairConverter.FromMessagesStream(stream);
-
-            Assert.IsTrue(Collection.Equals(messages, value), "LairConverter #4");
-        }
-
-        [Test]
         public void Test_Node()
         {
             var node = new Node();
@@ -121,47 +101,6 @@ namespace Library.UnitTest
             }
 
             Assert.AreEqual(key, key3, "Key #2");
-        }
-
-        [Test]
-        public void Test_Message()
-        {
-            Parallel.For(0, 1024, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
-            {
-                ////using (MemoryStream stream = new MemoryStream())
-                using (BufferStream bufferStream = new BufferStream(_bufferManager))
-                using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))
-                {
-                    var id = new byte[64];
-                    var channelNameBuffer = new byte[256];
-                    var contentBuffer = new byte[1024 * 2];
-
-                    _random.NextBytes(id);
-                    _random.NextBytes(channelNameBuffer);
-                    _random.NextBytes(contentBuffer);
-
-                    var channel = new Channel(id, NetworkConverter.ToBase64UrlString(channelNameBuffer).Substring(0, 256));
-                    var message = new Message(channel, NetworkConverter.ToBase64UrlString(contentBuffer).Substring(0, 1024 * 2), null, null);
-
-                    var buffer = new byte[1024];
-
-                    using (var inStream = message.Export(_bufferManager))
-                    {
-                        int count = 0;
-
-                        while ((count = inStream.Read(buffer, 0, buffer.Length)) > 0)
-                        {
-                            stream.Write(buffer, 0, count);
-                        }
-                    }
-
-                    stream.Position = 0;
-
-                    var message2 = Message.Import(stream, _bufferManager);
-
-                    Assert.AreEqual(message, message2, "Message #1");
-                }
-            });
         }
     }
 }

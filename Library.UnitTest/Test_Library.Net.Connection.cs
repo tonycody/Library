@@ -205,77 +205,92 @@ namespace Library.UnitTest
         [Test]
         public void Test_SecureConnection()
         {
-            TcpListener listener = new TcpListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 60000));
-            listener.Start();
-            var listenerAcceptSocket = listener.BeginAcceptSocket(null, null);
-
-            TcpClient client = new TcpClient();
-            client.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 60000));
-
-            var server = listener.EndAcceptSocket(listenerAcceptSocket);
-            listener.Stop();
-
-            ////DigitalSignature clientDigitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsa521_Sha512);
-            ////DigitalSignature serverDigitalSignature = new DigitalSignature(DigitalSignatureAlgorithm.ECDsa521_Sha512);
-            DigitalSignature clientDigitalSignature = null;
-            DigitalSignature serverDigitalSignature = null;
-
-            ////var TcpClient = new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-            using (var secureClient = new SecureClientConnection(new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
-            using (var secureServer = new SecureServerConnection(new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
+            for (int i = 0; i < 4; i++)
             {
-                var secureClientConnect = secureClient.BeginConnect(new TimeSpan(0, 0, 20), null, null);
-                var secureServerConnect = secureServer.BeginConnect(new TimeSpan(0, 0, 20), null, null);
+                TcpListener listener = new TcpListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 60000));
+                listener.Start();
+                var listenerAcceptSocket = listener.BeginAcceptSocket(null, null);
 
-                secureClient.EndClose(secureClientConnect);
-                secureServer.EndClose(secureServerConnect);
+                TcpClient client = new TcpClient();
+                client.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 60000));
 
-                ////if (!Collection.Equals(secureClient.PublicKey, serverDigitalSignature.PublicKey)) throw new Exception();
-                ////if (!Collection.Equals(secureServer.PublicKey, clientDigitalSignature.PublicKey)) throw new Exception();
+                var server = listener.EndAcceptSocket(listenerAcceptSocket);
+                listener.Stop();
 
-                using (MemoryStream stream = new MemoryStream())
+                DigitalSignature clientDigitalSignature = null;
+                DigitalSignature serverDigitalSignature = null;
+
+                if (2 <= i)
                 {
-                    var buffer = new byte[1024 * 8];
-                    _random.NextBytes(buffer);
-
-                    stream.Write(buffer, 0, buffer.Length);
-                    stream.Seek(0, SeekOrigin.Begin);
-
-                    var secureClientSend = secureClient.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
-                    var secureServerReceive = secureServer.BeginReceive(new TimeSpan(0, 0, 20), null, null);
-
-                    secureClient.EndSend(secureClientSend);
-                    var returnStream = secureServer.EndReceive(secureServerReceive);
-
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
-
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #1");
+                    clientDigitalSignature = new DigitalSignature("NickName1", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+                    serverDigitalSignature = new DigitalSignature("NickName2", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
                 }
 
-                using (MemoryStream stream = new MemoryStream())
+                SecureConnectionVersion version = SecureConnectionVersion.Version1;
+
+                if (i == 0 || i == 1) version = SecureConnectionVersion.Version1;
+                if (i == 2 || i == 3) version = SecureConnectionVersion.Version2;
+
+                ////var TcpClient = new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
+                using (var secureClient = new SecureConnection(SecureConnectionType.Client, version, new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
+                using (var secureServer = new SecureConnection(SecureConnectionType.Server, version, new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
                 {
-                    var buffer = new byte[1024 * 8];
-                    _random.NextBytes(buffer);
+                    var secureClientConnect = secureClient.BeginConnect(new TimeSpan(0, 0, 20), null, null);
+                    var secureServerConnect = secureServer.BeginConnect(new TimeSpan(0, 0, 20), null, null);
 
-                    stream.Write(buffer, 0, buffer.Length);
-                    stream.Seek(0, SeekOrigin.Begin);
+                    secureClient.EndClose(secureClientConnect);
+                    secureServer.EndClose(secureServerConnect);
 
-                    var secureServerSend = secureServer.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
-                    var secureClientReceive = secureClient.BeginReceive(new TimeSpan(0, 0, 20), null, null);
+                    if (2 <= i)
+                    {
+                        if (secureClient.Certificate.ToString() != serverDigitalSignature.ToString()) throw new Exception();
+                        if (secureServer.Certificate.ToString() != clientDigitalSignature.ToString()) throw new Exception();
+                    }
 
-                    secureServer.EndSend(secureServerSend);
-                    var returnStream = secureClient.EndReceive(secureClientReceive);
+                    using (MemoryStream stream = new MemoryStream())
+                    {
+                        var buffer = new byte[1024 * 8];
+                        _random.NextBytes(buffer);
 
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
+                        stream.Write(buffer, 0, buffer.Length);
+                        stream.Seek(0, SeekOrigin.Begin);
 
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #2");
+                        var secureClientSend = secureClient.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
+                        var secureServerReceive = secureServer.BeginReceive(new TimeSpan(0, 0, 20), null, null);
+
+                        secureClient.EndSend(secureClientSend);
+                        var returnStream = secureServer.EndReceive(secureServerReceive);
+
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
+
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #1");
+                    }
+
+                    using (MemoryStream stream = new MemoryStream())
+                    {
+                        var buffer = new byte[1024 * 8];
+                        _random.NextBytes(buffer);
+
+                        stream.Write(buffer, 0, buffer.Length);
+                        stream.Seek(0, SeekOrigin.Begin);
+
+                        var secureServerSend = secureServer.BeginSend(stream, new TimeSpan(0, 0, 20), null, null);
+                        var secureClientReceive = secureClient.BeginReceive(new TimeSpan(0, 0, 20), null, null);
+
+                        secureServer.EndSend(secureServerSend);
+                        var returnStream = secureClient.EndReceive(secureClientReceive);
+
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
+
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #2");
+                    }
                 }
+
+                client.Close();
+                server.Close();
             }
-
-            client.Close();
-            server.Close();
         }
     }
 }
