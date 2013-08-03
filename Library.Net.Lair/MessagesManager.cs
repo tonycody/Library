@@ -181,14 +181,14 @@ namespace Library.Net.Lair
             _pushMessages = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
             _pushMails = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
-            _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
-            _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
+            _pushSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 60, 0));
+            _pullSectionsRequest = new CirculationCollection<Section>(new TimeSpan(0, 30, 0));
 
-            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
-            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 3, 0));
+            _pushChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 60, 0));
+            _pullChannelsRequest = new CirculationCollection<Channel>(new TimeSpan(0, 30, 0));
 
-            _pushSignaturesRequest = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
-            _pullSignaturesRequest = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
+            _pushSignaturesRequest = new CirculationCollection<string>(new TimeSpan(0, 60, 0));
+            _pullSignaturesRequest = new CirculationCollection<string>(new TimeSpan(0, 30, 0));
         }
 
         public int Id

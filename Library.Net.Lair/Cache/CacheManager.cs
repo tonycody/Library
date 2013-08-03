@@ -403,9 +403,11 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
+                    if (value.Count > 1024 * 1024 * 32) throw new BadBlockException();
+
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        if (!Collection.Equals(Sha512.ComputeHash(value), key.Hash)) return;
+                        if (!Collection.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
 
                     if (this.Contains(key)) return;
@@ -750,5 +752,13 @@ namespace Library.Net.Lair
         public StopException() : base() { }
         public StopException(string message) : base(message) { }
         public StopException(string message, Exception innerException) : base(message, innerException) { }
+    }
+
+    [Serializable]
+    class BadBlockException : CacheManagerException
+    {
+        public BadBlockException() : base() { }
+        public BadBlockException(string message) : base(message) { }
+        public BadBlockException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

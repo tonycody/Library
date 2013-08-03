@@ -33,7 +33,7 @@ namespace Library.Net.Lair
 
         public static readonly int MaxPublicKeyLength = 64;
 
-        public ProfileContent(SignatureCollection trustSignatures, ChannelCollection channels, ExchangeAlgorithm exchangeAlgorithm, byte[] publicKey, DigitalSignature digitalSignature)
+        public ProfileContent(IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, ExchangeAlgorithm exchangeAlgorithm, byte[] publicKey)
         {
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
             if (channels != null) this.ProtectedChannels.AddRange(channels);

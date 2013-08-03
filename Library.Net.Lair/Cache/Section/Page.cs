@@ -15,26 +15,26 @@ namespace Library.Net.Lair
         {
             Name = 0,
             CreationTime = 1,
-            Content = 2,
+            Text = 2,
 
             FormatType = 3,
         }
 
         private string _name = null;
         private DateTime _creationTime = DateTime.MinValue;
-        private string _content = null;
+        private string _text = null;
 
         private ContentFormatType _formatType;
 
         public static readonly int MaxNameLength = 256;
 
-        public static readonly int MaxContentLength = 1024 * 4;
+        public static readonly int MaxTextLength = 1024 * 32;
 
-        public Page(string name, ContentFormatType formatType, string content)
+        public Page(string name, ContentFormatType formatType, string text)
         {
             this.Name = name;
             this.CreationTime = DateTime.UtcNow;
-            this.Content = content;
+            this.Text = text;
 
             this.FormatType = formatType;
         }
@@ -66,11 +66,11 @@ namespace Library.Net.Lair
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                     }
-                    else if (id == (byte)SerializeId.Content)
+                    else if (id == (byte)SerializeId.Text)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.Content = reader.ReadToEnd();
+                            this.Text = reader.ReadToEnd();
                         }
                     }
 
@@ -128,8 +128,8 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Content
-            if (this.Content != null)
+            // Text
+            if (this.Text != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -138,12 +138,12 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(this.Content);
+                    writer.Write(this.Text);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Content);
+                bufferStream.WriteByte((byte)SerializeId.Text);
 
                 streams.Add(bufferStream);
             }
@@ -173,8 +173,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (_content == null) return 0;
-            else return _content.GetHashCode();
+            if (_text == null) return 0;
+            else return _text.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -192,7 +192,7 @@ namespace Library.Net.Lair
 
             if (this.Name != other.Name
                 || this.CreationTime != other.CreationTime
-                || this.Content != other.Content
+                || this.Text != other.Text
 
                 || this.FormatType != other.FormatType)
             {
@@ -204,7 +204,7 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            return this.Content;
+            return this.Text;
         }
 
         public override Page DeepClone()
@@ -251,22 +251,22 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Content")]
-        public string Content
+        [DataMember(Name = "Text")]
+        public string Text
         {
             get
             {
-                return _content;
+                return _text;
             }
             private set
             {
-                if (value != null && value.Length > Page.MaxContentLength)
+                if (value != null && value.Length > Page.MaxTextLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _content = value;
+                    _text = value;
                 }
             }
         }

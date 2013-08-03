@@ -5,6 +5,6 @@ namespace Library.Net.Lair
 {
     interface IMailContent
     {
-        string Content { get; }
+        string Text { get; }
     }
 }

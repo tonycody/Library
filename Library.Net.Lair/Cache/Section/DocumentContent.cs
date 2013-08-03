@@ -18,7 +18,7 @@ namespace Library.Net.Lair
 
         private PageCollection _pages = null;
 
-        public static readonly int MaxPagesCount = 1024;
+        public static readonly int MaxPagesCount = 256;
 
         public DocumentContent(IEnumerable<Page> pages)
         {

@@ -8,6 +8,6 @@ namespace Library.Net.Lair
     {
         string Name { get; }
         DateTime CreationTime { get; }
-        string Content { get; }
+        string Text { get; }
     }
 }

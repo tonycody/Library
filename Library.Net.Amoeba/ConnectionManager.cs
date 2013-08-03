@@ -35,7 +35,7 @@ namespace Library.Net.Amoeba
 
     class PullSeedsRequestEventArgs : EventArgs
     {
-        public SignatureCollection Signatures { get; set; }
+        public IEnumerable<string> Signatures { get; set; }
     }
 
     class PullSeedEventArgs : EventArgs

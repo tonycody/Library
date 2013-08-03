@@ -5,31 +5,44 @@ namespace Library.Net.Lair
 {
     public sealed class LairManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
+        private string _cachePath;
         private BufferManager _bufferManager;
 
         private ClientManager _clientManager;
         private ServerManager _serverManager;
+        private CacheManager _cacheManager;
         private ConnectionsManager _connectionsManager;
 
         private ManagerState _state = ManagerState.Stop;
 
-        private RemoveSectionsEventHandler _removeSectionsEvent;
-
-        private RemoveChannelsEventHandler _removeChannelsEvent;
-        private RemoveTopicsEventHandler _removeTopicsEvent;
-        private RemoveMessagesEventHandler _removeMessagesEvent;
+        private TrustSignaturesEventHandler _trustSignaturesEvent;
+        private LockSectionsEventHandler _removeSectionsEvent;
+        private LockChannelsEventHandler _removeChannelsEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        public LairManager(BufferManager bufferManager)
+        public LairManager(string cachePath, BufferManager bufferManager)
         {
+            _cachePath = cachePath;
+            
             _bufferManager = bufferManager;
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
-            _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _bufferManager);
+            _cacheManager = new CacheManager(_cachePath, _bufferManager);
+            _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
 
-            _connectionsManager.RemoveSectionsEvent = (object sender) =>
+            _connectionsManager.TrustSignaturesEvent = (object sender) =>
+            {
+                if (_trustSignaturesEvent != null)
+                {
+                    return _trustSignaturesEvent(this);
+                }
+
+                return null;
+            };
+
+            _connectionsManager.LockSectionsEvent = (object sender) =>
             {
                 if (_removeSectionsEvent != null)
                 {
@@ -39,7 +52,7 @@ namespace Library.Net.Lair
                 return null;
             };
 
-            _connectionsManager.RemoveChannelsEvent = (object sender) =>
+            _connectionsManager.LockChannelsEvent = (object sender) =>
             {
                 if (_removeChannelsEvent != null)
                 {
@@ -48,29 +61,20 @@ namespace Library.Net.Lair
 
                 return null;
             };
-
-            _connectionsManager.RemoveTopicsEvent = (object sender, Channel channel) =>
-            {
-                if (_removeTopicsEvent != null)
-                {
-                    return _removeTopicsEvent(this, channel);
-                }
-
-                return null;
-            };
-
-            _connectionsManager.RemoveMessagesEvent = (object sender, Channel channel) =>
-            {
-                if (_removeMessagesEvent != null)
-                {
-                    return _removeMessagesEvent(this, channel);
-                }
-
-                return null;
-            };
         }
 
-        public RemoveSectionsEventHandler RemoveSectionsEvent
+        public TrustSignaturesEventHandler TrustSignaturesEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                   _trustSignaturesEvent = value;
+                }
+            }
+        }
+
+        public LockSectionsEventHandler LockSectionsEvent
         {
             set
             {
@@ -81,35 +85,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public RemoveChannelsEventHandler RemoveChannelsEvent
+        public LockChannelsEventHandler LockChannelsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
                     _removeChannelsEvent = value;
-                }
-            }
-        }
-
-        public RemoveTopicsEventHandler RemoveTopicsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeTopicsEvent = value;
-                }
-            }
-        }
-
-        public RemoveMessagesEventHandler RemoveMessagesEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _removeMessagesEvent = value;
                 }
             }
         }
@@ -284,7 +266,7 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                _connectionsManager.SendRequest(section);
+                _connectionsManager.SendSectionRequest(section);
             }
         }
 
@@ -292,7 +274,7 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                _connectionsManager.SendRequest(channel);
+                _connectionsManager.SendChannelRequest(channel);
             }
         }
 
@@ -333,26 +315,6 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 return _connectionsManager.GetMessages(channel);
-            }
-        }
-
-        public void Upload(Topic topic)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.Upload(topic);
-            }
-        }
-
-        public void Upload(Message message)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.Upload(message);
             }
         }
 

@@ -146,9 +146,9 @@ namespace Library.Net.Lair
         public event PullTopicsEventHandler PullTopicsEvent;
         public event PullMessagesEventHandler PullMessagesEvent;
 
+        public event PullSignaturesRequestEventHandler PullSignaturesRequestEvent;
         public event PullMailsEventHandler PullMailsEvent;
 
-        public event PullSignaturesRequestEventHandler PullSignaturesRequestEvent;
         public event PullCancelEventHandler PullCancelEvent;
 
         public event CloseEventHandler CloseEvent;
