@@ -13,7 +13,7 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public static class ContentConverter
+    static class ContentConverter
     {
         private enum CompressionAlgorithm
         {
@@ -23,6 +23,7 @@ namespace Library.Net.Lair
         }
 
         private static BufferManager _bufferManager = BufferManager.Instance;
+        private static RNGCryptoServiceProvider _random = new RNGCryptoServiceProvider();
 
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
@@ -164,57 +165,133 @@ namespace Library.Net.Lair
             }
         }
 
+        private static Stream ToPaddingStream(Stream stream, int size)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream.Length + 4 > size) throw new ArgumentOutOfRangeException("size");
+
+            try
+            {
+                byte[] seedBuffer = new byte[4];
+                _random.GetBytes(seedBuffer);
+                Random random = new Random(NetworkConverter.ToInt32(seedBuffer));
+
+                BufferStream headerStream = new BufferStream(_bufferManager);
+                byte[] lengthBuffer = NetworkConverter.GetBytes((int)stream.Length);
+                headerStream.Write(lengthBuffer, 0, lengthBuffer.Length);
+
+                int paddinglength = size - ((int)stream.Length + 4);
+
+                BufferStream paddingStream = new BufferStream(_bufferManager);
+
+                {
+                    byte[] buffer = null;
+
+                    try
+                    {
+                        buffer = _bufferManager.TakeBuffer(1024);
+
+                        while (paddinglength > 0)
+                        {
+                            int writeSize = Math.Min(paddinglength, buffer.Length);
+
+                            random.NextBytes(buffer);
+                            paddingStream.Write(buffer, 0, writeSize);
+
+                            paddinglength -= writeSize;
+                        }
+                    }
+                    finally
+                    {
+                        _bufferManager.ReturnBuffer(buffer);
+                    }
+                }
+
+                return new JoinStream(headerStream, new WrapperStream(stream, true), paddingStream);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message, e);
+            }
+        }
+
+        private static Stream FromPaddingStream(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream.Length <= 4) throw new ArgumentOutOfRangeException("stream");
+
+            try
+            {
+                byte[] lengthBuffer = new byte[4];
+                stream.Read(lengthBuffer, 0, lengthBuffer.Length);
+                int length = NetworkConverter.ToInt32(lengthBuffer);
+
+                return new RangeStream(stream, 4, length);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message, e);
+            }
+        }
+
         private static Stream ToCryptoContent(Stream stream, IExchangeEncrypt exchangeEncrypt)
         {
             if (stream == null) throw new ArgumentNullException("stream");
             if (exchangeEncrypt == null) throw new ArgumentNullException("exchangeEncrypt");
 
-            ArraySegment<byte> value = new ArraySegment<byte>();
-
             try
             {
-                byte[] cryptoKey = new byte[64];
-                (new RNGCryptoServiceProvider()).GetBytes(cryptoKey);
+                ArraySegment<byte> value = new ArraySegment<byte>();
 
-                using (BufferStream outStream = new BufferStream(_bufferManager))
+                try
                 {
-                    using (Stream inStream = new WrapperStream(stream, true))
-                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                    using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                    byte[] cryptoKey = new byte[64];
+                    _random.GetBytes(cryptoKey);
+
+                    using (BufferStream outStream = new BufferStream(_bufferManager))
                     {
-                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                        try
+                        using (Stream inStream = new WrapperStream(stream, true))
+                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                        using (CryptoStream cs = new CryptoStream(new WrapperStream(outStream, true), rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
                         {
-                            int length = 0;
+                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                            while (0 < (length = inStream.Read(buffer, 0, buffer.Length)))
+                            try
                             {
-                                cs.Write(buffer, 0, length);
+                                int length = 0;
+
+                                while (0 < (length = inStream.Read(buffer, 0, buffer.Length)))
+                                {
+                                    cs.Write(buffer, 0, length);
+                                }
+                            }
+                            finally
+                            {
+                                _bufferManager.ReturnBuffer(buffer);
                             }
                         }
-                        finally
-                        {
-                            _bufferManager.ReturnBuffer(buffer);
-                        }
+
+                        outStream.Seek(0, SeekOrigin.Begin);
+
+                        value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)outStream.Length), 0, (int)outStream.Length);
+                        outStream.Read(value.Array, value.Offset, value.Count);
                     }
 
-                    outStream.Seek(0, SeekOrigin.Begin);
+                    var encryptedCryptoKey = Exchange.Encrypt(exchangeEncrypt, cryptoKey);
 
-                    value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)outStream.Length), 0, (int)outStream.Length);
-                    outStream.Read(value.Array, value.Offset, value.Count);
+                    return new CryptoContent(value, CryptoAlgorithm.Rijndael256, encryptedCryptoKey).Export(_bufferManager);
                 }
-
-                var encryptedCryptoKey = Exchange.Encrypt(exchangeEncrypt, cryptoKey);
-
-                return new CryptoContent(value, CryptoAlgorithm.Rijndael256, encryptedCryptoKey).Export(_bufferManager);
-            }
-            finally
-            {
-                if (value.Array != null)
+                finally
                 {
-                    _bufferManager.ReturnBuffer(value.Array);
+                    if (value.Array != null)
+                    {
+                        _bufferManager.ReturnBuffer(value.Array);
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message, e);
             }
         }
 
@@ -244,7 +321,7 @@ namespace Library.Net.Lair
                             {
                                 int length = 0;
 
-                                while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
+                                while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
                                 {
                                     outStream.Write(buffer, 0, length);
                                 }
@@ -265,9 +342,9 @@ namespace Library.Net.Lair
                     _bufferManager.ReturnBuffer(cryptoContent.Content.Array);
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return null;
+                throw new ArgumentException(e.Message, e);
             }
         }
 
@@ -406,11 +483,12 @@ namespace Library.Net.Lair
 
             ArraySegment<byte> value;
 
-            using (Stream cryptoStream = ContentConverter.ToStream<MailContent>(content))
-            using (Stream stream = ContentConverter.ToCryptoContent(cryptoStream, exchangeEncrypt))
+            using (Stream contentStream = ContentConverter.ToStream<MailContent>(content))
+            using (Stream paddingStream = ContentConverter.ToPaddingStream(contentStream, 1024 * 16))
+            using (Stream cryptostream = ContentConverter.ToCryptoContent(paddingStream, exchangeEncrypt))
             {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
-                stream.Read(value.Array, value.Offset, value.Count);
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)cryptostream.Length), 0, (int)cryptostream.Length);
+                cryptostream.Read(value.Array, value.Offset, value.Count);
             }
 
             return value;
@@ -424,9 +502,10 @@ namespace Library.Net.Lair
             try
             {
                 using (Stream cryptoStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream stream = ContentConverter.FromCryptoContent(cryptoStream, exchangeDecrypt))
+                using (Stream paddingStream = ContentConverter.FromCryptoContent(cryptoStream, exchangeDecrypt))
+                using (Stream contentStream = ContentConverter.FromPaddingStream(paddingStream))
                 {
-                    return ContentConverter.FromStream<MailContent>(stream);
+                    return ContentConverter.FromStream<MailContent>(contentStream);
                 }
             }
             catch (Exception)

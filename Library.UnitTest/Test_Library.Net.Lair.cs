@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Library.Io;
+using System.Collections.Generic;
 using Library.Net.Lair;
 using Library.Security;
 using NUnit.Framework;
-using System.Collections.Generic;
 
 namespace Library.UnitTest
 {
@@ -60,6 +58,69 @@ namespace Library.UnitTest
             var value = LairConverter.FromChannelString(stream);
 
             Assert.AreEqual(channel, value, "LairConverter #4");
+        }
+
+        [Test]
+        public void Test_ContentConverter_ProfileContent()
+        {
+            Exchange exchange = new Exchange(ExchangeAlgorithm.Rsa2048);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+
+            var signatures = new List<string>();
+            signatures.Add(digitalSignature.ToString());
+
+            var channels = new List<Channel>();
+            channels.Add(new Channel(new byte[64], "123"));
+
+            ProfileContent content = new ProfileContent(signatures, channels, exchange.ExchangeAlgorithm, exchange.PublicKey);
+            var binaryContent = ContentConverter.ToProfileContentBlock(content);
+
+            Assert.AreEqual(content, ContentConverter.FromProfileContentBlock(binaryContent));
+        }
+
+        [Test]
+        public void Test_ContentConverter_DocumentContent()
+        {
+            var pages = new List<Page>();
+            pages.Add(new Page("123", ContentFormatType.MiniWiki, "text"));
+            pages.Add(new Page("123", ContentFormatType.MiniWiki, "text"));
+            pages.Add(new Page("123", ContentFormatType.MiniWiki, "text"));
+
+            DocumentContent content = new DocumentContent(pages);
+            var binaryContent = ContentConverter.ToDocumentContentBlock(content);
+
+            Assert.AreEqual(content, ContentConverter.FromDocumentContentBlock(binaryContent));
+        }
+
+        [Test]
+        public void Test_ContentConverter_TopicContent()
+        {
+            TopicContent content = new TopicContent("123", ContentFormatType.MiniWiki);
+            var binaryContent = ContentConverter.ToTopicContentBlock(content);
+
+            Assert.AreEqual(content, ContentConverter.FromTopicContentBlock(binaryContent));
+        }
+
+        [Test]
+        public void Test_ContentConverter_MessageContent()
+        {
+            var keys = new List<Key>();
+            keys.Add(new Key(new byte[64], HashAlgorithm.Sha512));
+
+            MessageContent content = new MessageContent("123", keys);
+            var binaryContent = ContentConverter.ToMessageContentBlock(content);
+
+            Assert.AreEqual(content, ContentConverter.FromMessageContentBlock(binaryContent));
+        }
+
+        [Test]
+        public void Test_ContentConverter_MailContent()
+        {
+            Exchange exchange = new Exchange(ExchangeAlgorithm.Rsa2048);
+            MailContent content = new MailContent("test");
+            var binaryContent = ContentConverter.ToMailContentBlock(content, exchange);
+
+            Assert.AreEqual(content, ContentConverter.FromMailContentBlock(binaryContent, exchange));
         }
 
         [Test]

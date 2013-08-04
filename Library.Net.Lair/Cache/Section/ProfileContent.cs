@@ -31,7 +31,7 @@ namespace Library.Net.Lair
         public static readonly int MaxTrustSignaturesCount = 1024;
         public static readonly int MaxChannelsCount = 1024;
 
-        public static readonly int MaxPublicKeyLength = 64;
+        public static readonly int MaxPublicKeyLength = 1024 * 8;
 
         public ProfileContent(IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, ExchangeAlgorithm exchangeAlgorithm, byte[] publicKey)
         {

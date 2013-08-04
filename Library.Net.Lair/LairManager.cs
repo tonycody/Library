@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Library.Security;
 
 namespace Library.Net.Lair
 {
@@ -25,7 +26,7 @@ namespace Library.Net.Lair
         public LairManager(string cachePath, BufferManager bufferManager)
         {
             _cachePath = cachePath;
-            
+
             _bufferManager = bufferManager;
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
@@ -69,7 +70,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                   _trustSignaturesEvent = value;
+                    _trustSignaturesEvent = value;
                 }
             }
         }
@@ -96,24 +97,32 @@ namespace Library.Net.Lair
             }
         }
 
-        public ConnectionFilterCollection Filters
+        public Information Information
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    return _clientManager.Filters;
+                    List<InformationContext> contexts = new List<InformationContext>();
+                    contexts.AddRange(_connectionsManager.Information);
+                    contexts.AddRange(_cacheManager.Information);
+
+                    return new Information(contexts);
                 }
             }
         }
 
-        public UriCollection ListenUris
+        public IEnumerable<Information> ConnectionInformation
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
                 lock (this.ThisLock)
                 {
-                    return _serverManager.ListenUris;
+                    return _connectionsManager.ConnectionInformation;
                 }
             }
         }
@@ -149,6 +158,32 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _connectionsManager.OtherNodes;
+                }
+            }
+        }
+
+        public ConnectionFilterCollection Filters
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _clientManager.Filters;
+                }
+            }
+        }
+
+        public UriCollection ListenUris
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _serverManager.ListenUris;
                 }
             }
         }
@@ -197,35 +232,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Information> ConnectionInformation
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _connectionsManager.ConnectionInformation;
-                }
-            }
-        }
-
-        public Information Information
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    List<InformationContext> contexts = new List<InformationContext>();
-                    contexts.AddRange(_connectionsManager.Information);
-
-                    return new Information(contexts);
-                }
-            }
-        }
-
         public long ReceivedByteCount
         {
             get
@@ -252,6 +258,19 @@ namespace Library.Net.Lair
             }
         }
 
+        public long Size
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _cacheManager.Size;
+                }
+            }
+        }
+
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -262,19 +281,50 @@ namespace Library.Net.Lair
             }
         }
 
-        public void SendRequest(Section section)
+        public void Resize(long size)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _cacheManager.Resize(size);
+            }
+        }
+
+        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            _cacheManager.CheckBlocks(getProgressEvent);
+        }
+
+        public void SendSectionRequest(Section section)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
                 _connectionsManager.SendSectionRequest(section);
             }
         }
 
-        public void SendRequest(Channel channel)
+        public void SendChannelRequest(Channel channel)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
             lock (this.ThisLock)
             {
                 _connectionsManager.SendChannelRequest(channel);
+            }
+        }
+
+        public void SendSignatureRequest(string signature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.SendSignatureRequest(signature);
             }
         }
 
@@ -298,6 +348,36 @@ namespace Library.Net.Lair
             }
         }
 
+        public IEnumerable<string> GetSignatures()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetSignatures();
+            }
+        }
+
+        public IEnumerable<Profile> GetProfiles(Section section)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetProfiles(section);
+            }
+        }
+
+        public IEnumerable<Document> GetDocuments(Section section)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetDocuments(section);
+            }
+        }
+
         public IEnumerable<Topic> GetTopics(Channel channel)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -315,6 +395,121 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 return _connectionsManager.GetMessages(channel);
+            }
+        }
+
+        public IEnumerable<Mail> GetMails(string signature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetMails(signature);
+            }
+        }
+
+        public ProfileContent GetContent(Profile profile)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(profile);
+            }
+        }
+
+        public DocumentContent GetContent(Document document)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(document);
+            }
+        }
+
+        public TopicContent GetContent(Topic topic)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(topic);
+            }
+        }
+
+        public MessageContent GetContent(Message message)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(message);
+            }
+        }
+
+        public MailContent GetContent(Mail mail, IExchangeDecrypt exchangeDecrypt)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(mail, exchangeDecrypt);
+            }
+        }
+
+        public void UploadProfile(Section section,
+            IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.UploadProfile(section, trustSignatures, channels, exchangeEncrypt, digitalSignature);
+            }
+        }
+
+        public void UploadDocument(Section section,
+            IEnumerable<Page> pages, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.UploadDocument(section, pages, digitalSignature);
+            }
+        }
+
+        public void UploadTopic(Channel channel,
+            string text, ContentFormatType formatType, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.UploadTopic(channel, text, formatType, digitalSignature);
+            }
+        }
+
+        public void UploadMessage(Channel channel,
+            string text, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.UploadMessage(channel, text, anchors, digitalSignature);
+            }
+        }
+
+        public void UploadMail(string recipientSignature,
+            string text, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.UploadMail(recipientSignature, text, exchangeEncrypt, digitalSignature);
             }
         }
 
@@ -394,7 +589,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IThisLock メンバ
+        #region IThisLock
 
         public object ThisLock
         {

@@ -872,6 +872,7 @@ namespace Library.Net.Lair
             Stopwatch connectionCheckStopwatch = new Stopwatch();
             connectionCheckStopwatch.Start();
 
+            Stopwatch checkContentsStopwatch = new Stopwatch();
             Stopwatch refreshStopwatch = new Stopwatch();
 
             Stopwatch pushUploadStopwatch = new Stopwatch();
@@ -947,6 +948,100 @@ namespace Library.Net.Lair
                                 this.RemoveConnectionManager(connectionManager);
 
                                 break;
+                            }
+                        }
+                    }
+                }
+
+                if (!checkContentsStopwatch.IsRunning || checkContentsStopwatch.Elapsed.TotalMinutes >= 60)
+                {
+                    checkContentsStopwatch.Restart();
+
+                    lock (this.ThisLock)
+                    {
+                        lock (_settings.ThisLock)
+                        {
+                            {
+                                var cacheKeys = new HashSet<Key>(_cacheManager.ToArray());
+
+                                foreach (var section in _settings.GetSections())
+                                {
+                                    foreach (var item in _settings.GetProfiles(section))
+                                    {
+                                        if (!cacheKeys.Contains(item.Content)) _settings.RemoveProfile(item);
+                                    }
+
+                                    foreach (var item in _settings.GetDocuments(section))
+                                    {
+                                        if (!cacheKeys.Contains(item.Content)) _settings.RemoveDocument(item);
+                                    }
+                                }
+
+                                foreach (var channel in _settings.GetChannels())
+                                {
+                                    foreach (var item in _settings.GetTopics(channel))
+                                    {
+                                        if (!cacheKeys.Contains(item.Content)) _settings.RemoveTopic(item);
+                                    }
+
+                                    foreach (var item in _settings.GetMessages(channel))
+                                    {
+                                        if (!cacheKeys.Contains(item.Content)) _settings.RemoveMessage(item);
+                                    }
+                                }
+
+                                foreach (var signature in _settings.GetSignatures())
+                                {
+                                    foreach (var item in _settings.GetMails(signature))
+                                    {
+                                        if (!cacheKeys.Contains(item.Content)) _settings.RemoveMail(item);
+                                    }
+                                }
+                            }
+
+                            {
+                                var linkKeys = new HashSet<Key>();
+
+                                foreach (var section in _settings.GetSections())
+                                {
+                                    foreach (var item in _settings.GetProfiles(section))
+                                    {
+                                        linkKeys.Add(item.Content);
+                                    }
+
+                                    foreach (var item in _settings.GetDocuments(section))
+                                    {
+                                        linkKeys.Add(item.Content);
+                                    }
+                                }
+
+                                foreach (var channel in _settings.GetChannels())
+                                {
+                                    foreach (var item in _settings.GetTopics(channel))
+                                    {
+                                        linkKeys.Add(item.Content);
+                                    }
+
+                                    foreach (var item in _settings.GetMessages(channel))
+                                    {
+                                        linkKeys.Add(item.Content);
+                                    }
+                                }
+
+                                foreach (var signature in _settings.GetSignatures())
+                                {
+                                    foreach (var item in _settings.GetMails(signature))
+                                    {
+                                        linkKeys.Add(item.Content);
+                                    }
+                                }
+
+                                foreach (var key in _cacheManager.ToArray())
+                                {
+                                    if (linkKeys.Contains(key)) continue;
+
+                                    _cacheManager.Remove(key);
+                                }
                             }
                         }
                     }
@@ -1163,7 +1258,7 @@ namespace Library.Net.Lair
                                                     {
                                                         if ((now - item.CreationTime) > new TimeSpan(64, 0, 0, 0))
                                                         {
-                                                            _settings.RemoveMessage(item);
+                                                            removeMessages.Add(item);
                                                         }
                                                         else
                                                         {
@@ -1210,7 +1305,7 @@ namespace Library.Net.Lair
                                                     {
                                                         if ((now - item.CreationTime) > new TimeSpan(32, 0, 0, 0))
                                                         {
-                                                            _settings.RemoveMail(item);
+                                                            removeMails.Add(item);
                                                         }
                                                         else
                                                         {
@@ -1279,26 +1374,31 @@ namespace Library.Net.Lair
                                             foreach (var item in removeProfiles)
                                             {
                                                 _settings.RemoveProfile(item);
+                                                _cacheManager.Remove(item.Content);
                                             }
 
                                             foreach (var item in removeDocuments)
                                             {
                                                 _settings.RemoveDocument(item);
+                                                _cacheManager.Remove(item.Content);
                                             }
 
                                             foreach (var item in removeTopics)
                                             {
                                                 _settings.RemoveTopic(item);
+                                                _cacheManager.Remove(item.Content);
                                             }
 
                                             foreach (var item in removeMessages)
                                             {
                                                 _settings.RemoveMessage(item);
+                                                _cacheManager.Remove(item.Content);
                                             }
 
                                             foreach (var item in removeMails)
                                             {
                                                 _settings.RemoveMail(item);
+                                                _cacheManager.Remove(item.Content);
                                             }
                                         }
                                     }

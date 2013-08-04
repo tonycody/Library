@@ -8,7 +8,6 @@ namespace Library.UnitTest
     {
         private BufferManager _bufferManager = BufferManager.Instance;
 
-
         [Test]
         public void Test_Collection()
         {

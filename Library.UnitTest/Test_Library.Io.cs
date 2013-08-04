@@ -97,7 +97,6 @@ namespace Library.UnitTest
                 }
             });
 
-
             using (MemoryStream mstream = new MemoryStream())
             using (BufferStream bufferStream = new BufferStream(_bufferManager))
             using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))

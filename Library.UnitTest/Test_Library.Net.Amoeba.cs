@@ -191,5 +191,29 @@ namespace Library.UnitTest
             Assert.AreEqual(box, box3, "Box #2");
             Assert.IsTrue(box3.VerifyCertificate(), "Box #3");
         }
+
+        [Test]
+        public void Test_Store()
+        {
+            var store = new Store();
+            store.Boxes.Add(new Box() { Name = "Box" });
+
+            var store2 = store.DeepClone();
+
+            Assert.AreEqual(store, store2, "Store #1");
+
+            Store store3;
+
+            using (var storeStream = store.Export(_bufferManager))
+            {
+                var buffer = new byte[storeStream.Length];
+                storeStream.Read(buffer, 0, buffer.Length);
+
+                storeStream.Position = 0;
+                store3 = Store.Import(storeStream, _bufferManager);
+            }
+
+            Assert.AreEqual(store, store3, "Store #2");
+        }
     }
 }

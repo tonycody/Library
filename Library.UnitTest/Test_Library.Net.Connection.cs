@@ -226,14 +226,15 @@ namespace Library.UnitTest
                     serverDigitalSignature = new DigitalSignature("NickName2", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
                 }
 
-                SecureConnectionVersion version = SecureConnectionVersion.Version1;
+                SecureConnectionVersion clientVersion = SecureConnectionVersion.Version1;
+                SecureConnectionVersion serverVersion = SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2;
 
-                if (i == 0 || i == 1) version = SecureConnectionVersion.Version1;
-                if (i == 2 || i == 3) version = SecureConnectionVersion.Version2;
+                if (i == 0 || i == 1) clientVersion = SecureConnectionVersion.Version1;
+                if (i == 2 || i == 3) clientVersion = SecureConnectionVersion.Version2;
 
                 ////var TcpClient = new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-                using (var secureClient = new SecureConnection(SecureConnectionType.Client, version, new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
-                using (var secureServer = new SecureConnection(SecureConnectionType.Server, version, new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
+                using (var secureClient = new SecureConnection(SecureConnectionType.Client, clientVersion, new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
+                using (var secureServer = new SecureConnection(SecureConnectionType.Server, serverVersion, new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
                 {
                     var secureClientConnect = secureClient.BeginConnect(new TimeSpan(0, 0, 20), null, null);
                     var secureServerConnect = secureServer.BeginConnect(new TimeSpan(0, 0, 20), null, null);

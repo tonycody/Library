@@ -369,38 +369,80 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void Upload(Store store,
-            DigitalSignature digitalSignature)
+        public void SetOtherNodes(IEnumerable<Node> nodes)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _storeUploadManager.Upload(store,
-                    CompressionAlgorithm.Lzma,
-                    CryptoAlgorithm.Rijndael256,
-                    CorrectionAlgorithm.ReedSolomon8,
-                    HashAlgorithm.Sha512,
-                    digitalSignature);
+                _connectionsManager.SetOtherNodes(nodes);
             }
         }
 
-        public Store GetStore(string signature)
-        {
-            lock (this.ThisLock)
-            {
-                return _storeDownloadManager.GetStore(signature);
-            }
-        }
-
-        public void ResetStore(string signature)
+        public void Resize(long size)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _storeDownloadManager.Reset(signature);
+                if (this.State == ManagerState.Start)
+                {
+                    _uploadManager.Stop();
+                    _downloadManager.Stop();
+                }
+
+                if (this.EncodeState == ManagerState.Start)
+                {
+                    _uploadManager.EncodeStop();
+                }
+
+                if (this.DecodeState == ManagerState.Start)
+                {
+                    _downloadManager.DecodeStop();
+                }
+
+                _cacheManager.Resize(size);
+
+                if (this.State == ManagerState.Start)
+                {
+                    _uploadManager.Start();
+                    _downloadManager.Start();
+                }
+
+                if (this.EncodeState == ManagerState.Start)
+                {
+                    _uploadManager.EncodeStart();
+                }
+
+                if (this.DecodeState == ManagerState.Start)
+                {
+                    _downloadManager.DecodeStart();
+                }
             }
+        }
+
+        public void CheckSeeds()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _cacheManager.CheckSeeds();
+            }
+        }
+
+        public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            _cacheManager.CheckInternalBlocks(getProgressEvent);
+        }
+
+        public void CheckExternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            _cacheManager.CheckExternalBlocks(getProgressEvent);
         }
 
         public void Download(Seed seed, int priority)
@@ -561,80 +603,38 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void SetOtherNodes(IEnumerable<Node> nodes)
+        public Store GetStore(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                return _storeDownloadManager.GetStore(signature);
+            }
+        }
+
+        public void Upload(Store store,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.SetOtherNodes(nodes);
+                _storeUploadManager.Upload(store,
+                    CompressionAlgorithm.Lzma,
+                    CryptoAlgorithm.Rijndael256,
+                    CorrectionAlgorithm.ReedSolomon8,
+                    HashAlgorithm.Sha512,
+                    digitalSignature);
             }
         }
 
-        public void Resize(long size)
+        public void ResetStore(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                if (this.State == ManagerState.Start)
-                {
-                    _uploadManager.Stop();
-                    _downloadManager.Stop();
-                }
-
-                if (this.EncodeState == ManagerState.Start)
-                {
-                    _uploadManager.EncodeStop();
-                }
-
-                if (this.DecodeState == ManagerState.Start)
-                {
-                    _downloadManager.DecodeStop();
-                }
-
-                _cacheManager.Resize(size);
-
-                if (this.State == ManagerState.Start)
-                {
-                    _uploadManager.Start();
-                    _downloadManager.Start();
-                }
-
-                if (this.EncodeState == ManagerState.Start)
-                {
-                    _uploadManager.EncodeStart();
-                }
-
-                if (this.DecodeState == ManagerState.Start)
-                {
-                    _downloadManager.DecodeStart();
-                }
+                _storeDownloadManager.Reset(signature);
             }
-        }
-
-        public void CheckSeeds()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _cacheManager.CheckSeeds();
-            }
-        }
-
-        public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            _cacheManager.CheckInternalBlocks(getProgressEvent);
-        }
-
-        public void CheckExternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            _cacheManager.CheckExternalBlocks(getProgressEvent);
         }
 
         public override ManagerState State
