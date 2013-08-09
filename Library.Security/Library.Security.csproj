@@ -57,11 +57,11 @@
     <Compile Include="Certificate.cs" />
     <Compile Include="CertificateItemBase.cs" />
     <Compile Include="IExchangeDecrypt.cs" />
-    <Compile Include="Crypto\Rsa2048.cs" />
+    <Compile Include="Tools\Rsa2048.cs" />
     <Compile Include="Exchange.cs" />
     <Compile Include="DigitalSignatureConverter.cs" />
-    <Compile Include="Hash\Crc32_Castagnoli.cs" />
-    <Compile Include="Hash\Sha512.cs" />
+    <Compile Include="Tools\Crc32_Castagnoli.cs" />
+    <Compile Include="Tools\Sha512.cs" />
     <Compile Include="ICertificate.cs" />
     <Compile Include="IExchangeAlgorithm.cs" />
     <Compile Include="IExchangeEncrypt.cs" />
@@ -70,9 +70,9 @@
     <Compile Include="DigitalSignatureAlgorithm.cs" />
     <Compile Include="Signature.cs" />
     <Compile Include="SignatureCollection.cs" />
-    <Compile Include="Signature\ECDsaP521_Sha512.cs" />
+    <Compile Include="Tools\ECDsaP521_Sha512.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Signature\Rsa2048_Sha512.cs" />
+    <Compile Include="Tools\Rsa2048_Sha512.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">

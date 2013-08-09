@@ -55,14 +55,14 @@ namespace Library.Net.Lair
                     }
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                    list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>(0, stream));
+                list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {

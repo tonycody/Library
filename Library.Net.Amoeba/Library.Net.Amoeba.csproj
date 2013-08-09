@@ -60,7 +60,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BytesEqualityComparer.cs" />
     <Compile Include="Cache\AmoebaConverter.cs" />
     <Compile Include="AmoebaManager.cs" />
     <Compile Include="Cache\Box.cs" />
@@ -82,8 +81,8 @@
     <Compile Include="CountCache.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
-    <Compile Include="Hash\Crc32_Castagnoli.cs" />
-    <Compile Include="Hash\Sha512.cs" />
+    <Compile Include="Tools\Crc32_Castagnoli.cs" />
+    <Compile Include="Tools\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerManager.cs" />

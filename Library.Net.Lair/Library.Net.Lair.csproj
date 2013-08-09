@@ -95,7 +95,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BytesEqualityComparer.cs" />
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\Channel\Channel.cs" />
     <Compile Include="Cache\Channel\ChannelCollection.cs" />
@@ -148,8 +147,8 @@
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
-    <Compile Include="Hash\Crc32_Castagnoli.cs" />
-    <Compile Include="Hash\Sha512.cs" />
+    <Compile Include="Tools\Crc32_Castagnoli.cs" />
+    <Compile Include="Tools\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerManager.cs" />

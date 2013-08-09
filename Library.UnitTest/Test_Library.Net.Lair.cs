@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Library.Net.Lair;
 using Library.Security;
 using NUnit.Framework;
+using System.Text;
 
 namespace Library.UnitTest
 {
@@ -82,9 +83,19 @@ namespace Library.UnitTest
         public void Test_ContentConverter_DocumentContent()
         {
             var pages = new List<Page>();
-            pages.Add(new Page("123", ContentFormatType.MiniWiki, "text"));
-            pages.Add(new Page("123", ContentFormatType.MiniWiki, "text"));
-            pages.Add(new Page("123", ContentFormatType.MiniWiki, "text"));
+
+            //for (int i = 0; i < DocumentContent.MaxPagesCount; i++)
+            for (int i = 0; i < 32; i++)
+            {
+                StringBuilder sb = new StringBuilder();
+
+                for (int j = 0; j < Page.MaxTextLength; j++)
+                {
+                    sb.Append("0");
+                }
+
+                pages.Add(new Page("123", ContentFormatType.MiniWiki, sb.ToString()));
+            }
 
             DocumentContent content = new DocumentContent(pages);
             var binaryContent = ContentConverter.ToDocumentContentBlock(content);

@@ -72,7 +72,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BandwidthLimit.cs" />
-    <Compile Include="Hash\Sha512.cs" />
+    <Compile Include="Tools\Sha512.cs" />
     <Compile Include="SecureConnectionType.cs" />
     <Compile Include="SecureVersion2\ConnectionSignature.cs" />
     <Compile Include="SecureVersion2\CryptoAlgorithm.cs" />
@@ -80,15 +80,15 @@
     <Compile Include="SecureVersion2\KeyDerivationFunctionAlgorithm.cs" />
     <Compile Include="SecureVersion2\KeyExchangeAlgorithm.cs" />
     <Compile Include="SecureVersion2\ProtocolInformation.cs" />
-    <Compile Include="Hash\Crc32_Castagnoli.cs" />
-    <Compile Include="Crypto\Rsa2048.cs" />
-    <Compile Include="KeyDerivation\ANSI_X963_KDF.cs" />
+    <Compile Include="Tools\Crc32_Castagnoli.cs" />
+    <Compile Include="Tools\Rsa2048.cs" />
+    <Compile Include="Tools\ANSI_X963_KDF.cs" />
     <Compile Include="AsyncResult.cs" />
     <Compile Include="CompressConnection.cs" />
     <Compile Include="ConnectionBase.cs" />
     <Compile Include="CrcConnection.cs" />
-    <Compile Include="KeyExchange\ECDiffieHellmanP521_Sha512.cs" />
-    <Compile Include="KeyDerivation\KeyDerivationFunction.cs" />
+    <Compile Include="Tools\ECDiffieHellmanP521_Sha512.cs" />
+    <Compile Include="Tools\KeyDerivationFunction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecureConnectionVersion.cs" />
     <Compile Include="SecureConnection.cs" />

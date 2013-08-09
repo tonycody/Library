@@ -334,8 +334,6 @@ namespace Library.Net.Lair
                                 throw new BlockNotFoundException();
                             }
 
-                            clusters.UpdateTime = DateTime.UtcNow;
-
                             byte[] buffer = _bufferManager.TakeBuffer(clusters.Length);
 
                             try
@@ -463,7 +461,6 @@ namespace Library.Net.Lair
                     var clusters = new Clusters();
                     clusters.Indexes = clusterList.ToArray();
                     clusters.Length = value.Count;
-                    clusters.UpdateTime = DateTime.UtcNow;
                     _settings.ClustersIndex[key] = clusters;
                 }
             }
@@ -624,7 +621,7 @@ namespace Library.Net.Lair
             #endregion
         }
 
-        [DataContract(Name = "Clusters", Namespace = "http://Library/Net/Amoeba/CacheManager")]
+        [DataContract(Name = "Clusters", Namespace = "http://Library/Net/Lair/CacheManager")]
         private class Clusters : IThisLock
         {
             private long[] _indexes;
@@ -667,25 +664,6 @@ namespace Library.Net.Lair
                     lock (this.ThisLock)
                     {
                         _length = value;
-                    }
-                }
-            }
-
-            [DataMember(Name = "UpdateTime")]
-            public DateTime UpdateTime
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        return _updateTime;
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        _updateTime = value;
                     }
                 }
             }

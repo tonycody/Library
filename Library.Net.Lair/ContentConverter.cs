@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Library.Io;
 using Library.Security;
+using Library.Compression;
 
 namespace Library.Net.Lair
 {
@@ -37,6 +38,8 @@ namespace Library.Net.Lair
 
                 try
                 {
+                    stream.Seek(0, SeekOrigin.Begin);
+
                     BufferStream deflateBufferStream = new BufferStream(_bufferManager);
                     byte[] compressBuffer = null;
 
@@ -60,14 +63,34 @@ namespace Library.Net.Lair
                     }
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                    list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>(0, stream));
+                try
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    BufferStream lzmaBufferStream = new BufferStream(_bufferManager);
+
+                    using (var inStream = new WrapperStream(stream, true))
+                    using (var outStream = new WrapperStream(lzmaBufferStream, true))
+                    {
+                        Lzma.Compress(inStream, outStream, _bufferManager);
+                    }
+
+                    lzmaBufferStream.Seek(0, SeekOrigin.Begin);
+                    list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.Lzma, lzmaBufferStream));
+                }
+                catch (Exception)
+                {
+
+                }
+
+                list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {
@@ -77,10 +100,11 @@ namespace Library.Net.Lair
 #if DEBUG
                 if (list[0].Value.Length != stream.Length)
                 {
-                    Debug.WriteLine("ContentConverter ToStream : {0}→{1} {2}",
+                    Debug.WriteLine("ContentConverter ToStream {3} : {0}→{1} {2}",
                         NetworkConverter.ToSizeString(stream.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length),
-                        NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
+                        NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length),
+                        (CompressionAlgorithm)list[0].Key);
                 }
 #endif
 
@@ -116,6 +140,29 @@ namespace Library.Net.Lair
                     {
                         return ItemBase<T>.Import(dataStream, _bufferManager);
                     }
+                    else if (version == (byte)CompressionAlgorithm.Lzma)
+                    {
+                        using (BufferStream lzmaBufferStream = new BufferStream(_bufferManager))
+                        {
+                            using (var inStream = new WrapperStream(dataStream, true))
+                            using (var outStream = new WrapperStream(lzmaBufferStream, true))
+                            {
+                                Lzma.Decompress(inStream, outStream, _bufferManager);
+                            }
+
+#if DEBUG
+                            Debug.WriteLine("ContentConverter FromStream {3} : {0}→{1} {2}",
+                                NetworkConverter.ToSizeString(dataStream.Length),
+                                NetworkConverter.ToSizeString(lzmaBufferStream.Length),
+                                NetworkConverter.ToSizeString(dataStream.Length - lzmaBufferStream.Length),
+                                CompressionAlgorithm.Lzma);
+#endif
+
+                            lzmaBufferStream.Seek(0, SeekOrigin.Begin);
+
+                            return ItemBase<T>.Import(lzmaBufferStream, _bufferManager);
+                        }
+                    }
                     else if (version == (byte)CompressionAlgorithm.Deflate)
                     {
                         using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
@@ -142,10 +189,11 @@ namespace Library.Net.Lair
                             }
 
 #if DEBUG
-                            Debug.WriteLine("ContentConverter FromStream : {0}→{1} {2}",
+                            Debug.WriteLine("ContentConverter FromStream {3} : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
-                                NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));
+                                NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length),
+                                CompressionAlgorithm.Deflate);
 #endif
 
                             deflateBufferStream.Seek(0, SeekOrigin.Begin);
@@ -180,7 +228,7 @@ namespace Library.Net.Lair
                 byte[] lengthBuffer = NetworkConverter.GetBytes((int)stream.Length);
                 headerStream.Write(lengthBuffer, 0, lengthBuffer.Length);
 
-                int paddinglength = size - ((int)stream.Length + 4);
+                int paddingLength = size - ((int)stream.Length + 4);
 
                 BufferStream paddingStream = new BufferStream(_bufferManager);
 
@@ -191,14 +239,14 @@ namespace Library.Net.Lair
                     {
                         buffer = _bufferManager.TakeBuffer(1024);
 
-                        while (paddinglength > 0)
+                        while (paddingLength > 0)
                         {
-                            int writeSize = Math.Min(paddinglength, buffer.Length);
+                            int writeSize = Math.Min(paddingLength, buffer.Length);
 
                             random.NextBytes(buffer);
                             paddingStream.Write(buffer, 0, writeSize);
 
-                            paddinglength -= writeSize;
+                            paddingLength -= writeSize;
                         }
                     }
                     finally

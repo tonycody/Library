@@ -35,6 +35,8 @@ namespace Library.Net.Lair
         private LockedDictionary<Node, HashSet<Channel>> _pushChannelsRequestDictionary = new LockedDictionary<Node, HashSet<Channel>>();
         private LockedDictionary<Node, HashSet<string>> _pushSignaturesRequestDictionary = new LockedDictionary<Node, HashSet<string>>();
 
+        private LockedHashSet<string> _trustSignatures = new LockedHashSet<string>();
+
         private LockedList<Node> _creatingNodes;
         private CirculationCollection<Node> _cuttingNodes;
         private CirculationCollection<Node> _removeNodes;
@@ -866,6 +868,7 @@ namespace Library.Net.Lair
         }
 
         private volatile bool _refreshThreadRunning = false;
+        private volatile bool _trustSignaturesRefreshThreadRunning = false;
 
         private void ConnectionsManagerThread()
         {
@@ -873,6 +876,7 @@ namespace Library.Net.Lair
             connectionCheckStopwatch.Start();
 
             Stopwatch checkContentsStopwatch = new Stopwatch();
+            Stopwatch trustSignaturesRefreshStopwatch = new Stopwatch();
             Stopwatch refreshStopwatch = new Stopwatch();
 
             Stopwatch pushUploadStopwatch = new Stopwatch();
@@ -1045,6 +1049,39 @@ namespace Library.Net.Lair
                             }
                         }
                     }
+                }
+
+                if (!trustSignaturesRefreshStopwatch.IsRunning || trustSignaturesRefreshStopwatch.Elapsed.TotalSeconds >= 60)
+                {
+                    trustSignaturesRefreshStopwatch.Restart();
+
+                    ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
+                    {
+                        if (_trustSignaturesRefreshThreadRunning) return;
+                        _trustSignaturesRefreshThreadRunning = true;
+
+                        try
+                        {
+                            var lockSignatures = this.OnTrustSignaturesEvent();
+
+                            if (lockSignatures != null)
+                            {
+                                lock (_trustSignatures.ThisLock)
+                                {
+                                    _trustSignatures.Clear();
+                                    _trustSignatures.UnionWith(lockSignatures);
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                        finally
+                        {
+                            _refreshThreadRunning = false;
+                        }
+                    }));
                 }
 
                 if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
@@ -2382,6 +2419,8 @@ namespace Library.Net.Lair
 
                 if (profileList.Count != contentList.Count) return;
 
+                int priority = 0;
+
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Profiles ({0})", profileList.Count));
 
                 for (int i = 0; i < profileList.Count && i < _maxContentCount; i++)
@@ -2394,6 +2433,8 @@ namespace Library.Net.Lair
                         try
                         {
                             _cacheManager[profile.Content] = content;
+
+                            if (_trustSignatures.Contains(profile.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
@@ -2405,6 +2446,7 @@ namespace Library.Net.Lair
                     _pullProfileCount++;
                 }
 
+                messageManager.Priority += (priority + (priority - profileList.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2435,6 +2477,8 @@ namespace Library.Net.Lair
 
                 if (documentList.Count != contentList.Count) return;
 
+                int priority = 0;
+
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Documents ({0})", documentList.Count));
 
                 for (int i = 0; i < documentList.Count && i < _maxContentCount; i++)
@@ -2447,6 +2491,8 @@ namespace Library.Net.Lair
                         try
                         {
                             _cacheManager[document.Content] = content;
+
+                            if (_trustSignatures.Contains(document.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
@@ -2458,6 +2504,7 @@ namespace Library.Net.Lair
                     _pullDocumentCount++;
                 }
 
+                messageManager.Priority += (priority + (priority - documentList.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2509,6 +2556,8 @@ namespace Library.Net.Lair
 
                 if (topicList.Count != contentList.Count) return;
 
+                int priority = 0;
+
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Topics ({0})", topicList.Count));
 
                 for (int i = 0; i < topicList.Count && i < _maxContentCount; i++)
@@ -2521,6 +2570,8 @@ namespace Library.Net.Lair
                         try
                         {
                             _cacheManager[topic.Content] = content;
+
+                            if (_trustSignatures.Contains(topic.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
@@ -2532,6 +2583,7 @@ namespace Library.Net.Lair
                     _pullTopicCount++;
                 }
 
+                messageManager.Priority += (priority + (priority - topicList.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2564,6 +2616,8 @@ namespace Library.Net.Lair
 
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Messages ({0})", messageList.Count));
 
+                int priority = 0;
+
                 for (int i = 0; i < messageList.Count && i < _maxContentCount; i++)
                 {
                     var message = messageList[i];
@@ -2574,6 +2628,8 @@ namespace Library.Net.Lair
                         try
                         {
                             _cacheManager[message.Content] = content;
+
+                            if (_trustSignatures.Contains(message.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
@@ -2587,6 +2643,7 @@ namespace Library.Net.Lair
                     _pullMessageCount++;
                 }
 
+                messageManager.Priority += (priority + (priority - messageList.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2640,6 +2697,8 @@ namespace Library.Net.Lair
 
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Mails ({0})", mailList.Count));
 
+                int priority = 0;
+
                 for (int i = 0; i < mailList.Count && i < _maxContentCount; i++)
                 {
                     var mail = mailList[i];
@@ -2650,6 +2709,8 @@ namespace Library.Net.Lair
                         try
                         {
                             _cacheManager[mail.Content] = content;
+
+                            if (_trustSignatures.Contains(mail.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
@@ -2663,6 +2724,7 @@ namespace Library.Net.Lair
                     _pullMailCount++;
                 }
 
+                messageManager.Priority += (priority + (priority - mailList.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2982,7 +3044,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadProfile(Section section,
+        public Profile UploadProfile(Section section,
             IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3003,6 +3065,8 @@ namespace Library.Net.Lair
                     {
                         _cacheManager[key] = buffer;
                     }
+
+                    return profile;
                 }
                 finally
                 {
@@ -3014,7 +3078,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadDocument(Section section,
+        public Document UploadDocument(Section section,
             IEnumerable<Page> pages, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3029,12 +3093,14 @@ namespace Library.Net.Lair
                     buffer = ContentConverter.ToDocumentContentBlock(documentContent);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var profile = new Document(section, key, digitalSignature);
+                    var document = new Document(section, key, digitalSignature);
 
-                    if (_settings.SetDocument(profile))
+                    if (_settings.SetDocument(document))
                     {
                         _cacheManager[key] = buffer;
                     }
+
+                    return document;
                 }
                 finally
                 {
@@ -3046,7 +3112,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadTopic(Channel channel,
+        public Topic UploadTopic(Channel channel,
             string text, ContentFormatType formatType, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3061,12 +3127,14 @@ namespace Library.Net.Lair
                     buffer = ContentConverter.ToTopicContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var profile = new Topic(channel, key, digitalSignature);
+                    var topic = new Topic(channel, key, digitalSignature);
 
-                    if (_settings.SetTopic(profile))
+                    if (_settings.SetTopic(topic))
                     {
                         _cacheManager[key] = buffer;
                     }
+
+                    return topic;
                 }
                 finally
                 {
@@ -3078,7 +3146,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadMessage(Channel channel,
+        public Message UploadMessage(Channel channel,
             string text, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3093,12 +3161,14 @@ namespace Library.Net.Lair
                     buffer = ContentConverter.ToMessageContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var profile = new Message(channel, key, digitalSignature);
+                    var message = new Message(channel, key, digitalSignature);
 
-                    if (_settings.SetMessage(profile))
+                    if (_settings.SetMessage(message))
                     {
                         _cacheManager[key] = buffer;
                     }
+
+                    return message;
                 }
                 finally
                 {
@@ -3110,7 +3180,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadMail(string recipientSignature,
+        public Mail UploadMail(string recipientSignature,
             string text, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3125,12 +3195,14 @@ namespace Library.Net.Lair
                     buffer = ContentConverter.ToMailContentBlock(content, exchangeEncrypt);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var profile = new Mail(recipientSignature, key, digitalSignature);
+                    var mail = new Mail(recipientSignature, key, digitalSignature);
 
-                    if (_settings.SetMail(profile))
+                    if (_settings.SetMail(mail))
                     {
                         _cacheManager[key] = buffer;
                     }
+
+                    return mail;
                 }
                 finally
                 {
