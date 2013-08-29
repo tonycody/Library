@@ -550,7 +550,7 @@ namespace Library.Net.Lair
             }
         }
 
-        private class Settings : Library.Configuration.SettingsBase, IThisLock
+        private class Settings : Library.Configuration.SettingsBase
         {
             private object _thisLock = new object();
 
@@ -565,7 +565,7 @@ namespace Library.Net.Lair
 
             public override void Load(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -573,7 +573,7 @@ namespace Library.Net.Lair
 
             public override void Save(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Save(directoryPath);
                 }
@@ -583,7 +583,7 @@ namespace Library.Net.Lair
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (LockedDictionary<Key, Clusters>)this["ClustersIndex"];
                     }
@@ -594,31 +594,19 @@ namespace Library.Net.Lair
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (long)this["Size"];
                     }
                 }
                 set
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         this["Size"] = value;
                     }
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         [DataContract(Name = "Clusters", Namespace = "http://Library/Net/Lair/CacheManager")]

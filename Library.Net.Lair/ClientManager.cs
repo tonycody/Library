@@ -459,7 +459,7 @@ namespace Library.Net.Lair
 
         #endregion
 
-        private class Settings : Library.Configuration.SettingsBase, IThisLock
+        private class Settings : Library.Configuration.SettingsBase
         {
             private object _thisLock = new object();
 
@@ -485,24 +485,12 @@ namespace Library.Net.Lair
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (ConnectionFilterCollection)this["ConnectionFilters"];
                     }
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         protected override void Dispose(bool disposing)

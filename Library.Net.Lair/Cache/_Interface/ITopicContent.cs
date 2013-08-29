@@ -2,8 +2,8 @@
 
 namespace Library.Net.Lair
 {
-    interface ITopicContent : IContentFormatType
+    interface ITopicContent
     {
-        string Text { get; }
+        string Comment { get; }
     }
 }

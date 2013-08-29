@@ -6,10 +6,11 @@ using System.Threading;
 using Library.Collections;
 using Library.Io;
 using Library.Security;
+using System.Diagnostics;
 
 namespace Library.Net.Amoeba
 {
-    class StoreUploadManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
+    class BackgroundUploadManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
@@ -18,6 +19,7 @@ namespace Library.Net.Amoeba
         private Settings _settings;
 
         private volatile Thread _uploadManagerThread = null;
+        private volatile Thread _watchThread = null;
 
         private ManagerState _state = ManagerState.Stop;
 
@@ -28,7 +30,7 @@ namespace Library.Net.Amoeba
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        public StoreUploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
+        public BackgroundUploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _connectionsManager = connectionsManager;
             _cacheManager = cacheManager;
@@ -62,17 +64,17 @@ namespace Library.Net.Amoeba
 
                         lock (this.ThisLock)
                         {
-                            foreach (var item in _settings.StoreUploadItems.ToArray())
+                            foreach (var item in _settings.BackgroundUploadItems.ToArray())
                             {
                                 if (item.UploadKeys.Remove(key))
                                 {
                                     item.UploadedKeys.Add(key);
 
-                                    if (item.State == StoreUploadState.Uploading)
+                                    if (item.State == BackgroundUploadState.Uploading)
                                     {
                                         if (item.UploadKeys.Count == 0)
                                         {
-                                            item.State = StoreUploadState.Completed;
+                                            item.State = BackgroundUploadState.Completed;
 
                                             _connectionsManager.Upload(item.Seed);
 
@@ -90,11 +92,11 @@ namespace Library.Net.Amoeba
                 }
             }));
             _uploadedThread.Priority = ThreadPriority.BelowNormal;
-            _uploadedThread.Name = "StoreUploadManager_UploadedThread";
+            _uploadedThread.Name = "BackgroundUploadManager_UploadedThread";
             _uploadedThread.Start();
         }
 
-        private void SetKeyCount(StoreUploadItem item)
+        private void SetKeyCount(BackgroundUploadItem item)
         {
             lock (this.ThisLock)
             {
@@ -104,18 +106,16 @@ namespace Library.Net.Amoeba
                     {
                         item.UploadedKeys.Add(key);
                         item.UploadKeys.Remove(key);
+                    }
+                }
 
-                        if (item.State == StoreUploadState.Uploading)
-                        {
-                            if (item.UploadKeys.Count == 0)
-                            {
-                                item.State = StoreUploadState.Completed;
+                if (item.State == BackgroundUploadState.Uploading)
+                {
+                    if (item.UploadKeys.Count == 0)
+                    {
+                        item.State = BackgroundUploadState.Completed;
 
-                                _connectionsManager.Upload(item.Seed);
-
-                                this.Remove(item);
-                            }
-                        }
+                        _connectionsManager.Upload(item.Seed);
                     }
                 }
             }
@@ -128,20 +128,17 @@ namespace Library.Net.Amoeba
                 Thread.Sleep(1000 * 1);
                 if (this.State == ManagerState.Stop) return;
 
-                StoreUploadItem item = null;
+                BackgroundUploadItem item = null;
 
                 try
                 {
                     lock (this.ThisLock)
                     {
-                        lock (_settings.ThisLock)
+                        if (_settings.BackgroundUploadItems.Count > 0)
                         {
-                            if (_settings.StoreUploadItems.Count > 0)
-                            {
-                                item = _settings.StoreUploadItems
-                                    .Where(n => n.State == StoreUploadState.Encoding)
-                                    .FirstOrDefault();
-                            }
+                            item = _settings.BackgroundUploadItems
+                                .Where(n => n.State == BackgroundUploadState.Encoding)
+                                .FirstOrDefault();
                         }
                     }
                 }
@@ -156,47 +153,87 @@ namespace Library.Net.Amoeba
                     {
                         if (item.Groups.Count == 0 && item.Keys.Count == 0)
                         {
-                            KeyCollection keys = null;
-                            byte[] cryptoKey = null;
+                            Stream stream = null;
 
                             try
                             {
-                                using (Stream stream = item.Store.Export(_bufferManager))
-                                using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                if (item.Type == BackgroundItemType.Link)
                                 {
-                                    isStop = (this.State == ManagerState.Stop || !_settings.StoreUploadItems.Contains(item));
-                                }, 1024 * 1024, true))
+                                    stream = ((Link)item.Value).Export(_bufferManager);
+                                }
+                                else if (item.Type == BackgroundItemType.Store)
                                 {
-                                    item.Seed.Length = stream.Length;
+                                    stream = ((Store)item.Value).Export(_bufferManager);
+                                }
+                                else
+                                {
+                                    throw new FormatException();
+                                }
 
-                                    if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
-
-                                    if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                if (stream.Length == 0)
+                                {
+                                    lock (this.ThisLock)
                                     {
-                                        cryptoKey = Sha512.ComputeHash(encodingProgressStream);
+                                        item.Seed.Rank = 0;
+
+                                        if (item.DigitalSignature != null)
+                                        {
+                                            item.Seed.CreateCertificate(item.DigitalSignature);
+                                        }
+
+                                        _connectionsManager.Upload(item.Seed);
+
+                                        item.State = BackgroundUploadState.Completed;
+                                    }
+                                }
+                                else
+                                {
+                                    KeyCollection keys = null;
+                                    byte[] cryptoKey = null;
+
+                                    try
+                                    {
+                                        using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                        {
+                                            isStop = (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
+                                        }, 1024 * 1024, true))
+                                        {
+                                            item.Seed.Length = stream.Length;
+
+                                            if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
+
+                                            if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                            {
+                                                cryptoKey = Sha512.ComputeHash(encodingProgressStream);
+                                            }
+
+                                            encodingProgressStream.Seek(0, SeekOrigin.Begin);
+
+                                            item.State = BackgroundUploadState.Encoding;
+                                            keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                                        }
+                                    }
+                                    catch (StopIOException)
+                                    {
+                                        continue;
                                     }
 
-                                    encodingProgressStream.Seek(0, SeekOrigin.Begin);
+                                    lock (this.ThisLock)
+                                    {
+                                        foreach (var key in keys)
+                                        {
+                                            item.UploadKeys.Add(key);
+                                            item.LockedKeys.Add(key);
+                                        }
 
-                                    item.State = StoreUploadState.Encoding;
-                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                                        item.CryptoKey = cryptoKey;
+                                        item.Keys.AddRange(keys);
+                                    }
                                 }
                             }
-                            catch (StopIOException)
+                            finally
                             {
-                                continue;
-                            }
-
-                            lock (this.ThisLock)
-                            {
-                                foreach (var key in keys)
-                                {
-                                    item.UploadKeys.Add(key);
-                                    item.LockedKeys.Add(key);
-                                }
-
-                                item.CryptoKey = cryptoKey;
-                                item.Keys.AddRange(keys);
+                                if (stream != null) stream.Dispose();
                             }
                         }
                         else if (item.Groups.Count == 0 && item.Keys.Count == 1)
@@ -233,7 +270,7 @@ namespace Library.Net.Amoeba
 
                                 item.LockedKeys.Clear();
 
-                                item.State = StoreUploadState.Uploading;
+                                item.State = BackgroundUploadState.Uploading;
                             }
                         }
                         else if (item.Keys.Count > 0)
@@ -246,7 +283,7 @@ namespace Library.Net.Amoeba
                             {
                                 group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
                                 {
-                                    return (this.State == ManagerState.Stop || !_settings.StoreUploadItems.Contains(item));
+                                    return (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
                                 });
                             }
                             catch (StopException)
@@ -286,7 +323,7 @@ namespace Library.Net.Amoeba
                                 using (var stream = index.Export(_bufferManager))
                                 using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                 {
-                                    isStop = (this.State == ManagerState.Stop || !_settings.StoreUploadItems.Contains(item));
+                                    isStop = (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
                                 }, 1024 * 1024, true))
                                 {
                                     if (item.HashAlgorithm == HashAlgorithm.Sha512)
@@ -296,7 +333,7 @@ namespace Library.Net.Amoeba
 
                                     encodingProgressStream.Seek(0, SeekOrigin.Begin);
 
-                                    item.State = StoreUploadState.Encoding;
+                                    item.State = BackgroundUploadState.Encoding;
                                     keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                                 }
                             }
@@ -323,11 +360,86 @@ namespace Library.Net.Amoeba
                 }
                 catch (Exception e)
                 {
-                    item.State = StoreUploadState.Error;
+                    item.State = BackgroundUploadState.Error;
 
                     Log.Error(e);
 
                     this.Remove(item);
+                }
+            }
+        }
+
+        private void WatchThread()
+        {
+            Stopwatch watchStopwatch = new Stopwatch();
+
+            try
+            {
+                for (; ; )
+                {
+                    Thread.Sleep(1000);
+                    if (this.State == ManagerState.Stop) return;
+
+                    if (!watchStopwatch.IsRunning || watchStopwatch.Elapsed.TotalMinutes >= 10)
+                    {
+                        lock (this.ThisLock)
+                        {
+                            var now = DateTime.UtcNow;
+
+                            foreach (var item in _settings.BackgroundUploadItems.ToArray())
+                            {
+                                if (item.State == BackgroundUploadState.Completed
+                                    && (now - item.Seed.CreationTime) > new TimeSpan(3, 0, 0, 0))
+                                {
+                                    this.Remove(item);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error(e);
+            }
+        }
+
+        public void Upload(Link link,
+            CompressionAlgorithm compressionAlgorithm,
+            CryptoAlgorithm cryptoAlgorithm,
+            CorrectionAlgorithm correctionAlgorithm,
+            HashAlgorithm hashAlgorithm,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                {
+                    foreach (var item in _settings.BackgroundUploadItems.ToArray())
+                    {
+                        if (item.DigitalSignature.ToString() != digitalSignature.ToString()) continue;
+
+                        this.Remove(item);
+                    }
+                }
+
+                {
+                    BackgroundUploadItem item = new BackgroundUploadItem();
+
+                    item.Value = link;
+                    item.Type = BackgroundItemType.Link;
+                    item.State = BackgroundUploadState.Encoding;
+                    item.Rank = 1;
+                    item.CompressionAlgorithm = compressionAlgorithm;
+                    item.CryptoAlgorithm = cryptoAlgorithm;
+                    item.CorrectionAlgorithm = correctionAlgorithm;
+                    item.HashAlgorithm = hashAlgorithm;
+                    item.DigitalSignature = digitalSignature;
+                    item.Seed = new Seed();
+                    item.Seed.Keywords.Add(ConnectionsManager.Keyword_Link);
+                    item.Seed.CreationTime = DateTime.UtcNow;
+                    item.BlockLength = 1024 * 1024 * 1;
+
+                    _settings.BackgroundUploadItems.Add(item);
                 }
             }
         }
@@ -342,7 +454,7 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 {
-                    foreach (var item in _settings.StoreUploadItems.ToArray())
+                    foreach (var item in _settings.BackgroundUploadItems.ToArray())
                     {
                         if (item.DigitalSignature.ToString() != digitalSignature.ToString()) continue;
 
@@ -351,10 +463,11 @@ namespace Library.Net.Amoeba
                 }
 
                 {
-                    StoreUploadItem item = new StoreUploadItem();
+                    BackgroundUploadItem item = new BackgroundUploadItem();
 
-                    item.Store = store;
-                    item.State = StoreUploadState.Encoding;
+                    item.Value = store;
+                    item.Type = BackgroundItemType.Store;
+                    item.State = BackgroundUploadState.Encoding;
                     item.Rank = 1;
                     item.CompressionAlgorithm = compressionAlgorithm;
                     item.CryptoAlgorithm = cryptoAlgorithm;
@@ -366,12 +479,12 @@ namespace Library.Net.Amoeba
                     item.Seed.CreationTime = DateTime.UtcNow;
                     item.BlockLength = 1024 * 1024 * 1;
 
-                    _settings.StoreUploadItems.Add(item);
+                    _settings.BackgroundUploadItems.Add(item);
                 }
             }
         }
 
-        private void Remove(StoreUploadItem item)
+        private void Remove(BackgroundUploadItem item)
         {
             lock (this.ThisLock)
             {
@@ -380,22 +493,34 @@ namespace Library.Net.Amoeba
                     _cacheManager.Unlock(key);
                 }
 
-                _settings.StoreUploadItems.Remove(item);
+                _settings.BackgroundUploadItems.Remove(item);
             }
         }
 
-        private void Reset(StoreUploadItem item)
+        private void Reset(BackgroundUploadItem item)
         {
             lock (this.ThisLock)
             {
                 this.Remove(item);
 
-                this.Upload(item.Store,
-                    item.CompressionAlgorithm,
-                    item.CryptoAlgorithm,
-                    item.CorrectionAlgorithm,
-                    item.HashAlgorithm,
-                    item.DigitalSignature);
+                if (item.Type == BackgroundItemType.Link)
+                {
+                    this.Upload((Link)item.Value,
+                        item.CompressionAlgorithm,
+                        item.CryptoAlgorithm,
+                        item.CorrectionAlgorithm,
+                        item.HashAlgorithm,
+                        item.DigitalSignature);
+                }
+                else if (item.Type == BackgroundItemType.Store)
+                {
+                    this.Upload((Store)item.Value,
+                        item.CompressionAlgorithm,
+                        item.CryptoAlgorithm,
+                        item.CorrectionAlgorithm,
+                        item.HashAlgorithm,
+                        item.DigitalSignature);
+                }
             }
         }
 
@@ -421,8 +546,13 @@ namespace Library.Net.Amoeba
 
                 _uploadManagerThread = new Thread(this.UploadManagerThread);
                 _uploadManagerThread.Priority = ThreadPriority.Lowest;
-                _uploadManagerThread.Name = "StoreUploadManager_UploadManagerThread";
+                _uploadManagerThread.Name = "BackgroundUploadManager_UploadManagerThread";
                 _uploadManagerThread.Start();
+
+                _watchThread = new Thread(this.WatchThread);
+                _watchThread.Priority = ThreadPriority.Lowest;
+                _watchThread.Name = "BackgroundUploadManager_WatchThread";
+                _watchThread.Start();
             }
         }
 
@@ -436,6 +566,9 @@ namespace Library.Net.Amoeba
 
             _uploadManagerThread.Join();
             _uploadManagerThread = null;
+
+            _watchThread.Join();
+            _watchThread = null;
         }
 
         #region ISettings
@@ -446,7 +579,7 @@ namespace Library.Net.Amoeba
             {
                 _settings.Load(directoryPath);
 
-                foreach (var item in _settings.StoreUploadItems.ToArray())
+                foreach (var item in _settings.BackgroundUploadItems.ToArray())
                 {
                     try
                     {
@@ -454,11 +587,11 @@ namespace Library.Net.Amoeba
                     }
                     catch (Exception)
                     {
-                        _settings.StoreUploadItems.Remove(item);
+                        _settings.BackgroundUploadItems.Remove(item);
                     }
                 }
 
-                foreach (var item in _settings.StoreUploadItems)
+                foreach (var item in _settings.BackgroundUploadItems)
                 {
                     foreach (var key in item.LockedKeys)
                     {
@@ -478,13 +611,13 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        private class Settings : Library.Configuration.SettingsBase, IThisLock
+        private class Settings : Library.Configuration.SettingsBase
         {
             private object _thisLock = new object();
 
             public Settings()
                 : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedList<StoreUploadItem>>() { Name = "StoreUploadItems", Value = new LockedList<StoreUploadItem>() },
+                    new Library.Configuration.SettingsContext<LockedList<BackgroundUploadItem>>() { Name = "BackgroundUploadItems", Value = new LockedList<BackgroundUploadItem>() },
                 })
             {
 
@@ -492,7 +625,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -500,19 +633,19 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Save(directoryPath);
                 }
             }
 
-            public LockedList<StoreUploadItem> StoreUploadItems
+            public LockedList<BackgroundUploadItem> BackgroundUploadItems
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
-                        return (LockedList<StoreUploadItem>)this["StoreUploadItems"];
+                        return (LockedList<BackgroundUploadItem>)this["BackgroundUploadItems"];
                     }
                 }
             }

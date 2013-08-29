@@ -9,20 +9,27 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentContent : ItemBase<DocumentContent>, IDocumentContent<Page>
+    public sealed class DocumentContent : ItemBase<DocumentContent>, IDocumentContent
     {
         private enum SerializeId : byte
         {
-            Page = 0,
+            FormatType = 0,
+            Hypertext = 1,
+            Comment = 2,
         }
 
-        private PageCollection _pages = null;
+        private HypertextFormatType _formatType;
+        private string _hypertext = null;
+        private string _comment;
 
-        public static readonly int MaxPagesCount = 256;
+        public static readonly int MaxHypertextLength = 1024 * 32;
+        public static readonly int MaxCommentLength = 1024 * 32;
 
-        public DocumentContent(IEnumerable<Page> pages)
+        public DocumentContent(HypertextFormatType formatType, string hypertext, string comment)
         {
-            if (pages != null) this.ProtectedPages.AddRange(pages);
+            this.FormatType = formatType;
+            this.Hypertext = hypertext;
+            this.Comment = comment;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -38,9 +45,26 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Page)
+                    if (id == (byte)SerializeId.FormatType)
                     {
-                        this.ProtectedPages.Add(Page.Import(rangeStream, bufferManager));
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.FormatType = (HypertextFormatType)Enum.Parse(typeof(HypertextFormatType), reader.ReadToEnd());
+                        }
+                    }
+                    else if (id == (byte)SerializeId.Hypertext)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.Hypertext = reader.ReadToEnd();
+                        }
+                    }
+                    else if (id == (byte)SerializeId.Comment)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.Comment = reader.ReadToEnd();
+                        }
                     }
                 }
             }
@@ -51,16 +75,62 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Pages
-            foreach (var p in this.ProtectedPages)
+            // FormatType
+            if (this.FormatType != 0)
             {
-                Stream exportStream = p.Export(bufferManager);
-
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Page);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
 
-                streams.Add(new JoinStream(bufferStream, exportStream));
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.FormatType.ToString());
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.FormatType);
+
+                streams.Add(bufferStream);
+            }
+            // Hypertext
+            if (this.Hypertext != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.Hypertext);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Hypertext);
+
+                streams.Add(bufferStream);
+            }
+            // Comment
+            if (this.Comment != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.Comment);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Comment);
+
+                streams.Add(bufferStream);
             }
 
             return new JoinStream(streams);
@@ -68,8 +138,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (this.ProtectedPages.Count == 0) return 0;
-            else return this.ProtectedPages[0].GetHashCode();
+            if (_hypertext == null) return 0;
+            else return _hypertext.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -85,17 +155,20 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Pages == null) != (other.Pages == null))
+            if (this.Comment != other.Comment
+
+                || this.FormatType != other.FormatType
+                || this.Hypertext != other.Hypertext)
             {
                 return false;
             }
 
-            if (this.Pages != null && other.Pages != null)
-            {
-                if (!Collection.Equals(this.Pages, other.Pages)) return false;
-            }
-
             return true;
+        }
+
+        public override string ToString()
+        {
+            return this.Hypertext;
         }
 
         public override DocumentContent DeepClone()
@@ -106,25 +179,65 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IDocument<Page>
+        #region IHypertext
 
-        public IEnumerable<Page> Pages
+        [DataMember(Name = "FormatType")]
+        public HypertextFormatType FormatType
         {
             get
             {
-                return this.ProtectedPages;
+                return _formatType;
+            }
+            set
+            {
+                if (!Enum.IsDefined(typeof(HypertextFormatType), value))
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _formatType = value;
+                }
             }
         }
 
-        [DataMember(Name = "Pages")]
-        private PageCollection ProtectedPages
+        [DataMember(Name = "Hypertext")]
+        public string Hypertext
         {
             get
             {
-                if (_pages == null)
-                    _pages = new PageCollection(DocumentContent.MaxPagesCount);
+                return _hypertext;
+            }
+            private set
+            {
+                if (value != null && value.Length > DocumentContent.MaxHypertextLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _hypertext = value;
+                }
+            }
+        }
 
-                return _pages;
+        [DataMember(Name = "Comment")]
+        public string Comment
+        {
+            get
+            {
+                return _comment;
+            }
+            private set
+            {
+                if (value != null && value.Length > DocumentContent.MaxCommentLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _comment = value;
+                }
             }
         }
 

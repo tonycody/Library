@@ -228,7 +228,7 @@ namespace Library.Net.Proxy
             {
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
-              
+
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
                 {
                     throw new ProxyClientException(String.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", ((System.Net.IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString(), ((System.Net.IPEndPoint)_tcpClient.Client.RemoteEndPoint).Port.ToString()));

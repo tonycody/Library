@@ -480,7 +480,7 @@ namespace Library.Net.Proxy
                     {
                         ipv4Bytes[i] = response[i + 4];
                     }
-                    
+
                     IPAddress ipv4 = new IPAddress(ipv4Bytes);
                     addr = ipv4.ToString();
                     byte[] portBytesIpv4 = new byte[2];

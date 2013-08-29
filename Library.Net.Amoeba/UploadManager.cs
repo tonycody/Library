@@ -223,16 +223,16 @@ namespace Library.Net.Amoeba
                     {
                         item.UploadedKeys.Add(key);
                         item.UploadKeys.Remove(key);
+                    }
+                }
 
-                        if (item.State == UploadState.Uploading)
-                        {
-                            if (item.UploadKeys.Count == 0)
-                            {
-                                item.State = UploadState.Completed;
+                if (item.State == UploadState.Uploading)
+                {
+                    if (item.UploadKeys.Count == 0)
+                    {
+                        item.State = UploadState.Completed;
 
-                                _settings.UploadedSeeds.Add(item.Seed.DeepClone());
-                            }
-                        }
+                        _settings.UploadedSeeds.Add(item.Seed.DeepClone());
                     }
                 }
             }
@@ -251,16 +251,13 @@ namespace Library.Net.Amoeba
                 {
                     lock (this.ThisLock)
                     {
-                        lock (_settings.ThisLock)
+                        if (_settings.UploadItems.Count > 0)
                         {
-                            if (_settings.UploadItems.Count > 0)
-                            {
-                                item = _settings.UploadItems
-                                    .Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ParityEncoding)
-                                    .Where(n => n.Priority != 0)
-                                    .OrderBy(n => -n.Priority)
-                                    .FirstOrDefault();
-                            }
+                            item = _settings.UploadItems
+                                .Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ParityEncoding)
+                                .Where(n => n.Priority != 0)
+                                .OrderBy(n => -n.Priority)
+                                .FirstOrDefault();
                         }
                     }
                 }
@@ -1076,7 +1073,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        private class Settings : Library.Configuration.SettingsBase, IThisLock
+        private class Settings : Library.Configuration.SettingsBase
         {
             private object _thisLock = new object();
 
@@ -1091,7 +1088,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -1099,7 +1096,7 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Save(directoryPath);
                 }
@@ -1109,7 +1106,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (LockedList<UploadItem>)this["UploadItems"];
                     }
@@ -1120,24 +1117,12 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (SeedCollection)this["UploadedSeeds"];
                     }
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         protected override void Dispose(bool disposing)

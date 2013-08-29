@@ -1,14 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface IDocumentContent<TPage>
-          where TPage : IPage
+    [DataContract(Name = "HypertextFormatType", Namespace = "http://Library/Net/Lair")]
+    public enum HypertextFormatType
     {
-        IEnumerable<Page> Pages { get; }
+        [EnumMember(Value = "Raw")]
+        Raw = 0,
+
+        [EnumMember(Value = "MiniWiki")]
+        MiniWiki = 1,
+    }
+
+    interface IDocumentContent
+    {
+        HypertextFormatType FormatType { get; }
+        string Hypertext { get; }
+        string Comment { get; }
     }
 }

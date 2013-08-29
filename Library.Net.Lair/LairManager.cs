@@ -378,6 +378,16 @@ namespace Library.Net.Lair
             }
         }
 
+        public IEnumerable<Vote> GetVotes(Section section)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetVotes(section);
+            }
+        }
+
         public IEnumerable<Topic> GetTopics(Channel channel)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -428,6 +438,16 @@ namespace Library.Net.Lair
             }
         }
 
+        public VoteContent GetContent(Vote vote)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(vote);
+            }
+        }
+
         public TopicContent GetContent(Topic topic)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -458,58 +478,69 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadProfile(Section section,
-            IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
+        public Profile UploadProfile(Section section,
+            IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, string comment, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.UploadProfile(section, trustSignatures, channels, exchangeEncrypt, digitalSignature);
+                return _connectionsManager.UploadProfile(section, trustSignatures, channels, comment, exchangeEncrypt, digitalSignature);
             }
         }
 
-        public void UploadDocument(Section section,
-            IEnumerable<Page> pages, DigitalSignature digitalSignature)
+        public Document UploadDocument(Section section, string name,
+            string comment, HypertextFormatType formatType, string hypertext, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.UploadDocument(section, pages, digitalSignature);
+                return _connectionsManager.UploadDocument(section, name, comment, formatType, hypertext, digitalSignature);
             }
         }
 
-        public void UploadTopic(Channel channel,
-            string text, ContentFormatType formatType, DigitalSignature digitalSignature)
+        public Vote UploadVote(Section section,
+             IEnumerable<Key> goods, IEnumerable<Key> bads, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.UploadTopic(channel, text, formatType, digitalSignature);
+                return _connectionsManager.UploadVote(section, goods, bads, digitalSignature);
             }
         }
 
-        public void UploadMessage(Channel channel,
-            string text, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
+        public Topic UploadTopic(Channel channel,
+            string comment, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.UploadMessage(channel, text, anchors, digitalSignature);
+                return _connectionsManager.UploadTopic(channel, comment, digitalSignature);
             }
         }
 
-        public void UploadMail(string recipientSignature,
+        public Message UploadMessage(Channel channel,
+            string comment, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.UploadMessage(channel, comment, anchors, digitalSignature);
+            }
+        }
+
+        public Mail UploadMail(string recipientSignature,
             string text, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.UploadMail(recipientSignature, text, exchangeEncrypt, digitalSignature);
+                return _connectionsManager.UploadMail(recipientSignature, text, exchangeEncrypt, digitalSignature);
             }
         }
 

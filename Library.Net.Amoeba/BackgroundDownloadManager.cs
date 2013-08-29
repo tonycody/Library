@@ -10,7 +10,7 @@ using Library.Security;
 
 namespace Library.Net.Amoeba
 {
-    class StoreDownloadManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
+    class BackgroundDownloadManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
@@ -35,7 +35,7 @@ namespace Library.Net.Amoeba
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        public StoreDownloadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
+        public BackgroundDownloadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _connectionsManager = connectionsManager;
             _cacheManager = cacheManager;
@@ -117,7 +117,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void SetKeyCount(StoreDownloadItem item)
+        private void SetKeyCount(BackgroundDownloadItem item)
         {
             lock (this.ThisLock)
             {
@@ -133,42 +133,6 @@ namespace Library.Net.Amoeba
                     }
                 }
             }
-        }
-
-        private static bool CheckBoxDigitalSignature(ref Box box)
-        {
-            bool flag = true;
-            var seedList = new List<Seed>();
-            var boxList = new List<Box>();
-            boxList.Add(box);
-
-            for (int i = 0; i < boxList.Count; i++)
-            {
-                boxList.AddRange(boxList[i].Boxes);
-                seedList.AddRange(boxList[i].Seeds);
-            }
-
-            foreach (var item in seedList.Reverse<Seed>())
-            {
-                if (!item.VerifyCertificate())
-                {
-                    flag = false;
-
-                    item.CreateCertificate(null);
-                }
-            }
-
-            foreach (var item in boxList.Reverse<Box>())
-            {
-                if (!item.VerifyCertificate())
-                {
-                    flag = false;
-
-                    item.CreateCertificate(null);
-                }
-            }
-
-            return flag;
         }
 
         private static FileStream GetUniqueFileStream(string path)
@@ -227,40 +191,37 @@ namespace Library.Net.Amoeba
                 Thread.Sleep(1000 * 1);
                 if (this.State == ManagerState.Stop) return;
 
-                StoreDownloadItem item = null;
+                BackgroundDownloadItem item = null;
 
                 try
                 {
                     lock (this.ThisLock)
                     {
-                        lock (_settings.ThisLock)
+                        if (_settings.BackgroundDownloadItems.Count > 0)
                         {
-                            if (_settings.StoreDownloadItems.Count > 0)
                             {
+                                var items = _settings.BackgroundDownloadItems
+                                   .Where(n => n.State == BackgroundDownloadState.Downloading)
+                                   .Where(x =>
+                                   {
+                                       if (x.Rank == 1) return 0 == (!_cacheManager.Contains(x.Seed.Key) ? 1 : 0);
+                                       else return 0 == (x.Index.Groups.Sum(n => n.InformationLength) - x.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n))));
+                                   })
+                                   .ToList();
+
+                                item = items.FirstOrDefault();
+                            }
+
+                            if (item == null)
+                            {
+                                var items = _settings.BackgroundDownloadItems
+                                    .Where(n => n.State == BackgroundDownloadState.Downloading)
+                                    .ToList();
+
+                                if (items.Count > 0)
                                 {
-                                    var items = _settings.StoreDownloadItems
-                                       .Where(n => n.State == StoreDownloadState.Downloading)
-                                       .Where(x =>
-                                       {
-                                           if (x.Rank == 1) return 0 == (!_cacheManager.Contains(x.Seed.Key) ? 1 : 0);
-                                           else return 0 == (x.Index.Groups.Sum(n => n.InformationLength) - x.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n))));
-                                       })
-                                       .ToList();
-
-                                    item = items.FirstOrDefault();
-                                }
-
-                                if (item == null)
-                                {
-                                    var items = _settings.StoreDownloadItems
-                                        .Where(n => n.State == StoreDownloadState.Downloading)
-                                        .ToList();
-
-                                    if (items.Count > 0)
-                                    {
-                                        round = (round >= items.Count) ? 0 : round;
-                                        item = items[round++];
-                                    }
+                                    round = (round >= items.Count) ? 0 : round;
+                                    item = items[round++];
                                 }
                             }
                         }
@@ -279,20 +240,20 @@ namespace Library.Net.Amoeba
                         {
                             if (!_cacheManager.Contains(item.Seed.Key))
                             {
-                                item.State = StoreDownloadState.Downloading;
+                                item.State = BackgroundDownloadState.Downloading;
 
                                 _connectionsManager.Download(item.Seed.Key);
                             }
                             else
                             {
-                                item.State = StoreDownloadState.Decoding;
+                                item.State = BackgroundDownloadState.Decoding;
                             }
                         }
                         else
                         {
                             if (!item.Index.Groups.All(n => _countCache.GetCount(n) >= n.InformationLength))
                             {
-                                item.State = StoreDownloadState.Downloading;
+                                item.State = BackgroundDownloadState.Downloading;
 
                                 //int limitCount = (int)(1024 * (Math.Pow(item.Priority, 3) / Math.Pow(6, 3)));
                                 int limitCount = (int)32;
@@ -344,14 +305,14 @@ namespace Library.Net.Amoeba
                             }
                             else
                             {
-                                item.State = StoreDownloadState.Decoding;
+                                item.State = BackgroundDownloadState.Decoding;
                             }
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    item.State = StoreDownloadState.Error;
+                    item.State = BackgroundDownloadState.Error;
 
                     Log.Error(e);
 
@@ -369,21 +330,18 @@ namespace Library.Net.Amoeba
                 Thread.Sleep(1000 * 1);
                 if (this.State == ManagerState.Stop) return;
 
-                StoreDownloadItem item = null;
+                BackgroundDownloadItem item = null;
 
                 try
                 {
                     lock (this.ThisLock)
                     {
-                        lock (_settings.ThisLock)
+                        if (_settings.BackgroundDownloadItems.Count > 0)
                         {
-                            if (_settings.StoreDownloadItems.Count > 0)
-                            {
-                                item = _settings.StoreDownloadItems
-                                    .Where(n => n.State == StoreDownloadState.Decoding)
-                                    .OrderBy(n => (n.Rank != n.Seed.Rank) ? 0 : 1)
-                                    .FirstOrDefault();
-                            }
+                            item = _settings.BackgroundDownloadItems
+                                .Where(n => n.State == BackgroundDownloadState.Decoding)
+                                .OrderBy(n => (n.Rank != n.Seed.Rank) ? 0 : 1)
+                                .FirstOrDefault();
                         }
                     }
                 }
@@ -400,11 +358,11 @@ namespace Library.Net.Amoeba
                         {
                             if (!_cacheManager.Contains(item.Seed.Key))
                             {
-                                item.State = StoreDownloadState.Downloading;
+                                item.State = BackgroundDownloadState.Downloading;
                             }
                             else
                             {
-                                item.State = StoreDownloadState.Decoding;
+                                item.State = BackgroundDownloadState.Decoding;
 
                                 if (item.Rank < item.Seed.Rank)
                                 {
@@ -413,10 +371,10 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = StoreDownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
+                                        using (FileStream stream = BackgroundDownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.StoreDownloadItems.Contains(item));
+                                            isStop = (this.State == ManagerState.Stop || !_settings.BackgroundDownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
                                             {
@@ -478,20 +436,20 @@ namespace Library.Net.Amoeba
 
                                         this.SetKeyCount(item);
 
-                                        item.State = StoreDownloadState.Downloading;
+                                        item.State = BackgroundDownloadState.Downloading;
                                     }
                                 }
                                 else
                                 {
                                     bool largeFlag = false;
-                                    Store store;
+                                    object value = null;
 
                                     try
                                     {
                                         using (Stream stream = new BufferStream(_bufferManager))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.StoreDownloadItems.Contains(item));
+                                            isStop = (this.State == ManagerState.Stop || !_settings.BackgroundDownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Seed.Length))
                                             {
@@ -506,7 +464,15 @@ namespace Library.Net.Amoeba
                                             if (stream.Length != item.Seed.Length) throw new Exception();
 
                                             stream.Seek(0, SeekOrigin.Begin);
-                                            store = Store.Import(stream, _bufferManager);
+
+                                            if (item.Type == BackgroundItemType.Link)
+                                            {
+                                                value = Link.Import(stream, _bufferManager);
+                                            }
+                                            else if (item.Type == BackgroundItemType.Store)
+                                            {
+                                                value = Store.Import(stream, _bufferManager);
+                                            }
                                         }
                                     }
                                     catch (StopIOException)
@@ -525,14 +491,7 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        for (int i = 0; i < store.Boxes.Count; i++)
-                                        {
-                                            var box = store.Boxes[i];
-                                            StoreDownloadManager.CheckBoxDigitalSignature(ref box);
-                                            store.Boxes[i] = box;
-                                        }
-
-                                        item.Store = store;
+                                        item.Value = value;
 
                                         if (item.Seed != null)
                                         {
@@ -552,7 +511,7 @@ namespace Library.Net.Amoeba
 
                                         item.Indexes.Clear();
 
-                                        item.State = StoreDownloadState.Completed;
+                                        item.State = BackgroundDownloadState.Completed;
                                     }
                                 }
                             }
@@ -561,7 +520,7 @@ namespace Library.Net.Amoeba
                         {
                             if (!item.Index.Groups.All(n => _countCache.GetCount(n) >= n.InformationLength))
                             {
-                                item.State = StoreDownloadState.Downloading;
+                                item.State = BackgroundDownloadState.Downloading;
                             }
                             else
                             {
@@ -573,7 +532,7 @@ namespace Library.Net.Amoeba
                                     {
                                         headers.AddRange(_cacheManager.ParityDecoding(group, (object state2) =>
                                         {
-                                            return (this.State == ManagerState.Stop || !_settings.StoreDownloadItems.Contains(item));
+                                            return (this.State == ManagerState.Stop || !_settings.BackgroundDownloadItems.Contains(item));
                                         }));
                                     }
                                 }
@@ -582,7 +541,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                item.State = StoreDownloadState.Decoding;
+                                item.State = BackgroundDownloadState.Decoding;
 
                                 if (item.Rank < item.Seed.Rank)
                                 {
@@ -591,10 +550,10 @@ namespace Library.Net.Amoeba
 
                                     try
                                     {
-                                        using (FileStream stream = StoreDownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
+                                        using (FileStream stream = BackgroundDownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.StoreDownloadItems.Contains(item));
+                                            isStop = (this.State == ManagerState.Stop || !_settings.BackgroundDownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
                                             {
@@ -656,22 +615,22 @@ namespace Library.Net.Amoeba
 
                                         this.SetKeyCount(item);
 
-                                        item.State = StoreDownloadState.Downloading;
+                                        item.State = BackgroundDownloadState.Downloading;
                                     }
                                 }
                                 else
                                 {
-                                    item.State = StoreDownloadState.Decoding;
+                                    item.State = BackgroundDownloadState.Decoding;
 
                                     bool largeFlag = false;
-                                    Store store;
+                                    object value = null;
 
                                     try
                                     {
                                         using (Stream stream = new BufferStream(_bufferManager))
                                         using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                         {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.StoreDownloadItems.Contains(item));
+                                            isStop = (this.State == ManagerState.Stop || !_settings.BackgroundDownloadItems.Contains(item));
 
                                             if (!isStop && (stream.Length > item.Seed.Length))
                                             {
@@ -686,7 +645,15 @@ namespace Library.Net.Amoeba
                                             if (stream.Length != item.Seed.Length) throw new Exception();
 
                                             stream.Seek(0, SeekOrigin.Begin);
-                                            store = Store.Import(stream, _bufferManager);
+
+                                            if (item.Type == BackgroundItemType.Link)
+                                            {
+                                                value = Link.Import(stream, _bufferManager);
+                                            }
+                                            else if (item.Type == BackgroundItemType.Store)
+                                            {
+                                                value = Store.Import(stream, _bufferManager);
+                                            }
                                         }
                                     }
                                     catch (StopIOException)
@@ -705,14 +672,7 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        for (int i = 0; i < store.Boxes.Count; i++)
-                                        {
-                                            var box = store.Boxes[i];
-                                            StoreDownloadManager.CheckBoxDigitalSignature(ref box);
-                                            store.Boxes[i] = box;
-                                        }
-
-                                        item.Store = store;
+                                        item.Value = value;
 
                                         if (item.Seed != null)
                                         {
@@ -732,7 +692,7 @@ namespace Library.Net.Amoeba
 
                                         item.Indexes.Clear();
 
-                                        item.State = StoreDownloadState.Completed;
+                                        item.State = BackgroundDownloadState.Completed;
                                     }
                                 }
                             }
@@ -791,7 +751,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    item.State = StoreDownloadState.Error;
+                    item.State = BackgroundDownloadState.Error;
 
                     Log.Error(e);
 
@@ -815,7 +775,7 @@ namespace Library.Net.Amoeba
                     {
                         lock (this.ThisLock)
                         {
-                            foreach (var item in _settings.StoreDownloadItems.ToArray())
+                            foreach (var item in _settings.BackgroundDownloadItems.ToArray())
                             {
                                 if (this.SearchSignatures.Contains(item.Seed.Certificate.ToString())) continue;
 
@@ -825,20 +785,47 @@ namespace Library.Net.Amoeba
                             foreach (var signature in this.SearchSignatures)
                             {
                                 _connectionsManager.SendSeedRequest(signature);
+                            }
 
-                                var seed = _connectionsManager.GetStoreSeed(signature);
+                            // Link
+                            foreach (var signature in this.SearchSignatures)
+                            {
+                                var seed = _connectionsManager.GetLinkSeed(signature);
                                 if (seed == null || seed.Length > 1024 * 1024 * 32) continue;
 
-                                var item = _settings.StoreDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                                var item = _settings.BackgroundDownloadItems
+                                    .Where(n => n.Type == BackgroundItemType.Link)
+                                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
 
                                 if (item == null)
                                 {
-                                    this.Download(seed);
+                                    this.Download(seed, BackgroundItemType.Link);
                                 }
                                 else if (seed.CreationTime > item.Seed.CreationTime)
                                 {
                                     this.Remove(item);
-                                    this.Download(seed);
+                                    this.Download(seed, BackgroundItemType.Link);
+                                }
+                            }
+
+                            // Store
+                            foreach (var signature in this.SearchSignatures)
+                            {
+                                var seed = _connectionsManager.GetStoreSeed(signature);
+                                if (seed == null || seed.Length > 1024 * 1024 * 32) continue;
+
+                                var item = _settings.BackgroundDownloadItems
+                                    .Where(n => n.Type == BackgroundItemType.Store)
+                                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+
+                                if (item == null)
+                                {
+                                    this.Download(seed, BackgroundItemType.Store);
+                                }
+                                else if (seed.CreationTime > item.Seed.CreationTime)
+                                {
+                                    this.Remove(item);
+                                    this.Download(seed, BackgroundItemType.Store);
                                 }
                             }
                         }
@@ -851,11 +838,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void Remove(StoreDownloadItem item)
+        private void Remove(BackgroundDownloadItem item)
         {
             lock (this.ThisLock)
             {
-                if (item.State != StoreDownloadState.Completed)
+                if (item.State != BackgroundDownloadState.Completed)
                 {
                     if (item.Seed != null)
                     {
@@ -874,37 +861,78 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                _settings.StoreDownloadItems.Remove(item);
+                _settings.BackgroundDownloadItems.Remove(item);
             }
         }
 
-        private void Reset(StoreDownloadItem item)
+        private void Reset(BackgroundDownloadItem item)
         {
             lock (this.ThisLock)
             {
                 this.Remove(item);
-                this.Download(item.Seed);
+                this.Download(item.Seed, item.Type);
             }
         }
 
-        private void Download(Seed seed)
+        private void Download(Seed seed, BackgroundItemType type)
         {
             lock (this.ThisLock)
             {
-                if (_settings.StoreDownloadItems.Any(n => n.Seed == seed)) return;
+                if (_settings.BackgroundDownloadItems.Any(n => n.Seed == seed)) return;
 
-                StoreDownloadItem item = new StoreDownloadItem();
-
-                item.Rank = 1;
-                item.Seed = seed;
-                item.State = StoreDownloadState.Downloading;
-
-                if (item.Seed != null)
+                if (seed.Rank == 0)
                 {
-                    _cacheManager.Lock(item.Seed.Key);
-                }
+                    BackgroundDownloadItem item = new BackgroundDownloadItem();
 
-                _settings.StoreDownloadItems.Add(item);
+                    item.Rank = 0;
+                    item.Seed = seed;
+                    item.State = BackgroundDownloadState.Completed;
+                    item.Type = type;
+
+                    if (item.Type == BackgroundItemType.Link)
+                    {
+                        item.Value = new Link();
+                    }
+                    else if (item.Type == BackgroundItemType.Store)
+                    {
+                        item.Value = new Store();
+                    }
+                    else
+                    {
+                        throw new FormatException();
+                    }
+
+                    _settings.BackgroundDownloadItems.Add(item);
+                }
+                else
+                {
+                    BackgroundDownloadItem item = new BackgroundDownloadItem();
+
+                    item.Rank = 1;
+                    item.Seed = seed;
+                    item.State = BackgroundDownloadState.Downloading;
+                    item.Type = type;
+
+                    if (item.Seed != null)
+                    {
+                        _cacheManager.Lock(item.Seed.Key);
+                    }
+
+                    _settings.BackgroundDownloadItems.Add(item);
+                }
+            }
+        }
+
+        public Link GetLink(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                var item = _settings.BackgroundDownloadItems
+                    .Where(n => n.Type == BackgroundItemType.Link)
+                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                if (item == null) return null;
+
+                return (Link)item.Value;
             }
         }
 
@@ -912,10 +940,12 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                var item = _settings.StoreDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                var item = _settings.BackgroundDownloadItems
+                    .Where(n => n.Type == BackgroundItemType.Store)
+                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
                 if (item == null) return null;
 
-                return item.Store;
+                return (Store)item.Value;
             }
         }
 
@@ -923,7 +953,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                var item = _settings.StoreDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                var item = _settings.BackgroundDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
                 if (item == null) return;
 
                 this.Remove(item);
@@ -953,17 +983,17 @@ namespace Library.Net.Amoeba
 
                 _downloadManagerThread = new Thread(this.DownloadManagerThread);
                 _downloadManagerThread.Priority = ThreadPriority.Lowest;
-                _downloadManagerThread.Name = "StoreDownloadManager_DownloadManagerThread";
+                _downloadManagerThread.Name = "BackgroundDownloadManager_DownloadManagerThread";
                 _downloadManagerThread.Start();
 
                 _decodeManagerThread = new Thread(this.DecodeManagerThread);
                 _decodeManagerThread.Priority = ThreadPriority.Lowest;
-                _decodeManagerThread.Name = "StoreDownloadManager_DecodeManagerThread";
+                _decodeManagerThread.Name = "BackgroundDownloadManager_DecodeManagerThread";
                 _decodeManagerThread.Start();
 
                 _watchThread = new Thread(this.WatchThread);
                 _watchThread.Priority = ThreadPriority.Lowest;
-                _watchThread.Name = "StoreDownloadManager_WatchThread";
+                _watchThread.Name = "BackgroundDownloadManager_WatchThread";
                 _watchThread.Start();
             }
         }
@@ -994,7 +1024,7 @@ namespace Library.Net.Amoeba
             {
                 _settings.Load(directoryPath);
 
-                foreach (var item in _settings.StoreDownloadItems.ToArray())
+                foreach (var item in _settings.BackgroundDownloadItems.ToArray())
                 {
                     try
                     {
@@ -1002,13 +1032,13 @@ namespace Library.Net.Amoeba
                     }
                     catch (Exception)
                     {
-                        _settings.StoreDownloadItems.Remove(item);
+                        _settings.BackgroundDownloadItems.Remove(item);
                     }
                 }
 
-                foreach (var item in _settings.StoreDownloadItems)
+                foreach (var item in _settings.BackgroundDownloadItems)
                 {
-                    if (item.State != StoreDownloadState.Completed)
+                    if (item.State != BackgroundDownloadState.Completed)
                     {
                         if (item.Seed != null)
                         {
@@ -1040,13 +1070,13 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        private class Settings : Library.Configuration.SettingsBase, IThisLock
+        private class Settings : Library.Configuration.SettingsBase
         {
             private object _thisLock = new object();
 
             public Settings()
                 : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedList<StoreDownloadItem>>() { Name = "StoreDownloadItems", Value = new LockedList<StoreDownloadItem>() },
+                    new Library.Configuration.SettingsContext<LockedList<BackgroundDownloadItem>>() { Name = "BackgroundDownloadItems", Value = new LockedList<BackgroundDownloadItem>() },
                     new Library.Configuration.SettingsContext<SignatureCollection>() { Name = "Signatures", Value = new SignatureCollection() },
                 })
             {
@@ -1055,7 +1085,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -1063,19 +1093,19 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Save(directoryPath);
                 }
             }
 
-            public LockedList<StoreDownloadItem> StoreDownloadItems
+            public LockedList<BackgroundDownloadItem> BackgroundDownloadItems
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
-                        return (LockedList<StoreDownloadItem>)this["StoreDownloadItems"];
+                        return (LockedList<BackgroundDownloadItem>)this["BackgroundDownloadItems"];
                     }
                 }
             }
@@ -1084,7 +1114,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (SignatureCollection)this["Signatures"];
                     }

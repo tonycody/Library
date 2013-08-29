@@ -25,7 +25,7 @@ namespace Library.Collections
         public LockedQueue(IEnumerable<T> collection)
         {
             _queue = new Queue<T>();
-            
+
             foreach (var item in collection)
             {
                 this.Enqueue(item);

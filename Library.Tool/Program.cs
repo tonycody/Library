@@ -15,7 +15,7 @@ namespace Library.Tool
     internal class Program
     {
         internal static void Main(string[] args)
-        {           
+        {
             try
             {
                 if (args.Length >= 2 && args[0] == "DigitalSignature_Create")
@@ -268,18 +268,18 @@ namespace Library.Tool
                             Match match = regex.Match(item);
 
                             builder.AppendLine(string.Format(
-                            "        public {0} {1}\r\n" +
+                                "        public {0} {1}\r\n" +
                                 "        {{\r\n" +
                                 "            get\r\n" +
                                 "            {{\r\n" +
-                                "                lock (this.ThisLock)\r\n" +
+                                "                lock (_thisLock)\r\n" +
                                 "                {{\r\n" +
                                 "                   return ({0})this[\"{1}\"];\r\n" +
                                 "                }}\r\n" +
-                                "            }}\r\n\r\n" +
+                                "            }}\r\n" +
                                 "            set\r\n" +
                                 "            {{\r\n" +
-                                "                lock (this.ThisLock)\r\n" +
+                                "                lock (_thisLock)\r\n" +
                                 "                {{\r\n" +
                                 "                    this[\"{1}\"] = value;\r\n" +
                                 "                }}\r\n" +
@@ -351,7 +351,7 @@ namespace Library.Tool
                                     if (xml.LocalName == "Translate")
                                     {
                                         builder.AppendLine(string.Format(
-                                        "        public string {0}\r\n" +
+                                            "        public string {0}\r\n" +
                                             "        {{\r\n" +
                                             "            get\r\n" +
                                             "            {{\r\n" +

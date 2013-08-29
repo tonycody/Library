@@ -13,19 +13,19 @@ namespace Library.Net.Lair
     {
         private enum SerializeId : byte
         {
-            Text = 0,
+            Comment = 0,
             Anchor = 1,
         }
 
-        private string _text = null;
+        private string _comment = null;
         private KeyCollection _anchors = null;
 
-        public static readonly int MaxTextLength = 1024 * 4;
+        public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxAnchorsCount = 32;
 
-        public MessageContent(string text, IEnumerable<Key> anchors)
+        public MessageContent(string comment, IEnumerable<Key> anchors)
         {
-            this.Text = text;
+            this.Comment = comment;
             if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
@@ -42,11 +42,11 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Text)
+                    if (id == (byte)SerializeId.Comment)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.Text = reader.ReadToEnd();
+                            this.Comment = reader.ReadToEnd();
                         }
                     }
                     else if (id == (byte)SerializeId.Anchor)
@@ -62,8 +62,8 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Text
-            if (this.Text != null)
+            // Comment
+            if (this.Comment != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -72,12 +72,12 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(this.Text);
+                    writer.Write(this.Comment);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Text);
+                bufferStream.WriteByte((byte)SerializeId.Comment);
 
                 streams.Add(bufferStream);
             }
@@ -98,8 +98,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (_text == null) return 0;
-            else return _text.GetHashCode();
+            if (_comment == null) return 0;
+            else return _comment.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -115,10 +115,15 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Text != other.Text
+            if (this.Comment != other.Comment
                 || (this.Anchors == null) != (other.Anchors == null))
             {
                 return false;
+            }
+
+            if (this.Anchors != null && other.Anchors != null)
+            {
+                if (!Collection.Equals(this.Anchors, other.Anchors)) return false;
             }
 
             return true;
@@ -126,7 +131,7 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            return this.Text;
+            return this.Comment;
         }
 
         public override MessageContent DeepClone()
@@ -139,22 +144,22 @@ namespace Library.Net.Lair
 
         #region IMessageContent<Key>
 
-        [DataMember(Name = "Text")]
-        public string Text
+        [DataMember(Name = "Comment")]
+        public string Comment
         {
             get
             {
-                return _text;
+                return _comment;
             }
             private set
             {
-                if (value != null && value.Length > MessageContent.MaxTextLength)
+                if (value != null && value.Length > MessageContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _text = value;
+                    _comment = value;
                 }
             }
         }

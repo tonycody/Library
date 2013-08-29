@@ -14,21 +14,26 @@ namespace Library.Net.Lair
         private enum SerializeId : byte
         {
             Section = 0,
-            CreationTime = 1,
-            Content = 2,
+            Name = 1,
+            CreationTime = 2,
+            Content = 3,
 
-            Certificate = 3,
+            Certificate = 4,
         }
 
         private Section _section = null;
+        private string _name = null;
         private DateTime _creationTime = DateTime.MinValue;
         private Key _content = null;
 
         private Certificate _certificate;
 
-        public Document(Section section, Key content, DigitalSignature digitalSignature)
+        public static readonly int MaxNameLength = 256;
+
+        public Document(Section section, string name, Key content, DigitalSignature digitalSignature)
         {
             this.Section = section;
+            this.Name = name;
             this.CreationTime = DateTime.UtcNow;
             this.Content = content;
 
@@ -51,6 +56,13 @@ namespace Library.Net.Lair
                     if (id == (byte)SerializeId.Section)
                     {
                         this.Section = Section.Import(rangeStream, bufferManager);
+                    }
+                    else if (id == (byte)SerializeId.Name)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.Name = reader.ReadToEnd();
+                        }
                     }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
@@ -87,6 +99,25 @@ namespace Library.Net.Lair
                 bufferStream.WriteByte((byte)SerializeId.Section);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
+            }
+            // Name
+            if (this.Name != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.Name);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Name);
+
+                streams.Add(bufferStream);
             }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
@@ -205,6 +236,26 @@ namespace Library.Net.Lair
             private set
             {
                 _section = value;
+            }
+        }
+
+        [DataMember(Name = "Name")]
+        public string Name
+        {
+            get
+            {
+                return _name;
+            }
+            set
+            {
+                if (value != null && value.Length > Document.MaxNameLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _name = value;
+                }
             }
         }
 

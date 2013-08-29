@@ -1,24 +1,24 @@
 ﻿using System.Collections.Generic;
 using Library.Collections;
 
-namespace Library.Net.Lair
+namespace Library.Net.Amoeba
 {
-    public sealed class PageCollection : FilterList<Page>, IEnumerable<Page>
+    public sealed class IndexCollection : FilterList<Index>, IEnumerable<Index>
     {
-        public PageCollection() : base() { }
-        public PageCollection(int capacity) : base(capacity) { }
-        public PageCollection(IEnumerable<Page> collections) : base(collections) { }
+        public IndexCollection() : base() { }
+        public IndexCollection(int capacity) : base(capacity) { }
+        public IndexCollection(IEnumerable<Index> collections) : base(collections) { }
 
-        protected override bool Filter(Page item)
+        protected override bool Filter(Index item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Page>
+        #region IEnumerable<Index>
 
-        IEnumerator<Page> IEnumerable<Page>.GetEnumerator()
+        IEnumerator<Index> IEnumerable<Index>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

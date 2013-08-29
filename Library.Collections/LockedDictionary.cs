@@ -182,7 +182,7 @@ namespace Library.Collections
 
                 int count = _dic.Count;
                 _dic[key] = value;
-             
+
                 return (count != _dic.Count);
             }
         }

@@ -1559,7 +1559,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private class Settings : Library.Configuration.SettingsBase, IThisLock
+        private class Settings : Library.Configuration.SettingsBase
         {
             private object _thisLock = new object();
 
@@ -1576,7 +1576,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -1584,7 +1584,7 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Save(directoryPath);
                 }
@@ -1594,7 +1594,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (LockedDictionary<string, ShareIndex>)this["ShareIndex"];
                     }
@@ -1605,7 +1605,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (LockedDictionary<Key, Clusters>)this["ClustersIndex"];
                     }
@@ -1616,14 +1616,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (long)this["Size"];
                     }
                 }
                 set
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         this["Size"] = value;
                     }
@@ -1634,24 +1634,12 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (LockedList<SeedInformation>)this["SeedInformation"];
                     }
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         [DataContract(Name = "SeedInformation", Namespace = "http://Library/Net/Amoeba/CacheManager")]

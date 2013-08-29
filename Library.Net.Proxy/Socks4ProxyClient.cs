@@ -367,7 +367,7 @@ namespace Library.Net.Proxy
             {
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
-                
+
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
                 {
                     throw new ProxyClientException("A timeout while waiting for the proxy destination to respond.");

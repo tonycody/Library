@@ -34,6 +34,12 @@ namespace Library.Net.Lair
         public IEnumerable<ArraySegment<byte>> Contents { get; set; }
     }
 
+    class PullVotesEventArgs : EventArgs
+    {
+        public IEnumerable<Vote> Votes { get; set; }
+        public IEnumerable<ArraySegment<byte>> Contents { get; set; }
+    }
+
     class PullChannelsRequestEventArgs : EventArgs
     {
         public IEnumerable<Channel> Channels { get; set; }
@@ -67,6 +73,7 @@ namespace Library.Net.Lair
     delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
     delegate void PullProfilesEventHandler(object sender, PullProfilesEventArgs e);
     delegate void PullDocumentsEventHandler(object sender, PullDocumentsEventArgs e);
+    delegate void PullVotesEventHandler(object sender, PullVotesEventArgs e);
 
     delegate void PullChannelsRequestEventHandler(object sender, PullChannelsRequestEventArgs e);
     delegate void PullTopicsEventHandler(object sender, PullTopicsEventArgs e);
@@ -100,13 +107,14 @@ namespace Library.Net.Lair
             SectionsRequest = 5,
             Profiles = 6,
             Documents = 7,
+            Votes = 8,
 
-            ChannelsRequest = 8,
-            Topics = 9,
-            Messages = 10,
+            ChannelsRequest = 9,
+            Topics = 10,
+            Messages = 11,
 
-            SignaturesRequest = 11,
-            Mails = 12,
+            SignaturesRequest = 12,
+            Mails = 13,
         }
 
         private byte[] _mySessionId;
@@ -141,6 +149,7 @@ namespace Library.Net.Lair
         public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
         public event PullProfilesEventHandler PullProfilesEvent;
         public event PullDocumentsEventHandler PullDocumentsEvent;
+        public event PullVotesEventHandler PullVotesEvent;
 
         public event PullChannelsRequestEventHandler PullChannelsRequestEvent;
         public event PullTopicsEventHandler PullTopicsEvent;
@@ -590,6 +599,11 @@ namespace Library.Net.Lair
                                     var message = DocumentsMessage.Import(stream2, _bufferManager);
                                     this.OnPullDocuments(new PullDocumentsEventArgs() { Documents = message.Documents, Contents = message.Contents });
                                 }
+                                else if (type == (byte)SerializeId.Votes)
+                                {
+                                    var message = VotesMessage.Import(stream2, _bufferManager);
+                                    this.OnPullVotes(new PullVotesEventArgs() { Votes = message.Votes, Contents = message.Contents });
+                                }
                                 else if (type == (byte)SerializeId.ChannelsRequest)
                                 {
                                     var message = ChannelsRequestMessage.Import(stream2, _bufferManager);
@@ -666,6 +680,14 @@ namespace Library.Net.Lair
             if (this.PullDocumentsEvent != null)
             {
                 this.PullDocumentsEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullVotes(PullVotesEventArgs e)
+        {
+            if (this.PullVotesEvent != null)
+            {
+                this.PullVotesEvent(this, e);
             }
         }
 
@@ -858,6 +880,45 @@ namespace Library.Net.Lair
 
                     var message = new DocumentsMessage();
                     message.Documents.AddRange(documents);
+                    message.Contents.AddRange(contents);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushVotes(IEnumerable<Vote> votes, IEnumerable<ArraySegment<byte>> contents)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version3)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.Flush();
+
+                    var message = new VotesMessage();
+                    message.Votes.AddRange(votes);
                     message.Contents.AddRange(contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
@@ -1549,6 +1610,142 @@ namespace Library.Net.Lair
                             _documents = new DocumentCollection();
 
                         return _documents;
+                    }
+                }
+            }
+
+            [DataMember(Name = "Contents")]
+            public List<ArraySegment<byte>> Contents
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_contents == null)
+                            _contents = new List<ArraySegment<byte>>();
+
+                        return _contents;
+                    }
+                }
+            }
+
+            #region IThisLock
+
+            public object ThisLock
+            {
+                get
+                {
+                    lock (_thisStaticLock)
+                    {
+                        if (_thisLock == null)
+                            _thisLock = new object();
+
+                        return _thisLock;
+                    }
+                }
+            }
+
+            #endregion
+        }
+
+        [DataContract(Name = "VotesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
+        private sealed class VotesMessage : ItemBase<VotesMessage>, IThisLock
+        {
+            private enum SerializeId : byte
+            {
+                Vote = 0,
+                Content = 1,
+            }
+
+            private VoteCollection _profiles;
+            private List<ArraySegment<byte>> _contents;
+
+            private object _thisLock;
+            private static object _thisStaticLock = new object();
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                lock (this.ThisLock)
+                {
+                    Encoding encoding = new UTF8Encoding(false);
+                    byte[] lengthBuffer = new byte[4];
+
+                    for (; ; )
+                    {
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+                        byte id = (byte)stream.ReadByte();
+
+                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        {
+                            if (id == (byte)SerializeId.Vote)
+                            {
+                                this.Votes.Add(Vote.Import(rangeStream, bufferManager));
+                            }
+                            else if (id == (byte)SerializeId.Content)
+                            {
+                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
+                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
+
+                                this.Contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
+                            }
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // Votes
+                foreach (var m in this.Votes)
+                {
+                    Stream exportStream = m.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Vote);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // Contents
+                foreach (var m in this.Contents)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)m.Count), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Content);
+                    bufferStream.Write(m.Array, m.Offset, m.Count);
+
+                    streams.Add(bufferStream);
+                }
+
+                return new JoinStream(streams);
+            }
+
+            public override VotesMessage DeepClone()
+            {
+                lock (this.ThisLock)
+                {
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        return VotesMessage.Import(stream, BufferManager.Instance);
+                    }
+                }
+            }
+
+            [DataMember(Name = "Votes")]
+            public VoteCollection Votes
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        if (_profiles == null)
+                            _profiles = new VoteCollection();
+
+                        return _profiles;
                     }
                 }
             }

@@ -38,6 +38,7 @@ namespace Library.Net.Lair
 
                         messageManager.PushProfiles.TrimExcess();
                         messageManager.PushDocuments.TrimExcess();
+                        messageManager.PushVotes.TrimExcess();
                         messageManager.PushTopics.TrimExcess();
                         messageManager.PushMessages.TrimExcess();
                         messageManager.PushMails.TrimExcess();
@@ -154,6 +155,7 @@ namespace Library.Net.Lair
 
         private CirculationDictionary<string, DateTime> _pushProfiles;
         private CirculationDictionary<string, DateTime> _pushDocuments;
+        private CirculationCollection<Key> _pushVotes;
         private CirculationDictionary<string, DateTime> _pushTopics;
         private CirculationCollection<Key> _pushMessages;
         private CirculationCollection<Key> _pushMails;
@@ -177,6 +179,7 @@ namespace Library.Net.Lair
 
             _pushProfiles = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
             _pushDocuments = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
+            _pushVotes = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
             _pushTopics = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
             _pushMessages = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
             _pushMails = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
@@ -321,6 +324,17 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _pushDocuments;
+                }
+            }
+        }
+
+        public CirculationCollection<Key> PushVotes
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushVotes;
                 }
             }
         }

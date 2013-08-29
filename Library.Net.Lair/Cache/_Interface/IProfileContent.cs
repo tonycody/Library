@@ -12,5 +12,6 @@ namespace Library.Net.Lair
     {
         IEnumerable<string> TrustSignatures { get; }
         IEnumerable<TChannel> Channels { get; }
+        string Comment { get; }
     }
 }

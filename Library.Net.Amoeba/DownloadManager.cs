@@ -327,38 +327,35 @@ namespace Library.Net.Amoeba
                 {
                     lock (this.ThisLock)
                     {
-                        lock (_settings.ThisLock)
+                        if (_settings.DownloadItems.Count > 0)
                         {
-                            if (_settings.DownloadItems.Count > 0)
                             {
+                                var items = _settings.DownloadItems
+                                   .Where(n => n.State == DownloadState.Downloading)
+                                   .Where(n => n.Priority != 0)
+                                   .Where(x =>
+                                   {
+                                       if (x.Rank == 1) return 0 == (!_cacheManager.Contains(x.Seed.Key) ? 1 : 0);
+                                       else return 0 == (x.Index.Groups.Sum(n => n.InformationLength) - x.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n))));
+                                   })
+                                   .ToList();
+
+                                item = items.FirstOrDefault();
+                            }
+
+                            if (item == null)
+                            {
+                                var items = _settings.DownloadItems
+                                    .Where(n => n.State == DownloadState.Downloading)
+                                    .Where(n => n.Priority != 0)
+                                    .OrderBy(n => -n.Priority)
+                                    .Take(128)
+                                    .ToList();
+
+                                if (items.Count > 0)
                                 {
-                                    var items = _settings.DownloadItems
-                                       .Where(n => n.State == DownloadState.Downloading)
-                                       .Where(n => n.Priority != 0)
-                                       .Where(x =>
-                                       {
-                                           if (x.Rank == 1) return 0 == (!_cacheManager.Contains(x.Seed.Key) ? 1 : 0);
-                                           else return 0 == (x.Index.Groups.Sum(n => n.InformationLength) - x.Index.Groups.Sum(n => Math.Min(n.InformationLength, _countCache.GetCount(n))));
-                                       })
-                                       .ToList();
-
-                                    item = items.FirstOrDefault();
-                                }
-
-                                if (item == null)
-                                {
-                                    var items = _settings.DownloadItems
-                                        .Where(n => n.State == DownloadState.Downloading)
-                                        .Where(n => n.Priority != 0)
-                                        .OrderBy(n => -n.Priority)
-                                        .Take(128)
-                                        .ToList();
-
-                                    if (items.Count > 0)
-                                    {
-                                        round = (round >= items.Count) ? 0 : round;
-                                        item = items[round++];
-                                    }
+                                    round = (round >= items.Count) ? 0 : round;
+                                    item = items[round++];
                                 }
                             }
                         }
@@ -470,16 +467,13 @@ namespace Library.Net.Amoeba
                 {
                     lock (this.ThisLock)
                     {
-                        lock (_settings.ThisLock)
+                        if (_settings.DownloadItems.Count > 0)
                         {
-                            if (_settings.DownloadItems.Count > 0)
-                            {
-                                item = _settings.DownloadItems
-                                    .Where(n => n.State == DownloadState.Decoding || n.State == DownloadState.ParityDecoding)
-                                    .Where(n => n.Priority != 0)
-                                    .OrderBy(n => (n.Rank != n.Seed.Rank) ? 0 : 1)
-                                    .FirstOrDefault();
-                            }
+                            item = _settings.DownloadItems
+                                .Where(n => n.State == DownloadState.Decoding || n.State == DownloadState.ParityDecoding)
+                                .Where(n => n.Priority != 0)
+                                .OrderBy(n => (n.Rank != n.Seed.Rank) ? 0 : 1)
+                                .FirstOrDefault();
                         }
                     }
                 }
@@ -1184,7 +1178,7 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        private class Settings : Library.Configuration.SettingsBase, IThisLock
+        private class Settings : Library.Configuration.SettingsBase
         {
             private object _thisLock = new object();
 
@@ -1200,7 +1194,7 @@ namespace Library.Net.Amoeba
 
             public override void Load(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Load(directoryPath);
                 }
@@ -1208,7 +1202,7 @@ namespace Library.Net.Amoeba
 
             public override void Save(string directoryPath)
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     base.Save(directoryPath);
                 }
@@ -1218,14 +1212,14 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (string)this["BaseDirectory"];
                     }
                 }
                 set
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         this["BaseDirectory"] = value;
                     }
@@ -1236,7 +1230,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (LockedList<DownloadItem>)this["DownloadItems"];
                     }
@@ -1247,24 +1241,12 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
+                    lock (_thisLock)
                     {
                         return (SeedCollection)this["DownloadedSeeds"];
                     }
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         protected override void Dispose(bool disposing)

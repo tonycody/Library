@@ -15,13 +15,15 @@ namespace Library.Net.Lair
         {
             TrustSignature = 0,
             Channel = 1,
+            Comment = 2,
 
-            ExchangeAlgorithm = 2,
-            PublicKey = 3,
+            ExchangeAlgorithm = 3,
+            PublicKey = 4,
         }
 
         private SignatureCollection _trustSignatures = null;
         private ChannelCollection _channels = null;
+        private string _comment;
 
         private ExchangeAlgorithm _exchangeAlgorithm = 0;
         private byte[] _publicKey = null;
@@ -30,13 +32,15 @@ namespace Library.Net.Lair
 
         public static readonly int MaxTrustSignaturesCount = 1024;
         public static readonly int MaxChannelsCount = 1024;
+        public static readonly int MaxCommentLength = 1024 * 32;
 
         public static readonly int MaxPublicKeyLength = 1024 * 8;
 
-        public ProfileContent(IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, ExchangeAlgorithm exchangeAlgorithm, byte[] publicKey)
+        public ProfileContent(IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, string comment, ExchangeAlgorithm exchangeAlgorithm, byte[] publicKey)
         {
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
             if (channels != null) this.ProtectedChannels.AddRange(channels);
+            this.Comment = comment;
 
             this.ExchangeAlgorithm = exchangeAlgorithm;
             this.PublicKey = publicKey;
@@ -65,6 +69,13 @@ namespace Library.Net.Lair
                     else if (id == (byte)SerializeId.Channel)
                     {
                         this.ProtectedChannels.Add(Channel.Import(rangeStream, bufferManager));
+                    }
+                    else if (id == (byte)SerializeId.Comment)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this._comment = reader.ReadToEnd();
+                        }
                     }
 
                     else if (id == (byte)SerializeId.ExchangeAlgorithm)
@@ -120,6 +131,25 @@ namespace Library.Net.Lair
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
+            // Comment
+            if (this.Comment != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.Comment);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Comment);
+
+                streams.Add(bufferStream);
+            }
 
             // ExchangeAlgorithm
             if (this.ExchangeAlgorithm != 0)
@@ -174,6 +204,7 @@ namespace Library.Net.Lair
 
             if ((this.TrustSignatures == null) != (other.TrustSignatures == null)
                 || (this.Channels == null) != (other.Channels == null)
+                || this.Comment != other.Comment
 
                 || this.ExchangeAlgorithm != other.ExchangeAlgorithm
                 || (this.PublicKey == null) != (other.PublicKey == null))
@@ -246,6 +277,26 @@ namespace Library.Net.Lair
                     _channels = new ChannelCollection(ProfileContent.MaxChannelsCount);
 
                 return _channels;
+            }
+        }
+
+        [DataMember(Name = "Comment")]
+        public string Comment
+        {
+            get
+            {
+                return _comment;
+            }
+            private set
+            {
+                if (value != null && value.Length > DocumentContent.MaxCommentLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _comment = value;
+                }
             }
         }
 

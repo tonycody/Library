@@ -6,7 +6,7 @@ namespace Library.Net.Lair
     interface IMessageContent<TKey>
         where TKey : IKey
     {
-        string Text { get; }
+        string Comment { get; }
         IEnumerable<TKey> Anchors { get; }
     }
 }

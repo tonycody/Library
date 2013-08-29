@@ -460,6 +460,38 @@ namespace Library.Net.Lair
             }
         }
 
+        public static ArraySegment<byte> ToVoteContentBlock(VoteContent content)
+        {
+            if (content == null) throw new ArgumentNullException("content");
+
+            ArraySegment<byte> value;
+
+            using (Stream stream = ContentConverter.ToStream<VoteContent>(content))
+            {
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
+                stream.Read(value.Array, value.Offset, value.Count);
+            }
+
+            return value;
+        }
+
+        public static VoteContent FromVoteContentBlock(ArraySegment<byte> content)
+        {
+            if (content.Array == null) throw new ArgumentNullException("content.Array");
+
+            try
+            {
+                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                {
+                    return ContentConverter.FromStream<VoteContent>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         public static ArraySegment<byte> ToTopicContentBlock(TopicContent content)
         {
             if (content == null) throw new ArgumentNullException("content");

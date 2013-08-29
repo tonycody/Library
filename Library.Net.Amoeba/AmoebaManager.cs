@@ -17,8 +17,8 @@ namespace Library.Net.Amoeba
         private ConnectionsManager _connectionsManager;
         private DownloadManager _downloadManager;
         private UploadManager _uploadManager;
-        private StoreDownloadManager _storeDownloadManager;
-        private StoreUploadManager _storeUploadManager;
+        private BackgroundDownloadManager _backgroundDownloadManager;
+        private BackgroundUploadManager _backgroundUploadManager;
 
         private ManagerState _state = ManagerState.Stop;
         private ManagerState _encodeState = ManagerState.Stop;
@@ -40,8 +40,8 @@ namespace Library.Net.Amoeba
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
             _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
-            _storeDownloadManager = new StoreDownloadManager(_connectionsManager, _cacheManager, _bufferManager);
-            _storeUploadManager = new StoreUploadManager(_connectionsManager, _cacheManager, _bufferManager);
+            _backgroundDownloadManager = new BackgroundDownloadManager(_connectionsManager, _cacheManager, _bufferManager);
+            _backgroundUploadManager = new BackgroundUploadManager(_connectionsManager, _cacheManager, _bufferManager);
 
             _connectionsManager.LockSeedSignaturesEvent = (object sender) =>
             {
@@ -181,7 +181,7 @@ namespace Library.Net.Amoeba
 
                 lock (this.ThisLock)
                 {
-                    return _storeDownloadManager.SearchSignatures;
+                    return _backgroundDownloadManager.SearchSignatures;
                 }
             }
         }
@@ -387,13 +387,10 @@ namespace Library.Net.Amoeba
             {
                 if (this.State == ManagerState.Start)
                 {
-                    _uploadManager.Stop();
                     _downloadManager.Stop();
-                }
-
-                if (this.EncodeState == ManagerState.Start)
-                {
-                    _uploadManager.EncodeStop();
+                    _uploadManager.Stop();
+                    _backgroundDownloadManager.Stop();
+                    _backgroundUploadManager.Stop();
                 }
 
                 if (this.DecodeState == ManagerState.Start)
@@ -401,22 +398,29 @@ namespace Library.Net.Amoeba
                     _downloadManager.DecodeStop();
                 }
 
+                if (this.EncodeState == ManagerState.Start)
+                {
+                    _uploadManager.EncodeStop();
+                }
+
                 _cacheManager.Resize(size);
 
                 if (this.State == ManagerState.Start)
                 {
-                    _uploadManager.Start();
                     _downloadManager.Start();
-                }
-
-                if (this.EncodeState == ManagerState.Start)
-                {
-                    _uploadManager.EncodeStart();
+                    _uploadManager.Start();
+                    _backgroundDownloadManager.Start();
+                    _backgroundUploadManager.Start();
                 }
 
                 if (this.DecodeState == ManagerState.Start)
                 {
                     _downloadManager.DecodeStart();
+                }
+
+                if (this.EncodeState == ManagerState.Start)
+                {
+                    _uploadManager.EncodeStart();
                 }
             }
         }
@@ -603,11 +607,35 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public Link GetLink(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                return _backgroundDownloadManager.GetLink(signature);
+            }
+        }
+
         public Store GetStore(string signature)
         {
             lock (this.ThisLock)
             {
-                return _storeDownloadManager.GetStore(signature);
+                return _backgroundDownloadManager.GetStore(signature);
+            }
+        }
+
+        public void Upload(Link link,
+            DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _backgroundUploadManager.Upload(link,
+                    CompressionAlgorithm.Lzma,
+                    CryptoAlgorithm.Rijndael256,
+                    CorrectionAlgorithm.ReedSolomon8,
+                    HashAlgorithm.Sha512,
+                    digitalSignature);
             }
         }
 
@@ -618,12 +646,22 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _storeUploadManager.Upload(store,
+                _backgroundUploadManager.Upload(store,
                     CompressionAlgorithm.Lzma,
                     CryptoAlgorithm.Rijndael256,
                     CorrectionAlgorithm.ReedSolomon8,
                     HashAlgorithm.Sha512,
                     digitalSignature);
+            }
+        }
+
+        public void ResetLink(string signature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _backgroundDownloadManager.Reset(signature);
             }
         }
 
@@ -633,7 +671,7 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _storeDownloadManager.Reset(signature);
+                _backgroundDownloadManager.Reset(signature);
             }
         }
 
@@ -688,8 +726,8 @@ namespace Library.Net.Amoeba
                 _connectionsManager.Start();
                 _downloadManager.Start();
                 _uploadManager.Start();
-                _storeDownloadManager.Start();
-                _storeUploadManager.Start();
+                _backgroundDownloadManager.Start();
+                _backgroundUploadManager.Start();
             }
         }
 
@@ -702,8 +740,8 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
 
-                _storeUploadManager.Stop();
-                _storeDownloadManager.Stop();
+                _backgroundUploadManager.Stop();
+                _backgroundDownloadManager.Stop();
                 _uploadManager.Stop();
                 _downloadManager.Stop();
                 _connectionsManager.Stop();
@@ -778,8 +816,8 @@ namespace Library.Net.Amoeba
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _downloadManager.Load(System.IO.Path.Combine(directoryPath, "DownloadManager"));
                 _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
-                _storeDownloadManager.Load(System.IO.Path.Combine(directoryPath, "StoreDownloadManager"));
-                _storeUploadManager.Load(System.IO.Path.Combine(directoryPath, "StoreUploadManager"));
+                _backgroundDownloadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundDownloadManager"));
+                _backgroundUploadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"));
             }
         }
 
@@ -789,8 +827,8 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _storeUploadManager.Save(System.IO.Path.Combine(directoryPath, "StoreUploadManager"));
-                _storeDownloadManager.Save(System.IO.Path.Combine(directoryPath, "StoreDownloadManager"));
+                _backgroundUploadManager.Save(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"));
+                _backgroundDownloadManager.Save(System.IO.Path.Combine(directoryPath, "BackgroundDownloadManager"));
                 _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
                 _downloadManager.Save(System.IO.Path.Combine(directoryPath, "DownloadManager"));
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
@@ -809,10 +847,10 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
-                _storeUploadManager.Dispose();
-                _storeDownloadManager.Dispose();
-                _uploadManager.Dispose();
+                _backgroundDownloadManager.Dispose();
+                _backgroundUploadManager.Dispose();
                 _downloadManager.Dispose();
+                _uploadManager.Dispose();
                 _connectionsManager.Dispose();
                 _cacheManager.Dispose();
                 _serverManager.Dispose();

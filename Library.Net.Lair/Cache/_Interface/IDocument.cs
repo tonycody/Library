@@ -7,6 +7,7 @@ namespace Library.Net.Lair
         where TKey : IKey
     {
         TSection Section { get; }
+        string Name { get; }
         DateTime CreationTime { get; }
         TKey Content { get; }
     }

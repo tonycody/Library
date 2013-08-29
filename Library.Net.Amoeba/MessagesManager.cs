@@ -151,6 +151,7 @@ namespace Library.Net.Amoeba
         private LockedHashSet<Node> _surroundingNodes;
 
         private CirculationCollection<Key> _pushBlocks;
+        private CirculationDictionary<string, DateTime> _pushLinkSeeds;
         private CirculationDictionary<string, DateTime> _pushStoreSeeds;
 
         private CirculationCollection<Key> _pushBlocksLink;
@@ -171,6 +172,7 @@ namespace Library.Net.Amoeba
             _surroundingNodes = new LockedHashSet<Node>(128);
 
             _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushLinkSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
             _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
 
             _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
@@ -302,6 +304,17 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     return _pushBlocks;
+                }
+            }
+        }
+
+        public CirculationDictionary<string, DateTime> PushLinkSeeds
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushLinkSeeds;
                 }
             }
         }
