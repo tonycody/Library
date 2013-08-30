@@ -41,7 +41,7 @@ namespace Library.Net.Amoeba
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
 
-            _settings = new Settings();
+            _settings = new Settings(this.ThisLock);
 
             _cacheManager.SetKeyEvent += (object sender, IEnumerable<Key> keys) =>
             {
@@ -79,7 +79,7 @@ namespace Library.Net.Amoeba
                 }
             }));
             _setThread.Priority = ThreadPriority.BelowNormal;
-            _setThread.Name = "DownloadManager_SetThread";
+            _setThread.Name = "BackgroundDownloadManager_SetThread";
             _setThread.Start();
 
             _removeThread = new Thread(new ThreadStart(() =>
@@ -102,7 +102,7 @@ namespace Library.Net.Amoeba
                 }
             }));
             _removeThread.Priority = ThreadPriority.BelowNormal;
-            _removeThread.Name = "DownloadManager_RemoveThread";
+            _removeThread.Name = "BackgroundDownloadManager_RemoveThread";
             _removeThread.Start();
         }
 
@@ -773,6 +773,8 @@ namespace Library.Net.Amoeba
 
                     if (!watchStopwatch.IsRunning || watchStopwatch.Elapsed.TotalSeconds >= 60)
                     {
+                        watchStopwatch.Restart();
+
                         lock (this.ThisLock)
                         {
                             foreach (var item in _settings.BackgroundDownloadItems.ToArray())
@@ -782,50 +784,48 @@ namespace Library.Net.Amoeba
                                 this.Remove(item);
                             }
 
-                            foreach (var signature in this.SearchSignatures)
+                            foreach (var signature in this.SearchSignatures.ToArray())
                             {
                                 _connectionsManager.SendSeedRequest(signature);
-                            }
 
-                            // Link
-                            foreach (var signature in this.SearchSignatures)
-                            {
-                                var seed = _connectionsManager.GetLinkSeed(signature);
-                                if (seed == null || seed.Length > 1024 * 1024 * 32) continue;
+                                Seed seed;
 
-                                var item = _settings.BackgroundDownloadItems
-                                    .Where(n => n.Type == BackgroundItemType.Link)
-                                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
-
-                                if (item == null)
+                                // Link
+                                if (null != (seed = _connectionsManager.GetLinkSeed(signature))
+                                    && seed.Length < 1024 * 1024 * 32)
                                 {
-                                    this.Download(seed, BackgroundItemType.Link);
+                                    var item = _settings.BackgroundDownloadItems
+                                        .Where(n => n.Type == BackgroundItemType.Link)
+                                        .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+
+                                    if (item == null)
+                                    {
+                                        this.Download(seed, BackgroundItemType.Link);
+                                    }
+                                    else if (seed.CreationTime > item.Seed.CreationTime)
+                                    {
+                                        this.Remove(item);
+                                        this.Download(seed, BackgroundItemType.Link);
+                                    }
                                 }
-                                else if (seed.CreationTime > item.Seed.CreationTime)
-                                {
-                                    this.Remove(item);
-                                    this.Download(seed, BackgroundItemType.Link);
-                                }
-                            }
 
-                            // Store
-                            foreach (var signature in this.SearchSignatures)
-                            {
-                                var seed = _connectionsManager.GetStoreSeed(signature);
-                                if (seed == null || seed.Length > 1024 * 1024 * 32) continue;
-
-                                var item = _settings.BackgroundDownloadItems
-                                    .Where(n => n.Type == BackgroundItemType.Store)
-                                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
-
-                                if (item == null)
+                                // Store
+                                if (null != (seed = _connectionsManager.GetStoreSeed(signature))
+                                    && seed.Length < 1024 * 1024 * 32)
                                 {
-                                    this.Download(seed, BackgroundItemType.Store);
-                                }
-                                else if (seed.CreationTime > item.Seed.CreationTime)
-                                {
-                                    this.Remove(item);
-                                    this.Download(seed, BackgroundItemType.Store);
+                                    var item = _settings.BackgroundDownloadItems
+                                        .Where(n => n.Type == BackgroundItemType.Store)
+                                        .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+
+                                    if (item == null)
+                                    {
+                                        this.Download(seed, BackgroundItemType.Store);
+                                    }
+                                    else if (seed.CreationTime > item.Seed.CreationTime)
+                                    {
+                                        this.Remove(item);
+                                        this.Download(seed, BackgroundItemType.Store);
+                                    }
                                 }
                             }
                         }
@@ -932,7 +932,10 @@ namespace Library.Net.Amoeba
                     .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
                 if (item == null) return null;
 
-                return (Link)item.Value;
+                var link = item.Value as Link;
+                if (link == null) return null;
+
+                return link.DeepClone();
             }
         }
 
@@ -945,7 +948,10 @@ namespace Library.Net.Amoeba
                     .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
                 if (item == null) return null;
 
-                return (Store)item.Value;
+                var store = item.Value as Store;
+                if (store == null) return null;
+
+                return store.DeepClone();
             }
         }
 
@@ -975,6 +981,7 @@ namespace Library.Net.Amoeba
         {
             while (_downloadManagerThread != null) Thread.Sleep(1000);
             while (_decodeManagerThread != null) Thread.Sleep(1000);
+            while (_watchThread != null) Thread.Sleep(1000);
 
             lock (this.ThisLock)
             {
@@ -1072,15 +1079,15 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock = new object();
+            private object _thisLock;
 
-            public Settings()
+            public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<LockedList<BackgroundDownloadItem>>() { Name = "BackgroundDownloadItems", Value = new LockedList<BackgroundDownloadItem>() },
                     new Library.Configuration.SettingsContext<SignatureCollection>() { Name = "Signatures", Value = new SignatureCollection() },
                 })
             {
-
+                _thisLock = lockObject;
             }
 
             public override void Load(string directoryPath)
@@ -1120,18 +1127,6 @@ namespace Library.Net.Amoeba
                     }
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         protected override void Dispose(bool disposing)

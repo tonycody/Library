@@ -272,14 +272,14 @@ namespace Library.Tool
                                 "        {{\r\n" +
                                 "            get\r\n" +
                                 "            {{\r\n" +
-                                "                lock (_thisLock)\r\n" +
+                                "                lock (this.ThisLock)\r\n" +
                                 "                {{\r\n" +
                                 "                   return ({0})this[\"{1}\"];\r\n" +
                                 "                }}\r\n" +
                                 "            }}\r\n" +
                                 "            set\r\n" +
                                 "            {{\r\n" +
-                                "                lock (_thisLock)\r\n" +
+                                "                lock (this.ThisLock)\r\n" +
                                 "                {{\r\n" +
                                 "                    this[\"{1}\"] = value;\r\n" +
                                 "                }}\r\n" +

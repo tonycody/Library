@@ -143,9 +143,9 @@ namespace Library.Configuration
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-
+                    Log.Warning(e);
                 }
             }
         }
@@ -189,9 +189,9 @@ namespace Library.Configuration
 
                     File.Move(uniquePath, newPath);
                 }
-                catch (Exception)
+                catch (Exception e) 
                 {
-
+                    Log.Warning(e);
                 }
             }
         }

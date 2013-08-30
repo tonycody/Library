@@ -417,7 +417,7 @@ namespace Library.Net.Lair
 
         private void RemoveNode(Node node)
         {
-#if DEBUG
+#if !DEBUG
             int closeCount;
 
             _nodesStatus.TryGetValue(node, out closeCount);

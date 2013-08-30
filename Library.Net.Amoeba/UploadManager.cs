@@ -43,7 +43,7 @@ namespace Library.Net.Amoeba
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
 
-            _settings = new Settings();
+            _settings = new Settings(this.ThisLock);
 
             _connectionsManager.UploadedEvent += (object sender, IEnumerable<Key> keys) =>
             {
@@ -1075,15 +1075,15 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock = new object();
+            private object _thisLock;
 
-            public Settings()
+            public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<LockedList<UploadItem>>() { Name = "UploadItems", Value = new LockedList<UploadItem>() },
                     new Library.Configuration.SettingsContext<SeedCollection>() { Name = "UploadedSeeds", Value = new SeedCollection() },
                 })
             {
-
+                _thisLock = lockObject;
             }
 
             public override void Load(string directoryPath)

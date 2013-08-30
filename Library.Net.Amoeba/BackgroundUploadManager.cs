@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using Library.Collections;
 using Library.Io;
 using Library.Security;
-using System.Diagnostics;
 
 namespace Library.Net.Amoeba
 {
@@ -36,7 +36,7 @@ namespace Library.Net.Amoeba
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
 
-            _settings = new Settings();
+            _settings = new Settings(this.ThisLock);
 
             _connectionsManager.UploadedEvent += (object sender, IEnumerable<Key> keys) =>
             {
@@ -159,11 +159,17 @@ namespace Library.Net.Amoeba
                             {
                                 if (item.Type == BackgroundItemType.Link)
                                 {
-                                    stream = ((Link)item.Value).Export(_bufferManager);
+                                    var link = item.Value as Link;
+                                    if (link == null) throw new FormatException();
+
+                                    stream = link.Export(_bufferManager);
                                 }
                                 else if (item.Type == BackgroundItemType.Store)
                                 {
-                                    stream = ((Store)item.Value).Export(_bufferManager);
+                                    var store = item.Value as Store;
+                                    if (store == null) throw new FormatException();
+
+                                    stream = store.Export(_bufferManager);
                                 }
                                 else
                                 {
@@ -382,6 +388,8 @@ namespace Library.Net.Amoeba
 
                     if (!watchStopwatch.IsRunning || watchStopwatch.Elapsed.TotalMinutes >= 10)
                     {
+                        watchStopwatch.Restart();
+
                         lock (this.ThisLock)
                         {
                             var now = DateTime.UtcNow;
@@ -538,6 +546,7 @@ namespace Library.Net.Amoeba
         public override void Start()
         {
             while (_uploadManagerThread != null) Thread.Sleep(1000);
+            while (_watchThread != null) Thread.Sleep(1000);
 
             lock (this.ThisLock)
             {
@@ -613,14 +622,14 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock = new object();
+            private object _thisLock;
 
-            public Settings()
+            public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<LockedList<BackgroundUploadItem>>() { Name = "BackgroundUploadItems", Value = new LockedList<BackgroundUploadItem>() },
                 })
             {
-
+                _thisLock = lockObject;
             }
 
             public override void Load(string directoryPath)
@@ -649,18 +658,6 @@ namespace Library.Net.Amoeba
                     }
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         protected override void Dispose(bool disposing)

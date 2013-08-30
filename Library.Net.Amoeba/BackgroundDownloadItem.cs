@@ -22,6 +22,8 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "BackgroundDownloadItem", Namespace = "http://Library/Net/Amoeba")]
+    [KnownType(typeof(Link))]
+    [KnownType(typeof(Store))]
     sealed class BackgroundDownloadItem : IDeepCloneable<BackgroundDownloadItem>
     {
         private IndexCollection _indexes;

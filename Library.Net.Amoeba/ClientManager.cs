@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
         {
             _bufferManager = bufferManager;
 
-            _settings = new Settings();
+            _settings = new Settings(this.ThisLock);
         }
 
         public ConnectionFilterCollection Filters
@@ -461,14 +461,14 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock = new object();
+            private object _thisLock;
 
-            public Settings()
+            public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<ConnectionFilterCollection>() { Name = "ConnectionFilters", Value = new ConnectionFilterCollection() },
                  })
             {
-
+                _thisLock = lockObject;
             }
 
             public override void Load(string path)

@@ -24,6 +24,8 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "BackgroundUploadItem", Namespace = "http://Library/Net/Amoeba")]
+    [KnownType(typeof(Link))]
+    [KnownType(typeof(Store))]
     sealed class BackgroundUploadItem : IDeepCloneable<BackgroundUploadItem>
     {
         private KeyCollection _keys;
