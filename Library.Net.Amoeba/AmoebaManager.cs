@@ -24,8 +24,6 @@ namespace Library.Net.Amoeba
         private ManagerState _encodeState = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 
-        private LockSeedSignaturesEventHandler _lockSeedSignaturesEvent;
-
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
@@ -42,29 +40,6 @@ namespace Library.Net.Amoeba
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
             _backgroundDownloadManager = new BackgroundDownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _backgroundUploadManager = new BackgroundUploadManager(_connectionsManager, _cacheManager, _bufferManager);
-
-            _connectionsManager.LockSeedSignaturesEvent = (object sender) =>
-            {
-                if (_lockSeedSignaturesEvent != null)
-                {
-                    return _lockSeedSignaturesEvent(this);
-                }
-
-                return null;
-            };
-        }
-
-        public LockSeedSignaturesEventHandler LockSeedSignaturesEvent
-        {
-            set
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    _lockSeedSignaturesEvent = value;
-                }
-            }
         }
 
         public Information Information

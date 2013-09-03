@@ -104,6 +104,11 @@ namespace Library.Net.Amoeba
             _removeThread.Priority = ThreadPriority.BelowNormal;
             _removeThread.Name = "BackgroundDownloadManager_RemoveThread";
             _removeThread.Start();
+
+            _connectionsManager.LockSeedSignaturesEvent = (object sender) =>
+            {
+                return this.SearchSignatures;
+            };
         }
 
         public SignatureCollection SearchSignatures

@@ -980,8 +980,6 @@ namespace Library.Net.Lair
 
                     lock (this.ThisLock)
                     {
-                        lock (_settings.ThisLock)
-                        {
                             {
                                 var cacheKeys = new HashSet<Key>(_cacheManager.ToArray());
 
@@ -1074,7 +1072,6 @@ namespace Library.Net.Lair
                                     _cacheManager.Remove(key);
                                 }
                             }
-                        }
                     }
                 }
 
@@ -1238,8 +1235,6 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        lock (_settings.ThisLock)
-                                        {
                                             var removeProfiles = new List<Profile>();
                                             var removeDocuments = new List<Document>();
                                             var removeVotes = new List<Vote>();
@@ -1519,7 +1514,6 @@ namespace Library.Net.Lair
                                         }
                                     }
                                 }
-                            }
                         }
                         catch (Exception e)
                         {
@@ -2076,8 +2070,6 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        lock (_settings.ThisLock)
-                                        {
                                             foreach (var section in sections)
                                             {
                                                 foreach (var item in _settings.GetProfiles(section).Randomize())
@@ -2092,7 +2084,6 @@ namespace Library.Net.Lair
                                                         if (profiles.Count >= 256) goto End;
                                                     }
                                                 }
-                                            }
                                         }
                                     }
 
@@ -2199,8 +2190,6 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        lock (_settings.ThisLock)
-                                        {
                                             foreach (var section in sections)
                                             {
                                                 foreach (var item in _settings.GetVotes(section).Randomize())
@@ -2215,7 +2204,6 @@ namespace Library.Net.Lair
                                                     }
                                                 }
                                             }
-                                        }
                                     }
 
                                 End: ;
@@ -2268,8 +2256,6 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        lock (_settings.ThisLock)
-                                        {
                                             foreach (var channel in channels)
                                             {
                                                 foreach (var item in _settings.GetTopics(channel).Randomize())
@@ -2284,7 +2270,6 @@ namespace Library.Net.Lair
                                                         if (topics.Count >= 8) goto End;
                                                     }
                                                 }
-                                            }
                                         }
                                     }
 
@@ -2331,8 +2316,6 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        lock (_settings.ThisLock)
-                                        {
                                             foreach (var channel in channels)
                                             {
                                                 foreach (var item in _settings.GetMessages(channel).Randomize())
@@ -2346,7 +2329,6 @@ namespace Library.Net.Lair
                                                         if (messages.Count >= 256) goto End;
                                                     }
                                                 }
-                                            }
                                         }
                                     }
 
@@ -2400,8 +2382,6 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        lock (_settings.ThisLock)
-                                        {
                                             foreach (var signature in signatures)
                                             {
                                                 foreach (var item in _settings.GetMails(signature).Randomize())
@@ -2417,7 +2397,6 @@ namespace Library.Net.Lair
                                                 }
                                             }
                                         }
-                                    }
 
                                 End: ;
 
@@ -3575,13 +3554,10 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                lock (_settings.ThisLock)
-                {
                     _settings.OtherNodes.Clear();
                     _settings.OtherNodes.AddRange(_routeTable.ToArray());
 
                     _settings.Save(directoryPath);
-                }
             }
         }
 

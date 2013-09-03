@@ -349,7 +349,6 @@ namespace Library.Net.Amoeba
                                     .Where(n => n.State == DownloadState.Downloading)
                                     .Where(n => n.Priority != 0)
                                     .OrderBy(n => -n.Priority)
-                                    .Take(128)
                                     .ToList();
 
                                 if (items.Count > 0)
