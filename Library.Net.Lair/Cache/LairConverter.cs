@@ -217,7 +217,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = LairConverter.ToStream<Node>(item))
                 {
-                    return "Node@" + LairConverter.ToBase64String(stream);
+                    return "Node:" + LairConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -229,7 +229,7 @@ namespace Library.Net.Lair
         public static Node FromNodeString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) throw new ArgumentException("item");
 
             try
             {
@@ -254,14 +254,14 @@ namespace Library.Net.Lair
                 {
                     using (Stream stream = LairConverter.ToStream<Section>(item))
                     {
-                        return "Section@" + LairConverter.ToBase64String(stream) + "," + leaderSignature;
+                        return "Section:" + LairConverter.ToBase64String(stream) + "," + leaderSignature;
                     }
                 }
                 else
                 {
                     using (Stream stream = LairConverter.ToStream<Section>(item))
                     {
-                        return "Section@" + LairConverter.ToBase64String(stream);
+                        return "Section:" + LairConverter.ToBase64String(stream);
                     }
                 }
             }
@@ -274,7 +274,7 @@ namespace Library.Net.Lair
         public static Section FromSectionString(string item, out string leaderSignature)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Section@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
 
             leaderSignature = null;
 
@@ -305,15 +305,15 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToChannelString(Channel item)
+        public static string ToChatString(Chat item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
             try
             {
-                using (Stream stream = LairConverter.ToStream<Channel>(item))
+                using (Stream stream = LairConverter.ToStream<Chat>(item))
                 {
-                    return "Channel@" + LairConverter.ToBase64String(stream);
+                    return "Chat:" + LairConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -322,16 +322,16 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Channel FromChannelString(string item)
+        public static Chat FromChatString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Channel@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
 
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 8)))
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 5)))
                 {
-                    return LairConverter.FromStream<Channel>(stream);
+                    return LairConverter.FromStream<Chat>(stream);
                 }
             }
             catch (Exception)

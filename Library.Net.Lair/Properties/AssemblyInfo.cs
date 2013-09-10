@@ -13,5 +13,3 @@ using System.Runtime.CompilerServices;
 [assembly: ComVisible(false)]
 [assembly: Guid("5aa52eb2-1037-4319-97dc-9bbe976d1ce6")]
 [assembly: AssemblyVersion("0.0.0.416")] // BCJB4SErLuHjbHPnkDn3BFy6ZqRra/FS+cjifEV4FkSV1Cd3kPlK2UO5dsdNiKECLrQkq6i9hSEcwzIxT13y5g==
-
-[assembly: InternalsVisibleTo("Library.UnitTest")]

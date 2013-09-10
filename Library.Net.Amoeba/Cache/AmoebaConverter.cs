@@ -216,7 +216,7 @@ namespace Library.Net.Amoeba
             {
                 using (Stream stream = AmoebaConverter.ToStream<Node>(item))
                 {
-                    return "Node@" + AmoebaConverter.ToBase64String(stream);
+                    return "Node:" + AmoebaConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -228,7 +228,7 @@ namespace Library.Net.Amoeba
         public static Node FromNodeString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) throw new ArgumentException("item");
 
             try
             {
@@ -251,7 +251,7 @@ namespace Library.Net.Amoeba
             {
                 using (Stream stream = AmoebaConverter.ToStream<Seed>(item))
                 {
-                    return "Seed@" + AmoebaConverter.ToBase64String(stream);
+                    return "Seed:" + AmoebaConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -263,7 +263,7 @@ namespace Library.Net.Amoeba
         public static Seed FromSeedString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Seed@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Seed:") && !item.StartsWith("Seed@")) throw new ArgumentException("item");
 
             try
             {

@@ -56,6 +56,7 @@
   <ItemGroup>
     <Compile Include="Certificate.cs" />
     <Compile Include="CertificateItemBase.cs" />
+    <Compile Include="ExchangePublicKey.cs" />
     <Compile Include="IExchangeDecrypt.cs" />
     <Compile Include="Tools\Rsa2048.cs" />
     <Compile Include="Exchange.cs" />

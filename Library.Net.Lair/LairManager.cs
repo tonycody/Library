@@ -18,7 +18,7 @@ namespace Library.Net.Lair
 
         private TrustSignaturesEventHandler _trustSignaturesEvent;
         private LockSectionsEventHandler _removeSectionsEvent;
-        private LockChannelsEventHandler _removeChannelsEvent;
+        private LockChatsEventHandler _removeChatsEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -53,11 +53,11 @@ namespace Library.Net.Lair
                 return null;
             };
 
-            _connectionsManager.LockChannelsEvent = (object sender) =>
+            _connectionsManager.LockChatsEvent = (object sender) =>
             {
-                if (_removeChannelsEvent != null)
+                if (_removeChatsEvent != null)
                 {
-                    return _removeChannelsEvent(this);
+                    return _removeChatsEvent(this);
                 }
 
                 return null;
@@ -86,13 +86,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public LockChannelsEventHandler LockChannelsEvent
+        public LockChatsEventHandler LockChatsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _removeChannelsEvent = value;
+                    _removeChatsEvent = value;
                 }
             }
         }
@@ -308,13 +308,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public void SendChannelRequest(Channel channel)
+        public void SendChatRequest(Chat channel)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.SendChannelRequest(channel);
+                _connectionsManager.SendChatRequest(channel);
             }
         }
 
@@ -338,13 +338,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Channel> GetChannels()
+        public IEnumerable<Chat> GetChats()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetChannels();
+                return _connectionsManager.GetChats();
             }
         }
 
@@ -358,7 +358,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Profile> GetProfiles(Section section)
+        public IEnumerable<SectionProfile> GetProfiles(Section section)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -368,27 +368,27 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Document> GetDocuments(Section section)
+        public IEnumerable<DocumentPage> GetDocumentPages(Section section)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetDocuments(section);
+                return _connectionsManager.GetDocumentPages(section);
             }
         }
 
-        public IEnumerable<Vote> GetVotes(Section section)
+        public IEnumerable<DocumentOpinion> GetDocumentOpinions(Section section)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetVotes(section);
+                return _connectionsManager.GetDocumentOpinions(section);
             }
         }
 
-        public IEnumerable<Topic> GetTopics(Channel channel)
+        public IEnumerable<ChatTopic> GetTopics(Chat channel)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -398,7 +398,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Message> GetMessages(Channel channel)
+        public IEnumerable<ChatMessage> GetMessages(Chat channel)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -408,17 +408,17 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Mail> GetMails(string signature)
+        public IEnumerable<MailMessage> GetMailMessages(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetMails(signature);
+                return _connectionsManager.GetMailMessages(signature);
             }
         }
 
-        public ProfileContent GetContent(Profile profile)
+        public SectionProfileContent GetContent(SectionProfile profile)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -428,7 +428,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentContent GetContent(Document document)
+        public DocumentPageContent GetContent(DocumentPage document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -438,7 +438,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public VoteContent GetContent(Vote vote)
+        public DocumentOpinionContent GetContent(DocumentOpinion vote)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -448,7 +448,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public TopicContent GetContent(Topic topic)
+        public ChatTopicContent GetContent(ChatTopic topic)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -458,7 +458,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public MessageContent GetContent(Message message)
+        public ChatMessageContent GetContent(ChatMessage message)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -468,7 +468,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public MailContent GetContent(Mail mail, IExchangeDecrypt exchangeDecrypt)
+        public MailMessageContent GetContent(MailMessage mail, IExchangeDecrypt exchangeDecrypt)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -478,8 +478,8 @@ namespace Library.Net.Lair
             }
         }
 
-        public Profile UploadProfile(Section section,
-            IEnumerable<string> trustSignatures, IEnumerable<Channel> channels, string comment, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
+        public SectionProfile UploadProfile(Section section,
+            IEnumerable<string> trustSignatures, IEnumerable<Chat> channels, string comment, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -489,29 +489,29 @@ namespace Library.Net.Lair
             }
         }
 
-        public Document UploadDocument(Section section, string name,
+        public DocumentPage UploadDocumentPage(Section section, string name,
             string comment, HypertextFormatType formatType, string hypertext, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadDocument(section, name, comment, formatType, hypertext, digitalSignature);
+                return _connectionsManager.UploadDocumentPage(section, name, comment, formatType, hypertext, digitalSignature);
             }
         }
 
-        public Vote UploadVote(Section section,
+        public DocumentOpinion UploadDocumentOpinion(Section section,
              IEnumerable<Key> goods, IEnumerable<Key> bads, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadVote(section, goods, bads, digitalSignature);
+                return _connectionsManager.UploadDocumentOpinion(section, goods, bads, digitalSignature);
             }
         }
 
-        public Topic UploadTopic(Channel channel,
+        public ChatTopic UploadTopic(Chat channel,
             string comment, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -522,7 +522,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public Message UploadMessage(Channel channel,
+        public ChatMessage UploadMessage(Chat channel,
             string comment, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -533,14 +533,14 @@ namespace Library.Net.Lair
             }
         }
 
-        public Mail UploadMail(string recipientSignature,
+        public MailMessage UploadMailMessage(string recipientSignature,
             string text, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadMail(recipientSignature, text, exchangeEncrypt, digitalSignature);
+                return _connectionsManager.UploadMailMessage(recipientSignature, text, exchangeEncrypt, digitalSignature);
             }
         }
 
