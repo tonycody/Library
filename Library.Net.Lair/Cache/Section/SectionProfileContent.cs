@@ -14,34 +14,40 @@ namespace Library.Net.Lair
         private enum SerializeId : byte
         {
             Comment = 0,
-            ExchangePublicKey = 1,
-            TrustSignature = 2,
-            Document = 3,
-            Chat = 4,
+            TrustSignature = 1,
+            Document = 2,
+            Chat = 3,
+
+            ExchangeAlgorithm = 4,
+            PublicKey = 5,
         }
 
         private string _comment;
-        private ExchangePublicKey _exchangePublicKey;
         private SignatureCollection _trustSignatures = null;
         private DocumentCollection _documents = null;
         private ChatCollection _chats = null;
 
+        private ExchangeAlgorithm _exchangeAlgorithm;
+        private byte[] _publicKey;
+
         private int _hashCode = 0;
 
-        public static readonly int MaxCommentLength = 1024 * 32;
+        public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxTrustSignaturesCount = 1024;
         public static readonly int MaxDocumentsCount = 1024;
         public static readonly int MaxChatsCount = 1024;
 
-        public static readonly int MaxPublicKeyLength = 1024 * 8;
+        public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfileContent(string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Document> documents, IEnumerable<Chat> chats)
+        public SectionProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<Document> documents, IEnumerable<Chat> chats, IExchangeEncrypt exchangeEncrypt)
         {
             this.Comment = comment;
-            this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
             if (documents != null) this.ProtectedDocuments.AddRange(documents);
             if (chats != null) this.ProtectedChats.AddRange(chats);
+
+            this.ExchangeAlgorithm = exchangeEncrypt.ExchangeAlgorithm;
+            this.PublicKey = exchangeEncrypt.PublicKey;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -64,10 +70,6 @@ namespace Library.Net.Lair
                             this.Comment = reader.ReadToEnd();
                         }
                     }
-                    else if (id == (byte)SerializeId.ExchangePublicKey)
-                    {
-                        this.ExchangePublicKey = ExchangePublicKey.Import(rangeStream, bufferManager);
-                    }
                     else if (id == (byte)SerializeId.TrustSignature)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
@@ -82,6 +84,21 @@ namespace Library.Net.Lair
                     else if (id == (byte)SerializeId.Chat)
                     {
                         this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
+                    }
+
+                    else if (id == (byte)SerializeId.ExchangeAlgorithm)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
+                        }
+                    }
+                    else if (id == (byte)SerializeId.PublicKey)
+                    {
+                        byte[] buffer = new byte[(int)rangeStream.Length];
+                        rangeStream.Read(buffer, 0, buffer.Length);
+
+                        this.PublicKey = buffer;
                     }
                 }
             }
@@ -110,17 +127,6 @@ namespace Library.Net.Lair
                 bufferStream.WriteByte((byte)SerializeId.Comment);
 
                 streams.Add(bufferStream);
-            }
-            // ExchangePublicKey
-            if (this.ExchangePublicKey != null)
-            {
-                Stream exportStream = this.ExchangePublicKey.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.ExchangePublicKey);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
             }
             // TrustSignatures
             foreach (var t in this.TrustSignatures)
@@ -164,6 +170,36 @@ namespace Library.Net.Lair
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
+            // ExchangeAlgorithm
+            if (this.ExchangeAlgorithm != 0)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.ExchangeAlgorithm.ToString());
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
+
+                streams.Add(bufferStream);
+            }
+            // PublicKey
+            if (this.PublicKey != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.PublicKey);
+                bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
+
+                streams.Add(bufferStream);
+            }
+
             return new JoinStream(streams);
         }
 
@@ -186,10 +222,12 @@ namespace Library.Net.Lair
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Comment != other.Comment
-                || this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
                 || (this.Documents == null) != (other.Documents == null)
-                || (this.Chats == null) != (other.Chats == null))
+                || (this.Chats == null) != (other.Chats == null)
+
+                || this.ExchangeAlgorithm != other.ExchangeAlgorithm
+                || ((this.PublicKey == null) != (other.PublicKey == null)))
             {
                 return false;
             }
@@ -207,6 +245,11 @@ namespace Library.Net.Lair
             if (this.Chats != null && other.Chats != null)
             {
                 if (!Collection.Equals(this.Chats, other.Chats)) return false;
+            }
+
+            if (this.PublicKey != null && other.PublicKey != null)
+            {
+                if (!Collection.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             return true;
@@ -239,19 +282,6 @@ namespace Library.Net.Lair
                 {
                     _comment = value;
                 }
-            }
-        }
-
-        [DataMember(Name = " ExchangePublicKey")]
-        public ExchangePublicKey ExchangePublicKey
-        {
-            get
-            {
-                return _exchangePublicKey;
-            }
-            private set
-            {
-                _exchangePublicKey = value;
             }
         }
 
@@ -312,6 +342,59 @@ namespace Library.Net.Lair
                     _chats = new ChatCollection(SectionProfileContent.MaxChatsCount);
 
                 return _chats;
+            }
+        }
+
+        #endregion
+
+        #region  IExchangeEncrypt
+
+        [DataMember(Name = "ExchangeAlgorithm")]
+        public ExchangeAlgorithm ExchangeAlgorithm
+        {
+            get
+            {
+                return _exchangeAlgorithm;
+            }
+            private set
+            {
+                if (!Enum.IsDefined(typeof(ExchangeAlgorithm), value))
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _exchangeAlgorithm = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "PublicKey")]
+        public byte[] PublicKey
+        {
+            get
+            {
+                return _publicKey;
+            }
+            private set
+            {
+                if (value != null && (value.Length > Exchange.MaxPublickeyLength))
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _publicKey = value;
+                }
+
+                if (value != null && value.Length != 0)
+                {
+                    _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
+                }
+                else
+                {
+                    _hashCode = 0;
+                }
             }
         }
 

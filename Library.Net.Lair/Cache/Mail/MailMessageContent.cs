@@ -13,16 +13,16 @@ namespace Library.Net.Lair
     {
         private enum SerializeId : byte
         {
-            Content = 0,
+            Comment = 0,
         }
 
-        private string _content = null;
+        private string _comment = null;
 
-        public static readonly int MaxContentLength = 1024 * 4;
+        public static readonly int MaxCommentLength = 1024 * 4;
 
-        public MailMessageContent(string content)
+        public MailMessageContent(string comment)
         {
-            this.Content = content;
+            this.Comment = comment;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -38,11 +38,11 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Content)
+                    if (id == (byte)SerializeId.Comment)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.Content = reader.ReadToEnd();
+                            this.Comment = reader.ReadToEnd();
                         }
                     }
                 }
@@ -54,8 +54,8 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Content
-            if (this.Content != null)
+            // Comment
+            if (this.Comment != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -64,12 +64,12 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(this.Content);
+                    writer.Write(this.Comment);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Content);
+                bufferStream.WriteByte((byte)SerializeId.Comment);
 
                 streams.Add(bufferStream);
             }
@@ -79,8 +79,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (_content == null) return 0;
-            else return _content.GetHashCode();
+            if (_comment == null) return 0;
+            else return _comment.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -96,7 +96,7 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Content != other.Content)
+            if (this.Comment != other.Comment)
             {
                 return false;
             }
@@ -114,22 +114,22 @@ namespace Library.Net.Lair
 
         #region IMailMessageContent
 
-        [DataMember(Name = "Content")]
-        public string Content
+        [DataMember(Name = "Comment")]
+        public string Comment
         {
             get
             {
-                return _content;
+                return _comment;
             }
             private set
             {
-                if (value != null && value.Length > MailMessageContent.MaxContentLength)
+                if (value != null && value.Length > MailMessageContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _content = value;
+                    _comment = value;
                 }
             }
         }

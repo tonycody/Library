@@ -12,7 +12,7 @@ namespace Library.Net.Amoeba
         ReedSolomon8 = 1,
     }
 
-    interface ICorrectionAlgorithm
+    public interface ICorrectionAlgorithm
     {
         CorrectionAlgorithm CorrectionAlgorithm { get; }
         int InformationLength { get; }

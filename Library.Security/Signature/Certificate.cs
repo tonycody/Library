@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
@@ -7,40 +7,55 @@ using Library.Io;
 
 namespace Library.Security
 {
-    [DataContract(Name = "Exchange", Namespace = "http://Library/Security")]
-    public sealed class Exchange : ItemBase<Exchange>, IExchangeEncrypt, IExchangeDecrypt, IThisLock
+    [DataContract(Name = "Certificate", Namespace = "http://Library/Security")]
+    public sealed class Certificate : ItemBase<Certificate>, IThisLock
     {
         private enum SerializeId : byte
         {
-            ExchangeAlgorithm = 0,
-            PublicKey = 1,
-            PrivateKey = 2,
+            Nickname = 0,
+            DigitalSignatureAlgorithm = 1,
+            PublicKey = 2,
+            Signature = 3,
         }
 
-        private ExchangeAlgorithm _exchangeAlgorithm;
-        private byte[] _publicKey;
-        private byte[] _privateKey;
+        private string _nickname;
+        private DigitalSignatureAlgorithm _digitalSignatureAlgorithm = 0;
+        private byte[] _publicKey = null;
+        private byte[] _signature = null;
         private int _hashCode = 0;
+
+        private string _toString = null;
 
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
+        public static readonly int MaxNickNameLength = 256;
         public static readonly int MaxPublickeyLength = 1024 * 8;
-        public static readonly int MaxPrivatekeyLength = 1024 * 8;
+        public static readonly int MaxSignatureLength = 1024 * 8;
 
-        public Exchange(ExchangeAlgorithm exchangeAlgorithm)
+        internal Certificate(DigitalSignature digitalSignature, Stream stream)
         {
-            this.ExchangeAlgorithm = exchangeAlgorithm;
+            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
 
-            if (exchangeAlgorithm == ExchangeAlgorithm.Rsa2048)
+            byte[] signature;
+
+            if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
             {
-                byte[] publicKey, privateKey;
-
-                Rsa2048.CreateKeys(out publicKey, out privateKey);
-
-                this.PublicKey = publicKey;
-                this.PrivateKey = privateKey;
+                signature = ECDsaP521_Sha512.Sign(digitalSignature.PrivateKey, stream);
             }
+            else if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
+            {
+                signature = Rsa2048_Sha512.Sign(digitalSignature.PrivateKey, stream);
+            }
+            else
+            {
+                return;
+            }
+
+            this.Nickname = digitalSignature.Nickname;
+            this.DigitalSignatureAlgorithm = digitalSignature.DigitalSignatureAlgorithm;
+            this.PublicKey = digitalSignature.PublicKey;
+            this.Signature = signature;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -58,11 +73,18 @@ namespace Library.Security
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.ExchangeAlgorithm)
+                        if (id == (byte)SerializeId.Nickname)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
+                                this.Nickname = reader.ReadToEnd();
+                            }
+                        }
+                        else if (id == (byte)SerializeId.DigitalSignatureAlgorithm)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.DigitalSignatureAlgorithm = (DigitalSignatureAlgorithm)Enum.Parse(typeof(DigitalSignatureAlgorithm), reader.ReadToEnd());
                             }
                         }
                         else if (id == (byte)SerializeId.PublicKey)
@@ -72,12 +94,12 @@ namespace Library.Security
 
                             this.PublicKey = buffer;
                         }
-                        else if (id == (byte)SerializeId.PrivateKey)
+                        else if (id == (byte)SerializeId.Signature)
                         {
                             byte[] buffer = new byte[(int)rangeStream.Length];
                             rangeStream.Read(buffer, 0, buffer.Length);
 
-                            this.PrivateKey = buffer;
+                            this.Signature = buffer;
                         }
                     }
                 }
@@ -91,8 +113,7 @@ namespace Library.Security
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // ExchangeAlgorithm
-                if (this.ExchangeAlgorithm != 0)
+                if (this.Nickname != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -101,16 +122,35 @@ namespace Library.Security
                     using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                     using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        writer.Write(this.ExchangeAlgorithm.ToString());
+                        writer.Write(this.Nickname);
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
+                    bufferStream.WriteByte((byte)SerializeId.Nickname);
 
                     streams.Add(bufferStream);
                 }
-                // PublicKey
+
+                if (this.DigitalSignatureAlgorithm != 0)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.DigitalSignatureAlgorithm.ToString());
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.DigitalSignatureAlgorithm);
+
+                    streams.Add(bufferStream);
+                }
+
                 if (this.PublicKey != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
@@ -120,13 +160,13 @@ namespace Library.Security
 
                     streams.Add(bufferStream);
                 }
-                // PrivateKey
-                if (this.PrivateKey != null)
+
+                if (this.Signature != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.PrivateKey.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.PrivateKey);
-                    bufferStream.Write(this.PrivateKey, 0, this.PrivateKey.Length);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Signature.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Signature);
+                    bufferStream.Write(this.Signature, 0, this.Signature.Length);
 
                     streams.Add(bufferStream);
                 }
@@ -145,20 +185,21 @@ namespace Library.Security
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Exchange)) return false;
+            if ((object)obj == null || !(obj is Certificate)) return false;
 
-            return this.Equals((Exchange)obj);
+            return this.Equals((Certificate)obj);
         }
 
-        public override bool Equals(Exchange other)
+        public override bool Equals(Certificate other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.ExchangeAlgorithm != other.ExchangeAlgorithm
+            if (this.Nickname != other.Nickname
+                || this.DigitalSignatureAlgorithm != other.DigitalSignatureAlgorithm
                 || ((this.PublicKey == null) != (other.PublicKey == null))
-                || ((this.PrivateKey == null) != (other.PrivateKey == null)))
+                || ((this.Signature == null) != (other.Signature == null)))
             {
                 return false;
             }
@@ -168,71 +209,99 @@ namespace Library.Security
                 if (!Collection.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
-            if (this.PrivateKey != null && other.PrivateKey != null)
+            if (this.Signature != null && other.Signature != null)
             {
-                if (!Collection.Equals(this.PrivateKey, other.PrivateKey)) return false;
+                if (!Collection.Equals(this.Signature, other.Signature)) return false;
             }
 
             return true;
         }
 
-        public override Exchange DeepClone()
+        public override Certificate DeepClone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Exchange.Import(stream, BufferManager.Instance);
+                    return Certificate.Import(stream, BufferManager.Instance);
                 }
             }
         }
 
-        public ExchangePublicKey GetPublicKey()
+        public override string ToString()
         {
-            return new ExchangePublicKey(this.ExchangeAlgorithm, this.PublicKey);
-        }
-
-        public static byte[] Encrypt(IExchangeEncrypt exchangeEncrypt, byte[] value)
-        {
-            if (exchangeEncrypt.ExchangeAlgorithm == ExchangeAlgorithm.Rsa2048)
+            lock (this.ThisLock)
             {
-                return Rsa2048.Encrypt(exchangeEncrypt.PublicKey, value);
-            }
+                if (_toString == null)
+                    _toString = Library.Security.Signature.GetSignature(this);
 
-            return null;
+                return _toString;
+            }
         }
 
-        public static byte[] Decrypt(IExchangeDecrypt exchangeDecrypt, byte[] value)
+        internal bool Verify(Stream stream)
         {
-            if (exchangeDecrypt.ExchangeAlgorithm == ExchangeAlgorithm.Rsa2048)
+            if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
             {
-                return Rsa2048.Decrypt(exchangeDecrypt.PrivateKey, value);
+                return ECDsaP521_Sha512.Verify(this.PublicKey, this.Signature, stream);
             }
-
-            return null;
+            else if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
+            {
+                return Rsa2048_Sha512.Verify(this.PublicKey, this.Signature, stream);
+            }
+            else
+            {
+                return false;
+            }
         }
 
-        [DataMember(Name = "ExchangeAlgorithm")]
-        public ExchangeAlgorithm ExchangeAlgorithm
+        [DataMember(Name = "Nickname")]
+        public string Nickname
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _exchangeAlgorithm;
+                    return _nickname;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (!Enum.IsDefined(typeof(ExchangeAlgorithm), value))
+                    if (value != null && value.Length > Certificate.MaxNickNameLength)
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _exchangeAlgorithm = value;
+                        _nickname = value;
+                    }
+                }
+            }
+        }
+
+        [DataMember(Name = "DigitalSignatureAlgorithm")]
+        public DigitalSignatureAlgorithm DigitalSignatureAlgorithm
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _digitalSignatureAlgorithm;
+                }
+            }
+            private set
+            {
+                lock (this.ThisLock)
+                {
+                    if (!Enum.IsDefined(typeof(DigitalSignatureAlgorithm), value))
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _digitalSignatureAlgorithm = value;
                     }
                 }
             }
@@ -252,7 +321,7 @@ namespace Library.Security
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && (value.Length > Exchange.MaxPublickeyLength))
+                    if (value != null && (value.Length > Certificate.MaxPublickeyLength))
                     {
                         throw new ArgumentException();
                     }
@@ -273,27 +342,27 @@ namespace Library.Security
             }
         }
 
-        [DataMember(Name = "PrivateKey")]
-        public byte[] PrivateKey
+        [DataMember(Name = "Signature")]
+        public byte[] Signature
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _privateKey;
+                    return _signature;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && (value.Length > Exchange.MaxPrivatekeyLength))
+                    if (value != null && (value.Length > Certificate.MaxSignatureLength))
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _privateKey = value;
+                        _signature = value;
                     }
                 }
             }

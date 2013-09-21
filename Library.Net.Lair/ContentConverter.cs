@@ -282,7 +282,7 @@ namespace Library.Net.Lair
             }
         }
 
-        private static Stream ToCryptoContent(Stream stream, IExchangeEncrypt exchangeEncrypt)
+        private static Stream Encrypt(Stream stream, IExchangeEncrypt exchangeEncrypt)
         {
             if (stream == null) throw new ArgumentNullException("stream");
             if (exchangeEncrypt == null) throw new ArgumentNullException("exchangeEncrypt");
@@ -293,16 +293,21 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    byte[] cryptoKey = new byte[64];
+                    byte[] cryptoKey = new byte[32];
                     _random.GetBytes(cryptoKey);
 
                     using (BufferStream outStream = new BufferStream(_bufferManager))
                     {
+                        byte[] iv = new byte[32];
+                        _random.GetBytes(iv);
+
+                        outStream.Write(iv, 0, iv.Length);
+
                         using (Stream inStream = new WrapperStream(stream, true))
                         using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                        using (CryptoStream cs = new CryptoStream(new WrapperStream(outStream, true), rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                        using (CryptoStream cs = new CryptoStream(new WrapperStream(outStream, true), rijndael.CreateEncryptor(cryptoKey, iv), CryptoStreamMode.Write))
                         {
-                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
+                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
                             try
                             {
@@ -327,7 +332,9 @@ namespace Library.Net.Lair
 
                     var encryptedCryptoKey = Exchange.Encrypt(exchangeEncrypt, cryptoKey);
 
-                    return new CryptoContent(value, CryptoAlgorithm.Rijndael256, encryptedCryptoKey).Export(_bufferManager);
+                    CryptoContent content = new CryptoContent(value, CryptoAlgorithm.Rijndael256, encryptedCryptoKey);
+
+                    return content.Export(_bufferManager);
                 }
                 finally
                 {
@@ -343,27 +350,93 @@ namespace Library.Net.Lair
             }
         }
 
-        private static Stream FromCryptoContent(Stream stream, IExchangeDecrypt exchangeDecrypt)
+        private static Stream Decrypt(Stream stream, IExchangeDecrypt exchangeDecrypt)
         {
             if (stream == null) throw new ArgumentNullException("stream");
             if (exchangeDecrypt == null) throw new ArgumentNullException("exchangeDecrypt");
 
             try
             {
-                var cryptoContent = CryptoContent.Import(stream, _bufferManager);
+                CryptoContent cryptoContent = null;
 
                 try
                 {
+                    cryptoContent = CryptoContent.Import(stream, _bufferManager);
                     byte[] cryptoKey = Exchange.Decrypt(exchangeDecrypt, cryptoContent.CryptoKey);
+
                     var outStream = new BufferStream(_bufferManager);
 
                     if (cryptoContent.CryptoAlgorithm == CryptoAlgorithm.Rijndael256)
                     {
                         using (var inStream = new MemoryStream(cryptoContent.Content.Array, cryptoContent.Content.Offset, cryptoContent.Content.Count))
-                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                        using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                         {
-                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
+                            byte[] iv = new byte[32];
+                            inStream.Read(iv, 0, iv.Length);
+
+                            using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                            using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey, iv), CryptoStreamMode.Read))
+                            {
+                                byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                                try
+                                {
+                                    int length = 0;
+
+                                    while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
+                                    {
+                                        outStream.Write(buffer, 0, length);
+                                    }
+                                }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(buffer);
+                                }
+                            }
+                        }
+                    }
+
+                    outStream.Seek(0, SeekOrigin.Begin);
+
+                    return outStream;
+                }
+                finally
+                {
+                    if (cryptoContent != null && cryptoContent.Content.Array != null)
+                    {
+                        _bufferManager.ReturnBuffer(cryptoContent.Content.Array);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message, e);
+            }
+        }
+
+        private static Stream Encrypt(Stream stream, ICryptoAlgorithm cryptoInformation)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (cryptoInformation == null) throw new ArgumentNullException("cryptoInformation");
+
+            try
+            {
+                BufferStream outStream = null;
+
+                try
+                {
+                    outStream = new BufferStream(_bufferManager);
+
+                    var iv = new byte[32];
+                    _random.GetBytes(iv);
+                    outStream.Write(iv, 0, iv.Length);
+
+                    if (cryptoInformation.CryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+                    {
+                        using (Stream inStream = new WrapperStream(stream, true))
+                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                        using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateEncryptor(cryptoInformation.CryptoKey, iv), CryptoStreamMode.Read))
+                        {
+                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
                             try
                             {
@@ -382,13 +455,16 @@ namespace Library.Net.Lair
                     }
 
                     outStream.Seek(0, SeekOrigin.Begin);
-
-                    return outStream;
                 }
-                finally
+                catch (Exception)
                 {
-                    _bufferManager.ReturnBuffer(cryptoContent.Content.Array);
+                    if (outStream != null)
+                        outStream.Dispose();
+
+                    throw;
                 }
+
+                return outStream;
             }
             catch (Exception e)
             {
@@ -396,7 +472,67 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToProfileContentBlock(SectionProfileContent content)
+        private static Stream Decrypt(Stream stream, ICryptoAlgorithm cryptoInformation)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (cryptoInformation == null) throw new ArgumentNullException("cryptoInformation");
+
+            try
+            {
+                BufferStream outStream = null;
+
+                try
+                {
+                    outStream = new BufferStream(_bufferManager);
+
+                    if (cryptoInformation.CryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+                    {
+                        using (Stream inStream = new WrapperStream(stream, true))
+                        {
+                            var iv = new byte[32];
+                            inStream.Read(iv, 0, iv.Length);
+
+                            using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                            using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoInformation.CryptoKey, iv), CryptoStreamMode.Read))
+                            {
+                                byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                                try
+                                {
+                                    int length = 0;
+
+                                    while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
+                                    {
+                                        outStream.Write(buffer, 0, length);
+                                    }
+                                }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(buffer);
+                                }
+                            }
+                        }
+                    }
+
+                    outStream.Seek(0, SeekOrigin.Begin);
+                }
+                catch (Exception)
+                {
+                    if (outStream != null)
+                        outStream.Dispose();
+
+                    throw;
+                }
+
+                return outStream;
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message, e);
+            }
+        }
+
+        public static ArraySegment<byte> ToSectionProfileContentBlock(SectionProfileContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -411,7 +547,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static SectionProfileContent FromProfileContentBlock(ArraySegment<byte> content)
+        public static SectionProfileContent FromSectionProfileContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -492,7 +628,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToTopicContentBlock(ChatTopicContent content)
+        public static ArraySegment<byte> ToChatTopicContentBlock(ChatTopicContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -507,7 +643,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static ChatTopicContent FromTopicContentBlock(ArraySegment<byte> content)
+        public static ChatTopicContent FromChatTopicContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -524,7 +660,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToMessageContentBlock(ChatMessageContent content)
+        public static ArraySegment<byte> ToChatMessageContentBlock(ChatMessageContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -539,7 +675,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static ChatMessageContent FromMessageContentBlock(ArraySegment<byte> content)
+        public static ChatMessageContent FromChatMessageContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -556,6 +692,42 @@ namespace Library.Net.Lair
             }
         }
 
+        public static ArraySegment<byte> ToWhisperMessageContentBlock(WhisperMessageContent content, WhisperCryptoInformation cryptoInformation)
+        {
+            if (content == null) throw new ArgumentNullException("content");
+
+            ArraySegment<byte> value;
+
+            using (Stream contentStream = ContentConverter.ToStream<WhisperMessageContent>(content))
+            using (Stream paddingStream = ContentConverter.ToPaddingStream(contentStream, 1024 * 32))
+            using (Stream cryptostream = ContentConverter.Encrypt(paddingStream, cryptoInformation))
+            {
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)cryptostream.Length), 0, (int)cryptostream.Length);
+                cryptostream.Read(value.Array, value.Offset, value.Count);
+            }
+
+            return value;
+        }
+
+        public static WhisperMessageContent FromWhisperMessageContentBlock(ArraySegment<byte> content, WhisperCryptoInformation cryptoInformation)
+        {
+            if (content.Array == null) throw new ArgumentNullException("content.Array");
+
+            try
+            {
+                using (Stream cryptoStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream paddingStream = ContentConverter.Decrypt(cryptoStream, cryptoInformation))
+                using (Stream contentStream = ContentConverter.FromPaddingStream(paddingStream))
+                {
+                    return ContentConverter.FromStream<WhisperMessageContent>(contentStream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         public static ArraySegment<byte> ToMailMessageContentBlock(MailMessageContent content, IExchangeEncrypt exchangeEncrypt)
         {
             if (content == null) throw new ArgumentNullException("content");
@@ -564,8 +736,8 @@ namespace Library.Net.Lair
             ArraySegment<byte> value;
 
             using (Stream contentStream = ContentConverter.ToStream<MailMessageContent>(content))
-            using (Stream paddingStream = ContentConverter.ToPaddingStream(contentStream, 1024 * 16))
-            using (Stream cryptostream = ContentConverter.ToCryptoContent(paddingStream, exchangeEncrypt))
+            using (Stream paddingStream = ContentConverter.ToPaddingStream(contentStream, 1024 * 32))
+            using (Stream cryptostream = ContentConverter.Encrypt(paddingStream, exchangeEncrypt))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)cryptostream.Length), 0, (int)cryptostream.Length);
                 cryptostream.Read(value.Array, value.Offset, value.Count);
@@ -582,7 +754,7 @@ namespace Library.Net.Lair
             try
             {
                 using (Stream cryptoStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream paddingStream = ContentConverter.FromCryptoContent(cryptoStream, exchangeDecrypt))
+                using (Stream paddingStream = ContentConverter.Decrypt(cryptoStream, exchangeDecrypt))
                 using (Stream contentStream = ContentConverter.FromPaddingStream(paddingStream))
                 {
                     return ContentConverter.FromStream<MailMessageContent>(contentStream);

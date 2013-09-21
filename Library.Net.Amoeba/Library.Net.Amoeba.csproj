@@ -69,10 +69,10 @@
     <Compile Include="Cache\Link\LinkCollection.cs" />
     <Compile Include="Cache\Store\Store.cs" />
     <Compile Include="Cache\Store\StoreCollection.cs" />
-    <Compile Include="Cache\_Interface\ILink.cs" />
-    <Compile Include="Cache\_Interface\IKeywords.cs" />
-    <Compile Include="Cache\_Interface\IStore.cs" />
-    <Compile Include="Cache\_Interface\IBox.cs" />
+    <Compile Include="Cache\_Interface\Link\ILink.cs" />
+    <Compile Include="Cache\_Interface\Seed\IKeywords.cs" />
+    <Compile Include="Cache\_Interface\Store\IStore.cs" />
+    <Compile Include="Cache\_Interface\Store\IBox.cs" />
     <Compile Include="BackgroundDownloadItem.cs" />
     <Compile Include="BackgroundDownloadManager.cs" />
     <Compile Include="BackgroundUploadItem.cs" />
@@ -97,11 +97,11 @@
     <Compile Include="Cache\_Interface\ICompressionAlgorithm.cs" />
     <Compile Include="Cache\_Interface\ICorrectionAlgorithm.cs" />
     <Compile Include="Cache\_Interface\ICryptoAlgorithm.cs" />
-    <Compile Include="Cache\_Interface\IGroup.cs" />
+    <Compile Include="Cache\_Interface\Seed\IGroup.cs" />
     <Compile Include="Cache\_Interface\IHashAlgorithm.cs" />
-    <Compile Include="Cache\_Interface\IKey.cs" />
-    <Compile Include="Cache\_Interface\IIndex.cs" />
-    <Compile Include="Cache\_Interface\ISeed.cs" />
+    <Compile Include="Cache\_Interface\Seed\IKey.cs" />
+    <Compile Include="Cache\_Interface\Seed\IIndex.cs" />
+    <Compile Include="Cache\_Interface\Seed\ISeed.cs" />
     <Compile Include="Cache\Seed\Index.cs" />
     <Compile Include="Cache\Seed\IndexCollection.cs" />
     <Compile Include="Cache\Seed\Seed.cs" />
@@ -194,4 +194,5 @@
       <Name>Library.Compression</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
 </Project>

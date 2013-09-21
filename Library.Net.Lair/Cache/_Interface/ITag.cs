@@ -1,7 +1,7 @@
 ﻿
 namespace Library.Net.Lair
 {
-    interface ITag
+    public interface ITag
     {
         byte[] Id { get; }
         string Name { get; }

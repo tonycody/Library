@@ -12,7 +12,7 @@ namespace Library.Net.Amoeba
         Lzma = 1,
     }
 
-    interface ICompressionAlgorithm
+    public interface ICompressionAlgorithm
     {
         CompressionAlgorithm CompressionAlgorithm { get; }
     }

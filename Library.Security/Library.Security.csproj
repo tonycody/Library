@@ -54,23 +54,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Certificate.cs" />
-    <Compile Include="CertificateItemBase.cs" />
-    <Compile Include="ExchangePublicKey.cs" />
-    <Compile Include="IExchangeDecrypt.cs" />
+    <Compile Include="Exchange\Exchange.cs" />
+    <Compile Include="Exchange\IExchangeDecrypt.cs" />
+    <Compile Include="Exchange\IExchangeEncrypt.cs" />
+    <Compile Include="Signature\Certificate.cs" />
+    <Compile Include="Signature\CertificateItemBase.cs" />
     <Compile Include="Tools\Rsa2048.cs" />
-    <Compile Include="Exchange.cs" />
-    <Compile Include="DigitalSignatureConverter.cs" />
+    <Compile Include="Signature\DigitalSignatureConverter.cs" />
     <Compile Include="Tools\Crc32_Castagnoli.cs" />
     <Compile Include="Tools\Sha512.cs" />
-    <Compile Include="ICertificate.cs" />
-    <Compile Include="IExchangeAlgorithm.cs" />
-    <Compile Include="IExchangeEncrypt.cs" />
-    <Compile Include="ReadOnlyCertificateItemBase.cs" />
-    <Compile Include="DigitalSignature.cs" />
-    <Compile Include="DigitalSignatureAlgorithm.cs" />
-    <Compile Include="Signature.cs" />
-    <Compile Include="SignatureCollection.cs" />
+    <Compile Include="Signature\ICertificate.cs" />
+    <Compile Include="Exchange\IExchangeAlgorithm.cs" />
+    <Compile Include="Signature\ReadOnlyCertificateItemBase.cs" />
+    <Compile Include="Signature\DigitalSignature.cs" />
+    <Compile Include="Signature\DigitalSignatureAlgorithm.cs" />
+    <Compile Include="Signature\Signature.cs" />
+    <Compile Include="Signature\SignatureCollection.cs" />
     <Compile Include="Tools\ECDsaP521_Sha512.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tools\Rsa2048_Sha512.cs" />

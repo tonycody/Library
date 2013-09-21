@@ -9,7 +9,7 @@ namespace Library.Net.Amoeba
         Sha512 = 0,
     }
 
-    interface IHashAlgorithm
+    public interface IHashAlgorithm
     {
         HashAlgorithm HashAlgorithm { get; }
     }

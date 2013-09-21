@@ -2,7 +2,7 @@
 
 namespace Library.Net.Lair
 {
-    interface IDocumentOpinions<TDocument, TKey> : IComputeHash
+    interface IDocumentOpinion<TDocument, TKey> : IComputeHash
         where TDocument : IDocument
         where TKey : IKey
     {

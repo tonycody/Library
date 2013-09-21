@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentOpinion", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentOpinion : ReadOnlyCertificateItemBase<DocumentOpinion>, IDocumentOpinions<Document, Key>
+    public sealed class DocumentOpinion : ReadOnlyCertificateItemBase<DocumentOpinion>, IDocumentOpinion<Document, Key>
     {
         private enum SerializeId : byte
         {

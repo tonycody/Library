@@ -35,30 +35,64 @@ namespace Library.UnitTest
             var id = new byte[64];
             _random.NextBytes(id);
 
-            var section = new Section(id, "aoeui");
+            var tag = new Section(id, "aoeui");
 
-            var stream = LairConverter.ToSectionString(section, digitalSignature.ToString());
+            var stream = LairConverter.ToSectionString(tag, digitalSignature.ToString());
 
             string sectionSignature;
             var value = LairConverter.FromSectionString(stream, out sectionSignature);
 
-            Assert.AreEqual(section, value, "LairConverter #2");
+            Assert.AreEqual(tag, value, "LairConverter #2");
             Assert.AreEqual(digitalSignature.ToString(), sectionSignature, "LairConverter #3");
         }
 
         [Test]
-        public void Test_LairConverter_Channel()
+        public void Test_LairConverter_Document()
         {
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             var id = new byte[64];
             _random.NextBytes(id);
 
-            var channel = new Channel(id, "aoeui");
+            var tag = new Document(id, "aoeui");
 
-            var stream = LairConverter.ToChannelString(channel);
-            var value = LairConverter.FromChannelString(stream);
+            var stream = LairConverter.ToDocumentString(tag);
+            var value = LairConverter.FromDocumentString(stream);
 
-            Assert.AreEqual(channel, value, "LairConverter #4");
+            Assert.AreEqual(tag, value, "LairConverter #4");
+        }
+
+        [Test]
+        public void Test_LairConverter_Chat()
+        {
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+            var id = new byte[64];
+            _random.NextBytes(id);
+
+            var tag = new Chat(id, "aoeui");
+
+            var stream = LairConverter.ToChatString(tag);
+            var value = LairConverter.FromChatString(stream);
+
+            Assert.AreEqual(tag, value, "LairConverter #5");
+        }
+
+        [Test]
+        public void Test_LairConverter_Whisper()
+        {
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+            var id = new byte[64];
+            _random.NextBytes(id);
+
+            var tag = new Whisper(id, "aoeui");
+
+            WhisperCryptoInformation cryptoInformation1 = new WhisperCryptoInformation(CryptoAlgorithm.Rijndael256);
+            var stream = LairConverter.ToWhisperString(tag, cryptoInformation1);
+
+            WhisperCryptoInformation cryptoInformation2 = null;
+            var value = LairConverter.FromWhisperString(stream, out cryptoInformation2);
+
+            Assert.AreEqual(tag, value, "LairConverter #6");
+            Assert.AreEqual(cryptoInformation1, cryptoInformation2, "LairConverter #7");
         }
 
         [Test]
@@ -70,68 +104,95 @@ namespace Library.UnitTest
             var signatures = new List<string>();
             signatures.Add(digitalSignature.ToString());
 
-            var channels = new List<Channel>();
-            channels.Add(new Channel(new byte[64], "123"));
+            var documents = new List<Document>();
+            documents.Add(new Document(new byte[64], "123"));
 
-            ProfileContent content = new ProfileContent(signatures, channels, exchange.ExchangeAlgorithm, exchange.PublicKey);
-            var binaryContent = ContentConverter.ToProfileContentBlock(content);
+            var chats = new List<Chat>();
+            chats.Add(new Chat(new byte[64], "123"));
 
-            Assert.AreEqual(content, ContentConverter.FromProfileContentBlock(binaryContent));
+            SectionProfileContent content = new SectionProfileContent("comment", signatures, documents, chats, exchange);
+            var binaryContent = ContentConverter.ToSectionProfileContentBlock(content);
+
+            Assert.AreEqual(content, ContentConverter.FromSectionProfileContentBlock(binaryContent));
         }
 
         [Test]
-        public void Test_ContentConverter_DocumentContent()
+        public void Test_ContentConverter_DocumentPageContent()
         {
-            var pages = new List<Page>();
+            DocumentPageContent content = new DocumentPageContent(HypertextFormatType.MiniWiki, "aaaaa", "xxxxx");
+            var binaryContent = ContentConverter.ToDocumentPageContentBlock(content);
 
-            //for (int i = 0; i < DocumentContent.MaxPagesCount; i++)
+            Assert.AreEqual(content, ContentConverter.FromDocumentPageContentBlock(binaryContent));
+        }
+
+        [Test]
+        public void Test_ContentConverter_DocumentOpinionContent()
+        {
+            List<Key> goods = new List<Key>();
+            List<Key> bads = new List<Key>();
+
             for (int i = 0; i < 32; i++)
             {
-                StringBuilder sb = new StringBuilder();
-
-                for (int j = 0; j < Page.MaxTextLength; j++)
-                {
-                    sb.Append("0");
-                }
-
-                pages.Add(new Page("123", ContentFormatType.MiniWiki, sb.ToString()));
+                var key = new Key(new byte[64], HashAlgorithm.Sha512);
+                goods.Add(key);
             }
 
-            DocumentContent content = new DocumentContent(pages);
-            var binaryContent = ContentConverter.ToDocumentContentBlock(content);
+            for (int i = 0; i < 32; i++)
+            {
+                var key = new Key(new byte[64], HashAlgorithm.Sha512);
+                bads.Add(key);
+            }
 
-            Assert.AreEqual(content, ContentConverter.FromDocumentContentBlock(binaryContent));
+            DocumentOpinionContent content = new DocumentOpinionContent(goods, bads);
+            var binaryContent = ContentConverter.ToDocumentOpinionContentBlock(content);
+
+            Assert.AreEqual(content, ContentConverter.FromDocumentOpinionContentBlock(binaryContent));
         }
 
         [Test]
-        public void Test_ContentConverter_TopicContent()
+        public void Test_ContentConverter_ChatTopicContent()
         {
-            TopicContent content = new TopicContent("123", ContentFormatType.MiniWiki);
-            var binaryContent = ContentConverter.ToTopicContentBlock(content);
+            ChatTopicContent content = new ChatTopicContent("123");
+            var binaryContent = ContentConverter.ToChatTopicContentBlock(content);
 
-            Assert.AreEqual(content, ContentConverter.FromTopicContentBlock(binaryContent));
+            Assert.AreEqual(content, ContentConverter.FromChatTopicContentBlock(binaryContent));
         }
 
         [Test]
-        public void Test_ContentConverter_MessageContent()
+        public void Test_ContentConverter_ChatMessageContent()
         {
             var keys = new List<Key>();
             keys.Add(new Key(new byte[64], HashAlgorithm.Sha512));
 
-            MessageContent content = new MessageContent("123", keys);
-            var binaryContent = ContentConverter.ToMessageContentBlock(content);
+            ChatMessageContent content = new ChatMessageContent("123", keys);
+            var binaryContent = ContentConverter.ToChatMessageContentBlock(content);
 
-            Assert.AreEqual(content, ContentConverter.FromMessageContentBlock(binaryContent));
+            Assert.AreEqual(content, ContentConverter.FromChatMessageContentBlock(binaryContent));
         }
 
         [Test]
-        public void Test_ContentConverter_MailContent()
+        public void Test_ContentConverter_WhisperMessageContent()
+        {
+            var keys = new List<Key>();
+            keys.Add(new Key(new byte[64], HashAlgorithm.Sha512));
+
+            WhisperCryptoInformation cryptoInformation = new WhisperCryptoInformation(CryptoAlgorithm.Rijndael256);
+
+            WhisperMessageContent content = new WhisperMessageContent("123", keys);
+            var binaryContent = ContentConverter.ToWhisperMessageContentBlock(content, cryptoInformation);
+
+            Assert.AreEqual(content, ContentConverter.FromWhisperMessageContentBlock(binaryContent, cryptoInformation));
+        }
+
+        [Test]
+        public void Test_ContentConverter_MailMessageContent()
         {
             Exchange exchange = new Exchange(ExchangeAlgorithm.Rsa2048);
-            MailContent content = new MailContent("test");
-            var binaryContent = ContentConverter.ToMailContentBlock(content, exchange);
 
-            Assert.AreEqual(content, ContentConverter.FromMailContentBlock(binaryContent, exchange));
+            MailMessageContent content = new MailMessageContent("test");
+            var binaryContent = ContentConverter.ToMailMessageContentBlock(content, exchange);
+
+            Assert.AreEqual(content, ContentConverter.FromMailMessageContentBlock(binaryContent, exchange));
         }
 
         [Test]

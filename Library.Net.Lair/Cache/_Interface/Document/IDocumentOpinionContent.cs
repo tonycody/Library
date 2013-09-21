@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface IDocumentOpinionsContent<TKey>
+    interface IDocumentOpinionContent<TKey>
         where TKey : IKey
     {
         IEnumerable<TKey> Goods { get; }

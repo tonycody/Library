@@ -12,7 +12,10 @@ namespace Library.Net.Lair
 {
     public delegate IEnumerable<string> TrustSignaturesEventHandler(object sender);
     public delegate IEnumerable<Section> LockSectionsEventHandler(object sender);
+    public delegate IEnumerable<Document> LockDocumentsEventHandler(object sender);
     public delegate IEnumerable<Chat> LockChatsEventHandler(object sender);
+    public delegate IEnumerable<Whisper> LockWhispersEventHandler(object sender);
+    public delegate IEnumerable<Mail> LockMailsEventHandler(object sender);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -32,8 +35,10 @@ namespace Library.Net.Lair
         private MessagesManager _messagesManager;
 
         private LockedDictionary<Node, HashSet<Section>> _pushSectionsRequestDictionary = new LockedDictionary<Node, HashSet<Section>>();
+        private LockedDictionary<Node, HashSet<Document>> _pushDocumentsRequestDictionary = new LockedDictionary<Node, HashSet<Document>>();
         private LockedDictionary<Node, HashSet<Chat>> _pushChatsRequestDictionary = new LockedDictionary<Node, HashSet<Chat>>();
-        private LockedDictionary<Node, HashSet<string>> _pushSignaturesRequestDictionary = new LockedDictionary<Node, HashSet<string>>();
+        private LockedDictionary<Node, HashSet<Whisper>> _pushWhispersRequestDictionary = new LockedDictionary<Node, HashSet<Whisper>>();
+        private LockedDictionary<Node, HashSet<Mail>> _pushMailsRequestDictionary = new LockedDictionary<Node, HashSet<Mail>>();
 
         private LockedHashSet<string> _trustSignatures = new LockedHashSet<string>();
 
@@ -43,12 +48,16 @@ namespace Library.Net.Lair
         private CirculationDictionary<Node, int> _nodesStatus;
 
         private CirculationCollection<Section> _pushSectionsRequestList;
+        private CirculationCollection<Document> _pushDocumentsRequestList;
         private CirculationCollection<Chat> _pushChatsRequestList;
-        private CirculationCollection<string> _pushSignaturesRequestList;
+        private CirculationCollection<Whisper> _pushWhispersRequestList;
+        private CirculationCollection<Mail> _pushMailsRequestList;
 
         private LockedDictionary<Section, DateTime> _lastUsedSectionTimes = new LockedDictionary<Section, DateTime>();
+        private LockedDictionary<Document, DateTime> _lastUsedDocumentTimes = new LockedDictionary<Document, DateTime>();
         private LockedDictionary<Chat, DateTime> _lastUsedChatTimes = new LockedDictionary<Chat, DateTime>();
-        private LockedDictionary<string, DateTime> _lastUsedSignatureTimes = new LockedDictionary<string, DateTime>();
+        private LockedDictionary<Whisper, DateTime> _lastUsedWhisperTimes = new LockedDictionary<Whisper, DateTime>();
+        private LockedDictionary<Mail, DateTime> _lastUsedMailTimes = new LockedDictionary<Mail, DateTime>();
 
         private volatile Thread _connectionsManagerThread = null;
         private volatile Thread _createClientConnection1Thread = null;
@@ -69,24 +78,30 @@ namespace Library.Net.Lair
 
         private volatile int _pushNodeCount;
         private volatile int _pushSectionRequestCount;
-        private volatile int _pushProfileCount;
+        private volatile int _pushSectionProfileCount;
+        private volatile int _pushDocumentRequestCount;
         private volatile int _pushDocumentPageCount;
         private volatile int _pushDocumentOpinionCount;
         private volatile int _pushChatRequestCount;
-        private volatile int _pushTopicCount;
-        private volatile int _pushMessageCount;
-        private volatile int _pushSignatureRequestCount;
+        private volatile int _pushChatTopicCount;
+        private volatile int _pushChatMessageCount;
+        private volatile int _pushWhisperRequestCount;
+        private volatile int _pushWhisperMessageCount;
+        private volatile int _pushMailRequestCount;
         private volatile int _pushMailMessageCount;
 
         private volatile int _pullNodeCount;
         private volatile int _pullSectionRequestCount;
-        private volatile int _pullProfileCount;
+        private volatile int _pullSectionProfileCount;
+        private volatile int _pullDocumentRequestCount;
         private volatile int _pullDocumentPageCount;
         private volatile int _pullDocumentOpinionCount;
         private volatile int _pullChatRequestCount;
-        private volatile int _pullTopicCount;
-        private volatile int _pullMessageCount;
-        private volatile int _pullSignatureRequestCount;
+        private volatile int _pullChatTopicCount;
+        private volatile int _pullChatMessageCount;
+        private volatile int _pullWhisperRequestCount;
+        private volatile int _pullWhisperMessageCount;
+        private volatile int _pullMailRequestCount;
         private volatile int _pullMailMessageCount;
 
         private volatile int _acceptConnectionCount;
@@ -94,7 +109,10 @@ namespace Library.Net.Lair
 
         private TrustSignaturesEventHandler _trustSignaturesEvent;
         private LockSectionsEventHandler _lockSectionsEvent;
+        private LockDocumentsEventHandler _lockDocumentsEvent;
         private LockChatsEventHandler _lockChatsEvent;
+        private LockWhispersEventHandler _lockWhispersEvent;
+        private LockMailsEventHandler _lockMailsEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -142,8 +160,10 @@ namespace Library.Net.Lair
             _nodesStatus = new CirculationDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _pushSectionsRequestList = new CirculationCollection<Section>(new TimeSpan(0, 3, 0));
+            _pushDocumentsRequestList = new CirculationCollection<Document>(new TimeSpan(0, 3, 0));
             _pushChatsRequestList = new CirculationCollection<Chat>(new TimeSpan(0, 3, 0));
-            _pushSignaturesRequestList = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
+            _pushWhispersRequestList = new CirculationCollection<Whisper>(new TimeSpan(0, 3, 0));
+            _pushMailsRequestList = new CirculationCollection<Mail>(new TimeSpan(0, 3, 0));
 
             this.UpdateSessionId();
         }
@@ -170,6 +190,17 @@ namespace Library.Net.Lair
             }
         }
 
+        public LockDocumentsEventHandler LockDocumentsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _lockDocumentsEvent = value;
+                }
+            }
+        }
+
         public LockChatsEventHandler LockChatsEvent
         {
             set
@@ -177,6 +208,28 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     _lockChatsEvent = value;
+                }
+            }
+        }
+
+        public LockWhispersEventHandler LockWhispersEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _lockWhispersEvent = value;
+                }
+            }
+        }
+
+        public LockMailsEventHandler LockMailsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _lockMailsEvent = value;
                 }
             }
         }
@@ -306,20 +359,30 @@ namespace Library.Net.Lair
 
                     contexts.Add(new InformationContext("PushNodeCount", _pushNodeCount));
                     contexts.Add(new InformationContext("PushSectionRequestCount", _pushSectionRequestCount));
-                    contexts.Add(new InformationContext("PushProfileCount", _pushProfileCount));
+                    contexts.Add(new InformationContext("PushSectionProfileCount", _pushSectionProfileCount));
+                    contexts.Add(new InformationContext("PushDocumentRequestCount", _pushDocumentRequestCount));
                     contexts.Add(new InformationContext("PushDocumentPageCount", _pushDocumentPageCount));
+                    contexts.Add(new InformationContext("PushDocumentOpinionCount", _pushDocumentOpinionCount));
                     contexts.Add(new InformationContext("PushChatRequestCount", _pushChatRequestCount));
-                    contexts.Add(new InformationContext("PushTopicCount", _pushTopicCount));
-                    contexts.Add(new InformationContext("PushMessageCount", _pushMessageCount));
+                    contexts.Add(new InformationContext("PushChatTopicCount", _pushChatTopicCount));
+                    contexts.Add(new InformationContext("PushChatMessageCount", _pushChatMessageCount));
+                    contexts.Add(new InformationContext("PushWhisperRequestCount", _pushWhisperRequestCount));
+                    contexts.Add(new InformationContext("PushWhisperMessageCount", _pushWhisperMessageCount));
+                    contexts.Add(new InformationContext("PushMailRequestCount", _pushMailRequestCount));
                     contexts.Add(new InformationContext("PushMailMessageCount", _pushMailMessageCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
                     contexts.Add(new InformationContext("PullSectionRequestCount", _pullSectionRequestCount));
-                    contexts.Add(new InformationContext("PullProfileCount", _pullProfileCount));
+                    contexts.Add(new InformationContext("PullSectionProfileCount", _pullSectionProfileCount));
+                    contexts.Add(new InformationContext("PullDocumentRequestCount", _pullDocumentRequestCount));
                     contexts.Add(new InformationContext("PullDocumentPageCount", _pullDocumentPageCount));
+                    contexts.Add(new InformationContext("PullDocumentOpinionCount", _pullDocumentOpinionCount));
                     contexts.Add(new InformationContext("PullChatRequestCount", _pullChatRequestCount));
-                    contexts.Add(new InformationContext("PullTopicCount", _pullTopicCount));
-                    contexts.Add(new InformationContext("PullMessageCount", _pullMessageCount));
+                    contexts.Add(new InformationContext("PullChatTopicCount", _pullChatTopicCount));
+                    contexts.Add(new InformationContext("PullChatMessageCount", _pullChatMessageCount));
+                    contexts.Add(new InformationContext("PullWhisperRequestCount", _pullWhisperRequestCount));
+                    contexts.Add(new InformationContext("PullWhisperMessageCount", _pullWhisperMessageCount));
+                    contexts.Add(new InformationContext("PullMailRequestCount", _pullMailRequestCount));
                     contexts.Add(new InformationContext("PullMailMessageCount", _pullMailMessageCount));
 
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
@@ -396,11 +459,41 @@ namespace Library.Net.Lair
             return null;
         }
 
+        protected virtual IEnumerable<Document> OnLockDocumentsEvent()
+        {
+            if (_lockDocumentsEvent != null)
+            {
+                return _lockDocumentsEvent(this);
+            }
+
+            return null;
+        }
+
         protected virtual IEnumerable<Chat> OnLockChatsEvent()
         {
             if (_lockChatsEvent != null)
             {
                 return _lockChatsEvent(this);
+            }
+
+            return null;
+        }
+
+        protected virtual IEnumerable<Whisper> OnLockWhispersEvent()
+        {
+            if (_lockWhispersEvent != null)
+            {
+                return _lockWhispersEvent(this);
+            }
+
+            return null;
+        }
+
+        protected virtual IEnumerable<Mail> OnLockMailsEvent()
+        {
+            if (_lockMailsEvent != null)
+            {
+                return _lockMailsEvent(this);
             }
 
             return null;
@@ -655,13 +748,16 @@ namespace Library.Net.Lair
 
                 connectionManager.PullNodesEvent += new PullNodesEventHandler(connectionManager_NodesEvent);
                 connectionManager.PullSectionsRequestEvent += new PullSectionsRequestEventHandler(connectionManager_PullSectionsRequestEvent);
-                connectionManager.PullProfilesEvent += new PullProfilesEventHandler(connectionManager_PullProfilesEvent);
+                connectionManager.PullSectionProfilesEvent += new PullSectionProfilesEventHandler(connectionManager_PullSectionProfilesEvent);
+                connectionManager.PullDocumentsRequestEvent += new PullDocumentsRequestEventHandler(connectionManager_PullDocumentsRequestEvent);
                 connectionManager.PullDocumentPagesEvent += new PullDocumentPagesEventHandler(connectionManager_PullDocumentPagesEvent);
                 connectionManager.PullDocumentOpinionsEvent += new PullDocumentOpinionsEventHandler(connectionManager_PullDocumentOpinionsEvent);
                 connectionManager.PullChatsRequestEvent += new PullChatsRequestEventHandler(connectionManager_PullChatsRequestEvent);
-                connectionManager.PullTopicsEvent += new PullTopicsEventHandler(connectionManager_PullTopicsEvent);
-                connectionManager.PullMessagesEvent += new PullMessagesEventHandler(connectionManager_PullMessagesEvent);
-                connectionManager.PullSignaturesRequestEvent += new PullSignaturesRequestEventHandler(connectionManager_PullSignaturesRequestEvent);
+                connectionManager.PullChatTopicsEvent += new PullChatTopicsEventHandler(connectionManager_PullChatTopicsEvent);
+                connectionManager.PullChatMessagesEvent += new PullChatMessagesEventHandler(connectionManager_PullChatMessagesEvent);
+                connectionManager.PullWhispersRequestEvent += new PullWhispersRequestEventHandler(connectionManager_PullWhispersRequestEvent);
+                connectionManager.PullWhisperMessagesEvent += new PullWhisperMessagesEventHandler(connectionManager_PullWhisperMessagesEvent);
+                connectionManager.PullMailsRequestEvent += new PullMailsRequestEventHandler(connectionManager_PullMailsRequestEvent);
                 connectionManager.PullMailMessagesEvent += new PullMailMessagesEventHandler(connectionManager_PullMailMessagesEvent);
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
@@ -985,38 +1081,49 @@ namespace Library.Net.Lair
 
                             foreach (var section in _settings.GetSections())
                             {
-                                foreach (var item in _settings.GetProfiles(section))
+                                foreach (var item in _settings.GetSectionProfiles(section))
                                 {
-                                    if (!cacheKeys.Contains(item.Content)) _settings.RemoveProfile(item);
+                                    if (!cacheKeys.Contains(item.Content)) _settings.RemoveSectionProfile(item);
                                 }
+                            }
 
-                                foreach (var item in _settings.GetDocumentPages(section))
+                            foreach (var document in _settings.GetDocuments())
+                            {
+                                foreach (var item in _settings.GetDocumentPages(document))
                                 {
                                     if (!cacheKeys.Contains(item.Content)) _settings.RemoveDocumentPage(item);
                                 }
 
-                                foreach (var item in _settings.GetDocumentOpinions(section))
+                                foreach (var item in _settings.GetDocumentOpinions(document))
                                 {
                                     if (!cacheKeys.Contains(item.Content)) _settings.RemoveDocumentOpinion(item);
                                 }
                             }
 
-                            foreach (var channel in _settings.GetChats())
+                            foreach (var chat in _settings.GetChats())
                             {
-                                foreach (var item in _settings.GetTopics(channel))
+                                foreach (var item in _settings.GetChatTopics(chat))
                                 {
-                                    if (!cacheKeys.Contains(item.Content)) _settings.RemoveTopic(item);
+                                    if (!cacheKeys.Contains(item.Content)) _settings.RemoveChatTopic(item);
                                 }
 
-                                foreach (var item in _settings.GetMessages(channel))
+                                foreach (var item in _settings.GetChatMessages(chat))
                                 {
-                                    if (!cacheKeys.Contains(item.Content)) _settings.RemoveMessage(item);
+                                    if (!cacheKeys.Contains(item.Content)) _settings.RemoveChatMessage(item);
                                 }
                             }
 
-                            foreach (var signature in _settings.GetSignatures())
+                            foreach (var whisper in _settings.GetWhispers())
                             {
-                                foreach (var item in _settings.GetMailMessages(signature))
+                                foreach (var item in _settings.GetWhisperMessages(whisper))
+                                {
+                                    if (!cacheKeys.Contains(item.Content)) _settings.RemoveWhisperMessage(item);
+                                }
+                            }
+
+                            foreach (var mail in _settings.GetMails())
+                            {
+                                foreach (var item in _settings.GetMailMessages(mail))
                                 {
                                     if (!cacheKeys.Contains(item.Content)) _settings.RemoveMailMessage(item);
                                 }
@@ -1028,38 +1135,49 @@ namespace Library.Net.Lair
 
                             foreach (var section in _settings.GetSections())
                             {
-                                foreach (var item in _settings.GetProfiles(section))
-                                {
-                                    linkKeys.Add(item.Content);
-                                }
-
-                                foreach (var item in _settings.GetDocumentPages(section))
-                                {
-                                    linkKeys.Add(item.Content);
-                                }
-
-                                foreach (var item in _settings.GetDocumentOpinions(section))
+                                foreach (var item in _settings.GetSectionProfiles(section))
                                 {
                                     linkKeys.Add(item.Content);
                                 }
                             }
 
-                            foreach (var channel in _settings.GetChats())
+                            foreach (var document in _settings.GetDocuments())
                             {
-                                foreach (var item in _settings.GetTopics(channel))
+                                foreach (var item in _settings.GetDocumentPages(document))
                                 {
                                     linkKeys.Add(item.Content);
                                 }
 
-                                foreach (var item in _settings.GetMessages(channel))
+                                foreach (var item in _settings.GetDocumentOpinions(document))
                                 {
                                     linkKeys.Add(item.Content);
                                 }
                             }
 
-                            foreach (var signature in _settings.GetSignatures())
+                            foreach (var chat in _settings.GetChats())
                             {
-                                foreach (var item in _settings.GetMailMessages(signature))
+                                foreach (var item in _settings.GetChatTopics(chat))
+                                {
+                                    linkKeys.Add(item.Content);
+                                }
+
+                                foreach (var item in _settings.GetChatMessages(chat))
+                                {
+                                    linkKeys.Add(item.Content);
+                                }
+                            }
+
+                            foreach (var whisper in _settings.GetWhispers())
+                            {
+                                foreach (var item in _settings.GetWhisperMessages(whisper))
+                                {
+                                    linkKeys.Add(item.Content);
+                                }
+                            }
+
+                            foreach (var mail in _settings.GetMails())
+                            {
+                                foreach (var item in _settings.GetMailMessages(mail))
                                 {
                                     linkKeys.Add(item.Content);
                                 }
@@ -1157,6 +1275,41 @@ namespace Library.Net.Lair
                             }
 
                             {
+                                var lockDocuments = this.OnLockDocumentsEvent();
+
+                                if (lockDocuments != null)
+                                {
+                                    var removeDocuments = new HashSet<Document>();
+                                    removeDocuments.UnionWith(_settings.GetDocuments());
+                                    removeDocuments.ExceptWith(lockDocuments);
+
+                                    var sortList = removeDocuments.ToList();
+
+                                    sortList.Sort((x, y) =>
+                                    {
+                                        DateTime tx;
+                                        DateTime ty;
+
+                                        _lastUsedDocumentTimes.TryGetValue(x, out tx);
+                                        _lastUsedDocumentTimes.TryGetValue(y, out ty);
+
+                                        return tx.CompareTo(ty);
+                                    });
+
+                                    _settings.RemoveDocuments(sortList.Take(sortList.Count - 1024));
+
+                                    var liveDocuments = new HashSet<Document>(_settings.GetDocuments());
+
+                                    foreach (var signature in _lastUsedDocumentTimes.Keys.ToArray())
+                                    {
+                                        if (liveDocuments.Contains(signature)) continue;
+
+                                        _lastUsedDocumentTimes.Remove(signature);
+                                    }
+                                }
+                            }
+
+                            {
                                 var lockChats = this.OnLockChatsEvent();
 
                                 if (lockChats != null)
@@ -1192,36 +1345,71 @@ namespace Library.Net.Lair
                             }
 
                             {
-                                var lockSignatures = this.OnTrustSignaturesEvent();
+                                var lockWhispers = this.OnLockWhispersEvent();
 
-                                if (lockSignatures != null)
+                                if (lockWhispers != null)
                                 {
-                                    var removeSignatures = new HashSet<string>();
-                                    removeSignatures.UnionWith(_settings.GetSignatures());
-                                    removeSignatures.ExceptWith(lockSignatures);
+                                    var removeWhispers = new HashSet<Whisper>();
+                                    removeWhispers.UnionWith(_settings.GetWhispers());
+                                    removeWhispers.ExceptWith(lockWhispers);
 
-                                    var sortList = removeSignatures.ToList();
+                                    var sortList = removeWhispers.ToList();
 
                                     sortList.Sort((x, y) =>
                                     {
                                         DateTime tx;
                                         DateTime ty;
 
-                                        _lastUsedSignatureTimes.TryGetValue(x, out tx);
-                                        _lastUsedSignatureTimes.TryGetValue(y, out ty);
+                                        _lastUsedWhisperTimes.TryGetValue(x, out tx);
+                                        _lastUsedWhisperTimes.TryGetValue(y, out ty);
 
                                         return tx.CompareTo(ty);
                                     });
 
-                                    _settings.RemoveSignatures(sortList.Take(sortList.Count - 1024));
+                                    _settings.RemoveWhispers(sortList.Take(sortList.Count - 1024));
 
-                                    var liveSignatures = new HashSet<string>(_settings.GetSignatures());
+                                    var liveWhispers = new HashSet<Whisper>(_settings.GetWhispers());
 
-                                    foreach (var signature in _lastUsedSignatureTimes.Keys.ToArray())
+                                    foreach (var signature in _lastUsedWhisperTimes.Keys.ToArray())
                                     {
-                                        if (liveSignatures.Contains(signature)) continue;
+                                        if (liveWhispers.Contains(signature)) continue;
 
-                                        _lastUsedSignatureTimes.Remove(signature);
+                                        _lastUsedWhisperTimes.Remove(signature);
+                                    }
+                                }
+                            }
+
+                            {
+                                var lockMails = this.OnLockMailsEvent();
+
+                                if (lockMails != null)
+                                {
+                                    var removeMails = new HashSet<Mail>();
+                                    removeMails.UnionWith(_settings.GetMails());
+                                    removeMails.ExceptWith(lockMails);
+
+                                    var sortList = removeMails.ToList();
+
+                                    sortList.Sort((x, y) =>
+                                    {
+                                        DateTime tx;
+                                        DateTime ty;
+
+                                        _lastUsedMailTimes.TryGetValue(x, out tx);
+                                        _lastUsedMailTimes.TryGetValue(y, out ty);
+
+                                        return tx.CompareTo(ty);
+                                    });
+
+                                    _settings.RemoveMails(sortList.Take(sortList.Count - 1024));
+
+                                    var liveMails = new HashSet<Mail>(_settings.GetMails());
+
+                                    foreach (var signature in _lastUsedMailTimes.Keys.ToArray())
+                                    {
+                                        if (liveMails.Contains(signature)) continue;
+
+                                        _lastUsedMailTimes.Remove(signature);
                                     }
                                 }
                             }
@@ -1235,35 +1423,41 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        var removeProfiles = new List<SectionProfile>();
+                                        var removeSectionProfiles = new List<SectionProfile>();
                                         var removeDocumentPages = new List<DocumentPage>();
                                         var removeDocumentOpinions = new List<DocumentOpinion>();
-                                        var removeTopics = new List<ChatTopic>();
-                                        var removeMessages = new List<ChatMessage>();
+                                        var removeChatTopics = new List<ChatTopic>();
+                                        var removeChatMessages = new List<ChatMessage>();
+                                        var removeWhisperMessages = new List<WhisperMessage>();
                                         var removeMailMessages = new List<MailMessage>();
 
                                         foreach (var section in _settings.GetSections())
                                         {
+                                            // trustのSectionProfileはすべて許容
+                                            // untrustのSectionProfileはランダムに256まで許容
                                             {
-                                                var untrustProfiles = new List<SectionProfile>();
+                                                var untrustItems = new List<SectionProfile>();
 
-                                                foreach (var item in _settings.GetProfiles(section))
+                                                foreach (var item in _settings.GetSectionProfiles(section))
                                                 {
                                                     if (lockSignatureHashset.Contains(item.Certificate.ToString())) continue;
 
-                                                    untrustProfiles.Add(item);
+                                                    untrustItems.Add(item);
                                                 }
 
-                                                removeProfiles.AddRange(untrustProfiles.Randomize().Take(untrustProfiles.Count - 256));
+                                                removeSectionProfiles.AddRange(untrustItems.Randomize().Take(untrustItems.Count - 256));
                                             }
+                                        }
 
-                                            // トラストな作成者のドキュメントは新しい順に1024まで許容
-                                            // 非トラストな作成者のドキュメントは新しい順に32まで許容
+                                        foreach (var document in _settings.GetDocuments())
+                                        {
+                                            // trustのDocumentPageは新しい順に1024まで許容
+                                            // untrustのDocumentPageは新しい順に32まで許容
                                             {
                                                 var trustDocumentPages = new List<DocumentPage>();
                                                 var untrustDocumentPages = new List<DocumentPage>();
 
-                                                foreach (var item in _settings.GetDocumentPages(section))
+                                                foreach (var item in _settings.GetDocumentPages(document))
                                                 {
                                                     if (lockSignatureHashset.Contains(item.Certificate.ToString()))
                                                     {
@@ -1296,10 +1490,12 @@ namespace Library.Net.Lair
                                                 }
                                             }
 
+                                            // trustのDocumentOpinionはすべて許容
+                                            // untrustのDocumentOpinionはランダムに256まで許容
                                             {
                                                 var untrustDocumentOpinions = new List<DocumentOpinion>();
 
-                                                foreach (var item in _settings.GetDocumentOpinions(section))
+                                                foreach (var item in _settings.GetDocumentOpinions(document))
                                                 {
                                                     if (lockSignatureHashset.Contains(item.Certificate.ToString())) continue;
 
@@ -1310,13 +1506,15 @@ namespace Library.Net.Lair
                                             }
                                         }
 
-                                        foreach (var channel in _settings.GetChats())
+                                        foreach (var chat in _settings.GetChats())
                                         {
+                                            // trustのChatTopicは新しい順に4まで許容
+                                            // untrustのChatTopicは新しい順に2まで許容
                                             {
                                                 var trustTopics = new List<ChatTopic>();
                                                 var untrustTopics = new List<ChatTopic>();
 
-                                                foreach (var item in _settings.GetTopics(channel))
+                                                foreach (var item in _settings.GetChatTopics(chat))
                                                 {
                                                     if (lockSignatureHashset.Contains(item.Certificate.ToString()))
                                                     {
@@ -1335,7 +1533,7 @@ namespace Library.Net.Lair
                                                         return x.CreationTime.CompareTo(y);
                                                     });
 
-                                                    removeTopics.AddRange(trustTopics.Take(trustTopics.Count - 4));
+                                                    removeChatTopics.AddRange(trustTopics.Take(trustTopics.Count - 4));
                                                 }
 
                                                 if (untrustTopics.Count > 2)
@@ -1345,22 +1543,22 @@ namespace Library.Net.Lair
                                                         return x.CreationTime.CompareTo(y);
                                                     });
 
-                                                    removeTopics.AddRange(untrustTopics.Take(untrustTopics.Count - 2));
+                                                    removeChatTopics.AddRange(untrustTopics.Take(untrustTopics.Count - 2));
                                                 }
                                             }
 
-                                            // 64日を過ぎたメッセージは破棄
-                                            // トラストな作成者のメッセージは新しい順に256まで許容
-                                            // 非トラストな作成者のメッセージは新しい順に32まで許容
+                                            // 作成後64日を過ぎたChatMessageは破棄
+                                            // trustのChatMessageは新しい順に256まで許容
+                                            // untrustのChatMessageは新しい順に32まで許容
                                             {
                                                 var trustMessages = new List<ChatMessage>();
                                                 var untrustMessages = new List<ChatMessage>();
 
-                                                foreach (var item in _settings.GetMessages(channel))
+                                                foreach (var item in _settings.GetChatMessages(chat))
                                                 {
                                                     if ((now - item.CreationTime) > new TimeSpan(64, 0, 0, 0))
                                                     {
-                                                        removeMessages.Add(item);
+                                                        removeChatMessages.Add(item);
                                                     }
                                                     else
                                                     {
@@ -1382,7 +1580,7 @@ namespace Library.Net.Lair
                                                         return x.CreationTime.CompareTo(y);
                                                     });
 
-                                                    removeMessages.AddRange(trustMessages.Take(trustMessages.Count - 256));
+                                                    removeChatMessages.AddRange(trustMessages.Take(trustMessages.Count - 256));
                                                 }
 
                                                 if (untrustMessages.Count > 32)
@@ -1392,23 +1590,73 @@ namespace Library.Net.Lair
                                                         return x.CreationTime.CompareTo(y);
                                                     });
 
-                                                    removeMessages.AddRange(untrustMessages.Take(untrustMessages.Count - 32));
+                                                    removeChatMessages.AddRange(untrustMessages.Take(untrustMessages.Count - 32));
                                                 }
                                             }
                                         }
 
-                                        foreach (var signature in _settings.GetSignatures())
+                                        foreach (var whisper in _settings.GetWhispers())
                                         {
-                                            // 32日を過ぎたメールは破棄
-                                            // トラストな作成者のメールはすべて許容、一つのあて先につき新しい順に8まで許容
-                                            // 非トラストな作成者のメールは32人分まで許容、一つのあて先につき新しい順に2まで許容
+                                            // 作成後64日を過ぎたWhisperMessageは破棄
+                                            // trustのWhisperMessageは新しい順に256まで許容
+                                            // untrustのWhisperMessageは新しい順に32まで許容
+                                            {
+                                                var trustMessages = new List<WhisperMessage>();
+                                                var untrustMessages = new List<WhisperMessage>();
+
+                                                foreach (var item in _settings.GetWhisperMessages(whisper))
+                                                {
+                                                    if ((now - item.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                                                    {
+                                                        removeWhisperMessages.Add(item);
+                                                    }
+                                                    else
+                                                    {
+                                                        if (lockSignatureHashset.Contains(item.Certificate.ToString()))
+                                                        {
+                                                            trustMessages.Add(item);
+                                                        }
+                                                        else
+                                                        {
+                                                            untrustMessages.Add(item);
+                                                        }
+                                                    }
+                                                }
+
+                                                if (trustMessages.Count > 256)
+                                                {
+                                                    trustMessages.Sort((x, y) =>
+                                                    {
+                                                        return x.CreationTime.CompareTo(y);
+                                                    });
+
+                                                    removeWhisperMessages.AddRange(trustMessages.Take(trustMessages.Count - 256));
+                                                }
+
+                                                if (untrustMessages.Count > 32)
+                                                {
+                                                    untrustMessages.Sort((x, y) =>
+                                                    {
+                                                        return x.CreationTime.CompareTo(y);
+                                                    });
+
+                                                    removeWhisperMessages.AddRange(untrustMessages.Take(untrustMessages.Count - 32));
+                                                }
+                                            }
+                                        }
+
+                                        foreach (var mail in _settings.GetMails())
+                                        {
+                                            // 64日を過ぎたMailMessageは破棄
+                                            // untrustのMailMessageはすべて許容、一つのあて先につき新しい順に8まで許容
+                                            // untrustのMailMessageは32人分まで許容、一つのあて先につき新しい順に2まで許容
                                             {
                                                 var trustMailMessageDic = new Dictionary<string, List<MailMessage>>();
                                                 var untrustMailMessageDic = new Dictionary<string, List<MailMessage>>();
 
-                                                foreach (var item in _settings.GetMailMessages(signature))
+                                                foreach (var item in _settings.GetMailMessages(mail))
                                                 {
-                                                    if ((now - item.CreationTime) > new TimeSpan(32, 0, 0, 0))
+                                                    if ((now - item.CreationTime) > new TimeSpan(64, 0, 0, 0))
                                                     {
                                                         removeMailMessages.Add(item);
                                                     }
@@ -1476,9 +1724,9 @@ namespace Library.Net.Lair
                                             }
                                         }
 
-                                        foreach (var item in removeProfiles)
+                                        foreach (var item in removeSectionProfiles)
                                         {
-                                            _settings.RemoveProfile(item);
+                                            _settings.RemoveSectionProfile(item);
                                             _cacheManager.Remove(item.Content);
                                         }
 
@@ -1494,15 +1742,21 @@ namespace Library.Net.Lair
                                             _cacheManager.Remove(item.Content);
                                         }
 
-                                        foreach (var item in removeTopics)
+                                        foreach (var item in removeChatTopics)
                                         {
-                                            _settings.RemoveTopic(item);
+                                            _settings.RemoveChatTopic(item);
                                             _cacheManager.Remove(item.Content);
                                         }
 
-                                        foreach (var item in removeMessages)
+                                        foreach (var item in removeChatMessages)
                                         {
-                                            _settings.RemoveMessage(item);
+                                            _settings.RemoveChatMessage(item);
+                                            _cacheManager.Remove(item.Content);
+                                        }
+
+                                        foreach (var item in removeWhisperMessages)
+                                        {
+                                            _settings.RemoveWhisperMessage(item);
                                             _cacheManager.Remove(item.Content);
                                         }
 
@@ -1551,6 +1805,26 @@ namespace Library.Net.Lair
                         }
                     }
 
+                    foreach (var item in _settings.GetDocuments())
+                    {
+                        try
+                        {
+                            List<Node> requestNodes = new List<Node>();
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                var messageManager = _messagesManager[requestNodes[i]];
+
+                                messageManager.PullDocumentsRequest.Add(item);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    }
+
                     foreach (var item in _settings.GetChats())
                     {
                         try
@@ -1571,18 +1845,38 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    foreach (var item in _settings.GetSignatures())
+                    foreach (var item in _settings.GetWhispers())
                     {
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 1));
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
                                 var messageManager = _messagesManager[requestNodes[i]];
 
-                                messageManager.PullSignaturesRequest.Add(item);
+                                messageManager.PullWhispersRequest.Add(item);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    }
+
+                    foreach (var item in _settings.GetMails())
+                    {
+                        try
+                        {
+                            List<Node> requestNodes = new List<Node>();
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                var messageManager = _messagesManager[requestNodes[i]];
+
+                                messageManager.PullMailsRequest.Add(item);
                             }
                         }
                         catch (Exception e)
@@ -1598,8 +1892,10 @@ namespace Library.Net.Lair
                     pushDownloadStopwatch.Restart();
 
                     HashSet<Section> pushSectionsRequestList = new HashSet<Section>();
+                    HashSet<Document> pushDocumentsRequestList = new HashSet<Document>();
                     HashSet<Chat> pushChatsRequestList = new HashSet<Chat>();
-                    HashSet<string> pushSignaturesRequestList = new HashSet<string>();
+                    HashSet<Whisper> pushWhispersRequestList = new HashSet<Whisper>();
+                    HashSet<Mail> pushMailsRequestList = new HashSet<Mail>();
                     List<Node> nodes = new List<Node>();
 
                     lock (this.ThisLock)
@@ -1643,6 +1939,40 @@ namespace Library.Net.Lair
                         }
 
                         {
+                            var list = _pushDocumentsRequestList
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushDocumentsRequest.Contains(list[i])))
+                                {
+                                    pushDocumentsRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        foreach (var node in nodes)
+                        {
+                            var messageManager = _messagesManager[node];
+                            var list = messageManager.PullDocumentsRequest
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushDocumentsRequest.Contains(list[i])))
+                                {
+                                    pushDocumentsRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        {
                             var list = _pushChatsRequestList
                                 .ToArray()
                                 .Randomize()
@@ -1677,16 +2007,16 @@ namespace Library.Net.Lair
                         }
 
                         {
-                            var list = _pushSignaturesRequestList
+                            var list = _pushWhispersRequestList
                                 .ToArray()
                                 .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushSignaturesRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushWhispersRequest.Contains(list[i])))
                                 {
-                                    pushSignaturesRequestList.Add(list[i]);
+                                    pushWhispersRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1695,16 +2025,50 @@ namespace Library.Net.Lair
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
-                            var list = messageManager.PullSignaturesRequest
+                            var list = messageManager.PullWhispersRequest
                                 .ToArray()
                                 .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushSignaturesRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushWhispersRequest.Contains(list[i])))
                                 {
-                                    pushSignaturesRequestList.Add(list[i]);
+                                    pushWhispersRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        {
+                            var list = _pushMailsRequestList
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushMailsRequest.Contains(list[i])))
+                                {
+                                    pushMailsRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        foreach (var node in nodes)
+                        {
+                            var messageManager = _messagesManager[node];
+                            var list = messageManager.PullMailsRequest
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushMailsRequest.Contains(list[i])))
+                                {
+                                    pushMailsRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1787,46 +2151,6 @@ namespace Library.Net.Lair
                             foreach (var item in pushChatsRequestDictionary)
                             {
                                 _pushChatsRequestDictionary.Add(item.Key, item.Value);
-                            }
-                        }
-                    }
-
-                    {
-                        Dictionary<Node, HashSet<string>> pushSignaturesRequestDictionary = new Dictionary<Node, HashSet<string>>();
-
-                        foreach (var item in pushSignaturesRequestList)
-                        {
-                            try
-                            {
-                                List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 1));
-
-                                for (int i = 0; i < requestNodes.Count; i++)
-                                {
-                                    HashSet<string> hashset;
-
-                                    if (!pushSignaturesRequestDictionary.TryGetValue(requestNodes[i], out hashset))
-                                    {
-                                        hashset = new HashSet<string>();
-                                        pushSignaturesRequestDictionary[requestNodes[i]] = hashset;
-                                    }
-
-                                    hashset.Add(item);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Log.Error(e);
-                            }
-                        }
-
-                        lock (_pushSignaturesRequestDictionary.ThisLock)
-                        {
-                            _pushSignaturesRequestDictionary.Clear();
-
-                            foreach (var item in pushSignaturesRequestDictionary)
-                            {
-                                _pushSignaturesRequestDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1966,6 +2290,50 @@ namespace Library.Net.Lair
                                 }
                             }
 
+                            // PushDocumentsRequest
+                            {
+                                DocumentCollection tempList = null;
+                                int count = (int)(_maxRequestCount * this.ResponseTimePriority(connectionManager.Node));
+
+                                lock (_pushDocumentsRequestDictionary.ThisLock)
+                                {
+                                    HashSet<Document> hashset;
+
+                                    if (_pushDocumentsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                    {
+                                        tempList = new DocumentCollection(hashset.Randomize().Take(count));
+
+                                        hashset.ExceptWith(tempList);
+                                        messageManager.PushDocumentsRequest.AddRange(tempList);
+                                    }
+                                }
+
+                                if (tempList != null && tempList.Count > 0)
+                                {
+                                    try
+                                    {
+                                        connectionManager.PushDocumentsRequest(tempList);
+
+                                        foreach (var item in tempList)
+                                        {
+                                            _pushDocumentsRequestList.Remove(item);
+                                        }
+
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push DocumentsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                        _pushDocumentRequestCount += tempList.Count;
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        foreach (var item in tempList)
+                                        {
+                                            messageManager.PushDocumentsRequest.Remove(item);
+                                        }
+
+                                        throw e;
+                                    }
+                                }
+                            }
+
                             // PushChatsRequest
                             {
                                 ChatCollection tempList = null;
@@ -2010,21 +2378,21 @@ namespace Library.Net.Lair
                                 }
                             }
 
-                            // PushSignaturesRequest
+                            // PushWhispersRequest
                             {
-                                SignatureCollection tempList = null;
+                                WhisperCollection tempList = null;
                                 int count = (int)(_maxRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
-                                lock (_pushSignaturesRequestDictionary.ThisLock)
+                                lock (_pushWhispersRequestDictionary.ThisLock)
                                 {
-                                    HashSet<string> hashset;
+                                    HashSet<Whisper> hashset;
 
-                                    if (_pushSignaturesRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                    if (_pushWhispersRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                     {
-                                        tempList = new SignatureCollection(hashset.Randomize().Take(count));
+                                        tempList = new WhisperCollection(hashset.Randomize().Take(count));
 
                                         hashset.ExceptWith(tempList);
-                                        messageManager.PushSignaturesRequest.AddRange(tempList);
+                                        messageManager.PushWhispersRequest.AddRange(tempList);
                                     }
                                 }
 
@@ -2032,21 +2400,21 @@ namespace Library.Net.Lair
                                 {
                                     try
                                     {
-                                        connectionManager.PushSignaturesRequest(tempList);
+                                        connectionManager.PushWhispersRequest(tempList);
 
                                         foreach (var item in tempList)
                                         {
-                                            _pushSignaturesRequestList.Remove(item);
+                                            _pushWhispersRequestList.Remove(item);
                                         }
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push SignaturesRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
-                                        _pushSignatureRequestCount += tempList.Count;
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push WhispersRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                        _pushWhisperRequestCount += tempList.Count;
                                     }
                                     catch (Exception e)
                                     {
                                         foreach (var item in tempList)
                                         {
-                                            messageManager.PushSignaturesRequest.Remove(item);
+                                            messageManager.PushWhispersRequest.Remove(item);
                                         }
 
                                         throw e;
@@ -2054,6 +2422,49 @@ namespace Library.Net.Lair
                                 }
                             }
 
+                            // PushMailsRequest
+                            {
+                                MailCollection tempList = null;
+                                int count = (int)(_maxRequestCount * this.ResponseTimePriority(connectionManager.Node));
+
+                                lock (_pushMailsRequestDictionary.ThisLock)
+                                {
+                                    HashSet<Mail> hashset;
+
+                                    if (_pushMailsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                    {
+                                        tempList = new MailCollection(hashset.Randomize().Take(count));
+
+                                        hashset.ExceptWith(tempList);
+                                        messageManager.PushMailsRequest.AddRange(tempList);
+                                    }
+                                }
+
+                                if (tempList != null && tempList.Count > 0)
+                                {
+                                    try
+                                    {
+                                        connectionManager.PushMailsRequest(tempList);
+
+                                        foreach (var item in tempList)
+                                        {
+                                            _pushMailsRequestList.Remove(item);
+                                        }
+
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push MailsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                        _pushMailRequestCount += tempList.Count;
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        foreach (var item in tempList)
+                                        {
+                                            messageManager.PushMailsRequest.Remove(item);
+                                        }
+
+                                        throw e;
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -2064,24 +2475,24 @@ namespace Library.Net.Lair
 
                             if (sections.Count > 0)
                             {
-                                // PushProfiles
+                                // PushSectionProfiles
                                 {
-                                    var profiles = new List<SectionProfile>();
+                                    var items = new List<SectionProfile>();
 
                                     lock (this.ThisLock)
                                     {
                                         foreach (var section in sections)
                                         {
-                                            foreach (var item in _settings.GetProfiles(section).Randomize())
+                                            foreach (var item in _settings.GetSectionProfiles(section).Randomize())
                                             {
                                                 DateTime creationTime;
 
-                                                if (!messageManager.PushProfiles.TryGetValue(item.Certificate.ToString(), out creationTime)
+                                                if (!messageManager.PushSectionProfiles.TryGetValue(item.Certificate.ToString(), out creationTime)
                                                     || item.CreationTime > creationTime)
                                                 {
-                                                    profiles.Add(item);
+                                                    items.Add(item);
 
-                                                    if (profiles.Count >= 256) goto End;
+                                                    if (items.Count >= 256) goto End;
                                                 }
                                             }
                                         }
@@ -2093,7 +2504,7 @@ namespace Library.Net.Lair
 
                                     try
                                     {
-                                        foreach (var item in profiles)
+                                        foreach (var item in items)
                                         {
                                             try
                                             {
@@ -2101,18 +2512,18 @@ namespace Library.Net.Lair
                                             }
                                             catch (Exception)
                                             {
-                                                _settings.RemoveProfile(item);
+                                                _settings.RemoveSectionProfile(item);
                                             }
                                         }
 
-                                        connectionManager.PushProfiles(profiles, contents);
+                                        connectionManager.PushSectionProfiles(items, contents);
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push Profiles ({0})", profiles.Count));
-                                        _pushProfileCount += profiles.Count;
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push SectionProfiles ({0})", items.Count));
+                                        _pushSectionProfileCount += items.Count;
 
-                                        foreach (var item in profiles)
+                                        foreach (var item in items)
                                         {
-                                            messageManager.PushProfiles.Add(item.Certificate.ToString(), item.CreationTime);
+                                            messageManager.PushSectionProfiles.Add(item.Certificate.ToString(), item.CreationTime);
                                         }
                                     }
                                     finally
@@ -2123,25 +2534,31 @@ namespace Library.Net.Lair
                                         }
                                     }
                                 }
+                            }
+                        }
 
+                        {
+                            List<Document> documents = new List<Document>(messageManager.PullDocumentsRequest.Randomize());
+
+                            if (documents.Count > 0)
+                            {
                                 // PushDocumentPages
                                 {
-                                    var documents = new List<DocumentPage>();
+                                    var items = new List<DocumentPage>();
 
                                     lock (this.ThisLock)
                                     {
-                                        foreach (var section in sections)
+                                        foreach (var section in documents)
                                         {
                                             foreach (var item in _settings.GetDocumentPages(section).Randomize())
                                             {
-                                                DateTime creationTime;
+                                                var key = new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm);
 
-                                                if (!messageManager.PushDocumentPages.TryGetValue(item.Certificate.ToString(), out creationTime)
-                                                    || item.CreationTime > creationTime)
+                                                if (!messageManager.PushDocumentPages.Contains(key))
                                                 {
-                                                    documents.Add(item);
+                                                    items.Add(item);
 
-                                                    if (documents.Count >= 32) goto End;
+                                                    if (items.Count >= 32) goto End;
                                                 }
                                             }
                                         }
@@ -2153,7 +2570,7 @@ namespace Library.Net.Lair
 
                                     try
                                     {
-                                        foreach (var item in documents)
+                                        foreach (var item in items)
                                         {
                                             try
                                             {
@@ -2165,14 +2582,14 @@ namespace Library.Net.Lair
                                             }
                                         }
 
-                                        connectionManager.PushDocumentPages(documents, contents);
+                                        connectionManager.PushDocumentPages(items, contents);
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push DocumentPages ({0})", documents.Count));
-                                        _pushDocumentPageCount += documents.Count;
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push DocumentPages ({0})", items.Count));
+                                        _pushDocumentPageCount += items.Count;
 
-                                        foreach (var item in documents)
+                                        foreach (var item in items)
                                         {
-                                            messageManager.PushDocumentPages.Add(item.Certificate.ToString(), item.CreationTime);
+                                            messageManager.PushDocumentPages.Add(new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm));
                                         }
                                     }
                                     finally
@@ -2186,21 +2603,22 @@ namespace Library.Net.Lair
 
                                 // PushDocumentOpinions
                                 {
-                                    var votes = new List<DocumentOpinion>();
+                                    var items = new List<DocumentOpinion>();
 
                                     lock (this.ThisLock)
                                     {
-                                        foreach (var section in sections)
+                                        foreach (var section in documents)
                                         {
                                             foreach (var item in _settings.GetDocumentOpinions(section).Randomize())
                                             {
-                                                var key = new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm);
+                                                DateTime creationTime;
 
-                                                if (!messageManager.PushDocumentOpinions.Contains(key))
+                                                if (!messageManager.PushDocumentOpinions.TryGetValue(item.Certificate.ToString(), out creationTime)
+                                                    || item.CreationTime > creationTime)
                                                 {
-                                                    votes.Add(item);
+                                                    items.Add(item);
 
-                                                    if (votes.Count >= 32) goto End;
+                                                    if (items.Count >= 256) goto End;
                                                 }
                                             }
                                         }
@@ -2212,7 +2630,7 @@ namespace Library.Net.Lair
 
                                     try
                                     {
-                                        foreach (var item in votes)
+                                        foreach (var item in items)
                                         {
                                             try
                                             {
@@ -2224,14 +2642,14 @@ namespace Library.Net.Lair
                                             }
                                         }
 
-                                        connectionManager.PushDocumentOpinions(votes, contents);
+                                        connectionManager.PushDocumentOpinions(items, contents);
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push DocumentOpinions ({0})", votes.Count));
-                                        _pushDocumentOpinionCount += votes.Count;
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push DocumentOpinions ({0})", items.Count));
+                                        _pushDocumentOpinionCount += items.Count;
 
-                                        foreach (var item in votes)
+                                        foreach (var item in items)
                                         {
-                                            messageManager.PushDocumentOpinions.Add(new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm));
+                                            messageManager.PushDocumentOpinions.Add(item.Certificate.ToString(), item.CreationTime);
                                         }
                                     }
                                     finally
@@ -2246,28 +2664,28 @@ namespace Library.Net.Lair
                         }
 
                         {
-                            var channels = new List<Chat>(messageManager.PullChatsRequest.Randomize());
+                            var chats = new List<Chat>(messageManager.PullChatsRequest.Randomize());
 
-                            if (channels.Count > 0)
+                            if (chats.Count > 0)
                             {
-                                // PushTopics
+                                // PushChatTopics
                                 {
-                                    var topics = new List<ChatTopic>();
+                                    var items = new List<ChatTopic>();
 
                                     lock (this.ThisLock)
                                     {
-                                        foreach (var channel in channels)
+                                        foreach (var chat in chats)
                                         {
-                                            foreach (var item in _settings.GetTopics(channel).Randomize())
+                                            foreach (var item in _settings.GetChatTopics(chat).Randomize())
                                             {
                                                 DateTime creationTime;
 
-                                                if (!messageManager.PushTopics.TryGetValue(item.Certificate.ToString(), out creationTime)
+                                                if (!messageManager.PushChatTopics.TryGetValue(item.Certificate.ToString(), out creationTime)
                                                     || item.CreationTime > creationTime)
                                                 {
-                                                    topics.Add(item);
+                                                    items.Add(item);
 
-                                                    if (topics.Count >= 8) goto End;
+                                                    if (items.Count >= 8) goto End;
                                                 }
                                             }
                                         }
@@ -2279,7 +2697,7 @@ namespace Library.Net.Lair
 
                                     try
                                     {
-                                        foreach (var item in topics)
+                                        foreach (var item in items)
                                         {
                                             try
                                             {
@@ -2287,18 +2705,18 @@ namespace Library.Net.Lair
                                             }
                                             catch (Exception)
                                             {
-                                                _settings.RemoveTopic(item);
+                                                _settings.RemoveChatTopic(item);
                                             }
                                         }
 
-                                        connectionManager.PushTopics(topics, contents);
+                                        connectionManager.PushChatTopics(items, contents);
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push Topics ({0})", topics.Count));
-                                        _pushTopicCount += topics.Count;
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push ChatTopics ({0})", items.Count));
+                                        _pushChatTopicCount += items.Count;
 
-                                        foreach (var item in topics)
+                                        foreach (var item in items)
                                         {
-                                            messageManager.PushTopics.Add(item.Certificate.ToString(), item.CreationTime);
+                                            messageManager.PushChatTopics.Add(item.Certificate.ToString(), item.CreationTime);
                                         }
                                     }
                                     finally
@@ -2310,23 +2728,23 @@ namespace Library.Net.Lair
                                     }
                                 }
 
-                                // PushMessages
+                                // PushChatMessages
                                 {
-                                    var messages = new List<ChatMessage>();
+                                    var items = new List<ChatMessage>();
 
                                     lock (this.ThisLock)
                                     {
-                                        foreach (var channel in channels)
+                                        foreach (var chat in chats)
                                         {
-                                            foreach (var item in _settings.GetMessages(channel).Randomize())
+                                            foreach (var item in _settings.GetChatMessages(chat).Randomize())
                                             {
                                                 var key = new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm);
 
-                                                if (!messageManager.PushMessages.Contains(key))
+                                                if (!messageManager.PushChatMessages.Contains(key))
                                                 {
-                                                    messages.Add(item);
+                                                    items.Add(item);
 
-                                                    if (messages.Count >= 256) goto End;
+                                                    if (items.Count >= 256) goto End;
                                                 }
                                             }
                                         }
@@ -2338,7 +2756,7 @@ namespace Library.Net.Lair
 
                                     try
                                     {
-                                        foreach (var item in messages)
+                                        foreach (var item in items)
                                         {
                                             try
                                             {
@@ -2346,18 +2764,18 @@ namespace Library.Net.Lair
                                             }
                                             catch (Exception)
                                             {
-                                                _settings.RemoveMessage(item);
+                                                _settings.RemoveChatMessage(item);
                                             }
                                         }
 
-                                        connectionManager.PushMessages(messages, contents);
+                                        connectionManager.PushChatMessages(items, contents);
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push Messages ({0})", messages.Count));
-                                        _pushMessageCount += messages.Count;
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push ChatMessages ({0})", items.Count));
+                                        _pushChatMessageCount += items.Count;
 
-                                        foreach (var item in messages)
+                                        foreach (var item in items)
                                         {
-                                            messageManager.PushMessages.Add(new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm));
+                                            messageManager.PushChatMessages.Add(new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm));
                                         }
                                     }
                                     finally
@@ -2372,27 +2790,93 @@ namespace Library.Net.Lair
                         }
 
                         {
-                            var signatures = new List<string>(messageManager.PullSignaturesRequest.Randomize());
+                            var whispers = new List<Whisper>(messageManager.PullWhispersRequest.Randomize());
 
-                            if (signatures.Count > 0)
+                            if (whispers.Count > 0)
                             {
-                                // PushMailMessages
+                                // PushWhisperMessages
                                 {
-                                    var mails = new List<MailMessage>();
+                                    var items = new List<WhisperMessage>();
 
                                     lock (this.ThisLock)
                                     {
-                                        foreach (var signature in signatures)
+                                        foreach (var whisper in whispers)
                                         {
-                                            foreach (var item in _settings.GetMailMessages(signature).Randomize())
+                                            foreach (var item in _settings.GetWhisperMessages(whisper).Randomize())
+                                            {
+                                                var key = new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm);
+
+                                                if (!messageManager.PushWhisperMessages.Contains(key))
+                                                {
+                                                    items.Add(item);
+
+                                                    if (items.Count >= 256) goto End;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                End: ;
+
+                                    var contents = new List<ArraySegment<byte>>();
+
+                                    try
+                                    {
+                                        foreach (var item in items)
+                                        {
+                                            try
+                                            {
+                                                contents.Add(_cacheManager[item.Content]);
+                                            }
+                                            catch (Exception)
+                                            {
+                                                _settings.RemoveWhisperMessage(item);
+                                            }
+                                        }
+
+                                        connectionManager.PushWhisperMessages(items, contents);
+
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push WhisperMessages ({0})", items.Count));
+                                        _pushWhisperMessageCount += items.Count;
+
+                                        foreach (var item in items)
+                                        {
+                                            messageManager.PushWhisperMessages.Add(new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm));
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        foreach (var content in contents)
+                                        {
+                                            _bufferManager.ReturnBuffer(content.Array);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        {
+                            var mails = new List<Mail>(messageManager.PullMailsRequest.Randomize());
+
+                            if (mails.Count > 0)
+                            {
+                                // PushMailMessages
+                                {
+                                    var items = new List<MailMessage>();
+
+                                    lock (this.ThisLock)
+                                    {
+                                        foreach (var mail in mails)
+                                        {
+                                            foreach (var item in _settings.GetMailMessages(mail).Randomize())
                                             {
                                                 var key = new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm);
 
                                                 if (!messageManager.PushMailMessages.Contains(key))
                                                 {
-                                                    mails.Add(item);
+                                                    items.Add(item);
 
-                                                    if (mails.Count >= 256) goto End;
+                                                    if (items.Count >= 256) goto End;
                                                 }
                                             }
                                         }
@@ -2404,7 +2888,7 @@ namespace Library.Net.Lair
 
                                     try
                                     {
-                                        foreach (var item in mails)
+                                        foreach (var item in items)
                                         {
                                             try
                                             {
@@ -2416,12 +2900,12 @@ namespace Library.Net.Lair
                                             }
                                         }
 
-                                        connectionManager.PushMailMessages(mails, contents);
+                                        connectionManager.PushMailMessages(items, contents);
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push MailMessages ({0})", mails.Count));
-                                        _pushMailMessageCount += mails.Count;
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push MailMessages ({0})", items.Count));
+                                        _pushMailMessageCount += items.Count;
 
-                                        foreach (var item in mails)
+                                        foreach (var item in items)
                                         {
                                             messageManager.PushMailMessages.Add(new Key(item.GetHash(_hashAlgorithm), _hashAlgorithm));
                                         }
@@ -2510,7 +2994,7 @@ namespace Library.Net.Lair
             }
         }
 
-        void connectionManager_PullProfilesEvent(object sender, PullProfilesEventArgs e)
+        private void connectionManager_PullSectionProfilesEvent(object sender, PullSectionProfilesEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
@@ -2519,41 +3003,41 @@ namespace Library.Net.Lair
 
             try
             {
-                if (e.Profiles == null || e.Contents == null) return;
+                if (e.SectionProfiles == null || e.Contents == null) return;
 
-                var profileList = e.Profiles.ToList();
+                var list = e.SectionProfiles.ToList();
                 var contentList = e.Contents.ToList();
 
-                if (profileList.Count != contentList.Count) return;
+                if (list.Count != contentList.Count) return;
 
                 int priority = 0;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Profiles ({0})", profileList.Count));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull SectionProfiles ({0})", list.Count));
 
-                for (int i = 0; i < profileList.Count && i < _maxContentCount; i++)
+                for (int i = 0; i < list.Count && i < _maxContentCount; i++)
                 {
-                    var profile = profileList[i];
+                    var sectionProfile = list[i];
                     var content = contentList[i];
 
-                    if (_settings.SetProfile(profile))
+                    if (_settings.SetSectionProfile(sectionProfile))
                     {
                         try
                         {
-                            _cacheManager[profile.Content] = content;
+                            _cacheManager[sectionProfile.Content] = content;
 
-                            if (_trustSignatures.Contains(profile.Certificate.ToString())) priority++;
+                            if (_trustSignatures.Contains(sectionProfile.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
-                            _settings.RemoveProfile(profile);
+                            _settings.RemoveSectionProfile(sectionProfile);
                         }
                     }
 
-                    messageManager.PushProfiles[profile.Certificate.ToString()] = profile.CreationTime;
-                    _pullProfileCount++;
+                    messageManager.PushSectionProfiles[sectionProfile.Certificate.ToString()] = sectionProfile.CreationTime;
+                    _pullSectionProfileCount++;
                 }
 
-                messageManager.Priority += (priority + (priority - profileList.Count));
+                messageManager.Priority += (priority + (priority - list.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2568,7 +3052,28 @@ namespace Library.Net.Lair
             }
         }
 
-        void connectionManager_PullDocumentPagesEvent(object sender, PullDocumentPagesEventArgs e)
+        private void connectionManager_PullDocumentsRequestEvent(object sender, PullDocumentsRequestEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            var messageManager = _messagesManager[connectionManager.Node];
+
+            if (e.Documents == null
+                || messageManager.PullDocumentsRequest.Count > _maxRequestCount * 60) return;
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull DocumentsRequest ({0})", e.Documents.Count()));
+
+            foreach (var c in e.Documents.Take(_maxRequestCount))
+            {
+                if (c == null || c.Id == null || string.IsNullOrWhiteSpace(c.Name)) continue;
+
+                messageManager.PullDocumentsRequest.Add(c);
+                _pullDocumentRequestCount++;
+            }
+        }
+
+        private void connectionManager_PullDocumentPagesEvent(object sender, PullDocumentPagesEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
@@ -2579,39 +3084,41 @@ namespace Library.Net.Lair
             {
                 if (e.DocumentPages == null || e.Contents == null) return;
 
-                var documentList = e.DocumentPages.ToList();
+                var list = e.DocumentPages.ToList();
                 var contentList = e.Contents.ToList();
 
-                if (documentList.Count != contentList.Count) return;
+                if (list.Count != contentList.Count) return;
 
                 int priority = 0;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull DocumentPages ({0})", documentList.Count));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull DocumentPages ({0})", list.Count));
 
-                for (int i = 0; i < documentList.Count && i < _maxContentCount; i++)
+                for (int i = 0; i < list.Count && i < _maxContentCount; i++)
                 {
-                    var profile = documentList[i];
+                    var documentPage = list[i];
                     var content = contentList[i];
 
-                    if (_settings.SetDocumentPage(profile))
+                    if (_settings.SetDocumentPage(documentPage))
                     {
                         try
                         {
-                            _cacheManager[profile.Content] = content;
+                            _cacheManager[documentPage.Content] = content;
 
-                            if (_trustSignatures.Contains(profile.Certificate.ToString())) priority++;
+                            if (_trustSignatures.Contains(documentPage.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
-                            _settings.RemoveDocumentPage(profile);
+                            _settings.RemoveDocumentPage(documentPage);
                         }
                     }
 
-                    messageManager.PushDocumentPages[profile.Certificate.ToString()] = profile.CreationTime;
+                    var key = new Key(documentPage.GetHash(_hashAlgorithm), _hashAlgorithm);
+
+                    messageManager.PushDocumentPages.Add(key);
                     _pullDocumentPageCount++;
                 }
 
-                messageManager.Priority += (priority + (priority - documentList.Count));
+                messageManager.Priority += (priority + (priority - list.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2626,7 +3133,7 @@ namespace Library.Net.Lair
             }
         }
 
-        void connectionManager_PullDocumentOpinionsEvent(object sender, PullDocumentOpinionsEventArgs e)
+        private void connectionManager_PullDocumentOpinionsEvent(object sender, PullDocumentOpinionsEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
@@ -2637,41 +3144,39 @@ namespace Library.Net.Lair
             {
                 if (e.DocumentOpinions == null || e.Contents == null) return;
 
-                var voteList = e.DocumentOpinions.ToList();
+                var list = e.DocumentOpinions.ToList();
                 var contentList = e.Contents.ToList();
 
-                if (voteList.Count != contentList.Count) return;
+                if (list.Count != contentList.Count) return;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull DocumentOpinions ({0})", voteList.Count));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull DocumentOpinions ({0})", list.Count));
 
                 int priority = 0;
 
-                for (int i = 0; i < voteList.Count && i < _maxContentCount; i++)
+                for (int i = 0; i < list.Count && i < _maxContentCount; i++)
                 {
-                    var mail = voteList[i];
+                    var documentOpinion = list[i];
                     var content = contentList[i];
 
-                    if (_settings.SetDocumentOpinion(mail))
+                    if (_settings.SetDocumentOpinion(documentOpinion))
                     {
                         try
                         {
-                            _cacheManager[mail.Content] = content;
+                            _cacheManager[documentOpinion.Content] = content;
 
-                            if (_trustSignatures.Contains(mail.Certificate.ToString())) priority++;
+                            if (_trustSignatures.Contains(documentOpinion.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
-                            _settings.RemoveDocumentOpinion(mail);
+                            _settings.RemoveDocumentOpinion(documentOpinion);
                         }
                     }
 
-                    var key = new Key(mail.GetHash(_hashAlgorithm), _hashAlgorithm);
-
-                    messageManager.PushDocumentOpinions.Add(key);
+                    messageManager.PushDocumentOpinions[documentOpinion.Certificate.ToString()] = documentOpinion.CreationTime;
                     _pullDocumentOpinionCount++;
                 }
 
-                messageManager.Priority += (priority + (priority - voteList.Count));
+                messageManager.Priority += (priority + (priority - list.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2707,7 +3212,7 @@ namespace Library.Net.Lair
             }
         }
 
-        void connectionManager_PullTopicsEvent(object sender, PullTopicsEventArgs e)
+        private void connectionManager_PullChatTopicsEvent(object sender, PullChatTopicsEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
@@ -2716,41 +3221,41 @@ namespace Library.Net.Lair
 
             try
             {
-                if (e.Topics == null || e.Contents == null) return;
+                if (e.ChatTopics == null || e.Contents == null) return;
 
-                var topicList = e.Topics.ToList();
+                var list = e.ChatTopics.ToList();
                 var contentList = e.Contents.ToList();
 
-                if (topicList.Count != contentList.Count) return;
+                if (list.Count != contentList.Count) return;
 
                 int priority = 0;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Topics ({0})", topicList.Count));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull ChatTopics ({0})", list.Count));
 
-                for (int i = 0; i < topicList.Count && i < _maxContentCount; i++)
+                for (int i = 0; i < list.Count && i < _maxContentCount; i++)
                 {
-                    var topic = topicList[i];
+                    var chatTopic = list[i];
                     var content = contentList[i];
 
-                    if (_settings.SetTopic(topic))
+                    if (_settings.SetChatTopic(chatTopic))
                     {
                         try
                         {
-                            _cacheManager[topic.Content] = content;
+                            _cacheManager[chatTopic.Content] = content;
 
-                            if (_trustSignatures.Contains(topic.Certificate.ToString())) priority++;
+                            if (_trustSignatures.Contains(chatTopic.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
-                            _settings.RemoveTopic(topic);
+                            _settings.RemoveChatTopic(chatTopic);
                         }
                     }
 
-                    messageManager.PushTopics[topic.Certificate.ToString()] = topic.CreationTime;
-                    _pullTopicCount++;
+                    messageManager.PushChatTopics[chatTopic.Certificate.ToString()] = chatTopic.CreationTime;
+                    _pullChatTopicCount++;
                 }
 
-                messageManager.Priority += (priority + (priority - topicList.Count));
+                messageManager.Priority += (priority + (priority - list.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2765,7 +3270,7 @@ namespace Library.Net.Lair
             }
         }
 
-        void connectionManager_PullMessagesEvent(object sender, PullMessagesEventArgs e)
+        private void connectionManager_PullChatMessagesEvent(object sender, PullChatMessagesEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
@@ -2774,43 +3279,43 @@ namespace Library.Net.Lair
 
             try
             {
-                if (e.Messages == null || e.Contents == null) return;
+                if (e.ChatMessages == null || e.Contents == null) return;
 
-                var messageList = e.Messages.ToList();
+                var list = e.ChatMessages.ToList();
                 var contentList = e.Contents.ToList();
 
-                if (messageList.Count != contentList.Count) return;
+                if (list.Count != contentList.Count) return;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Messages ({0})", messageList.Count));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull ChatMessages ({0})", list.Count));
 
                 int priority = 0;
 
-                for (int i = 0; i < messageList.Count && i < _maxContentCount; i++)
+                for (int i = 0; i < list.Count && i < _maxContentCount; i++)
                 {
-                    var message = messageList[i];
+                    var chatMessage = list[i];
                     var content = contentList[i];
 
-                    if (_settings.SetMessage(message))
+                    if (_settings.SetChatMessage(chatMessage))
                     {
                         try
                         {
-                            _cacheManager[message.Content] = content;
+                            _cacheManager[chatMessage.Content] = content;
 
-                            if (_trustSignatures.Contains(message.Certificate.ToString())) priority++;
+                            if (_trustSignatures.Contains(chatMessage.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
-                            _settings.RemoveMessage(message);
+                            _settings.RemoveChatMessage(chatMessage);
                         }
                     }
 
-                    var key = new Key(message.GetHash(_hashAlgorithm), _hashAlgorithm);
+                    var key = new Key(chatMessage.GetHash(_hashAlgorithm), _hashAlgorithm);
 
-                    messageManager.PushMessages.Add(key);
-                    _pullMessageCount++;
+                    messageManager.PushChatMessages.Add(key);
+                    _pullChatMessageCount++;
                 }
 
-                messageManager.Priority += (priority + (priority - messageList.Count));
+                messageManager.Priority += (priority + (priority - list.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2825,28 +3330,109 @@ namespace Library.Net.Lair
             }
         }
 
-        void connectionManager_PullSignaturesRequestEvent(object sender, PullSignaturesRequestEventArgs e)
+        private void connectionManager_PullWhispersRequestEvent(object sender, PullWhispersRequestEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Signatures == null
-                || messageManager.PullSignaturesRequest.Count > _maxRequestCount * 60) return;
+            if (e.Whispers == null
+                || messageManager.PullWhispersRequest.Count > _maxRequestCount * 60) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull SignaturesRequest {0} ({1})", String.Join(", ", e.Signatures), e.Signatures.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull WhispersRequest {0} ({1})", String.Join(", ", e.Whispers), e.Whispers.Count()));
 
-            foreach (var s in e.Signatures.Take(_maxRequestCount))
+            foreach (var c in e.Whispers.Take(_maxRequestCount))
             {
-                if (s == null || !Signature.HasSignature(s)) continue;
+                if (c == null || c.Id == null || string.IsNullOrWhiteSpace(c.Name)) continue;
 
-                messageManager.PullSignaturesRequest.Add(s);
-                _pullSignatureRequestCount++;
+                messageManager.PullWhispersRequest.Add(c);
+                _pullWhisperRequestCount++;
             }
         }
 
-        void connectionManager_PullMailMessagesEvent(object sender, PullMailMessagesEventArgs e)
+        private void connectionManager_PullWhisperMessagesEvent(object sender, PullWhisperMessagesEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            var messageManager = _messagesManager[connectionManager.Node];
+
+            try
+            {
+                if (e.WhisperMessages == null || e.Contents == null) return;
+
+                var list = e.WhisperMessages.ToList();
+                var contentList = e.Contents.ToList();
+
+                if (list.Count != contentList.Count) return;
+
+                Debug.WriteLine(string.Format("ConnectionManager: Pull WhisperMessages ({0})", list.Count));
+
+                int priority = 0;
+
+                for (int i = 0; i < list.Count && i < _maxContentCount; i++)
+                {
+                    var whisperMessage = list[i];
+                    var content = contentList[i];
+
+                    if (_settings.SetWhisperMessage(whisperMessage))
+                    {
+                        try
+                        {
+                            _cacheManager[whisperMessage.Content] = content;
+
+                            if (_trustSignatures.Contains(whisperMessage.Certificate.ToString())) priority++;
+                        }
+                        catch (Exception)
+                        {
+                            _settings.RemoveWhisperMessage(whisperMessage);
+                        }
+                    }
+
+                    var key = new Key(whisperMessage.GetHash(_hashAlgorithm), _hashAlgorithm);
+
+                    messageManager.PushWhisperMessages.Add(key);
+                    _pullWhisperMessageCount++;
+                }
+
+                messageManager.Priority += (priority + (priority - list.Count));
+                messageManager.LastPullTime = DateTime.UtcNow;
+            }
+            finally
+            {
+                foreach (var content in e.Contents)
+                {
+                    if (content.Array != null)
+                    {
+                        _bufferManager.ReturnBuffer(content.Array);
+                    }
+                }
+            }
+        }
+
+        private void connectionManager_PullMailsRequestEvent(object sender, PullMailsRequestEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            var messageManager = _messagesManager[connectionManager.Node];
+
+            if (e.Mails == null
+                || messageManager.PullMailsRequest.Count > _maxRequestCount * 60) return;
+
+            Debug.WriteLine(string.Format("ConnectionManager: Pull MailsRequest {0} ({1})", String.Join(", ", e.Mails), e.Mails.Count()));
+
+            foreach (var c in e.Mails.Take(_maxRequestCount))
+            {
+                if (c == null || c.Id == null || string.IsNullOrWhiteSpace(c.Name)) continue;
+
+                messageManager.PullMailsRequest.Add(c);
+                _pullMailRequestCount++;
+            }
+        }
+
+        private void connectionManager_PullMailMessagesEvent(object sender, PullMailMessagesEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
@@ -2857,41 +3443,41 @@ namespace Library.Net.Lair
             {
                 if (e.MailMessages == null || e.Contents == null) return;
 
-                var mailList = e.MailMessages.ToList();
+                var list = e.MailMessages.ToList();
                 var contentList = e.Contents.ToList();
 
-                if (mailList.Count != contentList.Count) return;
+                if (list.Count != contentList.Count) return;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull MailMessages ({0})", mailList.Count));
+                Debug.WriteLine(string.Format("ConnectionManager: Pull MailMessages ({0})", list.Count));
 
                 int priority = 0;
 
-                for (int i = 0; i < mailList.Count && i < _maxContentCount; i++)
+                for (int i = 0; i < list.Count && i < _maxContentCount; i++)
                 {
-                    var mail = mailList[i];
+                    var mailMessage = list[i];
                     var content = contentList[i];
 
-                    if (_settings.SetMailMessage(mail))
+                    if (_settings.SetMailMessage(mailMessage))
                     {
                         try
                         {
-                            _cacheManager[mail.Content] = content;
+                            _cacheManager[mailMessage.Content] = content;
 
-                            if (_trustSignatures.Contains(mail.Certificate.ToString())) priority++;
+                            if (_trustSignatures.Contains(mailMessage.Certificate.ToString())) priority++;
                         }
                         catch (Exception)
                         {
-                            _settings.RemoveMailMessage(mail);
+                            _settings.RemoveMailMessage(mailMessage);
                         }
                     }
 
-                    var key = new Key(mail.GetHash(_hashAlgorithm), _hashAlgorithm);
+                    var key = new Key(mailMessage.GetHash(_hashAlgorithm), _hashAlgorithm);
 
                     messageManager.PushMailMessages.Add(key);
                     _pullMailMessageCount++;
                 }
 
-                messageManager.Priority += (priority + (priority - mailList.Count));
+                messageManager.Priority += (priority + (priority - list.Count));
                 messageManager.LastPullTime = DateTime.UtcNow;
             }
             finally
@@ -2978,19 +3564,35 @@ namespace Library.Net.Lair
             }
         }
 
-        public void SendChatRequest(Chat channel)
+        public void SendDocumentRequest(Document document)
         {
             lock (this.ThisLock)
             {
-                _pushChatsRequestList.Add(channel);
+                _pushDocumentsRequestList.Add(document);
             }
         }
 
-        public void SendSignatureRequest(string signature)
+        public void SendChatRequest(Chat chat)
         {
             lock (this.ThisLock)
             {
-                _pushSignaturesRequestList.Add(signature);
+                _pushChatsRequestList.Add(chat);
+            }
+        }
+
+        public void SendWhisperRequest(Whisper whisper)
+        {
+            lock (this.ThisLock)
+            {
+                _pushWhispersRequestList.Add(whisper);
+            }
+        }
+
+        public void SendMailRequest(Mail mail)
+        {
+            lock (this.ThisLock)
+            {
+                _pushMailsRequestList.Add(mail);
             }
         }
 
@@ -3004,6 +3606,16 @@ namespace Library.Net.Lair
             }
         }
 
+        public IEnumerable<Document> GetDocuments()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _settings.GetDocuments();
+            }
+        }
+
         public IEnumerable<Chat> GetChats()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3014,73 +3626,93 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<string> GetSignatures()
+        public IEnumerable<Whisper> GetWhispers()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetSignatures();
+                return _settings.GetWhispers();
             }
         }
 
-        public IEnumerable<SectionProfile> GetProfiles(Section section)
+        public IEnumerable<Mail> GetMails()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetProfiles(section);
+                return _settings.GetMails();
             }
         }
 
-        public IEnumerable<DocumentPage> GetDocumentPages(Section section)
+        public IEnumerable<SectionProfile> GetSectionProfiles(Section section)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetDocumentPages(section);
+                return _settings.GetSectionProfiles(section);
             }
         }
 
-        public IEnumerable<DocumentOpinion> GetDocumentOpinions(Section section)
+        public IEnumerable<DocumentPage> GetDocumentPages(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetDocumentOpinions(section);
+                return _settings.GetDocumentPages(document);
             }
         }
 
-        public IEnumerable<ChatTopic> GetTopics(Chat channel)
+        public IEnumerable<DocumentOpinion> GetDocumentOpinions(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetTopics(channel);
+                return _settings.GetDocumentOpinions(document);
             }
         }
 
-        public IEnumerable<ChatMessage> GetMessages(Chat channel)
+        public IEnumerable<ChatTopic> GetChatTopics(Chat chat)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetMessages(channel);
+                return _settings.GetChatTopics(chat);
             }
         }
 
-        public IEnumerable<MailMessage> GetMailMessages(string signature)
+        public IEnumerable<ChatMessage> GetChatMessages(Chat chat)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetMailMessages(signature);
+                return _settings.GetChatMessages(chat);
+            }
+        }
+
+        public IEnumerable<WhisperMessage> GetWhisperMessages(Whisper chat)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _settings.GetWhisperMessages(chat);
+            }
+        }
+
+        public IEnumerable<MailMessage> GetMailMessages(Mail mail)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _settings.GetMailMessages(mail);
             }
         }
 
@@ -3096,7 +3728,7 @@ namespace Library.Net.Lair
                 {
                     buffer = _cacheManager[profile.Content];
 
-                    return ContentConverter.FromProfileContentBlock(buffer);
+                    return ContentConverter.FromSectionProfileContentBlock(buffer);
                 }
                 finally
                 {
@@ -3156,7 +3788,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopic topic)
+        public ChatTopicContent GetContent(ChatTopic chatTopic)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3166,9 +3798,9 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    buffer = _cacheManager[topic.Content];
+                    buffer = _cacheManager[chatTopic.Content];
 
-                    return ContentConverter.FromTopicContentBlock(buffer);
+                    return ContentConverter.FromChatTopicContentBlock(buffer);
                 }
                 finally
                 {
@@ -3180,7 +3812,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessage message)
+        public ChatMessageContent GetContent(ChatMessage chatMessage)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3190,9 +3822,9 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    buffer = _cacheManager[message.Content];
+                    buffer = _cacheManager[chatMessage.Content];
 
-                    return ContentConverter.FromMessageContentBlock(buffer);
+                    return ContentConverter.FromChatMessageContentBlock(buffer);
                 }
                 finally
                 {
@@ -3204,7 +3836,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public MailMessageContent GetContent(MailMessage mail, IExchangeDecrypt exchangeDecrypt)
+        public WhisperMessageContent GetContent(WhisperMessage whisperMessage, WhisperCryptoInformation cryptoInformation)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3214,7 +3846,31 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    buffer = _cacheManager[mail.Content];
+                    buffer = _cacheManager[whisperMessage.Content];
+
+                    return ContentConverter.FromWhisperMessageContentBlock(buffer, cryptoInformation);
+                }
+                finally
+                {
+                    if (buffer.Array != null)
+                    {
+                        _bufferManager.ReturnBuffer(buffer.Array);
+                    }
+                }
+            }
+        }
+
+        public MailMessageContent GetContent(MailMessage mailMessage, IExchangeDecrypt exchangeDecrypt)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                try
+                {
+                    buffer = _cacheManager[mailMessage.Content];
 
                     return ContentConverter.FromMailMessageContentBlock(buffer, exchangeDecrypt);
                 }
@@ -3229,7 +3885,7 @@ namespace Library.Net.Lair
         }
 
         public SectionProfile UploadProfile(Section section,
-            IEnumerable<string> trustSignatures, IEnumerable<Chat> channels, string comment, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
+            string comment, IExchangeEncrypt exchangeEncrypt, IEnumerable<string> trustSignatures, IEnumerable<Document> documents, IEnumerable<Chat> chats, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3239,18 +3895,18 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    var content = new SectionProfileContent(exchangeEncrypt.ExchangeAlgorithm, exchangeEncrypt.PublicKey, trustSignatures, comment, channels);
-                    buffer = ContentConverter.ToProfileContentBlock(content);
+                    var content = new SectionProfileContent(comment, trustSignatures, documents, chats, exchangeEncrypt);
+                    buffer = ContentConverter.ToSectionProfileContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var profile = new SectionProfile(section, key, digitalSignature);
+                    var sectionProfile = new SectionProfile(section, key, digitalSignature);
 
-                    if (_settings.SetProfile(profile))
+                    if (_settings.SetSectionProfile(sectionProfile))
                     {
                         _cacheManager[key] = buffer;
                     }
 
-                    return profile;
+                    return sectionProfile;
                 }
                 finally
                 {
@@ -3262,7 +3918,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentPage UploadDocumentPage(Section section, string name,
+        public DocumentPage UploadDocumentPage(Document document, string name,
             string comment, HypertextFormatType formatType, string hypertext, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3277,14 +3933,14 @@ namespace Library.Net.Lair
                     buffer = ContentConverter.ToDocumentPageContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var document = new DocumentPage(section, name, key, digitalSignature);
+                    var documentPage = new DocumentPage(document, name, key, digitalSignature);
 
-                    if (_settings.SetDocumentPage(document))
+                    if (_settings.SetDocumentPage(documentPage))
                     {
                         _cacheManager[key] = buffer;
                     }
 
-                    return document;
+                    return documentPage;
                 }
                 finally
                 {
@@ -3296,7 +3952,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentOpinion UploadDocumentOpinion(Section section,
+        public DocumentOpinion UploadDocumentOpinion(Document document,
              IEnumerable<Key> goods, IEnumerable<Key> bads, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3311,14 +3967,14 @@ namespace Library.Net.Lair
                     buffer = ContentConverter.ToDocumentOpinionContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var document = new DocumentOpinion(section, key, digitalSignature);
+                    var documentOpinion = new DocumentOpinion(document, key, digitalSignature);
 
-                    if (_settings.SetDocumentOpinion(document))
+                    if (_settings.SetDocumentOpinion(documentOpinion))
                     {
                         _cacheManager[key] = buffer;
                     }
 
-                    return document;
+                    return documentOpinion;
                 }
                 finally
                 {
@@ -3330,7 +3986,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatTopic UploadTopic(Chat channel,
+        public ChatTopic UploadChatTopic(Chat chat,
             string comment, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3342,17 +3998,17 @@ namespace Library.Net.Lair
                 try
                 {
                     var content = new ChatTopicContent(comment);
-                    buffer = ContentConverter.ToTopicContentBlock(content);
+                    buffer = ContentConverter.ToChatTopicContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var topic = new ChatTopic(channel, key, digitalSignature);
+                    var chatTopic = new ChatTopic(chat, key, digitalSignature);
 
-                    if (_settings.SetTopic(topic))
+                    if (_settings.SetChatTopic(chatTopic))
                     {
                         _cacheManager[key] = buffer;
                     }
 
-                    return topic;
+                    return chatTopic;
                 }
                 finally
                 {
@@ -3364,7 +4020,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatMessage UploadMessage(Chat channel,
+        public ChatMessage UploadChatMessage(Chat chat,
             string comment, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3376,17 +4032,17 @@ namespace Library.Net.Lair
                 try
                 {
                     var content = new ChatMessageContent(comment, anchors);
-                    buffer = ContentConverter.ToMessageContentBlock(content);
+                    buffer = ContentConverter.ToChatMessageContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var message = new ChatMessage(channel, key, digitalSignature);
+                    var chatMessage = new ChatMessage(chat, key, digitalSignature);
 
-                    if (_settings.SetMessage(message))
+                    if (_settings.SetChatMessage(chatMessage))
                     {
                         _cacheManager[key] = buffer;
                     }
 
-                    return message;
+                    return chatMessage;
                 }
                 finally
                 {
@@ -3398,7 +4054,41 @@ namespace Library.Net.Lair
             }
         }
 
-        public MailMessage UploadMailMessage(string recipientSignature,
+        public WhisperMessage UploadWhisperMessage(Whisper whisper,
+            string comment, IEnumerable<Key> anchors, WhisperCryptoInformation cryptoInformation, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                try
+                {
+                    var content = new WhisperMessageContent(comment, anchors);
+                    buffer = ContentConverter.ToWhisperMessageContentBlock(content, cryptoInformation);
+                    var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
+
+                    var whisperMessage = new WhisperMessage(whisper, key, digitalSignature);
+
+                    if (_settings.SetWhisperMessage(whisperMessage))
+                    {
+                        _cacheManager[key] = buffer;
+                    }
+
+                    return whisperMessage;
+                }
+                finally
+                {
+                    if (buffer.Array != null)
+                    {
+                        _bufferManager.ReturnBuffer(buffer.Array);
+                    }
+                }
+            }
+        }
+
+        public MailMessage UploadMailMessage(Mail mail,
             string text, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -3413,14 +4103,14 @@ namespace Library.Net.Lair
                     buffer = ContentConverter.ToMailMessageContentBlock(content, exchangeEncrypt);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var mail = new MailMessage(recipientSignature, key, digitalSignature);
+                    var mailMessage = new MailMessage(mail, key, digitalSignature);
 
-                    if (_settings.SetMailMessage(mail))
+                    if (_settings.SetMailMessage(mailMessage))
                     {
                         _cacheManager[key] = buffer;
                     }
 
-                    return mail;
+                    return mailMessage;
                 }
                 finally
                 {
@@ -3573,12 +4263,13 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
-                    new Library.Configuration.SettingsContext<Dictionary<Section, Dictionary<string, SectionProfile>>>() { Name = "Profiles", Value = new Dictionary<Section, Dictionary<string, SectionProfile>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Section, Dictionary<string, HashSet<DocumentPage>>>>() { Name = "DocumentPages", Value = new Dictionary<Section, Dictionary<string, HashSet<DocumentPage>>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Section, Dictionary<string, DocumentOpinion>>>() { Name = "DocumentOpinions", Value = new Dictionary<Section, Dictionary<string, DocumentOpinion>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Chat, Dictionary<string, ChatTopic>>>() { Name = "Topics", Value = new Dictionary<Chat, Dictionary<string, ChatTopic>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Chat, HashSet<ChatMessage>>>() { Name = "Messages", Value = new Dictionary<Chat, HashSet<ChatMessage>>() },
-                    new Library.Configuration.SettingsContext<Dictionary<string, HashSet<MailMessage>>>() { Name = "MailMessages", Value = new Dictionary<string, HashSet<MailMessage>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Section, Dictionary<string, SectionProfile>>>() { Name = "SectionProfiles", Value = new Dictionary<Section, Dictionary<string, SectionProfile>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Document, Dictionary<string, HashSet<DocumentPage>>>>() { Name = "DocumentPages", Value =new Dictionary<Document, Dictionary<string, HashSet<DocumentPage>>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Document, Dictionary<string, DocumentOpinion>>>() { Name = "DocumentOpinions", Value = new Dictionary<Document, Dictionary<string, DocumentOpinion>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Chat, Dictionary<string, ChatTopic>>>() { Name = "ChatTopics", Value = new Dictionary<Chat, Dictionary<string, ChatTopic>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Chat, HashSet<ChatMessage>>>() { Name = "ChatMessages", Value = new Dictionary<Chat, HashSet<ChatMessage>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Whisper, HashSet<WhisperMessage>>>() { Name = "WhisperMessages", Value = new Dictionary<Whisper, HashSet<WhisperMessage>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Mail, HashSet<MailMessage>>>() { Name = "MailMessages", Value = new Dictionary<Mail, HashSet<MailMessage>>() },
                 })
             {
 
@@ -3593,14 +4284,20 @@ namespace Library.Net.Lair
                         List<InformationContext> contexts = new List<InformationContext>();
 
                         contexts.Add(new InformationContext("SectionCount", this.GetSections().Count()));
-                        contexts.Add(new InformationContext("ProfileCount", this.Profiles.Values.Sum(n => n.Count)));
+                        contexts.Add(new InformationContext("SectionProfileCount", this.SectionProfiles.Values.Sum(n => n.Count)));
+
+                        contexts.Add(new InformationContext("DocumentCount", this.GetDocuments().Count()));
                         contexts.Add(new InformationContext("DocumentPageCount", this.DocumentPages.Values.Sum(n => n.Values.Sum(m => m.Count))));
                         contexts.Add(new InformationContext("DocumentOpinionCount", this.DocumentOpinions.Values.Sum(n => n.Count)));
 
                         contexts.Add(new InformationContext("ChatCount", this.GetChats().Count()));
-                        contexts.Add(new InformationContext("TopicCount", this.Topics.Values.Sum(n => n.Count)));
-                        contexts.Add(new InformationContext("MessageCount", this.Messages.Sum(n => n.Value.Count)));
+                        contexts.Add(new InformationContext("ChatTopicCount", this.ChatTopics.Values.Sum(n => n.Count)));
+                        contexts.Add(new InformationContext("ChatMessageCount", this.ChatMessages.Sum(n => n.Value.Count)));
 
+                        contexts.Add(new InformationContext("WhisperCount", this.GetWhispers().Count()));
+                        contexts.Add(new InformationContext("WhisperMessageCount", this.WhisperMessages.Sum(n => n.Value.Count)));
+
+                        contexts.Add(new InformationContext("MailCount", this.GetMails().Count()));
                         contexts.Add(new InformationContext("MailMessageCount", this.MailMessages.Sum(n => n.Value.Count)));
 
                         return new Information(contexts);
@@ -3630,7 +4327,18 @@ namespace Library.Net.Lair
                 {
                     HashSet<Section> hashset = new HashSet<Section>();
 
-                    hashset.UnionWith(this.Profiles.Keys);
+                    hashset.UnionWith(this.SectionProfiles.Keys);
+
+                    return hashset;
+                }
+            }
+
+            public IEnumerable<Document> GetDocuments()
+            {
+                lock (_thisLock)
+                {
+                    HashSet<Document> hashset = new HashSet<Document>();
+
                     hashset.UnionWith(this.DocumentPages.Keys);
                     hashset.UnionWith(this.DocumentOpinions.Keys);
 
@@ -3644,18 +4352,34 @@ namespace Library.Net.Lair
                 {
                     HashSet<Chat> hashset = new HashSet<Chat>();
 
-                    hashset.UnionWith(this.Topics.Keys);
-                    hashset.UnionWith(this.Messages.Keys);
+                    hashset.UnionWith(this.ChatTopics.Keys);
+                    hashset.UnionWith(this.ChatMessages.Keys);
 
                     return hashset;
                 }
             }
 
-            public IEnumerable<string> GetSignatures()
+            public IEnumerable<Whisper> GetWhispers()
             {
                 lock (_thisLock)
                 {
-                    return this.MailMessages.Keys.ToArray();
+                    HashSet<Whisper> hashset = new HashSet<Whisper>();
+
+                    hashset.UnionWith(this.WhisperMessages.Keys);
+
+                    return hashset;
+                }
+            }
+
+            public IEnumerable<Mail> GetMails()
+            {
+                lock (_thisLock)
+                {
+                    HashSet<Mail> hashset = new HashSet<Mail>();
+
+                    hashset.UnionWith(this.MailMessages.Keys);
+
+                    return hashset;
                 }
             }
 
@@ -3665,43 +4389,64 @@ namespace Library.Net.Lair
                 {
                     foreach (var section in sections)
                     {
-                        this.Profiles.Remove(section);
-                        this.DocumentPages.Remove(section);
-                        this.DocumentOpinions.Remove(section);
+                        this.SectionProfiles.Remove(section);
                     }
                 }
             }
 
-            public void RemoveChats(IEnumerable<Chat> channels)
+            public void RemoveDocuments(IEnumerable<Document> documents)
             {
                 lock (_thisLock)
                 {
-                    foreach (var channel in channels)
+                    foreach (var document in documents)
                     {
-                        this.Topics.Remove(channel);
-                        this.Messages.Remove(channel);
+                        this.DocumentPages.Remove(document);
+                        this.DocumentOpinions.Remove(document);
                     }
                 }
             }
 
-            public void RemoveSignatures(IEnumerable<string> signatures)
+            public void RemoveChats(IEnumerable<Chat> chats)
             {
                 lock (_thisLock)
                 {
-                    foreach (var signature in signatures)
+                    foreach (var chat in chats)
                     {
-                        this.MailMessages.Remove(signature);
+                        this.ChatTopics.Remove(chat);
+                        this.ChatMessages.Remove(chat);
                     }
                 }
             }
 
-            public IEnumerable<SectionProfile> GetProfiles(Section section)
+            public void RemoveWhispers(IEnumerable<Whisper> whispers)
+            {
+                lock (_thisLock)
+                {
+                    foreach (var whisper in whispers)
+                    {
+                        this.WhisperMessages.Remove(whisper);
+                    }
+                }
+            }
+
+            public void RemoveMails(IEnumerable<Mail> mails)
+            {
+                lock (_thisLock)
+                {
+                    foreach (var mail in mails)
+                    {
+                        this.MailMessages.Remove(mail);
+                    }
+                }
+            }
+
+            public IEnumerable<SectionProfile> GetSectionProfiles(Section section)
             {
                 lock (_thisLock)
                 {
                     Dictionary<string, SectionProfile> dic = null;
 
-                    if (this.Profiles.TryGetValue(section, out dic))
+                    if (this.SectionProfiles.TryGetValue(section, out dic))
                     {
                         return dic.Values;
                     }
@@ -3710,13 +4455,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<DocumentPage> GetDocumentPages(Section section, string name)
+            public IEnumerable<DocumentPage> GetDocumentPages(Document document, string name)
             {
                 lock (_thisLock)
                 {
                     Dictionary<string, HashSet<DocumentPage>> dic = null;
 
-                    if (this.DocumentPages.TryGetValue(section, out dic))
+                    if (this.DocumentPages.TryGetValue(document, out dic))
                     {
                         HashSet<DocumentPage> hashset = null;
 
@@ -3730,13 +4475,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<DocumentPage> GetDocumentPages(Section section)
+            public IEnumerable<DocumentPage> GetDocumentPages(Document document)
             {
                 lock (_thisLock)
                 {
                     Dictionary<string, HashSet<DocumentPage>> dic = null;
 
-                    if (this.DocumentPages.TryGetValue(section, out dic))
+                    if (this.DocumentPages.TryGetValue(document, out dic))
                     {
                         List<DocumentPage> list = new List<DocumentPage>();
 
@@ -3750,13 +4495,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<DocumentOpinion> GetDocumentOpinions(Section section)
+            public IEnumerable<DocumentOpinion> GetDocumentOpinions(Document document)
             {
                 lock (_thisLock)
                 {
                     Dictionary<string, DocumentOpinion> dic = null;
 
-                    if (this.DocumentOpinions.TryGetValue(section, out dic))
+                    if (this.DocumentOpinions.TryGetValue(document, out dic))
                     {
                         return dic.Values;
                     }
@@ -3765,13 +4510,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<ChatTopic> GetTopics(Chat channel)
+            public IEnumerable<ChatTopic> GetChatTopics(Chat chat)
             {
                 lock (_thisLock)
                 {
                     Dictionary<string, ChatTopic> dic = null;
 
-                    if (this.Topics.TryGetValue(channel, out dic))
+                    if (this.ChatTopics.TryGetValue(chat, out dic))
                     {
                         return dic.Values;
                     }
@@ -3780,13 +4525,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<ChatMessage> GetMessages(Chat channel)
+            public IEnumerable<ChatMessage> GetChatMessages(Chat chat)
             {
                 lock (_thisLock)
                 {
                     HashSet<ChatMessage> hashset = null;
 
-                    if (this.Messages.TryGetValue(channel, out hashset))
+                    if (this.ChatMessages.TryGetValue(chat, out hashset))
                     {
                         return hashset;
                     }
@@ -3795,13 +4540,28 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<MailMessage> GetMailMessages(string signature)
+            public IEnumerable<WhisperMessage> GetWhisperMessages(Whisper whisper)
+            {
+                lock (_thisLock)
+                {
+                    HashSet<WhisperMessage> hashset = null;
+
+                    if (this.WhisperMessages.TryGetValue(whisper, out hashset))
+                    {
+                        return hashset;
+                    }
+
+                    return new WhisperMessage[0];
+                }
+            }
+
+            public IEnumerable<MailMessage> GetMailMessages(Mail mail)
             {
                 lock (_thisLock)
                 {
                     HashSet<MailMessage> hashset = null;
 
-                    if (this.MailMessages.TryGetValue(signature, out hashset))
+                    if (this.MailMessages.TryGetValue(mail, out hashset))
                     {
                         return hashset;
                     }
@@ -3810,26 +4570,26 @@ namespace Library.Net.Lair
                 }
             }
 
-            public bool SetProfile(SectionProfile profile)
+            public bool SetSectionProfile(SectionProfile sectionProfile)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (profile == null || profile.Section == null || profile.Section.Id == null || profile.Section.Id.Length == 0 || string.IsNullOrWhiteSpace(profile.Section.Name)
-                        || (profile.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || profile.Certificate == null || !profile.VerifyCertificate()) return false;
+                    if (sectionProfile == null || sectionProfile.Section == null || sectionProfile.Section.Id == null || sectionProfile.Section.Id.Length == 0 || string.IsNullOrWhiteSpace(sectionProfile.Section.Name)
+                        || (sectionProfile.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || sectionProfile.Certificate == null || !sectionProfile.VerifyCertificate()) return false;
 
-                    var signature = profile.Certificate.ToString();
+                    var signature = sectionProfile.Certificate.ToString();
 
                     Dictionary<string, SectionProfile> dic = null;
 
-                    if (!this.Profiles.TryGetValue(profile.Section, out dic))
+                    if (!this.SectionProfiles.TryGetValue(sectionProfile.Section, out dic))
                     {
                         dic = new Dictionary<string, SectionProfile>();
-                        this.Profiles[profile.Section] = dic;
+                        this.SectionProfiles[sectionProfile.Section] = dic;
 
-                        dic[signature] = profile;
+                        dic[signature] = sectionProfile;
 
                         return true;
                     }
@@ -3837,9 +4597,9 @@ namespace Library.Net.Lair
                     SectionProfile tempProfile = null;
 
                     if (!dic.TryGetValue(signature, out tempProfile)
-                        || profile.CreationTime > tempProfile.CreationTime)
+                        || sectionProfile.CreationTime > tempProfile.CreationTime)
                     {
-                        dic[signature] = profile;
+                        dic[signature] = sectionProfile;
 
                         return true;
                     }
@@ -3848,38 +4608,38 @@ namespace Library.Net.Lair
                 }
             }
 
-            public bool SetDocumentPage(DocumentPage document)
+            public bool SetDocumentPage(DocumentPage documentPage)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (document == null || document.Section == null || document.Section.Id == null || document.Section.Id.Length == 0 || string.IsNullOrWhiteSpace(document.Section.Name)
-                        || (document.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || document.Certificate == null || !document.VerifyCertificate()) return false;
+                    if (documentPage == null || documentPage.Document == null || documentPage.Document.Id == null || documentPage.Document.Id.Length == 0 || string.IsNullOrWhiteSpace(documentPage.Document.Name)
+                        || (documentPage.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || documentPage.Certificate == null || !documentPage.VerifyCertificate()) return false;
 
-                    var signature = document.Certificate.ToString();
+                    var signature = documentPage.Certificate.ToString();
 
                     Dictionary<string, HashSet<DocumentPage>> dic = null;
                     HashSet<DocumentPage> hashset = null;
 
-                    if (!this.DocumentPages.TryGetValue(document.Section, out dic))
+                    if (!this.DocumentPages.TryGetValue(documentPage.Document, out dic))
                     {
                         dic = new Dictionary<string, HashSet<DocumentPage>>();
-                        this.DocumentPages[document.Section] = dic;
+                        this.DocumentPages[documentPage.Document] = dic;
 
                         hashset = new HashSet<DocumentPage>();
-                        hashset.Add(document);
-                        dic[document.Name] = hashset;
+                        hashset.Add(documentPage);
+                        dic[documentPage.Name] = hashset;
 
                         return true;
                     }
 
-                    if (!dic.TryGetValue(document.Name, out hashset))
+                    if (!dic.TryGetValue(documentPage.Name, out hashset))
                     {
                         hashset = new HashSet<DocumentPage>();
-                        hashset.Add(document);
-                        dic[document.Name] = hashset;
+                        hashset.Add(documentPage);
+                        dic[documentPage.Name] = hashset;
 
                         return true;
                     }
@@ -3888,15 +4648,15 @@ namespace Library.Net.Lair
 
                     if (currentDocumentPage == null)
                     {
-                        hashset.Add(document);
+                        hashset.Add(documentPage);
 
                         return true;
                     }
 
-                    if (currentDocumentPage.CreationTime < document.CreationTime)
+                    if (currentDocumentPage.CreationTime < documentPage.CreationTime)
                     {
                         hashset.Remove(currentDocumentPage);
-                        hashset.Add(document);
+                        hashset.Add(documentPage);
 
                         return true;
                     }
@@ -3905,26 +4665,26 @@ namespace Library.Net.Lair
                 }
             }
 
-            public bool SetDocumentOpinion(DocumentOpinion vote)
+            public bool SetDocumentOpinion(DocumentOpinion documentOpinion)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (vote == null || vote.Section == null || vote.Section.Id == null || vote.Section.Id.Length == 0 || string.IsNullOrWhiteSpace(vote.Section.Name)
-                        || (vote.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || vote.Certificate == null || !vote.VerifyCertificate()) return false;
+                    if (documentOpinion == null || documentOpinion.Document == null || documentOpinion.Document.Id == null || documentOpinion.Document.Id.Length == 0 || string.IsNullOrWhiteSpace(documentOpinion.Document.Name)
+                        || (documentOpinion.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || documentOpinion.Certificate == null || !documentOpinion.VerifyCertificate()) return false;
 
-                    var signature = vote.Certificate.ToString();
+                    var signature = documentOpinion.Certificate.ToString();
 
                     Dictionary<string, DocumentOpinion> dic = null;
 
-                    if (!this.DocumentOpinions.TryGetValue(vote.Section, out dic))
+                    if (!this.DocumentOpinions.TryGetValue(documentOpinion.Document, out dic))
                     {
                         dic = new Dictionary<string, DocumentOpinion>();
-                        this.DocumentOpinions[vote.Section] = dic;
+                        this.DocumentOpinions[documentOpinion.Document] = dic;
 
-                        dic[signature] = vote;
+                        dic[signature] = documentOpinion;
 
                         return true;
                     }
@@ -3932,9 +4692,9 @@ namespace Library.Net.Lair
                     DocumentOpinion tempDocumentOpinion = null;
 
                     if (!dic.TryGetValue(signature, out tempDocumentOpinion)
-                        || vote.CreationTime > tempDocumentOpinion.CreationTime)
+                        || documentOpinion.CreationTime > tempDocumentOpinion.CreationTime)
                     {
-                        dic[signature] = vote;
+                        dic[signature] = documentOpinion;
 
                         return true;
                     }
@@ -3943,26 +4703,26 @@ namespace Library.Net.Lair
                 }
             }
 
-            public bool SetTopic(ChatTopic topic)
+            public bool SetChatTopic(ChatTopic chatTopic)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (topic == null || topic.Chat == null || topic.Chat.Id == null || topic.Chat.Id.Length == 0 || string.IsNullOrWhiteSpace(topic.Chat.Name)
-                        || (topic.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || topic.Certificate == null || !topic.VerifyCertificate()) return false;
+                    if (chatTopic == null || chatTopic.Chat == null || chatTopic.Chat.Id == null || chatTopic.Chat.Id.Length == 0 || string.IsNullOrWhiteSpace(chatTopic.Chat.Name)
+                        || (chatTopic.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || chatTopic.Certificate == null || !chatTopic.VerifyCertificate()) return false;
 
-                    var signature = topic.Certificate.ToString();
+                    var signature = chatTopic.Certificate.ToString();
 
                     Dictionary<string, ChatTopic> dic = null;
 
-                    if (!this.Topics.TryGetValue(topic.Chat, out dic))
+                    if (!this.ChatTopics.TryGetValue(chatTopic.Chat, out dic))
                     {
                         dic = new Dictionary<string, ChatTopic>();
-                        this.Topics[topic.Chat] = dic;
+                        this.ChatTopics[chatTopic.Chat] = dic;
 
-                        dic[signature] = topic;
+                        dic[signature] = chatTopic;
 
                         return true;
                     }
@@ -3970,9 +4730,9 @@ namespace Library.Net.Lair
                     ChatTopic tempTopic = null;
 
                     if (!dic.TryGetValue(signature, out tempTopic)
-                        || topic.CreationTime > tempTopic.CreationTime)
+                        || chatTopic.CreationTime > tempTopic.CreationTime)
                     {
-                        dic[signature] = topic;
+                        dic[signature] = chatTopic;
 
                         return true;
                     }
@@ -3981,173 +4741,214 @@ namespace Library.Net.Lair
                 }
             }
 
-            public bool SetMessage(ChatMessage message)
+            public bool SetChatMessage(ChatMessage chatMessage)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (message == null || message.Chat == null || message.Chat.Id == null || message.Chat.Id.Length == 0 || string.IsNullOrWhiteSpace(message.Chat.Name)
-                        || (now - message.CreationTime) > new TimeSpan(64, 0, 0, 0)
-                        || (message.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || message.Certificate == null || !message.VerifyCertificate()) return false;
+                    if (chatMessage == null || chatMessage.Chat == null || chatMessage.Chat.Id == null || chatMessage.Chat.Id.Length == 0 || string.IsNullOrWhiteSpace(chatMessage.Chat.Name)
+                        || (now - chatMessage.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                        || (chatMessage.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || chatMessage.Certificate == null || !chatMessage.VerifyCertificate()) return false;
 
                     HashSet<ChatMessage> hashset = null;
 
-                    if (!this.Messages.TryGetValue(message.Chat, out hashset))
+                    if (!this.ChatMessages.TryGetValue(chatMessage.Chat, out hashset))
                     {
                         hashset = new HashSet<ChatMessage>();
-                        this.Messages[message.Chat] = hashset;
+                        this.ChatMessages[chatMessage.Chat] = hashset;
                     }
 
-                    return hashset.Add(message);
+                    return hashset.Add(chatMessage);
                 }
             }
 
-            public bool SetMailMessage(MailMessage mail)
+            public bool SetWhisperMessage(WhisperMessage whisperMessage)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (mail == null || !Signature.HasSignature(mail.RecipientSignature)
-                        || (now - mail.CreationTime) > new TimeSpan(32, 0, 0, 0)
-                        || (mail.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                        || mail.Certificate == null || !mail.VerifyCertificate()) return false;
+                    if (whisperMessage == null || whisperMessage.Whisper == null || whisperMessage.Whisper.Id == null || whisperMessage.Whisper.Id.Length == 0 || string.IsNullOrWhiteSpace(whisperMessage.Whisper.Name)
+                        || (now - whisperMessage.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                        || (whisperMessage.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || whisperMessage.Certificate == null || !whisperMessage.VerifyCertificate()) return false;
 
-                    HashSet<MailMessage> hashset = null;
+                    HashSet<WhisperMessage> hashset = null;
 
-                    if (!this.MailMessages.TryGetValue(mail.RecipientSignature, out hashset))
+                    if (!this.WhisperMessages.TryGetValue(whisperMessage.Whisper, out hashset))
                     {
-                        hashset = new HashSet<MailMessage>();
-                        this.MailMessages[mail.RecipientSignature] = hashset;
+                        hashset = new HashSet<WhisperMessage>();
+                        this.WhisperMessages[whisperMessage.Whisper] = hashset;
                     }
 
-                    return hashset.Add(mail);
+                    return hashset.Add(whisperMessage);
                 }
             }
 
-            public void RemoveProfile(SectionProfile profile)
+            public bool SetMailMessage(MailMessage mailMessage)
             {
                 lock (_thisLock)
                 {
-                    var signature = profile.Certificate.ToString();
+                    var now = DateTime.UtcNow;
+
+                    if (mailMessage == null || mailMessage.Mail == null || mailMessage.Mail.Id == null || mailMessage.Mail.Id.Length == 0 || string.IsNullOrWhiteSpace(mailMessage.Mail.Name)
+                        || (now - mailMessage.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                        || (mailMessage.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || mailMessage.Certificate == null || !mailMessage.VerifyCertificate()) return false;
+
+                    HashSet<MailMessage> hashset = null;
+
+                    if (!this.MailMessages.TryGetValue(mailMessage.Mail, out hashset))
+                    {
+                        hashset = new HashSet<MailMessage>();
+                        this.MailMessages[mailMessage.Mail] = hashset;
+                    }
+
+                    return hashset.Add(mailMessage);
+                }
+            }
+
+            public void RemoveSectionProfile(SectionProfile sectionProfile)
+            {
+                lock (_thisLock)
+                {
+                    var signature = sectionProfile.Certificate.ToString();
 
                     Dictionary<string, SectionProfile> dic = null;
 
-                    if (this.Profiles.TryGetValue(profile.Section, out dic))
+                    if (this.SectionProfiles.TryGetValue(sectionProfile.Section, out dic))
                     {
                         dic.Remove(signature);
 
                         if (dic.Count == 0)
                         {
-                            this.Profiles.Remove(profile.Section);
+                            this.SectionProfiles.Remove(sectionProfile.Section);
                         }
                     }
                 }
             }
 
-            public void RemoveDocumentPage(DocumentPage document)
+            public void RemoveDocumentPage(DocumentPage documentPage)
             {
                 lock (_thisLock)
                 {
-                    var signature = document.Certificate.ToString();
+                    var signature = documentPage.Certificate.ToString();
 
                     Dictionary<string, HashSet<DocumentPage>> dic = null;
 
-                    if (this.DocumentPages.TryGetValue(document.Section, out dic))
+                    if (this.DocumentPages.TryGetValue(documentPage.Document, out dic))
                     {
                         HashSet<DocumentPage> hashset = null;
 
-                        if (dic.TryGetValue(document.Name, out hashset))
+                        if (dic.TryGetValue(documentPage.Name, out hashset))
                         {
-                            hashset.Remove(document);
+                            hashset.Remove(documentPage);
 
                             if (hashset.Count == 0)
                             {
-                                dic.Remove(document.Name);
+                                dic.Remove(documentPage.Name);
                             }
                         }
 
                         if (dic.Count == 0)
                         {
-                            this.DocumentPages.Remove(document.Section);
+                            this.DocumentPages.Remove(documentPage.Document);
                         }
                     }
                 }
             }
 
-            public void RemoveDocumentOpinion(DocumentOpinion vote)
+            public void RemoveDocumentOpinion(DocumentOpinion documentOpinion)
             {
                 lock (_thisLock)
                 {
-                    var signature = vote.Certificate.ToString();
+                    var signature = documentOpinion.Certificate.ToString();
 
                     Dictionary<string, DocumentOpinion> dic = null;
 
-                    if (this.DocumentOpinions.TryGetValue(vote.Section, out dic))
+                    if (this.DocumentOpinions.TryGetValue(documentOpinion.Document, out dic))
                     {
                         dic.Remove(signature);
 
                         if (dic.Count == 0)
                         {
-                            this.DocumentOpinions.Remove(vote.Section);
+                            this.DocumentOpinions.Remove(documentOpinion.Document);
                         }
                     }
                 }
             }
 
-            public void RemoveTopic(ChatTopic topic)
+            public void RemoveChatTopic(ChatTopic chatTopic)
             {
                 lock (_thisLock)
                 {
-                    var signature = topic.Certificate.ToString();
+                    var signature = chatTopic.Certificate.ToString();
 
                     Dictionary<string, ChatTopic> dic = null;
 
-                    if (this.Topics.TryGetValue(topic.Chat, out dic))
+                    if (this.ChatTopics.TryGetValue(chatTopic.Chat, out dic))
                     {
                         dic.Remove(signature);
 
                         if (dic.Count == 0)
                         {
-                            this.Topics.Remove(topic.Chat);
+                            this.ChatTopics.Remove(chatTopic.Chat);
                         }
                     }
                 }
             }
 
-            public void RemoveMessage(ChatMessage message)
+            public void RemoveChatMessage(ChatMessage chatMessage)
             {
                 lock (_thisLock)
                 {
                     HashSet<ChatMessage> hashset = null;
 
-                    if (this.Messages.TryGetValue(message.Chat, out hashset))
+                    if (this.ChatMessages.TryGetValue(chatMessage.Chat, out hashset))
                     {
-                        hashset.Remove(message);
+                        hashset.Remove(chatMessage);
 
                         if (hashset.Count == 0)
                         {
-                            this.Messages.Remove(message.Chat);
+                            this.ChatMessages.Remove(chatMessage.Chat);
                         }
                     }
                 }
             }
 
-            public void RemoveMailMessage(MailMessage mail)
+            public void RemoveWhisperMessage(WhisperMessage whisperMessage)
+            {
+                lock (_thisLock)
+                {
+                    HashSet<WhisperMessage> hashset = null;
+
+                    if (this.WhisperMessages.TryGetValue(whisperMessage.Whisper, out hashset))
+                    {
+                        hashset.Remove(whisperMessage);
+
+                        if (hashset.Count == 0)
+                        {
+                            this.WhisperMessages.Remove(whisperMessage.Whisper);
+                        }
+                    }
+                }
+            }
+
+            public void RemoveMailMessage(MailMessage mailMessage)
             {
                 lock (_thisLock)
                 {
                     HashSet<MailMessage> hashset = null;
 
-                    if (this.MailMessages.TryGetValue(mail.RecipientSignature, out hashset))
+                    if (this.MailMessages.TryGetValue(mailMessage.Mail, out hashset))
                     {
-                        hashset.Remove(mail);
+                        hashset.Remove(mailMessage);
 
                         if (hashset.Count == 0)
                         {
-                            this.MailMessages.Remove(mail.RecipientSignature);
+                            this.MailMessages.Remove(mailMessage.Mail);
                         }
                     }
                 }
@@ -4218,68 +5019,79 @@ namespace Library.Net.Lair
                 }
             }
 
-            private Dictionary<Section, Dictionary<string, SectionProfile>> Profiles
+            private Dictionary<Section, Dictionary<string, SectionProfile>> SectionProfiles
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<Section, Dictionary<string, SectionProfile>>)this["Profiles"];
+                        return (Dictionary<Section, Dictionary<string, SectionProfile>>)this["SectionProfiles"];
                     }
                 }
             }
 
-            private Dictionary<Section, Dictionary<string, HashSet<DocumentPage>>> DocumentPages
+            private Dictionary<Document, Dictionary<string, HashSet<DocumentPage>>> DocumentPages
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<Section, Dictionary<string, HashSet<DocumentPage>>>)this["DocumentPages"];
+                        return (Dictionary<Document, Dictionary<string, HashSet<DocumentPage>>>)this["DocumentPages"];
                     }
                 }
             }
 
-            private Dictionary<Section, Dictionary<string, DocumentOpinion>> DocumentOpinions
+            private Dictionary<Document, Dictionary<string, DocumentOpinion>> DocumentOpinions
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<Section, Dictionary<string, DocumentOpinion>>)this["DocumentOpinions"];
+                        return (Dictionary<Document, Dictionary<string, DocumentOpinion>>)this["DocumentOpinions"];
                     }
                 }
             }
 
-            private Dictionary<Chat, Dictionary<string, ChatTopic>> Topics
+            private Dictionary<Chat, Dictionary<string, ChatTopic>> ChatTopics
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<Chat, Dictionary<string, ChatTopic>>)this["Topics"];
+                        return (Dictionary<Chat, Dictionary<string, ChatTopic>>)this["ChatTopics"];
                     }
                 }
             }
 
-            private Dictionary<Chat, HashSet<ChatMessage>> Messages
+            private Dictionary<Chat, HashSet<ChatMessage>> ChatMessages
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<Chat, HashSet<ChatMessage>>)this["Messages"];
+                        return (Dictionary<Chat, HashSet<ChatMessage>>)this["ChatMessages"];
                     }
                 }
             }
 
-            private Dictionary<string, HashSet<MailMessage>> MailMessages
+            private Dictionary<Whisper, HashSet<WhisperMessage>> WhisperMessages
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<string, HashSet<MailMessage>>)this["MailMessages"];
+                        return (Dictionary<Whisper, HashSet<WhisperMessage>>)this["WhisperMessages"];
+                    }
+                }
+            }
+
+            private Dictionary<Mail, HashSet<MailMessage>> MailMessages
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<Mail, HashSet<MailMessage>>)this["MailMessages"];
                     }
                 }
             }

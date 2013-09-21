@@ -12,7 +12,7 @@ namespace Library.Net.Amoeba
         Rijndael256 = 1,
     }
 
-    interface ICryptoAlgorithm
+    public interface ICryptoAlgorithm
     {
         CryptoAlgorithm CryptoAlgorithm { get; }
         byte[] CryptoKey { get; }

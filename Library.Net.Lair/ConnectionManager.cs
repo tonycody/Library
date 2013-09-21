@@ -22,10 +22,15 @@ namespace Library.Net.Lair
         public IEnumerable<Section> Sections { get; set; }
     }
 
-    class PullProfilesEventArgs : EventArgs
+    class PullSectionProfilesEventArgs : EventArgs
     {
-        public IEnumerable<SectionProfile> Profiles { get; set; }
+        public IEnumerable<SectionProfile> SectionProfiles { get; set; }
         public IEnumerable<ArraySegment<byte>> Contents { get; set; }
+    }
+
+    class PullDocumentsRequestEventArgs : EventArgs
+    {
+        public IEnumerable<Document> Documents { get; set; }
     }
 
     class PullDocumentPagesEventArgs : EventArgs
@@ -45,21 +50,32 @@ namespace Library.Net.Lair
         public IEnumerable<Chat> Chats { get; set; }
     }
 
-    class PullTopicsEventArgs : EventArgs
+    class PullChatTopicsEventArgs : EventArgs
     {
-        public IEnumerable<ChatTopic> Topics { get; set; }
+        public IEnumerable<ChatTopic> ChatTopics { get; set; }
         public IEnumerable<ArraySegment<byte>> Contents { get; set; }
     }
 
-    class PullMessagesEventArgs : EventArgs
+    class PullChatMessagesEventArgs : EventArgs
     {
-        public IEnumerable<ChatMessage> Messages { get; set; }
+        public IEnumerable<ChatMessage> ChatMessages { get; set; }
         public IEnumerable<ArraySegment<byte>> Contents { get; set; }
     }
 
-    class PullSignaturesRequestEventArgs : EventArgs
+    class PullWhispersRequestEventArgs : EventArgs
     {
-        public IEnumerable<string> Signatures { get; set; }
+        public IEnumerable<Whisper> Whispers { get; set; }
+    }
+
+    class PullWhisperMessagesEventArgs : EventArgs
+    {
+        public IEnumerable<WhisperMessage> WhisperMessages { get; set; }
+        public IEnumerable<ArraySegment<byte>> Contents { get; set; }
+    }
+
+    class PullMailsRequestEventArgs : EventArgs
+    {
+        public IEnumerable<Mail> Mails { get; set; }
     }
 
     class PullMailMessagesEventArgs : EventArgs
@@ -71,15 +87,20 @@ namespace Library.Net.Lair
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
 
     delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
-    delegate void PullProfilesEventHandler(object sender, PullProfilesEventArgs e);
+    delegate void PullSectionProfilesEventHandler(object sender, PullSectionProfilesEventArgs e);
+
+    delegate void PullDocumentsRequestEventHandler(object sender, PullDocumentsRequestEventArgs e);
     delegate void PullDocumentPagesEventHandler(object sender, PullDocumentPagesEventArgs e);
     delegate void PullDocumentOpinionsEventHandler(object sender, PullDocumentOpinionsEventArgs e);
 
     delegate void PullChatsRequestEventHandler(object sender, PullChatsRequestEventArgs e);
-    delegate void PullTopicsEventHandler(object sender, PullTopicsEventArgs e);
-    delegate void PullMessagesEventHandler(object sender, PullMessagesEventArgs e);
+    delegate void PullChatTopicsEventHandler(object sender, PullChatTopicsEventArgs e);
+    delegate void PullChatMessagesEventHandler(object sender, PullChatMessagesEventArgs e);
 
-    delegate void PullSignaturesRequestEventHandler(object sender, PullSignaturesRequestEventArgs e);
+    delegate void PullWhispersRequestEventHandler(object sender, PullWhispersRequestEventArgs e);
+    delegate void PullWhisperMessagesEventHandler(object sender, PullWhisperMessagesEventArgs e);
+
+    delegate void PullMailsRequestEventHandler(object sender, PullMailsRequestEventArgs e);
     delegate void PullMailMessagesEventHandler(object sender, PullMailMessagesEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
@@ -105,16 +126,21 @@ namespace Library.Net.Lair
             Nodes = 4,
 
             SectionsRequest = 5,
-            Profiles = 6,
-            DocumentPages = 7,
-            DocumentOpinions = 8,
+            SectionProfiles = 6,
 
-            ChatsRequest = 9,
-            Topics = 10,
-            Messages = 11,
+            DocumentsRequest = 7,
+            DocumentPages = 8,
+            DocumentOpinions = 9,
 
-            SignaturesRequest = 12,
-            MailMessages = 13,
+            ChatsRequest = 10,
+            ChatTopics = 11,
+            ChatMessages = 12,
+
+            WhispersRequest = 13,
+            WhisperMessages = 14,
+
+            MailsRequest = 15,
+            MailMessages = 16,
         }
 
         private byte[] _mySessionId;
@@ -147,15 +173,20 @@ namespace Library.Net.Lair
         public event PullNodesEventHandler PullNodesEvent;
 
         public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
-        public event PullProfilesEventHandler PullProfilesEvent;
+        public event PullSectionProfilesEventHandler PullSectionProfilesEvent;
+
+        public event PullDocumentsRequestEventHandler PullDocumentsRequestEvent;
         public event PullDocumentPagesEventHandler PullDocumentPagesEvent;
         public event PullDocumentOpinionsEventHandler PullDocumentOpinionsEvent;
 
         public event PullChatsRequestEventHandler PullChatsRequestEvent;
-        public event PullTopicsEventHandler PullTopicsEvent;
-        public event PullMessagesEventHandler PullMessagesEvent;
+        public event PullChatTopicsEventHandler PullChatTopicsEvent;
+        public event PullChatMessagesEventHandler PullChatMessagesEvent;
 
-        public event PullSignaturesRequestEventHandler PullSignaturesRequestEvent;
+        public event PullWhispersRequestEventHandler PullWhispersRequestEvent;
+        public event PullWhisperMessagesEventHandler PullWhisperMessagesEvent;
+
+        public event PullMailsRequestEventHandler PullMailsRequestEvent;
         public event PullMailMessagesEventHandler PullMailMessagesEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
@@ -586,48 +617,63 @@ namespace Library.Net.Lair
                                 }
                                 else if (type == (byte)SerializeId.SectionsRequest)
                                 {
-                                    var message = SectionsRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSectionsRequest(new PullSectionsRequestEventArgs() { Sections = message.Sections });
+                                    var message = RequestMessage<Section>.Import(stream2, _bufferManager);
+                                    this.OnPullSectionsRequest(new PullSectionsRequestEventArgs() { Sections = message.Tags });
                                 }
-                                else if (type == (byte)SerializeId.Profiles)
+                                else if (type == (byte)SerializeId.SectionProfiles)
                                 {
-                                    var message = ProfilesMessage.Import(stream2, _bufferManager);
-                                    this.OnPullProfiles(new PullProfilesEventArgs() { Profiles = message.Profiles, Contents = message.Contents });
+                                    var message = ItemsMessage<SectionProfile>.Import(stream2, _bufferManager);
+                                    this.OnPullSectionProfiles(new PullSectionProfilesEventArgs() { SectionProfiles = message.Items, Contents = message.Contents });
+                                }
+                                else if (type == (byte)SerializeId.DocumentsRequest)
+                                {
+                                    var message = RequestMessage<Document>.Import(stream2, _bufferManager);
+                                    this.OnPullDocumentsRequest(new PullDocumentsRequestEventArgs() { Documents = message.Tags });
                                 }
                                 else if (type == (byte)SerializeId.DocumentPages)
                                 {
-                                    var message = DocumentPagesMessage.Import(stream2, _bufferManager);
-                                    this.OnPullDocumentPages(new PullDocumentPagesEventArgs() { DocumentPages = message.DocumentPages, Contents = message.Contents });
+                                    var message = ItemsMessage<DocumentPage>.Import(stream2, _bufferManager);
+                                    this.OnPullDocumentPages(new PullDocumentPagesEventArgs() { DocumentPages = message.Items, Contents = message.Contents });
                                 }
                                 else if (type == (byte)SerializeId.DocumentOpinions)
                                 {
-                                    var message = DocumentOpinionsMessage.Import(stream2, _bufferManager);
-                                    this.OnPullDocumentOpinions(new PullDocumentOpinionsEventArgs() { DocumentOpinions = message.DocumentOpinions, Contents = message.Contents });
+                                    var message = ItemsMessage<DocumentOpinion>.Import(stream2, _bufferManager);
+                                    this.OnPullDocumentOpinions(new PullDocumentOpinionsEventArgs() { DocumentOpinions = message.Items, Contents = message.Contents });
                                 }
                                 else if (type == (byte)SerializeId.ChatsRequest)
                                 {
-                                    var message = ChatsRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullChatsRequest(new PullChatsRequestEventArgs() { Chats = message.Chats });
+                                    var message = RequestMessage<Chat>.Import(stream2, _bufferManager);
+                                    this.OnPullChatsRequest(new PullChatsRequestEventArgs() { Chats = message.Tags });
                                 }
-                                else if (type == (byte)SerializeId.Topics)
+                                else if (type == (byte)SerializeId.ChatTopics)
                                 {
-                                    var message = TopicsMessage.Import(stream2, _bufferManager);
-                                    this.OnPullTopics(new PullTopicsEventArgs() { Topics = message.Topics, Contents = message.Contents });
+                                    var message = ItemsMessage<ChatTopic>.Import(stream2, _bufferManager);
+                                    this.OnPullChatTopics(new PullChatTopicsEventArgs() { ChatTopics = message.Items, Contents = message.Contents });
                                 }
-                                else if (type == (byte)SerializeId.Messages)
+                                else if (type == (byte)SerializeId.ChatMessages)
                                 {
-                                    var message = MessagesMessage.Import(stream2, _bufferManager);
-                                    this.OnPullMessages(new PullMessagesEventArgs() { Messages = message.Messages, Contents = message.Contents });
+                                    var message = ItemsMessage<ChatMessage>.Import(stream2, _bufferManager);
+                                    this.OnPullChatMessages(new PullChatMessagesEventArgs() { ChatMessages = message.Items, Contents = message.Contents });
                                 }
-                                else if (type == (byte)SerializeId.SignaturesRequest)
+                                else if (type == (byte)SerializeId.WhispersRequest)
                                 {
-                                    var message = SignaturesRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSignaturesRequest(new PullSignaturesRequestEventArgs() { Signatures = message.Signatures });
+                                    var message = RequestMessage<Whisper>.Import(stream2, _bufferManager);
+                                    this.OnPullWhispersRequest(new PullWhispersRequestEventArgs() { Whispers = message.Tags });
+                                }
+                                else if (type == (byte)SerializeId.WhisperMessages)
+                                {
+                                    var message = ItemsMessage<WhisperMessage>.Import(stream2, _bufferManager);
+                                    this.OnPullWhisperMessages(new PullWhisperMessagesEventArgs() { WhisperMessages = message.Items, Contents = message.Contents });
+                                }
+                                else if (type == (byte)SerializeId.MailsRequest)
+                                {
+                                    var message = RequestMessage<Mail>.Import(stream2, _bufferManager);
+                                    this.OnPullMailsRequest(new PullMailsRequestEventArgs() { Mails = message.Tags });
                                 }
                                 else if (type == (byte)SerializeId.MailMessages)
                                 {
-                                    var message = MailMessagesMessage.Import(stream2, _bufferManager);
-                                    this.OnPullMailMessages(new PullMailMessagesEventArgs() { MailMessages = message.MailMessages, Contents = message.Contents });
+                                    var message = ItemsMessage<MailMessage>.Import(stream2, _bufferManager);
+                                    this.OnPullMailMessages(new PullMailMessagesEventArgs() { MailMessages = message.Items, Contents = message.Contents });
                                 }
                             }
                         }
@@ -667,11 +713,19 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnPullProfiles(PullProfilesEventArgs e)
+        protected virtual void OnPullSectionProfiles(PullSectionProfilesEventArgs e)
         {
-            if (this.PullProfilesEvent != null)
+            if (this.PullSectionProfilesEvent != null)
             {
-                this.PullProfilesEvent(this, e);
+                this.PullSectionProfilesEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullDocumentsRequest(PullDocumentsRequestEventArgs e)
+        {
+            if (this.PullDocumentsRequestEvent != null)
+            {
+                this.PullDocumentsRequestEvent(this, e);
             }
         }
 
@@ -699,27 +753,43 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnPullTopics(PullTopicsEventArgs e)
+        protected virtual void OnPullChatTopics(PullChatTopicsEventArgs e)
         {
-            if (this.PullTopicsEvent != null)
+            if (this.PullChatTopicsEvent != null)
             {
-                this.PullTopicsEvent(this, e);
+                this.PullChatTopicsEvent(this, e);
             }
         }
 
-        protected virtual void OnPullMessages(PullMessagesEventArgs e)
+        protected virtual void OnPullChatMessages(PullChatMessagesEventArgs e)
         {
-            if (this.PullMessagesEvent != null)
+            if (this.PullChatMessagesEvent != null)
             {
-                this.PullMessagesEvent(this, e);
+                this.PullChatMessagesEvent(this, e);
             }
         }
 
-        protected virtual void OnPullSignaturesRequest(PullSignaturesRequestEventArgs e)
+        protected virtual void OnPullWhispersRequest(PullWhispersRequestEventArgs e)
         {
-            if (this.PullSignaturesRequestEvent != null)
+            if (this.PullWhispersRequestEvent != null)
             {
-                this.PullSignaturesRequestEvent(this, e);
+                this.PullWhispersRequestEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullWhisperMessages(PullWhisperMessagesEventArgs e)
+        {
+            if (this.PullWhisperMessagesEvent != null)
+            {
+                this.PullWhisperMessagesEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullMailsRequest(PullMailsRequestEventArgs e)
+        {
+            if (this.PullMailsRequestEvent != null)
+            {
+                this.PullMailsRequestEvent(this, e);
             }
         }
 
@@ -763,8 +833,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.Nodes);
                     stream.Flush();
 
-                    var message = new NodesMessage();
-                    message.Nodes.AddRange(nodes);
+                    var message = new NodesMessage(nodes);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -801,8 +870,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.SectionsRequest);
                     stream.Flush();
 
-                    var message = new SectionsRequestMessage();
-                    message.Sections.AddRange(sections);
+                    var message = new RequestMessage<Section>(sections);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -826,7 +894,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushProfiles(IEnumerable<SectionProfile> profiles, IEnumerable<ArraySegment<byte>> contents)
+        public void PushSectionProfiles(IEnumerable<SectionProfile> sectionProfiles, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -836,12 +904,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.WriteByte((byte)SerializeId.SectionProfiles);
                     stream.Flush();
 
-                    var message = new ProfilesMessage();
-                    message.Profiles.AddRange(profiles);
-                    message.Contents.AddRange(contents);
+                    var message = new ItemsMessage<SectionProfile>(sectionProfiles, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -865,7 +931,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushDocumentPages(IEnumerable<DocumentPage> documents, IEnumerable<ArraySegment<byte>> contents)
+        public void PushDocumentsRequest(IEnumerable<Document> documents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -875,12 +941,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.WriteByte((byte)SerializeId.DocumentsRequest);
                     stream.Flush();
 
-                    var message = new DocumentPagesMessage();
-                    message.DocumentPages.AddRange(documents);
-                    message.Contents.AddRange(contents);
+                    var message = new RequestMessage<Document>(documents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -904,7 +968,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushDocumentOpinions(IEnumerable<DocumentOpinion> votes, IEnumerable<ArraySegment<byte>> contents)
+        public void PushDocumentPages(IEnumerable<DocumentPage> documentPages, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -914,12 +978,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.WriteByte((byte)SerializeId.DocumentPages);
                     stream.Flush();
 
-                    var message = new DocumentOpinionsMessage();
-                    message.DocumentOpinions.AddRange(votes);
-                    message.Contents.AddRange(contents);
+                    var message = new ItemsMessage<DocumentPage>(documentPages, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -943,7 +1005,44 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushChatsRequest(IEnumerable<Chat> channels)
+        public void PushDocumentOpinions(IEnumerable<DocumentOpinion> documentOpinions, IEnumerable<ArraySegment<byte>> contents)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version3)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.DocumentOpinions);
+                    stream.Flush();
+
+                    var message = new ItemsMessage<DocumentOpinion>(documentOpinions, contents);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushChatsRequest(IEnumerable<Chat> chats)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -956,8 +1055,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.ChatsRequest);
                     stream.Flush();
 
-                    var message = new ChatsRequestMessage();
-                    message.Chats.AddRange(channels);
+                    var message = new RequestMessage<Chat>(chats);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -981,7 +1079,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushTopics(IEnumerable<ChatTopic> topics, IEnumerable<ArraySegment<byte>> contents)
+        public void PushChatTopics(IEnumerable<ChatTopic> chatTopics, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -991,12 +1089,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.WriteByte((byte)SerializeId.ChatTopics);
                     stream.Flush();
 
-                    var message = new TopicsMessage();
-                    message.Topics.AddRange(topics);
-                    message.Contents.AddRange(contents);
+                    var message = new ItemsMessage<ChatTopic>(chatTopics, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1020,7 +1116,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushMessages(IEnumerable<ChatMessage> messages, IEnumerable<ArraySegment<byte>> contents)
+        public void PushChatMessages(IEnumerable<ChatMessage> chatMessages, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1030,12 +1126,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.WriteByte((byte)SerializeId.ChatMessages);
                     stream.Flush();
 
-                    var message = new MessagesMessage();
-                    message.Messages.AddRange(messages);
-                    message.Contents.AddRange(contents);
+                    var message = new ItemsMessage<ChatMessage>(chatMessages, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1059,7 +1153,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushSignaturesRequest(IEnumerable<string> channels)
+        public void PushWhispersRequest(IEnumerable<Whisper> whispers)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1069,11 +1163,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.SignaturesRequest);
+                    stream.WriteByte((byte)SerializeId.WhispersRequest);
                     stream.Flush();
 
-                    var message = new SignaturesRequestMessage();
-                    message.Signatures.AddRange(channels);
+                    var message = new RequestMessage<Whisper>(whispers);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1097,7 +1190,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushMailMessages(IEnumerable<MailMessage> mails, IEnumerable<ArraySegment<byte>> contents)
+        public void PushWhisperMessages(IEnumerable<WhisperMessage> whisperMessages, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1107,12 +1200,84 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Nodes);
+                    stream.WriteByte((byte)SerializeId.WhisperMessages);
                     stream.Flush();
 
-                    var message = new MailMessagesMessage();
-                    message.MailMessages.AddRange(mails);
-                    message.Contents.AddRange(contents);
+                    var message = new ItemsMessage<WhisperMessage>(whisperMessages, contents);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushMailsRequest(IEnumerable<Mail> mails)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version3)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.MailsRequest);
+                    stream.Flush();
+
+                    var message = new RequestMessage<Mail>(mails);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _sendUpdateTime = DateTime.UtcNow;
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushMailMessages(IEnumerable<MailMessage> mailMessages, IEnumerable<ArraySegment<byte>> contents)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion == ProtocolVersion.Version3)
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.MailMessages);
+                    stream.Flush();
+
+                    var message = new ItemsMessage<MailMessage>(mailMessages, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1169,38 +1334,36 @@ namespace Library.Net.Lair
 
         #region Message
 
-        [DataContract(Name = "NodesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class NodesMessage : ItemBase<NodesMessage>, IThisLock
+        private sealed class NodesMessage : ItemBase<NodesMessage>
         {
             private enum SerializeId : byte
             {
                 Node = 0,
             }
 
-            private NodeCollection _nodes;
+            private NodeCollection _nodes = new NodeCollection();
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public NodesMessage(IEnumerable<Node> nodes)
+            {
+                _nodes.AddRange(nodes);
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Node)
                         {
-                            if (id == (byte)SerializeId.Node)
-                            {
-                                this.Nodes.Add(Node.Import(rangeStream, bufferManager));
-                            }
+                            _nodes.Add(Node.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1228,195 +1391,52 @@ namespace Library.Net.Lair
 
             public override NodesMessage DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return NodesMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return NodesMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "Nodes")]
-            public NodeCollection Nodes
+            public IEnumerable<Node> Nodes
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_nodes == null)
-                            _nodes = new NodeCollection(128);
-
-                        return _nodes;
-                    }
+                    return _nodes;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
-        [DataContract(Name = "SectionsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class SectionsRequestMessage : ItemBase<SectionsRequestMessage>, IThisLock
+        private sealed class RequestMessage<T> : ItemBase<RequestMessage<T>>
+            where T : ItemBase<T>, ITag
         {
             private enum SerializeId : byte
             {
-                Section = 0,
+                Tag = 0,
             }
 
-            private SectionCollection _sections;
+            private List<T> _tags = new List<T>();
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public RequestMessage(IEnumerable<T> tags)
+            {
+                _tags.AddRange(tags);
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Tag)
                         {
-                            if (id == (byte)SerializeId.Section)
-                            {
-                                this.Sections.Add(Section.Import(rangeStream, bufferManager));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
-
-                    // Sections
-                    foreach (var s in this.Sections)
-                    {
-                        Stream exportStream = s.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Section);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
-                }
-            }
-
-            public override SectionsRequestMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return SectionsRequestMessage.Import(stream, BufferManager.Instance);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Sections")]
-            public SectionCollection Sections
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_sections == null)
-                            _sections = new SectionCollection(128);
-
-                        return _sections;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "ProfilesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class ProfilesMessage : ItemBase<ProfilesMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Profile = 0,
-                Content = 1,
-            }
-
-            private SectionProfileCollection _profiles;
-            private List<ArraySegment<byte>> _contents;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Profile)
-                            {
-                                this.Profiles.Add(SectionProfile.Import(rangeStream, bufferManager));
-                            }
-                            else if (id == (byte)SerializeId.Content)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
-
-                                this.Contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
-                            }
+                            _tags.Add(ItemBase<T>.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1427,132 +1447,79 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Profiles
-                foreach (var m in this.Profiles)
+                // Tags
+                foreach (var t in this.Tags)
                 {
-                    Stream exportStream = m.Export(bufferManager);
+                    Stream exportStream = t.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Profile);
+                    bufferStream.WriteByte((byte)SerializeId.Tag);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
-                }
-                // Contents
-                foreach (var m in this.Contents)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)m.Count), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(m.Array, m.Offset, m.Count);
-
-                    streams.Add(bufferStream);
                 }
 
                 return new JoinStream(streams);
             }
 
-            public override ProfilesMessage DeepClone()
+            public override RequestMessage<T> DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return ProfilesMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return RequestMessage<T>.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "Profiles")]
-            public SectionProfileCollection Profiles
+            public IEnumerable<T> Tags
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_profiles == null)
-                            _profiles = new SectionProfileCollection();
-
-                        return _profiles;
-                    }
+                    return _tags;
                 }
             }
-
-            [DataMember(Name = "Contents")]
-            public List<ArraySegment<byte>> Contents
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_contents == null)
-                            _contents = new List<ArraySegment<byte>>();
-
-                        return _contents;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
-        [DataContract(Name = "DocumentPagesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class DocumentPagesMessage : ItemBase<DocumentPagesMessage>, IThisLock
+        private sealed class ItemsMessage<T> : ItemBase<ItemsMessage<T>>
+            where T : ItemBase<T>
         {
             private enum SerializeId : byte
             {
-                DocumentPage = 0,
+                Item = 0,
                 Content = 1,
             }
 
-            private DocumentPageCollection _documents;
-            private List<ArraySegment<byte>> _contents;
+            private List<T> _items = new List<T>();
+            private List<ArraySegment<byte>> _contents = new List<ArraySegment<byte>>();
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public ItemsMessage(IEnumerable<T> items, IEnumerable<ArraySegment<byte>> contents)
+            {
+                _items.AddRange(items);
+                _contents.AddRange(contents);
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Item)
                         {
-                            if (id == (byte)SerializeId.DocumentPage)
-                            {
-                                this.DocumentPages.Add(DocumentPage.Import(rangeStream, bufferManager));
-                            }
-                            else if (id == (byte)SerializeId.Content)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
+                            _items.Add(ItemBase<T>.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Content)
+                        {
+                            byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
+                            rangeStream.Read(buff, 0, (int)rangeStream.Length);
 
-                                this.Contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
-                            }
+                            _contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
                         }
                     }
                 }
@@ -1563,24 +1530,24 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // DocumentPages
-                foreach (var m in this.DocumentPages)
+                // Items
+                foreach (var i in this.Items)
                 {
-                    Stream exportStream = m.Export(bufferManager);
+                    Stream exportStream = i.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.DocumentPage);
+                    bufferStream.WriteByte((byte)SerializeId.Item);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
                 // Contents
-                foreach (var m in this.Contents)
+                foreach (var c in this.Contents)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)m.Count), 0, 4);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)c.Count), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(m.Array, m.Offset, m.Count);
+                    bufferStream.Write(c.Array, c.Offset, c.Count);
 
                     streams.Add(bufferStream);
                 }
@@ -1588,829 +1555,29 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override DocumentPagesMessage DeepClone()
+            public override ItemsMessage<T> DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return DocumentPagesMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return ItemsMessage<T>.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "DocumentPages")]
-            public DocumentPageCollection DocumentPages
+            public IEnumerable<T> Items
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_documents == null)
-                            _documents = new DocumentPageCollection();
-
-                        return _documents;
-                    }
+                    return _items;
                 }
             }
 
-            [DataMember(Name = "Contents")]
-            public List<ArraySegment<byte>> Contents
+            public IEnumerable<ArraySegment<byte>> Contents
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_contents == null)
-                            _contents = new List<ArraySegment<byte>>();
-
-                        return _contents;
-                    }
+                    return _contents;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "DocumentOpinionsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class DocumentOpinionsMessage : ItemBase<DocumentOpinionsMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                DocumentOpinion = 0,
-                Content = 1,
-            }
-
-            private DocumentOpinionCollection _profiles;
-            private List<ArraySegment<byte>> _contents;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.DocumentOpinion)
-                            {
-                                this.DocumentOpinions.Add(DocumentOpinion.Import(rangeStream, bufferManager));
-                            }
-                            else if (id == (byte)SerializeId.Content)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
-
-                                this.Contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
-
-                // DocumentOpinions
-                foreach (var m in this.DocumentOpinions)
-                {
-                    Stream exportStream = m.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.DocumentOpinion);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
-                }
-                // Contents
-                foreach (var m in this.Contents)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)m.Count), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(m.Array, m.Offset, m.Count);
-
-                    streams.Add(bufferStream);
-                }
-
-                return new JoinStream(streams);
-            }
-
-            public override DocumentOpinionsMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return DocumentOpinionsMessage.Import(stream, BufferManager.Instance);
-                    }
-                }
-            }
-
-            [DataMember(Name = "DocumentOpinions")]
-            public DocumentOpinionCollection DocumentOpinions
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_profiles == null)
-                            _profiles = new DocumentOpinionCollection();
-
-                        return _profiles;
-                    }
-                }
-            }
-
-            [DataMember(Name = "Contents")]
-            public List<ArraySegment<byte>> Contents
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_contents == null)
-                            _contents = new List<ArraySegment<byte>>();
-
-                        return _contents;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "ChatsRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class ChatsRequestMessage : ItemBase<ChatsRequestMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Chat = 0,
-            }
-
-            private ChatCollection _channels;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Chat)
-                            {
-                                this.Chats.Add(Chat.Import(rangeStream, bufferManager));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
-
-                    // Chats
-                    foreach (var c in this.Chats)
-                    {
-                        Stream exportStream = c.Export(bufferManager);
-
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Chat);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
-                }
-            }
-
-            public override ChatsRequestMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return ChatsRequestMessage.Import(stream, BufferManager.Instance);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Chats")]
-            public ChatCollection Chats
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_channels == null)
-                            _channels = new ChatCollection(128);
-
-                        return _channels;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "TopicsMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class TopicsMessage : ItemBase<TopicsMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Topic = 0,
-                Content = 1,
-            }
-
-            private ChatTopicCollection _topics;
-            private List<ArraySegment<byte>> _contents;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Topic)
-                            {
-                                this.Topics.Add(ChatTopic.Import(rangeStream, bufferManager));
-                            }
-                            else if (id == (byte)SerializeId.Content)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
-
-                                this.Contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
-
-                // Topics
-                foreach (var m in this.Topics)
-                {
-                    Stream exportStream = m.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Topic);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
-                }
-                // Contents
-                foreach (var m in this.Contents)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)m.Count), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(m.Array, m.Offset, m.Count);
-
-                    streams.Add(bufferStream);
-                }
-
-                return new JoinStream(streams);
-            }
-
-            public override TopicsMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return TopicsMessage.Import(stream, BufferManager.Instance);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Topics")]
-            public ChatTopicCollection Topics
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_topics == null)
-                            _topics = new ChatTopicCollection();
-
-                        return _topics;
-                    }
-                }
-            }
-
-            [DataMember(Name = "Contents")]
-            public List<ArraySegment<byte>> Contents
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_contents == null)
-                            _contents = new List<ArraySegment<byte>>();
-
-                        return _contents;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "MessagesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class MessagesMessage : ItemBase<MessagesMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Message = 0,
-                Content = 1,
-            }
-
-            private ChatMessageCollection _messages;
-            private List<ArraySegment<byte>> _contents;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Message)
-                            {
-                                this.Messages.Add(ChatMessage.Import(rangeStream, bufferManager));
-                            }
-                            else if (id == (byte)SerializeId.Content)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
-
-                                this.Contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
-
-                // Messages
-                foreach (var m in this.Messages)
-                {
-                    Stream exportStream = m.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Message);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
-                }
-                // Contents
-                foreach (var m in this.Contents)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)m.Count), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(m.Array, m.Offset, m.Count);
-
-                    streams.Add(bufferStream);
-                }
-
-                return new JoinStream(streams);
-            }
-
-            public override MessagesMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return MessagesMessage.Import(stream, BufferManager.Instance);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Messages")]
-            public ChatMessageCollection Messages
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_messages == null)
-                            _messages = new ChatMessageCollection();
-
-                        return _messages;
-                    }
-                }
-            }
-
-            [DataMember(Name = "Contents")]
-            public List<ArraySegment<byte>> Contents
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_contents == null)
-                            _contents = new List<ArraySegment<byte>>();
-
-                        return _contents;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "SignaturesRequestMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class SignaturesRequestMessage : ItemBase<SignaturesRequestMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                Signature = 0,
-            }
-
-            private SignatureCollection _signatures;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.Signature)
-                            {
-                                using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                                {
-                                    this.Signatures.Add(reader.ReadToEnd());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
-
-                    // Signatures
-                    foreach (var s in this.Signatures)
-                    {
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.SetLength(5);
-                        bufferStream.Seek(5, SeekOrigin.Begin);
-
-                        using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                        using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                        {
-                            writer.Write(s);
-                        }
-
-                        bufferStream.Seek(0, SeekOrigin.Begin);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Signature);
-
-                        streams.Add(bufferStream);
-                    }
-
-                    return new JoinStream(streams);
-                }
-            }
-
-            public override SignaturesRequestMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return SignaturesRequestMessage.Import(stream, BufferManager.Instance);
-                    }
-                }
-            }
-
-            [DataMember(Name = "Signatures")]
-            public SignatureCollection Signatures
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_signatures == null)
-                            _signatures = new SignatureCollection(128);
-
-                        return _signatures;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
-        }
-
-        [DataContract(Name = "MailMessagesMessage", Namespace = "http://Library/Net/Lair/ConnectionManager")]
-        private sealed class MailMessagesMessage : ItemBase<MailMessagesMessage>, IThisLock
-        {
-            private enum SerializeId : byte
-            {
-                MailMessage = 0,
-                Content = 1,
-            }
-
-            private MailMessageCollection _mails;
-            private List<ArraySegment<byte>> _contents;
-
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-            {
-                lock (this.ThisLock)
-                {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
-
-                    for (; ; )
-                    {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                        {
-                            if (id == (byte)SerializeId.MailMessage)
-                            {
-                                this.MailMessages.Add(MailMessage.Import(rangeStream, bufferManager));
-                            }
-                            else if (id == (byte)SerializeId.Content)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
-
-                                this.Contents.Add(new ArraySegment<byte>(buff, 0, (int)rangeStream.Length));
-                            }
-                        }
-                    }
-                }
-            }
-
-            public override Stream Export(BufferManager bufferManager)
-            {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
-
-                // MailMessages
-                foreach (var m in this.MailMessages)
-                {
-                    Stream exportStream = m.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.MailMessage);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
-                }
-                // Contents
-                foreach (var m in this.Contents)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)m.Count), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(m.Array, m.Offset, m.Count);
-
-                    streams.Add(bufferStream);
-                }
-
-                return new JoinStream(streams);
-            }
-
-            public override MailMessagesMessage DeepClone()
-            {
-                lock (this.ThisLock)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return MailMessagesMessage.Import(stream, BufferManager.Instance);
-                    }
-                }
-            }
-
-            [DataMember(Name = "MailMessages")]
-            public MailMessageCollection MailMessages
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_mails == null)
-                            _mails = new MailMessageCollection();
-
-                        return _mails;
-                    }
-                }
-            }
-
-            [DataMember(Name = "Contents")]
-            public List<ArraySegment<byte>> Contents
-            {
-                get
-                {
-                    lock (this.ThisLock)
-                    {
-                        if (_contents == null)
-                            _contents = new List<ArraySegment<byte>>();
-
-                        return _contents;
-                    }
-                }
-            }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
         #endregion

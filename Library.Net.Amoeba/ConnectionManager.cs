@@ -671,8 +671,7 @@ namespace Library.Net.Amoeba
                     stream.WriteByte((byte)SerializeId.Nodes);
                     stream.Flush();
 
-                    var message = new NodesMessage();
-                    message.Nodes.AddRange(nodes);
+                    var message = new NodesMessage(nodes);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -709,8 +708,7 @@ namespace Library.Net.Amoeba
                     stream.WriteByte((byte)SerializeId.BlocksLink);
                     stream.Flush();
 
-                    var message = new BlocksLinkMessage();
-                    message.Keys.AddRange(keys);
+                    var message = new BlocksLinkMessage(keys);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -747,8 +745,7 @@ namespace Library.Net.Amoeba
                     stream.WriteByte((byte)SerializeId.BlocksRequest);
                     stream.Flush();
 
-                    var message = new BlocksRequestMessage();
-                    message.Keys.AddRange(keys);
+                    var message = new BlocksRequestMessage(keys);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -785,9 +782,7 @@ namespace Library.Net.Amoeba
                     stream.WriteByte((byte)SerializeId.Block);
                     stream.Flush();
 
-                    var message = new BlockMessage();
-                    message.Key = key;
-                    message.Value = value;
+                    var message = new BlockMessage(key, value);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -824,8 +819,7 @@ namespace Library.Net.Amoeba
                     stream.WriteByte((byte)SerializeId.SeedsRequest);
                     stream.Flush();
 
-                    var message = new SeedsRequestMessage();
-                    message.Signatures.AddRange(signatures);
+                    var message = new SeedsRequestMessage(signatures);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -917,38 +911,36 @@ namespace Library.Net.Amoeba
 
         #region Message
 
-        [DataContract(Name = "NodesMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class NodesMessage : ItemBase<NodesMessage>, IThisLock
+        private sealed class NodesMessage : ItemBase<NodesMessage>
         {
             private enum SerializeId : byte
             {
                 Node = 0,
             }
 
-            private NodeCollection _nodes;
+            private NodeCollection _nodes = new NodeCollection();
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public NodesMessage(IEnumerable<Node> nodes)
+            {
+                _nodes.AddRange(nodes);
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Node)
                         {
-                            if (id == (byte)SerializeId.Node)
-                            {
-                                this.Nodes.Add(Node.Import(rangeStream, bufferManager));
-                            }
+                            _nodes.Add(Node.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -976,81 +968,51 @@ namespace Library.Net.Amoeba
 
             public override NodesMessage DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return NodesMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return NodesMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "Nodes")]
-            public NodeCollection Nodes
+            public IEnumerable<Node> Nodes
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_nodes == null)
-                            _nodes = new NodeCollection(128);
-
-                        return _nodes;
-                    }
+                    return _nodes;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
-        [DataContract(Name = "BlocksLinkMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class BlocksLinkMessage : ItemBase<BlocksLinkMessage>, IThisLock
+        private sealed class BlocksLinkMessage : ItemBase<BlocksLinkMessage>
         {
             private enum SerializeId : byte
             {
                 Key = 0,
             }
 
-            private KeyCollection _keys;
+            private KeyCollection _keys = new KeyCollection();
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public BlocksLinkMessage(IEnumerable<Key> keys)
+            {
+                _keys.AddRange(keys);
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Key)
                         {
-                            if (id == (byte)SerializeId.Key)
-                            {
-                                this.Keys.Add(Key.Import(rangeStream, bufferManager));
-                            }
+                            _keys.Add(Key.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1058,104 +1020,71 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // Keys
+                foreach (var k in this.Keys)
                 {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
+                    Stream exportStream = k.Export(bufferManager);
 
-                    // Keys
-                    foreach (var k in this.Keys)
-                    {
-                        Stream exportStream = k.Export(bufferManager);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Key);
 
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Key);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
+
+                return new JoinStream(streams);
             }
 
             public override BlocksLinkMessage DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return BlocksLinkMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return BlocksLinkMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "Keys")]
-            public KeyCollection Keys
+            public IEnumerable<Key> Keys
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_keys == null)
-                            _keys = new KeyCollection(8192);
-
-                        return _keys;
-                    }
+                    return _keys;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
-        [DataContract(Name = "BlocksRequestMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class BlocksRequestMessage : ItemBase<BlocksRequestMessage>, IThisLock
+        private sealed class BlocksRequestMessage : ItemBase<BlocksRequestMessage>
         {
             private enum SerializeId : byte
             {
                 Key = 0,
             }
 
-            private KeyCollection _keys;
+            private KeyCollection _keys = new KeyCollection();
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public BlocksRequestMessage(IEnumerable<Key> keys)
+            {
+                _keys.AddRange(keys);
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Key)
                         {
-                            if (id == (byte)SerializeId.Key)
-                            {
-                                this.Keys.Add(Key.Import(rangeStream, bufferManager));
-                            }
+                            _keys.Add(Key.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1163,74 +1092,42 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // Keys
+                foreach (var k in this.Keys)
                 {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
+                    Stream exportStream = k.Export(bufferManager);
 
-                    // Keys
-                    foreach (var k in this.Keys)
-                    {
-                        Stream exportStream = k.Export(bufferManager);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Key);
 
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Key);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-
-                    return new JoinStream(streams);
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
+
+                return new JoinStream(streams);
             }
 
             public override BlocksRequestMessage DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return BlocksRequestMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return BlocksRequestMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "Keys")]
-            public KeyCollection Keys
+            public IEnumerable<Key> Keys
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_keys == null)
-                            _keys = new KeyCollection(8192);
-
-                        return _keys;
-                    }
+                    return _keys;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
-        [DataContract(Name = "BlockMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class BlockMessage : ItemBase<BlockMessage>, IThisLock
+        private sealed class BlockMessage : ItemBase<BlockMessage>
         {
             private enum SerializeId : byte
             {
@@ -1241,35 +1138,35 @@ namespace Library.Net.Amoeba
             private Key _key;
             private ArraySegment<byte> _value;
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public BlockMessage(Key key, ArraySegment<byte> value)
+            {
+                _key = key;
+                _value = value;
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Key)
                         {
-                            if (id == (byte)SerializeId.Key)
-                            {
-                                this.Key = Key.Import(rangeStream, bufferManager);
-                            }
-                            else if (id == (byte)SerializeId.Value)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
+                            _key = Key.Import(rangeStream, bufferManager);
+                        }
+                        else if (id == (byte)SerializeId.Value)
+                        {
+                            byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
+                            rangeStream.Read(buff, 0, (int)rangeStream.Length);
 
-                                this.Value = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
-                            }
+                            _value = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
                         }
                     }
                 }
@@ -1277,138 +1174,90 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                List<Stream> streams = new List<Stream>();
+
+                // Key
+                if (this.Key != null)
                 {
-                    List<Stream> streams = new List<Stream>();
+                    Stream exportStream = this.Key.Export(bufferManager);
 
-                    // Key
-                    if (this.Key != null)
-                    {
-                        Stream exportStream = this.Key.Export(bufferManager);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Key);
 
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Key);
-
-                        streams.Add(new JoinStream(bufferStream, exportStream));
-                    }
-                    // Value
-                    if (this.Value.Array != null)
-                    {
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Value);
-                        bufferStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
-
-                        streams.Add(bufferStream);
-                    }
-
-                    return new JoinStream(streams);
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
+                // Value
+                if (this.Value.Array != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Value);
+                    bufferStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
+
+                    streams.Add(bufferStream);
+                }
+
+                return new JoinStream(streams);
             }
 
             public override BlockMessage DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return BlockMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return BlockMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "Key")]
             public Key Key
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _key;
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        _key = value;
-                    }
+                    return _key;
                 }
             }
 
-            [DataMember(Name = "Value")]
             public ArraySegment<byte> Value
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _value;
-                    }
-                }
-                set
-                {
-                    lock (this.ThisLock)
-                    {
-                        _value = value;
-                    }
+                    return _value;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
-        [DataContract(Name = "SeedsRequestMessage", Namespace = "http://Library/Net/Amoeba/ConnectionManager")]
-        private class SeedsRequestMessage : ItemBase<SeedsRequestMessage>, IThisLock
+        private sealed class SeedsRequestMessage : ItemBase<SeedsRequestMessage>
         {
             private enum SerializeId : byte
             {
                 Signature = 0,
             }
 
-            private SignatureCollection _signatures;
+            private SignatureCollection _signatures = new SignatureCollection();
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            public SeedsRequestMessage(IEnumerable<string> signatures)
+            {
+                _signatures.AddRange(signatures);
+            }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Signature)
                         {
-                            if (id == (byte)SerializeId.Signature)
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                                {
-                                    this.Signatures.Add(reader.ReadToEnd());
-                                }
+                                _signatures.Add(reader.ReadToEnd());
                             }
                         }
                     }
@@ -1417,78 +1266,47 @@ namespace Library.Net.Amoeba
 
             public override Stream Export(BufferManager bufferManager)
             {
-                lock (this.ThisLock)
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // Signatures
+                foreach (var s in this.Signatures)
                 {
-                    List<Stream> streams = new List<Stream>();
-                    Encoding encoding = new UTF8Encoding(false);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
 
-                    // Signatures
-                    foreach (var s in this.Signatures)
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        BufferStream bufferStream = new BufferStream(bufferManager);
-                        bufferStream.SetLength(5);
-                        bufferStream.Seek(5, SeekOrigin.Begin);
-
-                        using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                        using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                        {
-                            writer.Write(s);
-                        }
-
-                        bufferStream.Seek(0, SeekOrigin.Begin);
-                        bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Signature);
-
-                        streams.Add(bufferStream);
+                        writer.Write(s);
                     }
 
-                    return new JoinStream(streams);
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Signature);
+
+                    streams.Add(bufferStream);
                 }
+
+                return new JoinStream(streams);
             }
 
             public override SeedsRequestMessage DeepClone()
             {
-                lock (this.ThisLock)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        return SeedsRequestMessage.Import(stream, BufferManager.Instance);
-                    }
+                    return SeedsRequestMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            [DataMember(Name = "Signatures")]
-            public SignatureCollection Signatures
+            public IEnumerable<string> Signatures
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_signatures == null)
-                            _signatures = new SignatureCollection(128);
-
-                        return _signatures;
-                    }
+                    return _signatures;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    lock (_thisStaticLock)
-                    {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
-                    }
-                }
-            }
-
-            #endregion
         }
 
         #endregion

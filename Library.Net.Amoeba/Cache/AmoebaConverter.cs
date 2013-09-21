@@ -232,7 +232,7 @@ namespace Library.Net.Amoeba
 
             try
             {
-                using (Stream stream = AmoebaConverter.FromBase64String(item.Remove(0, 5)))
+                using (Stream stream = AmoebaConverter.FromBase64String(item.Remove(0, "Node:".Length)))
                 {
                     return AmoebaConverter.FromStream<Node>(stream);
                 }
@@ -267,7 +267,7 @@ namespace Library.Net.Amoeba
 
             try
             {
-                using (Stream stream = AmoebaConverter.FromBase64String(item.Remove(0, 5)))
+                using (Stream stream = AmoebaConverter.FromBase64String(item.Remove(0, "Seed:".Length)))
                 {
                     return AmoebaConverter.FromStream<Seed>(stream);
                 }

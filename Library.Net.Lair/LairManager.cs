@@ -308,23 +308,43 @@ namespace Library.Net.Lair
             }
         }
 
-        public void SendChatRequest(Chat channel)
+        public void SendDocumentRequest(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.SendChatRequest(channel);
+                _connectionsManager.SendDocumentRequest(document);
             }
         }
 
-        public void SendSignatureRequest(string signature)
+        public void SendChatRequest(Chat chat)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _connectionsManager.SendSignatureRequest(signature);
+                _connectionsManager.SendChatRequest(chat);
+            }
+        }
+
+        public void SendWhisperRequest(Whisper whisper)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.SendWhisperRequest(whisper);
+            }
+        }
+
+        public void SendMailRequest(Mail mail)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.SendMailRequest(mail);
             }
         }
 
@@ -338,6 +358,16 @@ namespace Library.Net.Lair
             }
         }
 
+        public IEnumerable<Document> GetDocuments()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetDocuments();
+            }
+        }
+
         public IEnumerable<Chat> GetChats()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -348,199 +378,230 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<string> GetSignatures()
+        public IEnumerable<Whisper> GetWhispers()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetSignatures();
+                return _connectionsManager.GetWhispers();
             }
         }
 
-        public IEnumerable<SectionProfile> GetProfiles(Section section)
+        public IEnumerable<Mail> GetMails()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetProfiles(section);
+                return _connectionsManager.GetMails();
             }
         }
 
-        public IEnumerable<DocumentPage> GetDocumentPages(Section section)
+        public IEnumerable<SectionProfile> GetSectionProfiles(Section section)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetDocumentPages(section);
+                return _connectionsManager.GetSectionProfiles(section);
             }
         }
 
-        public IEnumerable<DocumentOpinion> GetDocumentOpinions(Section section)
+        public IEnumerable<DocumentPage> GetDocumentPages(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetDocumentOpinions(section);
+                return _connectionsManager.GetDocumentPages(document);
             }
         }
 
-        public IEnumerable<ChatTopic> GetTopics(Chat channel)
+        public IEnumerable<DocumentOpinion> GetDocumentOpinions(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetTopics(channel);
+                return _connectionsManager.GetDocumentOpinions(document);
             }
         }
 
-        public IEnumerable<ChatMessage> GetMessages(Chat channel)
+        public IEnumerable<ChatTopic> GetChatTopics(Chat chat)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetMessages(channel);
+                return _connectionsManager.GetChatTopics(chat);
             }
         }
 
-        public IEnumerable<MailMessage> GetMailMessages(string signature)
+        public IEnumerable<ChatMessage> GetChatMessages(Chat chat)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetMailMessages(signature);
+                return _connectionsManager.GetChatMessages(chat);
             }
         }
 
-        public SectionProfileContent GetContent(SectionProfile profile)
+        public IEnumerable<WhisperMessage> GetWhisperMessages(Whisper whisper)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetContent(profile);
+                return _connectionsManager.GetWhisperMessages(whisper);
             }
         }
 
-        public DocumentPageContent GetContent(DocumentPage document)
+        public IEnumerable<MailMessage> GetMailMessages(Mail mail)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetContent(document);
+                return _connectionsManager.GetMailMessages(mail);
             }
         }
 
-        public DocumentOpinionContent GetContent(DocumentOpinion vote)
+        public SectionProfileContent GetContent(SectionProfile sectionProfile)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetContent(vote);
+                return _connectionsManager.GetContent(sectionProfile);
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopic topic)
+        public DocumentPageContent GetContent(DocumentPage documentPage)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetContent(topic);
+                return _connectionsManager.GetContent(documentPage);
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessage message)
+        public DocumentOpinionContent GetContent(DocumentOpinion documentOpinion)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetContent(message);
+                return _connectionsManager.GetContent(documentOpinion);
             }
         }
 
-        public MailMessageContent GetContent(MailMessage mail, IExchangeDecrypt exchangeDecrypt)
+        public ChatTopicContent GetContent(ChatTopic chatTopic)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetContent(mail, exchangeDecrypt);
+                return _connectionsManager.GetContent(chatTopic);
+            }
+        }
+
+        public ChatMessageContent GetContent(ChatMessage chatMessage)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(chatMessage);
+            }
+        }
+
+        public MailMessageContent GetContent(MailMessage mailMessage, IExchangeDecrypt exchangeDecrypt)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetContent(mailMessage, exchangeDecrypt);
             }
         }
 
         public SectionProfile UploadProfile(Section section,
-            IEnumerable<string> trustSignatures, IEnumerable<Chat> channels, string comment, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
+            string comment, IExchangeEncrypt exchangeEncrypt, IEnumerable<string> trustSignatures, IEnumerable<Document> documents, IEnumerable<Chat> chats, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadProfile(section, trustSignatures, channels, comment, exchangeEncrypt, digitalSignature);
+                return _connectionsManager.UploadProfile(section, comment, exchangeEncrypt, trustSignatures, documents, chats, digitalSignature);
             }
         }
 
-        public DocumentPage UploadDocumentPage(Section section, string name,
+        public DocumentPage UploadDocumentPage(Document document, string name,
             string comment, HypertextFormatType formatType, string hypertext, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadDocumentPage(section, name, comment, formatType, hypertext, digitalSignature);
+                return _connectionsManager.UploadDocumentPage(document, name, comment, formatType, hypertext, digitalSignature);
             }
         }
 
-        public DocumentOpinion UploadDocumentOpinion(Section section,
+        public DocumentOpinion UploadDocumentOpinion(Document document,
              IEnumerable<Key> goods, IEnumerable<Key> bads, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadDocumentOpinion(section, goods, bads, digitalSignature);
+                return _connectionsManager.UploadDocumentOpinion(document, goods, bads, digitalSignature);
             }
         }
 
-        public ChatTopic UploadTopic(Chat channel,
+        public ChatTopic UploadTopic(Chat chat,
             string comment, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadTopic(channel, comment, digitalSignature);
+                return _connectionsManager.UploadChatTopic(chat, comment, digitalSignature);
             }
         }
 
-        public ChatMessage UploadMessage(Chat channel,
+        public ChatMessage UploadMessage(Chat chat,
             string comment, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadMessage(channel, comment, anchors, digitalSignature);
+                return _connectionsManager.UploadChatMessage(chat, comment, anchors, digitalSignature);
             }
         }
 
-        public MailMessage UploadMailMessage(string recipientSignature,
+        public WhisperMessage UploadWhisperMessage(Whisper whisper,
+            string comment, IEnumerable<Key> anchors, WhisperCryptoInformation cryptoInformation, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.UploadWhisperMessage(whisper, comment, anchors, cryptoInformation, digitalSignature);
+            }
+        }
+
+        public MailMessage UploadMailMessage(Mail mail,
             string text, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.UploadMailMessage(recipientSignature, text, exchangeEncrypt, digitalSignature);
+                return _connectionsManager.UploadMailMessage(mail, text, exchangeEncrypt, digitalSignature);
             }
         }
 

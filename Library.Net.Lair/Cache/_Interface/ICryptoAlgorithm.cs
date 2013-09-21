@@ -9,7 +9,7 @@ namespace Library.Net.Lair
         Rijndael256 = 0,
     }
 
-    interface ICryptoAlgorithm
+    public interface ICryptoAlgorithm
     {
         CryptoAlgorithm CryptoAlgorithm { get; }
         byte[] CryptoKey { get; }
