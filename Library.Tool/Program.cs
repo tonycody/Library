@@ -515,7 +515,7 @@ namespace Library.Tool
 
                     foreach (var item in list)
                     {
-                        var text = item.Value.Substring(basePath.Length + 1).Replace(@"\", "/");
+                        var text = item.Value.Substring(basePath.Length).Replace(@"\", "/");
                         Console.WriteLine(string.Format("{0}\t{1}", item.Key, text));
                     }
 
