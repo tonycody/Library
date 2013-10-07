@@ -123,11 +123,11 @@ namespace Library.UnitTest
                 var seed = new Seed();
                 seed.Name = "aaaa.zip";
                 seed.Keywords.AddRange(new KeywordCollection 
-            {
-                "bbbb",
-                "cccc",
-                "dddd",
-            });
+                {
+                    "bbbb",
+                    "cccc",
+                    "dddd",
+                });
                 seed.CreationTime = DateTime.Now;
                 seed.Length = 10000;
                 seed.Comment = "eeee";

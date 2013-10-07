@@ -1405,41 +1405,19 @@ namespace Library.Net.Lair
 
                                         foreach (var document in _settings.GetDocuments())
                                         {
+                                            // trustのDocumentSiteはすべて許容
+                                            // untrustのDocumentSiteはランダムに256まで許容
                                             {
-                                                var trustDocumentSites = new List<DocumentSite>();
                                                 var untrustDocumentSites = new List<DocumentSite>();
 
                                                 foreach (var item in _settings.GetDocumentSites(document))
                                                 {
-                                                    if (lockSignatureHashset.Contains(item.Certificate.ToString()))
-                                                    {
-                                                        trustDocumentSites.Add(item);
-                                                    }
-                                                    else
-                                                    {
-                                                        untrustDocumentSites.Add(item);
-                                                    }
+                                                    if (lockSignatureHashset.Contains(item.Certificate.ToString())) continue;
+
+                                                    untrustDocumentSites.Add(item);
                                                 }
 
-                                                if (trustDocumentSites.Count > 1024)
-                                                {
-                                                    trustDocumentSites.Sort((x, y) =>
-                                                    {
-                                                        return x.CreationTime.CompareTo(y);
-                                                    });
-
-                                                    removeDocumentSites.AddRange(trustDocumentSites.Take(trustDocumentSites.Count - 1024));
-                                                }
-
-                                                if (untrustDocumentSites.Count > 32)
-                                                {
-                                                    untrustDocumentSites.Sort((x, y) =>
-                                                    {
-                                                        return x.CreationTime.CompareTo(y);
-                                                    });
-
-                                                    removeDocumentSites.AddRange(untrustDocumentSites.Take(untrustDocumentSites.Count - 32));
-                                                }
+                                                removeDocumentSites.AddRange(untrustDocumentSites.Randomize().Take(untrustDocumentSites.Count - 256));
                                             }
 
                                             // trustのDocumentOpinionはすべて許容
@@ -1600,8 +1578,8 @@ namespace Library.Net.Lair
                                         foreach (var mail in _settings.GetMails())
                                         {
                                             // 64日を過ぎたMailMessageは破棄
-                                            // trustのMailMessageは一つのあて先につき新しい順に8までで、すべての送信者を許容
-                                            // untrustのMailMessageは一つのあて先につき新しい順に2までで、32人の送信者を許容
+                                            // trustのMailMessageは、すべての送信者を許容し、一人の送信者につき新しい順に8まで許容
+                                            // untrustのMailMessageは、32人の送信者を許容し、一人の送信者につき2まで許容。
                                             {
                                                 var trustMailMessageDic = new Dictionary<string, List<MailMessage>>();
                                                 var untrustMailMessageDic = new Dictionary<string, List<MailMessage>>();

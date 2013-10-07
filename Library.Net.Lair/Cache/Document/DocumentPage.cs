@@ -23,7 +23,7 @@ namespace Library.Net.Lair
         private string _comment;
 
         public static readonly int MaxHypertextLength = 1024 * 32;
-        public static readonly int MaxCommentLength = 1024 * 32;
+        public static readonly int MaxCommentLength = 1024 * 4;
 
         public DocumentPage(HypertextFormatType formatType, string hypertext, string comment)
         {

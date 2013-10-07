@@ -29,24 +29,6 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_LairConverter_Section()
-        {
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
-            var id = new byte[64];
-            _random.NextBytes(id);
-
-            var tag = new Section(id, "aoeui");
-
-            var stream = LairConverter.ToSectionString(tag, digitalSignature.ToString());
-
-            string sectionSignature;
-            var value = LairConverter.FromSectionString(stream, out sectionSignature);
-
-            Assert.AreEqual(tag, value, "LairConverter #2");
-            Assert.AreEqual(digitalSignature.ToString(), sectionSignature, "LairConverter #3");
-        }
-
-        [Test]
         public void Test_LairConverter_Document()
         {
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
@@ -96,10 +78,12 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_ContentConverter_ProfileContent()
+        public void Test_ContentConverter_SignatureProfileContent()
         {
             Exchange exchange = new Exchange(ExchangeAlgorithm.Rsa2048);
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+
+            var comment = RandomString.GetValue(SignatureProfileContent.MaxCommentLength);
 
             var signatures = new List<string>();
             signatures.Add(digitalSignature.ToString());
@@ -110,37 +94,47 @@ namespace Library.UnitTest
             var chats = new List<Chat>();
             chats.Add(new Chat(new byte[64], "123"));
 
-            SectionProfileContent content = new SectionProfileContent("comment", signatures, documents, chats, exchange);
-            var binaryContent = ContentConverter.ToSectionProfileContentBlock(content);
+            SignatureProfileContent content = new SignatureProfileContent(comment, signatures, documents, chats, exchange);
+            var binaryContent = ContentConverter.ToSignatureProfileContentBlock(content);
 
-            Assert.AreEqual(content, ContentConverter.FromSectionProfileContentBlock(binaryContent));
+            Assert.AreEqual(content, ContentConverter.FromSignatureProfileContentBlock(binaryContent));
         }
 
         [Test]
-        public void Test_ContentConverter_DocumentPageContent()
+        public void Test_ContentConverter_DocumentSiteContent()
         {
-            DocumentPageContent content = new DocumentPageContent(HypertextFormatType.MiniWiki, "aaaaa", "xxxxx");
-            var binaryContent = ContentConverter.ToDocumentPageContentBlock(content);
+            List<DocumentPage> documentPages = new List<DocumentPage>();
 
-            Assert.AreEqual(content, ContentConverter.FromDocumentPageContentBlock(binaryContent));
+            for (int i = 0; i < DocumentSiteContent.MaxDocumentPageCount; i++)
+            {
+                var hypertext = RandomString.GetValue(DocumentPage.MaxHypertextLength);
+                var comment = RandomString.GetValue(DocumentPage.MaxCommentLength);
+
+                documentPages.Add(new DocumentPage(HypertextFormatType.MiniWiki, hypertext, comment));
+            }
+
+            DocumentSiteContent content = new DocumentSiteContent(documentPages);
+            var binaryContent = ContentConverter.ToDocumentSiteContentBlock(content);
+
+            Assert.AreEqual(content, ContentConverter.FromDocumentSiteContentBlock(binaryContent));
         }
 
         [Test]
         public void Test_ContentConverter_DocumentOpinionContent()
         {
-            List<Key> goods = new List<Key>();
-            List<Key> bads = new List<Key>();
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
 
-            for (int i = 0; i < 32; i++)
+            var goods = new List<string>();
+            var bads = new List<string>();
+
+            for (int i = 0; i < DocumentOpinionContent.MaxGoodCount; i++)
             {
-                var key = new Key(new byte[64], HashAlgorithm.Sha512);
-                goods.Add(key);
+                goods.Add(digitalSignature.ToString());
             }
 
-            for (int i = 0; i < 32; i++)
+            for (int i = 0; i < DocumentOpinionContent.MaxBadCount; i++)
             {
-                var key = new Key(new byte[64], HashAlgorithm.Sha512);
-                bads.Add(key);
+                bads.Add(digitalSignature.ToString());
             }
 
             DocumentOpinionContent content = new DocumentOpinionContent(goods, bads);
@@ -152,7 +146,9 @@ namespace Library.UnitTest
         [Test]
         public void Test_ContentConverter_ChatTopicContent()
         {
-            ChatTopicContent content = new ChatTopicContent("123");
+            var comment = RandomString.GetValue(ChatTopicContent.MaxCommentLength);
+
+            ChatTopicContent content = new ChatTopicContent(comment);
             var binaryContent = ContentConverter.ToChatTopicContentBlock(content);
 
             Assert.AreEqual(content, ContentConverter.FromChatTopicContentBlock(binaryContent));
@@ -161,10 +157,12 @@ namespace Library.UnitTest
         [Test]
         public void Test_ContentConverter_ChatMessageContent()
         {
+            var comment = RandomString.GetValue(ChatMessageContent.MaxCommentLength);
+
             var keys = new List<Key>();
             keys.Add(new Key(new byte[64], HashAlgorithm.Sha512));
 
-            ChatMessageContent content = new ChatMessageContent("123", keys);
+            ChatMessageContent content = new ChatMessageContent(comment, keys);
             var binaryContent = ContentConverter.ToChatMessageContentBlock(content);
 
             Assert.AreEqual(content, ContentConverter.FromChatMessageContentBlock(binaryContent));
@@ -173,12 +171,14 @@ namespace Library.UnitTest
         [Test]
         public void Test_ContentConverter_WhisperMessageContent()
         {
+            var comment = RandomString.GetValue(WhisperMessageContent.MaxCommentLength);
+
             var keys = new List<Key>();
             keys.Add(new Key(new byte[64], HashAlgorithm.Sha512));
 
             WhisperCryptoInformation cryptoInformation = new WhisperCryptoInformation(CryptoAlgorithm.Rijndael256);
 
-            WhisperMessageContent content = new WhisperMessageContent("123", keys);
+            WhisperMessageContent content = new WhisperMessageContent(comment, keys);
             var binaryContent = ContentConverter.ToWhisperMessageContentBlock(content, cryptoInformation);
 
             Assert.AreEqual(content, ContentConverter.FromWhisperMessageContentBlock(binaryContent, cryptoInformation));
@@ -187,9 +187,11 @@ namespace Library.UnitTest
         [Test]
         public void Test_ContentConverter_MailMessageContent()
         {
+            var comment = RandomString.GetValue(MailMessageContent.MaxCommentLength);
+
             Exchange exchange = new Exchange(ExchangeAlgorithm.Rsa2048);
 
-            MailMessageContent content = new MailMessageContent("test");
+            MailMessageContent content = new MailMessageContent(comment.ToString());
             var binaryContent = ContentConverter.ToMailMessageContentBlock(content, exchange);
 
             Assert.AreEqual(content, ContentConverter.FromMailMessageContentBlock(binaryContent, exchange));

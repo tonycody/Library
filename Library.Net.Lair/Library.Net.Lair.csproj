@@ -174,7 +174,6 @@
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
     <Compile Include="UriCollection.cs" />
-    <Compile Include="varwc.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
