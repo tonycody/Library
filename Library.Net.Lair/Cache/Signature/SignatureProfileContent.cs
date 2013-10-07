@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Document, Chat>
+    [DataContract(Name = "SignatureProfileContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class SignatureProfileContent : ItemBase<SignatureProfileContent>, ISignatureProfileContent<Document, Chat>
     {
         private enum SerializeId : byte
         {
@@ -39,7 +39,7 @@ namespace Library.Net.Lair
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<Document> documents, IEnumerable<Chat> chats, IExchangeEncrypt exchangeEncrypt)
+        public SignatureProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<Document> documents, IEnumerable<Chat> chats, IExchangeEncrypt exchangeEncrypt)
         {
             this.Comment = comment;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
@@ -210,12 +210,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is SectionProfileContent)) return false;
+            if ((object)obj == null || !(obj is SignatureProfileContent)) return false;
 
-            return this.Equals((SectionProfileContent)obj);
+            return this.Equals((SignatureProfileContent)obj);
         }
 
-        public override bool Equals(SectionProfileContent other)
+        public override bool Equals(SignatureProfileContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -255,11 +255,11 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override SectionProfileContent DeepClone()
+        public override SignatureProfileContent DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return SectionProfileContent.Import(stream, BufferManager.Instance);
+                return SignatureProfileContent.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -274,7 +274,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > DocumentPageContent.MaxCommentLength)
+                if (value != null && value.Length > SignatureProfileContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
@@ -299,7 +299,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_trustSignatures == null)
-                    _trustSignatures = new SignatureCollection(SectionProfileContent.MaxTrustSignaturesCount);
+                    _trustSignatures = new SignatureCollection(SignatureProfileContent.MaxTrustSignaturesCount);
 
                 return _trustSignatures;
             }
@@ -319,7 +319,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_documents == null)
-                    _documents = new DocumentCollection(SectionProfileContent.MaxDocumentsCount);
+                    _documents = new DocumentCollection(SignatureProfileContent.MaxDocumentsCount);
 
                 return _documents;
             }
@@ -339,7 +339,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_chats == null)
-                    _chats = new ChatCollection(SectionProfileContent.MaxChatsCount);
+                    _chats = new ChatCollection(SignatureProfileContent.MaxChatsCount);
 
                 return _chats;
             }

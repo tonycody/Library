@@ -960,11 +960,26 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void Reset(string signature)
+        public void ResetLink(string signature)
         {
             lock (this.ThisLock)
             {
-                var item = _settings.BackgroundDownloadItems.FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                var item = _settings.BackgroundDownloadItems
+                    .Where(n => n.Type == BackgroundItemType.Link)
+                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                if (item == null) return;
+
+                this.Remove(item);
+            }
+        }
+
+        public void ResetStore(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                var item = _settings.BackgroundDownloadItems
+                    .Where(n => n.Type == BackgroundItemType.Store)
+                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
                 if (item == null) return;
 
                 this.Remove(item);

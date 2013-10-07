@@ -244,49 +244,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToSectionString(Section item, string leaderSignature)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (leaderSignature == null || !Signature.HasSignature(leaderSignature)) throw new ArgumentNullException("leaderSignature");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Section>(item))
-                {
-                    return "Section:" + LairConverter.ToBase64String(stream) + "," + leaderSignature;
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Section FromSectionString(string item, out string leaderSignature)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
-            if (!item.Contains(",")) throw new ArgumentException("item");
-
-            leaderSignature = null;
-
-            try
-            {
-                var list = item.Split(new char[] { ',' }, 2);
-
-                leaderSignature = list[1];
-
-                using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, "Section:".Length)))
-                {
-                    return LairConverter.FromStream<Section>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
         public static string ToDocumentString(Document item)
         {
             if (item == null) throw new ArgumentNullException("item");

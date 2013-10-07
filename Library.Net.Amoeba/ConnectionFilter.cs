@@ -4,6 +4,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
+using Library.Io;
 
 namespace Library.Net.Amoeba
 {
@@ -175,16 +176,16 @@ namespace Library.Net.Amoeba
             {
                 var ds = new DataContractSerializer(typeof(ConnectionFilter));
 
-                using (MemoryStream ms = new MemoryStream())
+                using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
-                    ms.Position = 0;
+                    stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (ConnectionFilter)ds.ReadObject(textDictionaryReader);
                     }
@@ -308,16 +309,16 @@ namespace Library.Net.Amoeba
             {
                 var ds = new DataContractSerializer(typeof(UriCollection));
 
-                using (MemoryStream ms = new MemoryStream())
+                using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(ms, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
-                    ms.Position = 0;
+                    stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(ms, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (UriCondition)ds.ReadObject(textDictionaryReader);
                     }

@@ -532,13 +532,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToSectionProfileContentBlock(SectionProfileContent content)
+        public static ArraySegment<byte> ToSignatureProfileContentBlock(SignatureProfileContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<SectionProfileContent>(content))
+            using (Stream stream = ContentConverter.ToStream<SignatureProfileContent>(content))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
                 stream.Read(value.Array, value.Offset, value.Count);
@@ -547,7 +547,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static SectionProfileContent FromSectionProfileContentBlock(ArraySegment<byte> content)
+        public static SignatureProfileContent FromSignatureProfileContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -555,7 +555,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
-                    return ContentConverter.FromStream<SectionProfileContent>(stream);
+                    return ContentConverter.FromStream<SignatureProfileContent>(stream);
                 }
             }
             catch (Exception)
@@ -564,13 +564,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToDocumentPageContentBlock(DocumentPageContent content)
+        public static ArraySegment<byte> ToDocumentSiteContentBlock(DocumentSiteContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<DocumentPageContent>(content))
+            using (Stream stream = ContentConverter.ToStream<DocumentSiteContent>(content))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
                 stream.Read(value.Array, value.Offset, value.Count);
@@ -579,7 +579,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static DocumentPageContent FromDocumentPageContentBlock(ArraySegment<byte> content)
+        public static DocumentSiteContent FromDocumentSiteContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -587,7 +587,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
-                    return ContentConverter.FromStream<DocumentPageContent>(stream);
+                    return ContentConverter.FromStream<DocumentSiteContent>(stream);
                 }
             }
             catch (Exception)

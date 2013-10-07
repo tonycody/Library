@@ -7,7 +7,7 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    interface ISectionProfileContent<TDocument, TChat> : IExchangeEncrypt
+    interface ISignatureProfileContent<TDocument, TChat> : IExchangeEncrypt
         where TDocument : IDocument
         where TChat : IChat
     {

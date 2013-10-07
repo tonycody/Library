@@ -1,14 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface IDocumentPage<TDocument, TKey> : IComputeHash
-        where TDocument : IDocument
-        where TKey : IKey
+    [DataContract(Name = "HypertextFormatType", Namespace = "http://Library/Net/Lair")]
+    public enum HypertextFormatType
     {
-        TDocument Document { get; }
-        string Name { get; }
-        DateTime CreationTime { get; }
-        TKey Content { get; }
+        [EnumMember(Value = "MiniWiki")]
+        MiniWiki = 0,
+    }
+
+    interface IDocumentPage
+    {
+        HypertextFormatType FormatType { get; }
+        string Hypertext { get; }
+        string Comment { get; }
     }
 }

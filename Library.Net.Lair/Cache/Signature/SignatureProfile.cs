@@ -8,27 +8,24 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "SectionProfile", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfile : ReadOnlyCertificateItemBase<SectionProfile>, ISectionProfile<Section, Key>
+    [DataContract(Name = "SignatureProfile", Namespace = "http://Library/Net/Lair")]
+    public sealed class SignatureProfile : ReadOnlyCertificateItemBase<SignatureProfile>, ISignatureProfile<Key>
     {
         private enum SerializeId : byte
         {
-            Section = 0,
-            CreationTime = 1,
-            Content = 2,
+            CreationTime = 0,
+            Content = 1,
 
-            Certificate = 3,
+            Certificate = 2,
         }
 
-        private Section _section = null;
         private DateTime _creationTime = DateTime.MinValue;
         private Key _content = null;
 
         private Certificate _certificate;
 
-        public SectionProfile(Section section, Key content, DigitalSignature digitalSignature)
+        public SignatureProfile(Key content, DigitalSignature digitalSignature)
         {
-            this.Section = section;
             this.CreationTime = DateTime.UtcNow;
             this.Content = content;
 
@@ -48,11 +45,7 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Section)
-                    {
-                        this.Section = Section.Import(rangeStream, bufferManager);
-                    }
-                    else if (id == (byte)SerializeId.CreationTime)
+                    if (id == (byte)SerializeId.CreationTime)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
@@ -77,17 +70,6 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Section
-            if (this.Section != null)
-            {
-                Stream exportStream = this.Section.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Section);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
             {
@@ -142,12 +124,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is SectionProfile)) return false;
+            if ((object)obj == null || !(obj is SignatureProfile)) return false;
 
-            return this.Equals((SectionProfile)obj);
+            return this.Equals((SignatureProfile)obj);
         }
 
-        public override bool Equals(SectionProfile other)
+        public override bool Equals(SignatureProfile other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -158,11 +140,11 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override SectionProfile DeepClone()
+        public override SignatureProfile DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return SectionProfile.Import(stream, BufferManager.Instance);
+                return SignatureProfile.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -193,20 +175,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IProfile<Section, Key>
-
-        [DataMember(Name = "Section")]
-        public Section Section
-        {
-            get
-            {
-                return _section;
-            }
-            private set
-            {
-                _section = value;
-            }
-        }
+        #region IProfile<Key>
 
         [DataMember(Name = "CreationTime")]
         public DateTime CreationTime

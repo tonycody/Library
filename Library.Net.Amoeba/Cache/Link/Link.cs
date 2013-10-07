@@ -20,7 +20,7 @@ namespace Library.Net.Amoeba
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        public static readonly int MaxTrustSignaturesCount = 1024;
+        public static readonly int MaxTrustSignatureCount = 1024;
 
         public Link()
         {
@@ -139,7 +139,7 @@ namespace Library.Net.Amoeba
             get
             {
                 if (_trustSignatures == null)
-                    _trustSignatures = new SignatureCollection(Link.MaxTrustSignaturesCount);
+                    _trustSignatures = new SignatureCollection(Link.MaxTrustSignatureCount);
 
                 return _trustSignatures;
             }

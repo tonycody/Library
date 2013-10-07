@@ -32,53 +32,13 @@ namespace Library.Net.Upnp
             {
                 try
                 {
-                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), new TimeSpan(0, 0, 10));
+                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), new TimeSpan(0, 0, 30));
                     if (_services != null) return;
                 }
                 catch (Exception)
                 {
 
                 }
-
-                try
-                {
-                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("255.255.255.255"), new TimeSpan(0, 0, 10));
-                    if (_services != null) return;
-                }
-                catch (Exception)
-                {
-
-                }
-
-#if !MONO
-                foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
-                    .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up))
-                {
-                    var machineIp = nic.GetIPProperties().UnicastAddresses
-                        .Select(n => n.Address)
-                        .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
-                        .FirstOrDefault();
-                    if (machineIp == null) continue;
-
-                    var gatewayIp = nic.GetIPProperties().GatewayAddresses
-                        .Select(n => n.Address)
-                        .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
-                        .FirstOrDefault();
-                    if (gatewayIp == null) continue;
-
-                    try
-                    {
-                        _services = GetServicesFromDevice(out _location, gatewayIp, new TimeSpan(0, 0, 10));
-                        if (_services != null) return;
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-                }
-#else
-
-#endif
 
                 throw new TimeoutException();
             }
@@ -125,77 +85,75 @@ namespace Library.Net.Upnp
                     "MX: 3\r\n" +
                     "\r\n");
 
-            int queryCount = 0;
-
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            for (; ; )
+            TimeoutCheck(stopwatch.Elapsed, timeout);
+
+            List<string> queryResponses = new List<string>();
+
+            using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
             {
-                TimeoutCheck(stopwatch.Elapsed, timeout);
+                client.ReceiveTimeout = 1000 * 30;
+                client.SendTimeout = 1000 * 30;
+
+                for (int i = 0; i < querys.Count; i++)
+                {
+                    byte[] q = Encoding.ASCII.GetBytes(querys[i++]);
+
+                    IPEndPoint endPoint = new IPEndPoint(ip, 1900);
+                    client.SendTo(q, q.Length, SocketFlags.None, endPoint);
+                }
 
                 try
                 {
-                    List<string> queryResponses = new List<string>();
-
-                    try
+                    for (int i = 0; i < 1024; i++)
                     {
-                        using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
-                        {
-                            client.ReceiveTimeout = 3000;
-                            client.SendTimeout = 1000;
+                        byte[] data = new byte[1024 * 8];
+                        int dataLength = client.Receive(data);
 
-                            if (ip.ToString() == "255.255.255.255") client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, 1);
-
-                            byte[] q = Encoding.ASCII.GetBytes(querys[queryCount++]);
-
-                            IPEndPoint endPoint = new IPEndPoint(ip, 1900);
-                            client.SendTo(q, q.Length, SocketFlags.None, endPoint);
-
-                            for (int i = 0; i < 10; i++)
-                            {
-                                byte[] data = new byte[1024];
-                                int dataLength = client.Receive(data);
-
-                                var temp = Encoding.ASCII.GetString(data, 0, dataLength);
-                                if (!string.IsNullOrWhiteSpace(temp)) queryResponses.Add(temp);
-                            }
-                        }
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    foreach (var queryResponse in queryResponses)
-                    {
-                        var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
-                        if (string.IsNullOrWhiteSpace(regexLocation)) continue;
-
-                        Uri tempLocation = new Uri(regexLocation);
-
-                        Debug.WriteLine("UPnP Router: " + ip.ToString());
-                        Debug.WriteLine("UPnP Location: " + tempLocation.ToString());
-
-                        string downloadString = null;
-
-                        using (var webClient = new WebClient())
-                        {
-                            downloadString = webClient.DownloadString(tempLocation);
-                        }
-
-                        if (string.IsNullOrWhiteSpace(downloadString)) continue;
-                        if (!_deviceTypeRegex.IsMatch(downloadString)) continue;
-
-                        location = tempLocation;
-                        return downloadString;
+                        var temp = Encoding.ASCII.GetString(data, 0, dataLength);
+                        if (!string.IsNullOrWhiteSpace(temp)) queryResponses.Add(temp);
                     }
                 }
                 catch (Exception)
                 {
-                    continue;
+
                 }
             }
+
+            foreach (var queryResponse in queryResponses)
+            {
+                try
+                {
+                    var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
+                    if (string.IsNullOrWhiteSpace(regexLocation)) continue;
+
+                    Uri tempLocation = new Uri(regexLocation);
+
+                    Debug.WriteLine("UPnP Router: " + ip.ToString());
+                    Debug.WriteLine("UPnP Location: " + tempLocation.ToString());
+
+                    string downloadString = null;
+
+                    using (var webClient = new WebClient())
+                    {
+                        downloadString = webClient.DownloadString(tempLocation);
+                    }
+
+                    if (string.IsNullOrWhiteSpace(downloadString)) continue;
+                    if (!_deviceTypeRegex.IsMatch(downloadString)) continue;
+
+                    location = tempLocation;
+                    return downloadString;
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+
+            return null;
         }
 
         private static string GetExternalIpAddressFromService(string services, string serviceType, string gatewayIp, int gatewayPort, TimeSpan timeout)

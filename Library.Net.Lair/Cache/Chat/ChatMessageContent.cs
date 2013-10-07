@@ -21,7 +21,7 @@ namespace Library.Net.Lair
         private KeyCollection _anchors = null;
 
         public static readonly int MaxCommentLength = 1024 * 4;
-        public static readonly int MaxAnchorsCount = 32;
+        public static readonly int MaxAnchorCount = 32;
 
         public ChatMessageContent(string comment, IEnumerable<Key> anchors)
         {
@@ -178,7 +178,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_anchors == null)
-                    _anchors = new KeyCollection(ChatMessageContent.MaxAnchorsCount);
+                    _anchors = new KeyCollection(ChatMessageContent.MaxAnchorCount);
 
                 return _anchors;
             }

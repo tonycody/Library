@@ -54,7 +54,7 @@ namespace Library.Net.Amoeba
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxCommentLength = 1024;
 
-        public static readonly int MaxKeywordsLength = 3;
+        public static readonly int MaxKeywordCount = 3;
 
         public static readonly int MaxCryptoKeyLength = 64;
 
@@ -615,7 +615,7 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_keywords == null)
-                        _keywords = new KeywordCollection(Seed.MaxKeywordsLength);
+                        _keywords = new KeywordCollection(Seed.MaxKeywordCount);
 
                     return _keywords;
                 }

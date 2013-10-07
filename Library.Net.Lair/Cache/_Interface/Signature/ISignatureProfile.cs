@@ -2,11 +2,9 @@
 
 namespace Library.Net.Lair
 {
-    interface ISectionProfile<TSection, TKey> : IComputeHash
-        where TSection : ISection
+    interface ISignatureProfile<TKey> : IComputeHash
         where TKey : IKey
     {
-        TSection Section { get; }
         DateTime CreationTime { get; }
         TKey Content { get; }
     }

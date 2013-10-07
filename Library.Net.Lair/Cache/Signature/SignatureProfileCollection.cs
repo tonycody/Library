@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class SectionCollection : FilterList<Section>, IEnumerable<Section>
+    public sealed class SignatureProfileCollection : FilterList<SignatureProfile>, IEnumerable<SignatureProfile>
     {
-        public SectionCollection() : base() { }
-        public SectionCollection(int capacity) : base(capacity) { }
-        public SectionCollection(IEnumerable<Section> collections) : base(collections) { }
+        public SignatureProfileCollection() : base() { }
+        public SignatureProfileCollection(int capacity) : base(capacity) { }
+        public SignatureProfileCollection(IEnumerable<SignatureProfile> collections) : base(collections) { }
 
-        protected override bool Filter(Section item)
+        protected override bool Filter(SignatureProfile item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Section>
+        #region IEnumerable<SignatureProfile>
 
-        IEnumerator<Section> IEnumerable<Section>.GetEnumerator()
+        IEnumerator<SignatureProfile> IEnumerable<SignatureProfile>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

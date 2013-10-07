@@ -17,14 +17,14 @@ namespace Library.Net.Lair
         public IEnumerable<Node> Nodes { get; set; }
     }
 
-    class PullSectionsRequestEventArgs : EventArgs
+    class PullSignaturesRequestEventArgs : EventArgs
     {
-        public IEnumerable<Section> Sections { get; set; }
+        public IEnumerable<string> Signatures { get; set; }
     }
 
-    class PullSectionProfilesEventArgs : EventArgs
+    class PullSignatureProfilesEventArgs : EventArgs
     {
-        public IEnumerable<SectionProfile> SectionProfiles { get; set; }
+        public IEnumerable<SignatureProfile> SignatureProfiles { get; set; }
         public IEnumerable<ArraySegment<byte>> Contents { get; set; }
     }
 
@@ -33,9 +33,9 @@ namespace Library.Net.Lair
         public IEnumerable<Document> Documents { get; set; }
     }
 
-    class PullDocumentPagesEventArgs : EventArgs
+    class PullDocumentSitesEventArgs : EventArgs
     {
-        public IEnumerable<DocumentPage> DocumentPages { get; set; }
+        public IEnumerable<DocumentSite> DocumentSites { get; set; }
         public IEnumerable<ArraySegment<byte>> Contents { get; set; }
     }
 
@@ -86,11 +86,11 @@ namespace Library.Net.Lair
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
 
-    delegate void PullSectionsRequestEventHandler(object sender, PullSectionsRequestEventArgs e);
-    delegate void PullSectionProfilesEventHandler(object sender, PullSectionProfilesEventArgs e);
+    delegate void PullSignaturesRequestEventHandler(object sender, PullSignaturesRequestEventArgs e);
+    delegate void PullSignatureProfilesEventHandler(object sender, PullSignatureProfilesEventArgs e);
 
     delegate void PullDocumentsRequestEventHandler(object sender, PullDocumentsRequestEventArgs e);
-    delegate void PullDocumentPagesEventHandler(object sender, PullDocumentPagesEventArgs e);
+    delegate void PullDocumentSitesEventHandler(object sender, PullDocumentSitesEventArgs e);
     delegate void PullDocumentOpinionsEventHandler(object sender, PullDocumentOpinionsEventArgs e);
 
     delegate void PullChatsRequestEventHandler(object sender, PullChatsRequestEventArgs e);
@@ -125,11 +125,11 @@ namespace Library.Net.Lair
 
             Nodes = 4,
 
-            SectionsRequest = 5,
-            SectionProfiles = 6,
+            SignaturesRequest = 5,
+            SignatureProfiles = 6,
 
             DocumentsRequest = 7,
-            DocumentPages = 8,
+            DocumentSites = 8,
             DocumentOpinions = 9,
 
             ChatsRequest = 10,
@@ -172,11 +172,11 @@ namespace Library.Net.Lair
 
         public event PullNodesEventHandler PullNodesEvent;
 
-        public event PullSectionsRequestEventHandler PullSectionsRequestEvent;
-        public event PullSectionProfilesEventHandler PullSectionProfilesEvent;
+        public event PullSignaturesRequestEventHandler PullSignaturesRequestEvent;
+        public event PullSignatureProfilesEventHandler PullSignatureProfilesEvent;
 
         public event PullDocumentsRequestEventHandler PullDocumentsRequestEvent;
-        public event PullDocumentPagesEventHandler PullDocumentPagesEvent;
+        public event PullDocumentSitesEventHandler PullDocumentSitesEvent;
         public event PullDocumentOpinionsEventHandler PullDocumentOpinionsEvent;
 
         public event PullChatsRequestEventHandler PullChatsRequestEvent;
@@ -615,25 +615,25 @@ namespace Library.Net.Lair
                                     var message = NodesMessage.Import(stream2, _bufferManager);
                                     this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
                                 }
-                                else if (type == (byte)SerializeId.SectionsRequest)
+                                else if (type == (byte)SerializeId.SignaturesRequest)
                                 {
-                                    var message = RequestMessage<Section>.Import(stream2, _bufferManager);
-                                    this.OnPullSectionsRequest(new PullSectionsRequestEventArgs() { Sections = message.Tags });
+                                    var message = SignaturesRequestMessage.Import(stream2, _bufferManager);
+                                    this.OnPullSignaturesRequest(new PullSignaturesRequestEventArgs() { Signatures = message.Signatures });
                                 }
-                                else if (type == (byte)SerializeId.SectionProfiles)
+                                else if (type == (byte)SerializeId.SignatureProfiles)
                                 {
-                                    var message = ItemsMessage<SectionProfile>.Import(stream2, _bufferManager);
-                                    this.OnPullSectionProfiles(new PullSectionProfilesEventArgs() { SectionProfiles = message.Items, Contents = message.Contents });
+                                    var message = ItemsMessage<SignatureProfile>.Import(stream2, _bufferManager);
+                                    this.OnPullSignatureProfiles(new PullSignatureProfilesEventArgs() { SignatureProfiles = message.Items, Contents = message.Contents });
                                 }
                                 else if (type == (byte)SerializeId.DocumentsRequest)
                                 {
-                                    var message = RequestMessage<Document>.Import(stream2, _bufferManager);
+                                    var message = RequestsMessage<Document>.Import(stream2, _bufferManager);
                                     this.OnPullDocumentsRequest(new PullDocumentsRequestEventArgs() { Documents = message.Tags });
                                 }
-                                else if (type == (byte)SerializeId.DocumentPages)
+                                else if (type == (byte)SerializeId.DocumentSites)
                                 {
-                                    var message = ItemsMessage<DocumentPage>.Import(stream2, _bufferManager);
-                                    this.OnPullDocumentPages(new PullDocumentPagesEventArgs() { DocumentPages = message.Items, Contents = message.Contents });
+                                    var message = ItemsMessage<DocumentSite>.Import(stream2, _bufferManager);
+                                    this.OnPullDocumentSites(new PullDocumentSitesEventArgs() { DocumentSites = message.Items, Contents = message.Contents });
                                 }
                                 else if (type == (byte)SerializeId.DocumentOpinions)
                                 {
@@ -642,7 +642,7 @@ namespace Library.Net.Lair
                                 }
                                 else if (type == (byte)SerializeId.ChatsRequest)
                                 {
-                                    var message = RequestMessage<Chat>.Import(stream2, _bufferManager);
+                                    var message = RequestsMessage<Chat>.Import(stream2, _bufferManager);
                                     this.OnPullChatsRequest(new PullChatsRequestEventArgs() { Chats = message.Tags });
                                 }
                                 else if (type == (byte)SerializeId.ChatTopics)
@@ -657,7 +657,7 @@ namespace Library.Net.Lair
                                 }
                                 else if (type == (byte)SerializeId.WhispersRequest)
                                 {
-                                    var message = RequestMessage<Whisper>.Import(stream2, _bufferManager);
+                                    var message = RequestsMessage<Whisper>.Import(stream2, _bufferManager);
                                     this.OnPullWhispersRequest(new PullWhispersRequestEventArgs() { Whispers = message.Tags });
                                 }
                                 else if (type == (byte)SerializeId.WhisperMessages)
@@ -667,7 +667,7 @@ namespace Library.Net.Lair
                                 }
                                 else if (type == (byte)SerializeId.MailsRequest)
                                 {
-                                    var message = RequestMessage<Mail>.Import(stream2, _bufferManager);
+                                    var message = RequestsMessage<Mail>.Import(stream2, _bufferManager);
                                     this.OnPullMailsRequest(new PullMailsRequestEventArgs() { Mails = message.Tags });
                                 }
                                 else if (type == (byte)SerializeId.MailMessages)
@@ -705,19 +705,19 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnPullSectionsRequest(PullSectionsRequestEventArgs e)
+        protected virtual void OnPullSignaturesRequest(PullSignaturesRequestEventArgs e)
         {
-            if (this.PullSectionsRequestEvent != null)
+            if (this.PullSignaturesRequestEvent != null)
             {
-                this.PullSectionsRequestEvent(this, e);
+                this.PullSignaturesRequestEvent(this, e);
             }
         }
 
-        protected virtual void OnPullSectionProfiles(PullSectionProfilesEventArgs e)
+        protected virtual void OnPullSignatureProfiles(PullSignatureProfilesEventArgs e)
         {
-            if (this.PullSectionProfilesEvent != null)
+            if (this.PullSignatureProfilesEvent != null)
             {
-                this.PullSectionProfilesEvent(this, e);
+                this.PullSignatureProfilesEvent(this, e);
             }
         }
 
@@ -729,11 +729,11 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual void OnPullDocumentPages(PullDocumentPagesEventArgs e)
+        protected virtual void OnPullDocumentSites(PullDocumentSitesEventArgs e)
         {
-            if (this.PullDocumentPagesEvent != null)
+            if (this.PullDocumentSitesEvent != null)
             {
-                this.PullDocumentPagesEvent(this, e);
+                this.PullDocumentSitesEvent(this, e);
             }
         }
 
@@ -857,7 +857,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushSectionsRequest(IEnumerable<Section> sections)
+        public void PushSignaturesRequest(IEnumerable<string> signatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -867,10 +867,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.SectionsRequest);
+                    stream.WriteByte((byte)SerializeId.SignaturesRequest);
                     stream.Flush();
 
-                    var message = new RequestMessage<Section>(sections);
+                    var message = new SignaturesRequestMessage(signatures);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -894,7 +894,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushSectionProfiles(IEnumerable<SectionProfile> sectionProfiles, IEnumerable<ArraySegment<byte>> contents)
+        public void PushSignatureProfiles(IEnumerable<SignatureProfile> signatureProfiles, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -904,10 +904,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.SectionProfiles);
+                    stream.WriteByte((byte)SerializeId.SignatureProfiles);
                     stream.Flush();
 
-                    var message = new ItemsMessage<SectionProfile>(sectionProfiles, contents);
+                    var message = new ItemsMessage<SignatureProfile>(signatureProfiles, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -944,7 +944,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.DocumentsRequest);
                     stream.Flush();
 
-                    var message = new RequestMessage<Document>(documents);
+                    var message = new RequestsMessage<Document>(documents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -968,7 +968,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushDocumentPages(IEnumerable<DocumentPage> documentPages, IEnumerable<ArraySegment<byte>> contents)
+        public void PushDocumentSites(IEnumerable<DocumentSite> documentSites, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -978,10 +978,10 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.DocumentPages);
+                    stream.WriteByte((byte)SerializeId.DocumentSites);
                     stream.Flush();
 
-                    var message = new ItemsMessage<DocumentPage>(documentPages, contents);
+                    var message = new ItemsMessage<DocumentSite>(documentSites, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1055,7 +1055,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.ChatsRequest);
                     stream.Flush();
 
-                    var message = new RequestMessage<Chat>(chats);
+                    var message = new RequestsMessage<Chat>(chats);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1166,7 +1166,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.WhispersRequest);
                     stream.Flush();
 
-                    var message = new RequestMessage<Whisper>(whispers);
+                    var message = new RequestsMessage<Whisper>(whispers);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1240,7 +1240,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.MailsRequest);
                     stream.Flush();
 
-                    var message = new RequestMessage<Mail>(mails);
+                    var message = new RequestsMessage<Mail>(mails);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -1406,7 +1406,90 @@ namespace Library.Net.Lair
             }
         }
 
-        private sealed class RequestMessage<T> : ItemBase<RequestMessage<T>>
+        private sealed class SignaturesRequestMessage : ItemBase<SignaturesRequestMessage>
+        {
+            private enum SerializeId : byte
+            {
+                Signature = 0,
+            }
+
+            private SignatureCollection _signatures = new SignatureCollection();
+
+            public SignaturesRequestMessage(IEnumerable<string> signatures)
+            {
+                _signatures.AddRange(signatures);
+            }
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
+                {
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    {
+                        if (id == (byte)SerializeId.Signature)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                _signatures.Add(reader.ReadToEnd());
+                            }
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // Signatures
+                foreach (var s in this.Signatures)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(s);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Signature);
+
+                    streams.Add(bufferStream);
+                }
+
+                return new JoinStream(streams);
+            }
+
+            public override SignaturesRequestMessage DeepClone()
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return SignaturesRequestMessage.Import(stream, BufferManager.Instance);
+                }
+            }
+
+            public IEnumerable<string> Signatures
+            {
+                get
+                {
+                    return _signatures;
+                }
+            }
+        }
+
+        private sealed class RequestsMessage<T> : ItemBase<RequestsMessage<T>>
             where T : ItemBase<T>, ITag
         {
             private enum SerializeId : byte
@@ -1416,7 +1499,7 @@ namespace Library.Net.Lair
 
             private List<T> _tags = new List<T>();
 
-            public RequestMessage(IEnumerable<T> tags)
+            public RequestsMessage(IEnumerable<T> tags)
             {
                 _tags.AddRange(tags);
             }
@@ -1462,11 +1545,11 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override RequestMessage<T> DeepClone()
+            public override RequestsMessage<T> DeepClone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return RequestMessage<T>.Import(stream, BufferManager.Instance);
+                    return RequestsMessage<T>.Import(stream, BufferManager.Instance);
                 }
             }
 

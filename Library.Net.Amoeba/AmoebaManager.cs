@@ -636,7 +636,7 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _backgroundDownloadManager.Reset(signature);
+                _backgroundDownloadManager.ResetLink(signature);
             }
         }
 
@@ -646,7 +646,7 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _backgroundDownloadManager.Reset(signature);
+                _backgroundDownloadManager.ResetStore(signature);
             }
         }
 
