@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentOpinionContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent
+    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -17,13 +17,13 @@ namespace Library.Net.Lair
             Bad = 1,
         }
 
-        private SignatureCollection _goods = null;
-        private SignatureCollection _bads = null;
+        private KeyCollection _goods = null;
+        private KeyCollection _bads = null;
 
-        public static readonly int MaxGoodCount = 1024;
-        public static readonly int MaxBadCount = 1024;
+        public static readonly int MaxGoodsCount = 1024;
+        public static readonly int MaxBadsCount = 1024;
 
-        public DocumentOpinionContent(IEnumerable<string> goods, IEnumerable<string> bads)
+        public DocumentOpinionContent(IEnumerable<Key> goods, IEnumerable<Key> bads)
         {
             if (goods != null) this.ProtectedGoods.AddRange(goods);
             if (bads != null) this.ProtectedBads.AddRange(bads);
@@ -44,17 +44,11 @@ namespace Library.Net.Lair
                 {
                     if (id == (byte)SerializeId.Good)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ProtectedGoods.Add(reader.ReadToEnd());
-                        }
+                        this.ProtectedGoods.Add(Key.Import(rangeStream, bufferManager));
                     }
                     else if (id == (byte)SerializeId.Bad)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ProtectedBads.Add(reader.ReadToEnd());
-                        }
+                        this.ProtectedBads.Add(Key.Import(rangeStream, bufferManager));
                     }
                 }
             }
@@ -66,42 +60,26 @@ namespace Library.Net.Lair
             Encoding encoding = new UTF8Encoding(false);
 
             // Goods
-            foreach (var g in this.Goods)
+            foreach (var a in this.Goods)
             {
+                Stream exportStream = a.Export(bufferManager);
+
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(g);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Good);
 
-                streams.Add(bufferStream);
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
             // Bads
-            foreach (var b in this.Bads)
+            foreach (var a in this.Bads)
             {
+                Stream exportStream = a.Export(bufferManager);
+
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(b);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Bad);
 
-                streams.Add(bufferStream);
+                streams.Add(new JoinStream(bufferStream, exportStream));
             }
 
             return new JoinStream(streams);
@@ -153,9 +131,9 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IDocumentOpinionsContent
+        #region IDocumentOpinionsContent<Key>
 
-        public IEnumerable<string> Goods
+        public IEnumerable<Key> Goods
         {
             get
             {
@@ -164,18 +142,18 @@ namespace Library.Net.Lair
         }
 
         [DataMember(Name = "Goods")]
-        private SignatureCollection ProtectedGoods
+        private KeyCollection ProtectedGoods
         {
             get
             {
                 if (_goods == null)
-                    _goods = new SignatureCollection();
+                    _goods = new KeyCollection(DocumentOpinionContent.MaxGoodsCount);
 
                 return _goods;
             }
         }
 
-        public IEnumerable<string> Bads
+        public IEnumerable<Key> Bads
         {
             get
             {
@@ -184,12 +162,12 @@ namespace Library.Net.Lair
         }
 
         [DataMember(Name = "Bads")]
-        private SignatureCollection ProtectedBads
+        private KeyCollection ProtectedBads
         {
             get
             {
                 if (_bads == null)
-                    _bads = new SignatureCollection();
+                    _bads = new KeyCollection(DocumentOpinionContent.MaxBadsCount);
 
                 return _bads;
             }

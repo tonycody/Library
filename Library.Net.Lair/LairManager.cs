@@ -604,7 +604,7 @@ namespace Library.Net.Lair
         }
 
         public void UploadDocumentOpinion(Document document,
-             IEnumerable<string> goods, IEnumerable<string> bads, DigitalSignature digitalSignature)
+             IEnumerable<Key> goods, IEnumerable<Key> bads, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 

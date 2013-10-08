@@ -4,9 +4,10 @@ using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface IDocumentOpinionContent
+    interface IDocumentOpinionContent<TKey>
+        where TKey : IKey
     {
-        IEnumerable<string> Goods { get; }
-        IEnumerable<string> Bads { get; }
+        IEnumerable<TKey> Goods { get; }
+        IEnumerable<TKey> Bads { get; }
     }
 }
