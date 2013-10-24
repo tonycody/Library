@@ -1,24 +1,24 @@
 ﻿using System.Collections.Generic;
 using Library.Collections;
 
-namespace Library.Net.Amoeba
+namespace Library.Net.Lair
 {
-    public sealed class KeywordCollection : FilterList<string>, IEnumerable<string>
+    public sealed class ArgumentCollection : FilterList<string>, IEnumerable<string>
     {
-        public KeywordCollection() : base() { }
-        public KeywordCollection(int capacity) : base(capacity) { }
-        public KeywordCollection(IEnumerable<string> collections) : base(collections) { }
+        public ArgumentCollection() : base() { }
+        public ArgumentCollection(int capacity) : base(capacity) { }
+        public ArgumentCollection(IEnumerable<string> collections) : base(collections) { }
 
-        public static readonly int MaxKeywordLength = 256;
+        public static readonly int MaxArgumentLength = 1024;
 
         protected override bool Filter(string item)
         {
-            if (item == null || item.Length > KeywordCollection.MaxKeywordLength) return true;
+            if (item == null || item.Length > ArgumentCollection.MaxArgumentLength) return true;
 
             return false;
         }
 
-        #region IEnumerable<Keyword>
+        #region IEnumerable<Argument>
 
         IEnumerator<string> IEnumerable<string>.GetEnumerator()
         {

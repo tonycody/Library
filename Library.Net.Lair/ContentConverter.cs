@@ -564,13 +564,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToDocumentSiteContentBlock(DocumentSiteContent content)
+        public static ArraySegment<byte> ToDocumentSiteContentBlock(DocumentArchive content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<DocumentSiteContent>(content))
+            using (Stream stream = ContentConverter.ToStream<DocumentArchive>(content))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
                 stream.Read(value.Array, value.Offset, value.Count);
@@ -579,7 +579,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static DocumentSiteContent FromDocumentSiteContentBlock(ArraySegment<byte> content)
+        public static DocumentArchive FromDocumentSiteContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -587,7 +587,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
-                    return ContentConverter.FromStream<DocumentSiteContent>(stream);
+                    return ContentConverter.FromStream<DocumentArchive>(stream);
                 }
             }
             catch (Exception)
@@ -596,13 +596,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToDocumentOpinionContentBlock(DocumentOpinionContent content)
+        public static ArraySegment<byte> ToDocumentOpinionContentBlock(DocumentOpinion content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<DocumentOpinionContent>(content))
+            using (Stream stream = ContentConverter.ToStream<DocumentOpinion>(content))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
                 stream.Read(value.Array, value.Offset, value.Count);
@@ -611,7 +611,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static DocumentOpinionContent FromDocumentOpinionContentBlock(ArraySegment<byte> content)
+        public static DocumentOpinion FromDocumentOpinionContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -619,7 +619,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
-                    return ContentConverter.FromStream<DocumentOpinionContent>(stream);
+                    return ContentConverter.FromStream<DocumentOpinion>(stream);
                 }
             }
             catch (Exception)
@@ -628,13 +628,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToChatTopicContentBlock(ChatTopicContent content)
+        public static ArraySegment<byte> ToChatTopicContentBlock(ChatTopic content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<ChatTopicContent>(content))
+            using (Stream stream = ContentConverter.ToStream<ChatTopic>(content))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
                 stream.Read(value.Array, value.Offset, value.Count);
@@ -643,7 +643,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static ChatTopicContent FromChatTopicContentBlock(ArraySegment<byte> content)
+        public static ChatTopic FromChatTopicContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -651,7 +651,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
-                    return ContentConverter.FromStream<ChatTopicContent>(stream);
+                    return ContentConverter.FromStream<ChatTopic>(stream);
                 }
             }
             catch (Exception)
@@ -660,13 +660,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToChatMessageContentBlock(ChatMessageContent content)
+        public static ArraySegment<byte> ToChatMessageContentBlock(ChatMessage content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<ChatMessageContent>(content))
+            using (Stream stream = ContentConverter.ToStream<ChatMessage>(content))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
                 stream.Read(value.Array, value.Offset, value.Count);
@@ -675,7 +675,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static ChatMessageContent FromChatMessageContentBlock(ArraySegment<byte> content)
+        public static ChatMessage FromChatMessageContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -683,7 +683,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
-                    return ContentConverter.FromStream<ChatMessageContent>(stream);
+                    return ContentConverter.FromStream<ChatMessage>(stream);
                 }
             }
             catch (Exception)
@@ -728,14 +728,14 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToMailMessageContentBlock(MailMessageContent content, IExchangeEncrypt exchangeEncrypt)
+        public static ArraySegment<byte> ToMailMessageContentBlock(MailMessage content, IExchangeEncrypt exchangeEncrypt)
         {
             if (content == null) throw new ArgumentNullException("content");
             if (exchangeEncrypt == null) throw new ArgumentNullException("exchangeEncrypt");
 
             ArraySegment<byte> value;
 
-            using (Stream contentStream = ContentConverter.ToStream<MailMessageContent>(content))
+            using (Stream contentStream = ContentConverter.ToStream<MailMessage>(content))
             using (Stream paddingStream = ContentConverter.ToPaddingStream(contentStream, 1024 * 32))
             using (Stream cryptostream = ContentConverter.Encrypt(paddingStream, exchangeEncrypt))
             {
@@ -746,7 +746,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static MailMessageContent FromMailMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt exchangeDecrypt)
+        public static MailMessage FromMailMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt exchangeDecrypt)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
             if (exchangeDecrypt == null) throw new ArgumentNullException("exchangeDecrypt");
@@ -757,7 +757,7 @@ namespace Library.Net.Lair
                 using (Stream paddingStream = ContentConverter.Decrypt(cryptoStream, exchangeDecrypt))
                 using (Stream contentStream = ContentConverter.FromPaddingStream(paddingStream))
                 {
-                    return ContentConverter.FromStream<MailMessageContent>(contentStream);
+                    return ContentConverter.FromStream<MailMessage>(contentStream);
                 }
             }
             catch (Exception)

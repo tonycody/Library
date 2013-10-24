@@ -408,11 +408,11 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                var removeHeaders = _settings.ClustersIndex.Keys
+                var removeKeys = _settings.ClustersIndex.Keys
                     .Where(n => !usingHeaders.Contains(n))
                     .ToList();
 
-                removeHeaders.Sort((x, y) =>
+                removeKeys.Sort((x, y) =>
                 {
                     var xc = _settings.ClustersIndex[x];
                     var yc = _settings.ClustersIndex[y];
@@ -420,11 +420,11 @@ namespace Library.Net.Amoeba
                     return xc.UpdateTime.CompareTo(yc.UpdateTime);
                 });
 
-                foreach (var header in removeHeaders)
+                foreach (var key in removeKeys)
                 {
                     if (clusterCount <= _spaceClusters.Count) return;
 
-                    this.Remove(header);
+                    this.Remove(key);
                 }
             }
         }
@@ -583,11 +583,11 @@ namespace Library.Net.Amoeba
                 long cc = 256 * 1024 * 1024;
                 size = (long)((size + (cc - 1)) / cc) * cc;
 
-                foreach (var header in _settings.ClustersIndex.Keys.ToArray()
+                foreach (var key in _settings.ClustersIndex.Keys.ToArray()
                     .Where(n => _settings.ClustersIndex[n].Indexes.Any(o => size < ((o + 1) * CacheManager.ClusterSize)))
                     .ToArray())
                 {
-                    this.Remove(header);
+                    this.Remove(key);
                 }
 
                 long count = (size + (long)CacheManager.ClusterSize - 1) / (long)CacheManager.ClusterSize;
@@ -985,7 +985,7 @@ namespace Library.Net.Amoeba
             }
             else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
-                if (keys.Count > 128) throw new ArgumentOutOfRangeException("headers");
+                if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
 
                 List<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
                 List<ArraySegment<byte>> parityBufferList = new List<ArraySegment<byte>>();
@@ -1230,14 +1230,14 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                KeyCollection headers = new KeyCollection();
+                KeyCollection keys = new KeyCollection();
 
                 for (int i = 0; i < group.InformationLength; i++)
                 {
-                    headers.Add(group.Keys[i]);
+                    keys.Add(group.Keys[i]);
                 }
 
-                return new KeyCollection(headers.Select(n => n.DeepClone()));
+                return new KeyCollection(keys.Select(n => n.DeepClone()));
             }
             else
             {

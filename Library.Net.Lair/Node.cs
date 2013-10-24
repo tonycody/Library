@@ -19,8 +19,8 @@ namespace Library.Net.Lair
             Uri = 1,
         }
 
-        private byte[] _id;
-        private UriCollection _uris;
+        private byte[] _id = null;
+        private UriCollection _uris = null;
 
         private int _hashCode = 0;
 

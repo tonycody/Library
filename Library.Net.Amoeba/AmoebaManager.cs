@@ -124,15 +124,6 @@ namespace Library.Net.Amoeba
                     return _connectionsManager.BaseNode;
                 }
             }
-            set
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.BaseNode = value;
-                }
-            }
         }
 
         public IEnumerable<Node> OtherNodes
@@ -341,6 +332,16 @@ namespace Library.Net.Amoeba
                 {
                     return _cacheManager.Size;
                 }
+            }
+        }
+
+        public void SetBaseNode(Node baseNode)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.SetBaseNode(baseNode);
             }
         }
 

@@ -1396,7 +1396,7 @@ namespace Library.Net.Lair
 
                                     lock (this.ThisLock)
                                     {
-                                        var removeDocumentSites = new List<DocumentSite>();
+                                        var removeDocumentSites = new List<DocumentArchive>();
                                         var removeDocumentOpinions = new List<DocumentOpinion>();
                                         var removeChatTopics = new List<ChatTopic>();
                                         var removeChatMessages = new List<ChatMessage>();
@@ -1408,7 +1408,7 @@ namespace Library.Net.Lair
                                             // trustのDocumentSiteはすべて許容
                                             // untrustのDocumentSiteはランダムに256まで許容
                                             {
-                                                var untrustDocumentSites = new List<DocumentSite>();
+                                                var untrustDocumentSites = new List<DocumentArchive>();
 
                                                 foreach (var item in _settings.GetDocumentSites(document))
                                                 {
@@ -2470,7 +2470,7 @@ namespace Library.Net.Lair
                             {
                                 // PushDocumentSites
                                 {
-                                    var items = new List<DocumentSite>();
+                                    var items = new List<DocumentArchive>();
 
                                     lock (this.ThisLock)
                                     {
@@ -3588,7 +3588,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<DocumentSite> GetDocumentSites(Document document)
+        public IEnumerable<DocumentArchive> GetDocumentSites(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3672,7 +3672,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentSiteContent GetContent(DocumentSite document)
+        public DocumentArchive GetContent(DocumentArchive document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3696,7 +3696,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentOpinionContent GetContent(DocumentOpinion vote)
+        public DocumentOpinion GetContent(DocumentOpinion vote)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3720,7 +3720,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopic chatTopic)
+        public ChatTopic GetContent(ChatTopic chatTopic)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3744,7 +3744,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessage chatMessage)
+        public ChatMessage GetContent(ChatMessage chatMessage)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3792,7 +3792,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public MailMessageContent GetContent(MailMessage mailMessage, IExchangeDecrypt exchangeDecrypt)
+        public MailMessage GetContent(MailMessage mailMessage, IExchangeDecrypt exchangeDecrypt)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3858,11 +3858,11 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    var content = new DocumentSiteContent(documentPages);
+                    var content = new DocumentArchive(documentPages);
                     buffer = ContentConverter.ToDocumentSiteContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
-                    var documentSite = new DocumentSite(document, key, digitalSignature);
+                    var documentSite = new DocumentArchive(document, key, digitalSignature);
 
                     if (_settings.SetDocumentSite(documentSite))
                     {
@@ -3890,7 +3890,7 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    var content = new DocumentOpinionContent(goods, bads);
+                    var content = new DocumentOpinion(goods, bads);
                     buffer = ContentConverter.ToDocumentOpinionContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
@@ -3922,7 +3922,7 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    var content = new ChatTopicContent(comment);
+                    var content = new ChatTopic(comment);
                     buffer = ContentConverter.ToChatTopicContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
@@ -3954,7 +3954,7 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    var content = new ChatMessageContent(comment, anchors);
+                    var content = new ChatMessage(comment, anchors);
                     buffer = ContentConverter.ToChatMessageContentBlock(content);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
@@ -4018,7 +4018,7 @@ namespace Library.Net.Lair
 
                 try
                 {
-                    var content = new MailMessageContent(text);
+                    var content = new MailMessage(text);
                     buffer = ContentConverter.ToMailMessageContentBlock(content, exchangeEncrypt);
                     var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
 
@@ -4181,7 +4181,7 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<Dictionary<string, SignatureProfile>>() { Name = "SignatureProfiles", Value = new Dictionary<string, SignatureProfile>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Document, Dictionary<string, DocumentSite>>>() { Name = "DocumentSites", Value = new Dictionary<Document, Dictionary<string, DocumentSite>>() },
+                    new Library.Configuration.SettingsContext<Dictionary<Document, Dictionary<string, DocumentArchive>>>() { Name = "DocumentSites", Value = new Dictionary<Document, Dictionary<string, DocumentArchive>>() },
                     new Library.Configuration.SettingsContext<Dictionary<Document, Dictionary<string, DocumentOpinion>>>() { Name = "DocumentOpinions", Value = new Dictionary<Document, Dictionary<string, DocumentOpinion>>() },
                     new Library.Configuration.SettingsContext<Dictionary<Chat, Dictionary<string, ChatTopic>>>() { Name = "ChatTopics", Value = new Dictionary<Chat, Dictionary<string, ChatTopic>>() },
                     new Library.Configuration.SettingsContext<Dictionary<Chat, HashSet<ChatMessage>>>() { Name = "ChatMessages", Value = new Dictionary<Chat, HashSet<ChatMessage>>() },
@@ -4368,18 +4368,18 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<DocumentSite> GetDocumentSites(Document document)
+            public IEnumerable<DocumentArchive> GetDocumentSites(Document document)
             {
                 lock (_thisLock)
                 {
-                    Dictionary<string, DocumentSite> dic = null;
+                    Dictionary<string, DocumentArchive> dic = null;
 
                     if (this.DocumentSites.TryGetValue(document, out dic))
                     {
                         return dic.Values;
                     }
 
-                    return new DocumentSite[0];
+                    return new DocumentArchive[0];
                 }
             }
 
@@ -4484,7 +4484,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public bool SetDocumentSite(DocumentSite documentSite)
+            public bool SetDocumentSite(DocumentArchive documentSite)
             {
                 lock (_thisLock)
                 {
@@ -4496,11 +4496,11 @@ namespace Library.Net.Lair
 
                     var signature = documentSite.Certificate.ToString();
 
-                    Dictionary<string, DocumentSite> dic = null;
+                    Dictionary<string, DocumentArchive> dic = null;
 
                     if (!this.DocumentSites.TryGetValue(documentSite.Document, out dic))
                     {
-                        dic = new Dictionary<string, DocumentSite>();
+                        dic = new Dictionary<string, DocumentArchive>();
                         this.DocumentSites[documentSite.Document] = dic;
 
                         dic[signature] = documentSite;
@@ -4508,7 +4508,7 @@ namespace Library.Net.Lair
                         return true;
                     }
 
-                    DocumentSite tempDocumentSite = null;
+                    DocumentArchive tempDocumentSite = null;
 
                     if (!dic.TryGetValue(signature, out tempDocumentSite)
                         || documentSite.CreationTime > tempDocumentSite.CreationTime)
@@ -4675,13 +4675,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public void RemoveDocumentSite(DocumentSite documentSite)
+            public void RemoveDocumentSite(DocumentArchive documentSite)
             {
                 lock (_thisLock)
                 {
                     var signature = documentSite.Certificate.ToString();
 
-                    Dictionary<string, DocumentSite> dic = null;
+                    Dictionary<string, DocumentArchive> dic = null;
 
                     if (this.DocumentSites.TryGetValue(documentSite.Document, out dic))
                     {
@@ -4865,13 +4865,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            private Dictionary<Document, Dictionary<string, DocumentSite>> DocumentSites
+            private Dictionary<Document, Dictionary<string, DocumentArchive>> DocumentSites
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<Document, Dictionary<string, DocumentSite>>)this["DocumentSites"];
+                        return (Dictionary<Document, Dictionary<string, DocumentArchive>>)this["DocumentSites"];
                     }
                 }
             }

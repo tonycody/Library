@@ -19,8 +19,8 @@ namespace Library.Net.Amoeba
             Uri = 1,
         }
 
-        private byte[] _id;
-        private UriCollection _uris;
+        private byte[] _id = null;
+        private UriCollection _uris = null;
 
         private int _hashCode = 0;
 
@@ -30,9 +30,10 @@ namespace Library.Net.Amoeba
         public static readonly int MaxIdLength = 64;
         public static readonly int MaxUrisCount = 32;
 
-        public Node()
+        public Node(byte[] id, IEnumerable<string> uris)
         {
-
+            this.Id = id;
+            if (uris != null) this.ProtectedUris.AddRange(uris);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -62,7 +63,7 @@ namespace Library.Net.Amoeba
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Uris.Add(reader.ReadToEnd());
+                                this.ProtectedUris.Add(reader.ReadToEnd());
                             }
                         }
                     }
@@ -186,7 +187,7 @@ namespace Library.Net.Amoeba
                     return _id;
                 }
             }
-            set
+            private set
             {
                 lock (this.ThisLock)
                 {
@@ -215,18 +216,23 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        [DataMember(Name = "Uris")]
-        public UriCollection Uris
+        public IEnumerable<string> Uris
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    if (_uris == null)
-                        _uris = new UriCollection(Node.MaxUrisCount);
+                return this.ProtectedUris;
+            }
+        }
 
-                    return _uris;
-                }
+        [DataMember(Name = "Uris")]
+        private UriCollection ProtectedUris
+        {
+            get
+            {
+                if (_uris == null)
+                    _uris = new UriCollection(Node.MaxUrisCount);
+
+                return _uris;
             }
         }
 

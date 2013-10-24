@@ -35,7 +35,7 @@ namespace Library.Net.Lair
 
     class PullDocumentSitesEventArgs : EventArgs
     {
-        public IEnumerable<DocumentSite> DocumentSites { get; set; }
+        public IEnumerable<DocumentArchive> DocumentSites { get; set; }
         public IEnumerable<ArraySegment<byte>> Contents { get; set; }
     }
 
@@ -968,7 +968,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushDocumentSites(IEnumerable<DocumentSite> documentSites, IEnumerable<ArraySegment<byte>> contents)
+        public void PushDocumentSites(IEnumerable<DocumentArchive> documentSites, IEnumerable<ArraySegment<byte>> contents)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -981,7 +981,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.DocumentSites);
                     stream.Flush();
 
-                    var message = new ItemsMessage<DocumentSite>(documentSites, contents);
+                    var message = new ItemsMessage<DocumentArchive>(documentSites, contents);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 

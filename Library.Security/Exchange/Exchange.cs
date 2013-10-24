@@ -17,9 +17,9 @@ namespace Library.Security
             PrivateKey = 2,
         }
 
-        private ExchangeAlgorithm _exchangeAlgorithm;
-        private byte[] _publicKey;
-        private byte[] _privateKey;
+        private ExchangeAlgorithm _exchangeAlgorithm = 0;
+        private byte[] _publicKey = null;
+        private byte[] _privateKey = null;
         private int _hashCode = 0;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;

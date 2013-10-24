@@ -181,18 +181,6 @@ namespace Library.Net.Amoeba
                     return _settings.BaseNode;
                 }
             }
-            set
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    _settings.BaseNode = value;
-                    _routeTable.BaseNode = value;
-
-                    this.UpdateSessionId();
-                }
-            }
         }
 
         public IEnumerable<Node> OtherNodes
@@ -1489,7 +1477,7 @@ namespace Library.Net.Amoeba
 
                             nodes.AddRange(clist
                                 .Select(n => n.Node)
-                                .Where(n => n.Uris.Count > 0)
+                                .Where(n => n.Uris.Count() > 0)
                                 .Take(12));
                         }
 
@@ -1574,9 +1562,9 @@ namespace Library.Net.Amoeba
                                     Debug.WriteLine(string.Format("ConnectionManager: Push BlocksRequest ({0})", tempList.Count));
                                     _pushBlockRequestCount += tempList.Count;
 
-                                    foreach (var header in tempList)
+                                    foreach (var key in tempList)
                                     {
-                                        _downloadBlocks.Remove(header);
+                                        _downloadBlocks.Remove(key);
                                     }
                                 }
                                 catch (Exception e)
@@ -1902,11 +1890,11 @@ namespace Library.Net.Amoeba
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksLink ({0})", e.Keys.Count()));
 
-            foreach (var header in e.Keys.Take(_maxBlockLinkCount))
+            foreach (var key in e.Keys.Take(_maxBlockLinkCount))
             {
-                if (header == null || header.Hash == null || header.HashAlgorithm != HashAlgorithm.Sha512) continue;
+                if (key == null || key.Hash == null || key.HashAlgorithm != HashAlgorithm.Sha512) continue;
 
-                messageManager.PullBlocksLink.Add(header);
+                messageManager.PullBlocksLink.Add(key);
                 _pullBlockLinkCount++;
             }
         }
@@ -1923,11 +1911,11 @@ namespace Library.Net.Amoeba
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksRequest ({0})", e.Keys.Count()));
 
-            foreach (var header in e.Keys.Take(_maxBlockRequestCount))
+            foreach (var key in e.Keys.Take(_maxBlockRequestCount))
             {
-                if (header == null || header.Hash == null || header.HashAlgorithm != HashAlgorithm.Sha512) continue;
+                if (key == null || key.Hash == null || key.HashAlgorithm != HashAlgorithm.Sha512) continue;
 
-                messageManager.PullBlocksRequest.Add(header);
+                messageManager.PullBlocksRequest.Add(key);
                 _pullBlockRequestCount++;
             }
         }
@@ -2086,6 +2074,24 @@ namespace Library.Net.Amoeba
             if (_uploadedEvent != null)
             {
                 _uploadedEvent(this, keys);
+            }
+        }
+
+        public void SetBaseNode(Node baseNode)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (baseNode == null) throw new ArgumentNullException("baseNode");
+            if (baseNode.Id == null) throw new ArgumentNullException("baseNode.Id");
+
+            lock (this.ThisLock)
+            {
+                if (!Collection.Equals(_settings.BaseNode.Id, baseNode.Id))
+                {
+                    this.UpdateSessionId();
+                }
+
+                _settings.BaseNode = baseNode;
+                _routeTable.BaseNode = baseNode;
             }
         }
 
@@ -2349,7 +2355,7 @@ namespace Library.Net.Amoeba
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
-                    new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node() },
+                    new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node(new byte[64], null)},
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },

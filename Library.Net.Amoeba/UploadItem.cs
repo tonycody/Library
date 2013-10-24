@@ -3,8 +3,8 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Xml;
-using Library.Security;
 using Library.Io;
+using Library.Security;
 
 namespace Library.Net.Amoeba
 {
@@ -43,46 +43,50 @@ namespace Library.Net.Amoeba
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Amoeba")]
     sealed class UploadItem : IDeepCloneable<UploadItem>, IThisLock
     {
-        private string _filePath;
-        private UploadState _state;
         private UploadType _type;
+        private UploadState _state;
         private int _priority = 3;
-        private int _blockLength;
+
+        private string _filePath;
+
+        private int _rank;
         private KeyCollection _keys;
         private GroupCollection _groups;
-        private int _rank;
+        private int _blockLength;
         private CompressionAlgorithm _compressionAlgorithm;
         private CryptoAlgorithm _cryptoAlgorithm;
         private byte[] _cryptoKey;
         private CorrectionAlgorithm _correctionAlgorithm;
         private HashAlgorithm _hashAlgorithm;
+        private DigitalSignature _digitalSignature;
+        private Seed _seed;
+
+        private long _encodeBytes;
+        private long _encodingBytes;
+
         private List<Key> _LockedKeys;
         private HashSet<Key> _uploadKeys;
         private HashSet<Key> _uploadedKeys;
-        private Seed _seed;
-        private DigitalSignature _digitalSignature;
-        private long _encodeBytes;
-        private long _encodingBytes;
         private IndexCollection _indexes;
 
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
-        [DataMember(Name = "Priority")]
-        public int Priority
+        [DataMember(Name = "Type")]
+        public UploadType Type
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _priority;
+                    return _type;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _priority = value;
+                    _type = value;
                 }
             }
         }
@@ -106,21 +110,40 @@ namespace Library.Net.Amoeba
             }
         }
 
-        [DataMember(Name = "Type")]
-        public UploadType Type
+        [DataMember(Name = "Priority")]
+        public int Priority
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _type;
+                    return _priority;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _type = value;
+                    _priority = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "FilePath")]
+        public string FilePath
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _filePath;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _filePath = value;
                 }
             }
         }
@@ -144,21 +167,51 @@ namespace Library.Net.Amoeba
             }
         }
 
-        [DataMember(Name = "FilePath")]
-        public string FilePath
+        [DataMember(Name = "Keys")]
+        public KeyCollection Keys
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _filePath;
+                    if (_keys == null)
+                        _keys = new KeyCollection();
+
+                    return _keys;
+                }
+            }
+        }
+
+        [DataMember(Name = "Groups")]
+        public GroupCollection Groups
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_groups == null)
+                        _groups = new GroupCollection();
+
+                    return _groups;
+                }
+            }
+        }
+
+        [DataMember(Name = "BlockLength")]
+        public int BlockLength
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _blockLength;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _filePath = value;
+                    _blockLength = value;
                 }
             }
         }
@@ -197,6 +250,25 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     _cryptoAlgorithm = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "CryptoKey")]
+        public byte[] CryptoKey
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _cryptoKey;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _cryptoKey = value;
                 }
             }
         }
@@ -277,70 +349,40 @@ namespace Library.Net.Amoeba
             }
         }
 
-        [DataMember(Name = "BlockLength")]
-        public int BlockLength
+        [DataMember(Name = "EncodeBytes")]
+        public long EncodeBytes
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _blockLength;
+                    return _encodeBytes;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _blockLength = value;
+                    _encodeBytes = value;
                 }
             }
         }
 
-        [DataMember(Name = "CryptoKey")]
-        public byte[] CryptoKey
+        [DataMember(Name = "EncodingBytes")]
+        public long EncodingBytes
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _cryptoKey;
+                    return _encodingBytes;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _cryptoKey = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "Keys")]
-        public KeyCollection Keys
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_keys == null)
-                        _keys = new KeyCollection();
-
-                    return _keys;
-                }
-            }
-        }
-
-        [DataMember(Name = "Groups")]
-        public GroupCollection Groups
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    if (_groups == null)
-                        _groups = new GroupCollection();
-
-                    return _groups;
+                    _encodingBytes = value;
                 }
             }
         }
@@ -390,44 +432,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        [DataMember(Name = "EncodeBytes")]
-        public long EncodeBytes
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _encodeBytes;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _encodeBytes = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "EncodingBytes")]
-        public long EncodingBytes
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _encodingBytes;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _encodingBytes = value;
-                }
-            }
-        }
-
         [DataMember(Name = "Indexs")]
         public IndexCollection Indexes
         {
@@ -445,20 +449,23 @@ namespace Library.Net.Amoeba
 
         public UploadItem DeepClone()
         {
-            var ds = new DataContractSerializer(typeof(UploadItem));
-
-            using (BufferStream stream = new BufferStream(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
-                {
-                    ds.WriteObject(textDictionaryWriter, this);
-                }
+                var ds = new DataContractSerializer(typeof(UploadItem));
 
-                stream.Position = 0;
-
-                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    return (UploadItem)ds.ReadObject(textDictionaryReader);
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    {
+                        ds.WriteObject(textDictionaryWriter, this);
+                    }
+
+                    stream.Position = 0;
+
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    {
+                        return (UploadItem)ds.ReadObject(textDictionaryReader);
+                    }
                 }
             }
         }

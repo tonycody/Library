@@ -27,59 +27,120 @@ namespace Library.Net.Amoeba
     [DataContract(Name = "BackgroundUploadItem", Namespace = "http://Library/Net/Amoeba")]
     [KnownType(typeof(Link))]
     [KnownType(typeof(Store))]
-    sealed class BackgroundUploadItem : IDeepCloneable<BackgroundUploadItem>
+    sealed class BackgroundUploadItem : IDeepCloneable<BackgroundUploadItem>, IThisLock
     {
+        private BackgroundItemType _type;
+        private BackgroundUploadState _state;
+
+        private object _value;
+
+        private int _rank;
         private KeyCollection _keys;
         private GroupCollection _groups;
+        private int _blockLength;
+        private CompressionAlgorithm _compressionAlgorithm;
+        private CryptoAlgorithm _cryptoAlgorithm;
+        private byte[] _cryptoKey;
+        private CorrectionAlgorithm _correctionAlgorithm;
+        private HashAlgorithm _hashAlgorithm;
+        private DigitalSignature _digitalSignature;
+        private Seed _seed;
+
         private List<Key> _LockedKeys;
         private HashSet<Key> _uploadKeys;
         private HashSet<Key> _uploadedKeys;
 
-        [DataMember(Name = "Type")]
-        public BackgroundItemType Type { get; set; }
+        private object _thisLock;
+        private static object _thisStaticLock = new object();
 
-        [DataMember(Name = "Value")]
-        public object Value { get; set; }
+        [DataMember(Name = "Type")]
+        public BackgroundItemType Type
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _type;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _type = value;
+                }
+            }
+        }
 
         [DataMember(Name = "State")]
-        public BackgroundUploadState State { get; set; }
+        public BackgroundUploadState State
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _state;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _state = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Value")]
+        public object Value
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _value;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _value = value;
+                }
+            }
+        }
 
         [DataMember(Name = "Rank")]
-        public int Rank { get; set; }
-
-        [DataMember(Name = "CompressionAlgorithm")]
-        public CompressionAlgorithm CompressionAlgorithm { get; set; }
-
-        [DataMember(Name = "CryptoAlgorithm")]
-        public CryptoAlgorithm CryptoAlgorithm { get; set; }
-
-        [DataMember(Name = "CorrectionAlgorithm")]
-        public CorrectionAlgorithm CorrectionAlgorithm { get; set; }
-
-        [DataMember(Name = "HashAlgorithm")]
-        public HashAlgorithm HashAlgorithm { get; set; }
-
-        [DataMember(Name = "DigitalSignature")]
-        public DigitalSignature DigitalSignature { get; set; }
-
-        [DataMember(Name = "Seed")]
-        public Seed Seed { get; set; }
-
-        [DataMember(Name = "BlockLength")]
-        public int BlockLength { get; set; }
-
-        [DataMember(Name = "CryptoKey")]
-        public byte[] CryptoKey { get; set; }
+        public int Rank
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _rank;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _rank = value;
+                }
+            }
+        }
 
         [DataMember(Name = "Keys")]
         public KeyCollection Keys
         {
             get
             {
-                if (_keys == null)
-                    _keys = new KeyCollection();
+                lock (this.ThisLock)
+                {
+                    if (_keys == null)
+                        _keys = new KeyCollection();
 
-                return _keys;
+                    return _keys;
+                }
             }
         }
 
@@ -88,34 +149,165 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_groups == null)
-                    _groups = new GroupCollection();
+                lock (this.ThisLock)
+                {
+                    if (_groups == null)
+                        _groups = new GroupCollection();
 
-                return _groups;
+                    return _groups;
+                }
             }
         }
 
-        [DataMember(Name = "UploadKeys")]
-        public HashSet<Key> UploadKeys
+        [DataMember(Name = "BlockLength")]
+        public int BlockLength
         {
             get
             {
-                if (_uploadKeys == null)
-                    _uploadKeys = new HashSet<Key>();
-
-                return _uploadKeys;
+                lock (this.ThisLock)
+                {
+                    return _blockLength;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _blockLength = value;
+                }
             }
         }
 
-        [DataMember(Name = "UploadedKeys")]
-        public HashSet<Key> UploadedKeys
+        [DataMember(Name = "CompressionAlgorithm")]
+        public CompressionAlgorithm CompressionAlgorithm
         {
             get
             {
-                if (_uploadedKeys == null)
-                    _uploadedKeys = new HashSet<Key>();
+                lock (this.ThisLock)
+                {
+                    return _compressionAlgorithm;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _compressionAlgorithm = value;
+                }
+            }
+        }
 
-                return _uploadedKeys;
+        [DataMember(Name = "CryptoAlgorithm")]
+        public CryptoAlgorithm CryptoAlgorithm
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _cryptoAlgorithm;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _cryptoAlgorithm = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "CryptoKey")]
+        public byte[] CryptoKey
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _cryptoKey;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _cryptoKey = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "CorrectionAlgorithm")]
+        public CorrectionAlgorithm CorrectionAlgorithm
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _correctionAlgorithm;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _correctionAlgorithm = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "HashAlgorithm")]
+        public HashAlgorithm HashAlgorithm
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _hashAlgorithm;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _hashAlgorithm = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "DigitalSignature")]
+        public DigitalSignature DigitalSignature
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _digitalSignature;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _digitalSignature = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Seed")]
+        public Seed Seed
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _seed;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _seed = value;
+                }
             }
         }
 
@@ -124,31 +316,85 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_LockedKeys == null)
-                    _LockedKeys = new List<Key>();
+                lock (this.ThisLock)
+                {
+                    if (_LockedKeys == null)
+                        _LockedKeys = new List<Key>();
 
-                return _LockedKeys;
+                    return _LockedKeys;
+                }
+            }
+        }
+
+        [DataMember(Name = "UploadKeys")]
+        public HashSet<Key> UploadKeys
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_uploadKeys == null)
+                        _uploadKeys = new HashSet<Key>();
+
+                    return _uploadKeys;
+                }
+            }
+        }
+
+        [DataMember(Name = "UploadedKeys")]
+        public HashSet<Key> UploadedKeys
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_uploadedKeys == null)
+                        _uploadedKeys = new HashSet<Key>();
+
+                    return _uploadedKeys;
+                }
             }
         }
 
         public BackgroundUploadItem DeepClone()
         {
-            var ds = new DataContractSerializer(typeof(BackgroundUploadItem));
-
-            using (BufferStream stream = new BufferStream(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
-                {
-                    ds.WriteObject(textDictionaryWriter, this);
-                }
+                var ds = new DataContractSerializer(typeof(BackgroundUploadItem));
 
-                stream.Position = 0;
-
-                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    return (BackgroundUploadItem)ds.ReadObject(textDictionaryReader);
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    {
+                        ds.WriteObject(textDictionaryWriter, this);
+                    }
+
+                    stream.Position = 0;
+
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    {
+                        return (BackgroundUploadItem)ds.ReadObject(textDictionaryReader);
+                    }
                 }
             }
         }
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                lock (_thisStaticLock)
+                {
+                    if (_thisLock == null)
+                        _thisLock = new object();
+
+                    return _thisLock;
+                }
+            }
+        }
+
+        #endregion
     }
 }

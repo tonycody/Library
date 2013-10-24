@@ -28,38 +28,22 @@ namespace Library.Net.Amoeba
     [DataContract(Name = "DownloadItem", Namespace = "http://Library/Net/Amoeba")]
     sealed class DownloadItem : IDeepCloneable<DownloadItem>, IThisLock
     {
-        private int _priority = 3;
         private DownloadState _state;
+        private int _priority = 3;
+
+        private Seed _seed;
 
         private int _rank;
-        private Seed _seed;
         private Index _index;
         private string _path;
+
         private long _decodeBytes;
         private long _decodingBytes;
+
         private IndexCollection _indexes;
 
         private object _thisLock;
         private static object _thisStaticLock = new object();
-
-        [DataMember(Name = "Priority")]
-        public int Priority
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _priority;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _priority = value;
-                }
-            }
-        }
 
         [DataMember(Name = "State")]
         public DownloadState State
@@ -80,40 +64,21 @@ namespace Library.Net.Amoeba
             }
         }
 
-        [DataMember(Name = "Path")]
-        public string Path
+        [DataMember(Name = "Priority")]
+        public int Priority
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _path;
+                    return _priority;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _path = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "Rank")]
-        public int Rank
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _rank;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _rank = value;
+                    _priority = value;
                 }
             }
         }
@@ -137,6 +102,25 @@ namespace Library.Net.Amoeba
             }
         }
 
+        [DataMember(Name = "Rank")]
+        public int Rank
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _rank;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _rank = value;
+                }
+            }
+        }
+
         [DataMember(Name = "Index")]
         public Index Index
         {
@@ -152,6 +136,25 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     _index = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Path")]
+        public string Path
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _path;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _path = value;
                 }
             }
         }
@@ -211,20 +214,23 @@ namespace Library.Net.Amoeba
 
         public DownloadItem DeepClone()
         {
-            var ds = new DataContractSerializer(typeof(DownloadItem));
-
-            using (BufferStream stream = new BufferStream(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
-                {
-                    ds.WriteObject(textDictionaryWriter, this);
-                }
+                var ds = new DataContractSerializer(typeof(DownloadItem));
 
-                stream.Position = 0;
-
-                using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    return (DownloadItem)ds.ReadObject(textDictionaryReader);
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    {
+                        ds.WriteObject(textDictionaryWriter, this);
+                    }
+
+                    stream.Position = 0;
+
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    {
+                        return (DownloadItem)ds.ReadObject(textDictionaryReader);
+                    }
                 }
             }
         }

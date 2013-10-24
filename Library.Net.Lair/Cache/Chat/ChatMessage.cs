@@ -9,30 +9,24 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatMessage", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatMessage : ReadOnlyCertificateItemBase<ChatMessage>, IChatMessage<Chat, Key>
+    public sealed class ChatMessage : ItemBase<ChatMessage>, IChatMessage<Key>
     {
         private enum SerializeId : byte
         {
-            Chat = 0,
-            CreationTime = 1,
-            Content = 2,
-
-            Certificate = 3,
+            Comment = 0,
+            Anchor = 1,
         }
 
-        private Chat _chat = null;
-        private DateTime _creationTime = DateTime.MinValue;
-        private Key _content = null;
+        private string _comment = null;
+        private KeyCollection _anchors = null;
 
-        private Certificate _certificate;
+        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxAnchorCount = 32;
 
-        public ChatMessage(Chat chat, Key content, DigitalSignature digitalSignature)
+        public ChatMessage(string comment, IEnumerable<Key> anchors)
         {
-            this.Chat = chat;
-            this.CreationTime = DateTime.UtcNow;
-            this.Content = content;
-
-            this.CreateCertificate(digitalSignature);
+            this.Comment = comment;
+            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -48,25 +42,16 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Chat)
-                    {
-                        this.Chat = Chat.Import(rangeStream, bufferManager);
-                    }
-                    else if (id == (byte)SerializeId.CreationTime)
+                    if (id == (byte)SerializeId.Comment)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                            this.Comment = reader.ReadToEnd();
                         }
                     }
-                    else if (id == (byte)SerializeId.Content)
+                    else if (id == (byte)SerializeId.Anchor)
                     {
-                        this.Content = Key.Import(rangeStream, bufferManager);
-                    }
-
-                    else if (id == (byte)SerializeId.Certificate)
-                    {
-                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        this.ProtectedAnchors.Add(Key.Import(rangeStream, bufferManager));
                     }
                 }
             }
@@ -77,19 +62,8 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Chat
-            if (this.Chat != null)
-            {
-                Stream exportStream = this.Chat.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Chat);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-            // CreationTime
-            if (this.CreationTime != DateTime.MinValue)
+            // Comment
+            if (this.Comment != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -98,35 +72,23 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                    writer.Write(this.Comment);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CreationTime);
+                bufferStream.WriteByte((byte)SerializeId.Comment);
 
                 streams.Add(bufferStream);
             }
-            // Content
-            if (this.Content != null)
+            // Anchors
+            foreach (var a in this.Anchors)
             {
-                Stream exportStream = this.Content.Export(bufferManager);
+                Stream exportStream = a.Export(bufferManager);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Content);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-
-            // Certificate
-            if (this.Certificate != null)
-            {
-                Stream exportStream = this.Certificate.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Certificate);
+                bufferStream.WriteByte((byte)SerializeId.Anchor);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
@@ -136,8 +98,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (_content == null) return 0;
-            else return _content.GetHashCode();
+            if (_comment == null) return 0;
+            else return _comment.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -153,9 +115,23 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (!Collection.Equals(this.GetHash(HashAlgorithm.Sha512), other.GetHash(HashAlgorithm.Sha512))) return false;
+            if (this.Comment != other.Comment
+                || (this.Anchors == null) != (other.Anchors == null))
+            {
+                return false;
+            }
+
+            if (this.Anchors != null && other.Anchors != null)
+            {
+                if (!Collection.Equals(this.Anchors, other.Anchors)) return false;
+            }
 
             return true;
+        }
+
+        public override string ToString()
+        {
+            return this.Comment;
         }
 
         public override ChatMessage DeepClone()
@@ -166,102 +142,46 @@ namespace Library.Net.Lair
             }
         }
 
-        protected override Stream GetCertificateStream()
-        {
-            var temp = this.Certificate;
-            this.Certificate = null;
+        #region IMessageContent<Key>
 
-            try
-            {
-                return this.Export(BufferManager.Instance);
-            }
-            finally
-            {
-                this.Certificate = temp;
-            }
-        }
-
-        public override Certificate Certificate
+        [DataMember(Name = "Comment")]
+        public string Comment
         {
             get
             {
-                return _certificate;
-            }
-            protected set
-            {
-                _certificate = value;
-            }
-        }
-
-        #region IMessage<Chat, Key>
-
-        [DataMember(Name = "Chat")]
-        public Chat Chat
-        {
-            get
-            {
-                return _chat;
+                return _comment;
             }
             private set
             {
-                _chat = value;
-            }
-        }
-
-        [DataMember(Name = "CreationTime")]
-        public DateTime CreationTime
-        {
-            get
-            {
-                return _creationTime;
-            }
-            private set
-            {
-                var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-            }
-        }
-
-        [DataMember(Name = "Content")]
-        public Key Content
-        {
-            get
-            {
-                return _content;
-            }
-            private set
-            {
-                _content = value;
-            }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private byte[] _sha512_hash = null;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
+                if (value != null && value.Length > ChatMessage.MaxCommentLength)
                 {
-                    _sha512_hash = Sha512.ComputeHash(stream);
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _comment = value;
                 }
             }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
         }
 
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        public IEnumerable<Key> Anchors
         {
-            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
+            get
+            {
+                return this.ProtectedAnchors;
+            }
+        }
+
+        [DataMember(Name = "Anchors")]
+        private KeyCollection ProtectedAnchors
+        {
+            get
+            {
+                if (_anchors == null)
+                    _anchors = new KeyCollection(ChatMessage.MaxAnchorCount);
+
+                return _anchors;
+            }
         }
 
         #endregion

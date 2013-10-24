@@ -9,30 +9,24 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentOpinion", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentOpinion : ReadOnlyCertificateItemBase<DocumentOpinion>, IDocumentOpinion<Document, Key>
+    public sealed class DocumentOpinion : ItemBase<DocumentOpinion>, IDocumentOpinion<Key>
     {
         private enum SerializeId : byte
         {
-            Document = 0,
-            CreationTime = 1,
-            Content = 2,
-
-            Certificate = 3,
+            Good = 0,
+            Bad = 1,
         }
 
-        private Document _document = null;
-        private DateTime _creationTime = DateTime.MinValue;
-        private Key _content = null;
+        private KeyCollection _goods = null;
+        private KeyCollection _bads = null;
 
-        private Certificate _certificate;
+        public static readonly int MaxGoodsCount = 1024;
+        public static readonly int MaxBadsCount = 1024;
 
-        public DocumentOpinion(Document document, Key content, DigitalSignature digitalSignature)
+        public DocumentOpinion(IEnumerable<Key> goods, IEnumerable<Key> bads)
         {
-            this.Document = document;
-            this.CreationTime = DateTime.UtcNow;
-            this.Content = content;
-
-            this.CreateCertificate(digitalSignature);
+            if (goods != null) this.ProtectedGoods.AddRange(goods);
+            if (bads != null) this.ProtectedBads.AddRange(bads);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -48,25 +42,13 @@ namespace Library.Net.Lair
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Document)
+                    if (id == (byte)SerializeId.Good)
                     {
-                        this.Document = Document.Import(rangeStream, bufferManager);
+                        this.ProtectedGoods.Add(Key.Import(rangeStream, bufferManager));
                     }
-                    else if (id == (byte)SerializeId.CreationTime)
+                    else if (id == (byte)SerializeId.Bad)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                        }
-                    }
-                    else if (id == (byte)SerializeId.Content)
-                    {
-                        this.Content = Key.Import(rangeStream, bufferManager);
-                    }
-
-                    else if (id == (byte)SerializeId.Certificate)
-                    {
-                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        this.ProtectedBads.Add(Key.Import(rangeStream, bufferManager));
                     }
                 }
             }
@@ -77,56 +59,25 @@ namespace Library.Net.Lair
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
-            // Document
-            if (this.Document != null)
+            // Goods
+            foreach (var a in this.Goods)
             {
-                Stream exportStream = this.Document.Export(bufferManager);
+                Stream exportStream = a.Export(bufferManager);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Document);
+                bufferStream.WriteByte((byte)SerializeId.Good);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
-            // CreationTime
-            if (this.CreationTime != DateTime.MinValue)
+            // Bads
+            foreach (var a in this.Bads)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.CreationTime);
-
-                streams.Add(bufferStream);
-            }
-            // Content
-            if (this.Content != null)
-            {
-                Stream exportStream = this.Content.Export(bufferManager);
+                Stream exportStream = a.Export(bufferManager);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Content);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-
-            // Certificate
-            if (this.Certificate != null)
-            {
-                Stream exportStream = this.Certificate.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Certificate);
+                bufferStream.WriteByte((byte)SerializeId.Bad);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
@@ -136,8 +87,8 @@ namespace Library.Net.Lair
 
         public override int GetHashCode()
         {
-            if (_content == null) return 0;
-            else return _content.GetHashCode();
+            if (this.ProtectedGoods.Count == 0) return 0;
+            else return this.ProtectedGoods[0].GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -153,7 +104,21 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (!Collection.Equals(this.GetHash(HashAlgorithm.Sha512), other.GetHash(HashAlgorithm.Sha512))) return false;
+            if ((this.Goods == null) != (other.Goods == null)
+                || (this.Bads == null) != (other.Bads == null))
+            {
+                return false;
+            }
+
+            if (this.Goods != null && other.Goods != null)
+            {
+                if (!Collection.Equals(this.Goods, other.Goods)) return false;
+            }
+
+            if (this.Bads != null && other.Bads != null)
+            {
+                if (!Collection.Equals(this.Bads, other.Bads)) return false;
+            }
 
             return true;
         }
@@ -166,102 +131,46 @@ namespace Library.Net.Lair
             }
         }
 
-        protected override Stream GetCertificateStream()
-        {
-            var temp = this.Certificate;
-            this.Certificate = null;
+        #region IDocumentOpinionsContent<Key>
 
-            try
-            {
-                return this.Export(BufferManager.Instance);
-            }
-            finally
-            {
-                this.Certificate = temp;
-            }
-        }
-
-        public override Certificate Certificate
+        public IEnumerable<Key> Goods
         {
             get
             {
-                return _certificate;
-            }
-            protected set
-            {
-                _certificate = value;
+                return this.ProtectedGoods;
             }
         }
 
-        #region IDocumentOpinion<Document, Key>
-
-        [DataMember(Name = "Document")]
-        public Document Document
+        [DataMember(Name = "Goods")]
+        private KeyCollection ProtectedGoods
         {
             get
             {
-                return _document;
-            }
-            private set
-            {
-                _document = value;
+                if (_goods == null)
+                    _goods = new KeyCollection(DocumentOpinion.MaxGoodsCount);
+
+                return _goods;
             }
         }
 
-        [DataMember(Name = "CreationTime")]
-        public DateTime CreationTime
+        public IEnumerable<Key> Bads
         {
             get
             {
-                return _creationTime;
-            }
-            private set
-            {
-                var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                return this.ProtectedBads;
             }
         }
 
-        [DataMember(Name = "Content")]
-        public Key Content
+        [DataMember(Name = "Bads")]
+        private KeyCollection ProtectedBads
         {
             get
             {
-                return _content;
+                if (_bads == null)
+                    _bads = new KeyCollection(DocumentOpinion.MaxBadsCount);
+
+                return _bads;
             }
-            private set
-            {
-                _content = value;
-            }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private byte[] _sha512_hash = null;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    _sha512_hash = Sha512.ComputeHash(stream);
-                }
-            }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion

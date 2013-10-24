@@ -8,21 +8,26 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "ChatTopic", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatTopic : ItemBase<ChatTopic>, IChatTopic
+    [DataContract(Name = "SectionMessage", Namespace = "http://Library/Net/Lair")]
+    public sealed class SectionMessage : ItemBase<SectionMessage>, ISectionMessage<Key>
     {
         private enum SerializeId : byte
         {
             Comment = 0,
+            Anchor = 1,
         }
 
         private string _comment = null;
+        private Key _anchor = null;
 
-        public static readonly int MaxCommentLength = 1024 * 32;
+        private int _hashCode = 0;
 
-        public ChatTopic(string comment)
+        public static readonly int MaxCommentLength = 1024 * 4;
+
+        public SectionMessage(string comment, Key anchor)
         {
             this.Comment = comment;
+            this.Anchor = anchor;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -44,6 +49,10 @@ namespace Library.Net.Lair
                         {
                             this.Comment = reader.ReadToEnd();
                         }
+                    }
+                    else if (id == (byte)SerializeId.Anchor)
+                    {
+                        this.Anchor = Key.Import(rangeStream, bufferManager);
                     }
                 }
             }
@@ -73,30 +82,41 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
+            // Anchor
+            if (this.Anchor != null)
+            {
+                Stream exportStream = this.Anchor.Export(bufferManager);
+
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Anchor);
+
+                streams.Add(new JoinStream(bufferStream, exportStream));
+            }
 
             return new JoinStream(streams);
         }
 
         public override int GetHashCode()
         {
-            if (_comment == null) return 0;
-            else return _comment.GetHashCode();
+            return _hashCode;
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is ChatTopic)) return false;
+            if ((object)obj == null || !(obj is SectionMessage)) return false;
 
-            return this.Equals((ChatTopic)obj);
+            return this.Equals((SectionMessage)obj);
         }
 
-        public override bool Equals(ChatTopic other)
+        public override bool Equals(SectionMessage other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Comment != other.Comment)
+            if (this.Comment != other.Comment
+                || this.Anchor != other.Anchor)
             {
                 return false;
             }
@@ -104,20 +124,15 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override string ToString()
-        {
-            return this.Comment;
-        }
-
-        public override ChatTopic DeepClone()
+        public override SectionMessage DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return ChatTopic.Import(stream, BufferManager.Instance);
+                return SectionMessage.Import(stream, BufferManager.Instance);
             }
         }
 
-        #region ITopicContent
+        #region ISectionMessageContent
 
         [DataMember(Name = "Comment")]
         public string Comment
@@ -128,13 +143,35 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > ChatTopic.MaxCommentLength)
+                if (value != null && value.Length > SectionMessage.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
                     _comment = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Anchor")]
+        public Key Anchor
+        {
+            get
+            {
+                return _anchor;
+            }
+            private set
+            {
+                _anchor = value;
+
+                if (_anchor == null)
+                {
+                    _hashCode = 0;
+                }
+                else
+                {
+                    _hashCode = _anchor.GetHashCode();
                 }
             }
         }

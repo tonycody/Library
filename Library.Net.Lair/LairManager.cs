@@ -452,7 +452,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<DocumentSite> GetDocumentSites(Document document)
+        public IEnumerable<DocumentArchive> GetDocumentSites(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -522,7 +522,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentSiteContent GetContent(DocumentSite documentSite)
+        public DocumentArchive GetContent(DocumentArchive documentSite)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -532,7 +532,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentOpinionContent GetContent(DocumentOpinion documentOpinion)
+        public DocumentOpinion GetContent(DocumentOpinion documentOpinion)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -542,7 +542,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopic chatTopic)
+        public ChatTopic GetContent(ChatTopic chatTopic)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -552,7 +552,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessage chatMessage)
+        public ChatMessage GetContent(ChatMessage chatMessage)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -572,7 +572,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public MailMessageContent GetContent(MailMessage mailMessage, IExchangeDecrypt exchangeDecrypt)
+        public MailMessage GetContent(MailMessage mailMessage, IExchangeDecrypt exchangeDecrypt)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 

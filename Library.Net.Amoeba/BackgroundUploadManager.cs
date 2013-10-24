@@ -262,9 +262,9 @@ namespace Library.Net.Amoeba
 
                                 item.UploadKeys.Add(item.Seed.Key);
 
-                                foreach (var header in item.UploadKeys)
+                                foreach (var key in item.UploadKeys)
                                 {
-                                    _connectionsManager.Upload(header);
+                                    _connectionsManager.Upload(key);
                                 }
 
                                 this.SetKeyCount(item);

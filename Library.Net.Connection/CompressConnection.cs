@@ -13,7 +13,7 @@ namespace Library.Net.Connection
         private enum CompressAlgorithm : uint
         {
             None = 0,
-            Deflate = 1,
+            Deflate = 0x01,
         }
 
         private ConnectionBase _connection;

@@ -690,13 +690,13 @@ namespace Library.Net.Amoeba
                                 item.DecodingBytes = 0;
                                 item.DecodeBytes = item.Index.Groups.Sum(n => n.Length);
 
-                                List<Key> headers = new List<Key>();
+                                List<Key> keys = new List<Key>();
 
                                 try
                                 {
                                     foreach (var group in item.Index.Groups.ToArray())
                                     {
-                                        headers.AddRange(_cacheManager.ParityDecoding(group, (object state2) =>
+                                        keys.AddRange(_cacheManager.ParityDecoding(group, (object state2) =>
                                         {
                                             return (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
                                         }));
@@ -737,7 +737,7 @@ namespace Library.Net.Amoeba
                                             fileName = stream.Name;
 
                                             _cacheManager.Decoding(decodingProgressStream, item.Index.CompressionAlgorithm, item.Index.CryptoAlgorithm, item.Index.CryptoKey,
-                                                new KeyCollection(headers));
+                                                new KeyCollection(keys));
                                         }
                                     }
                                     catch (StopIOException)
@@ -837,7 +837,7 @@ namespace Library.Net.Amoeba
                                             fileName = stream.Name;
 
                                             _cacheManager.Decoding(decodingProgressStream, item.Index.CompressionAlgorithm, item.Index.CryptoAlgorithm, item.Index.CryptoKey,
-                                                new KeyCollection(headers));
+                                                new KeyCollection(keys));
 
                                             if (stream.Length != item.Seed.Length) throw new Exception();
                                         }
