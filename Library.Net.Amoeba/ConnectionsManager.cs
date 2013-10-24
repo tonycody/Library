@@ -607,7 +607,50 @@ namespace Library.Net.Amoeba
 
                     if (flag)
                     {
-                        connectionManager.Dispose();
+                        ThreadPool.QueueUserWorkItem(new WaitCallback((object state) =>
+                        {
+                            // PushNodes
+                            try
+                            {
+                                List<Node> nodes = new List<Node>();
+
+                                lock (this.ThisLock)
+                                {
+                                    foreach (var node in _routeTable)
+                                    {
+                                        if (connectionManager.Node == node) continue;
+                                        nodes.Add(node);
+
+                                        if (nodes.Count >= 50) break;
+                                    }
+                                }
+
+                                if (nodes.Count > 0)
+                                {
+                                    connectionManager.PushNodes(nodes);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
+                                    _pushNodeCount += nodes.Count;
+                                }
+                            }
+                            catch (Exception)
+                            {
+
+                            }
+
+                            try
+                            {
+                                connectionManager.PushCancel();
+
+                                Debug.WriteLine("ConnectionManager: Push Cancel");
+                            }
+                            catch (Exception)
+                            {
+
+                            }
+
+                            connectionManager.Dispose();
+                        }));
 
                         return;
                     }
