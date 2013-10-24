@@ -2398,7 +2398,7 @@ namespace Library.Net.Amoeba
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
-                    new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node(new byte[64], null)},
+                    new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
