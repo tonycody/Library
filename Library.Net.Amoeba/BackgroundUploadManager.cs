@@ -77,8 +77,6 @@ namespace Library.Net.Amoeba
                                             item.State = BackgroundUploadState.Completed;
 
                                             _connectionsManager.Upload(item.Seed);
-
-                                            this.Remove(item);
                                         }
                                     }
                                 }
@@ -386,7 +384,7 @@ namespace Library.Net.Amoeba
                     Thread.Sleep(1000);
                     if (this.State == ManagerState.Stop) return;
 
-                    if (!watchStopwatch.IsRunning || watchStopwatch.Elapsed.TotalMinutes >= 10)
+                    if (!watchStopwatch.IsRunning || watchStopwatch.Elapsed.TotalSeconds >= 60)
                     {
                         watchStopwatch.Restart();
 
@@ -397,7 +395,7 @@ namespace Library.Net.Amoeba
                             foreach (var item in _settings.BackgroundUploadItems.ToArray())
                             {
                                 if (item.State == BackgroundUploadState.Completed
-                                    && (now - item.Seed.CreationTime) > new TimeSpan(3, 0, 0, 0))
+                                    && (now - item.Seed.CreationTime) > new TimeSpan(32, 0, 0, 0))
                                 {
                                     this.Remove(item);
                                 }

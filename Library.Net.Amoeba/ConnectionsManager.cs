@@ -1367,7 +1367,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
-                    && pushSeedUploadStopwatch.Elapsed.TotalMinutes > 10)
+                    && pushSeedUploadStopwatch.Elapsed.TotalMinutes > 3)
                 {
                     pushSeedUploadStopwatch.Restart();
 
@@ -2481,7 +2481,11 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisLock)
                 {
-                    return this.StoreSeeds.Keys.ToArray();
+                    HashSet<string> signatures = new HashSet<string>();
+                    signatures.UnionWith(this.LinkSeeds.Keys);
+                    signatures.UnionWith(this.StoreSeeds.Keys);
+
+                    return signatures;
                 }
             }
 
