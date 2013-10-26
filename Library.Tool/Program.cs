@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml;
 using Library.Security;
+using System.Threading;
 
 namespace Library.Tool
 {

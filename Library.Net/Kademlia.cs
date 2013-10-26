@@ -235,21 +235,20 @@ namespace Library.Net
             }
         }
 
-        public static IEnumerable<T> Sort(T baseNode, byte[] id, IEnumerable<T> nodeList)
+        public static IEnumerable<T> Sort(byte[] baseId, byte[] targetId, IEnumerable<T> nodeList)
         {
-            if (baseNode == null) throw new ArgumentNullException("baseNode");
-            if (baseNode.Id == null) throw new ArgumentNullException("baseNode.Id");
-            if (id == null) throw new ArgumentNullException("key");
+            if (baseId == null) throw new ArgumentNullException("baseId");
+            if (targetId == null) throw new ArgumentNullException("targetId");
             if (nodeList == null) throw new ArgumentNullException("nodeList");
 
-            byte[] myXor = Kademlia<T>.Xor(id, baseNode.Id);
+            byte[] baseXor = Kademlia<T>.Xor(baseId, targetId);
             var list = new List<KeyValuePair<byte[], T>>();
 
             foreach (var node in nodeList)
             {
-                byte[] xor = Kademlia<T>.Xor(id, node.Id);
+                byte[] xor = Kademlia<T>.Xor(targetId, node.Id);
 
-                if (Collection.Compare(myXor, xor) > 0)
+                if (Collection.Compare(baseXor, xor) > 0)
                 {
                     list.Add(new KeyValuePair<byte[], T>(xor, node));
                 }
@@ -353,7 +352,7 @@ namespace Library.Net
 
             lock (this.ThisLock)
             {
-                return Kademlia<T>.Sort(_baseNode, id, this.ToArray());
+                return Kademlia<T>.Sort(_baseNode.Id, id, this.ToArray());
             }
         }
 

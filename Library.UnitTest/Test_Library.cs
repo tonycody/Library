@@ -113,11 +113,8 @@ namespace Library.UnitTest
             byte[] buffer1 = _bufferManager.TakeBuffer(1024);
             byte[] buffer2 = _bufferManager.TakeBuffer(1024 * 10);
 
-            _bufferManager.ReturnBuffer(buffer1);
-            _bufferManager.ReturnBuffer(buffer2);
-
-            buffer1 = _bufferManager.TakeBuffer(1024);
-            buffer2 = _bufferManager.TakeBuffer(1024 * 2);
+            Assert.IsTrue(buffer1.Length >= 1024, "BufferManager #1");
+            Assert.IsTrue(buffer2.Length >= 1024 * 10, "BufferManager #2");
 
             _bufferManager.ReturnBuffer(buffer1);
             _bufferManager.ReturnBuffer(buffer2);

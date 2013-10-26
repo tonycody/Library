@@ -13,6 +13,7 @@ namespace Library.UnitTest
     {
         private BufferManager _bufferManager = BufferManager.Instance;
         private Random _random = new Random();
+      
         private const int MaxReceiveCount = 1 * 1024 * 1024;
 
         [Test]

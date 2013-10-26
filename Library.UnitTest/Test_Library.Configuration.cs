@@ -16,6 +16,7 @@ namespace Library.UnitTest
             TestSettings testSettings = new TestSettings();
             testSettings.Text = "test";
             testSettings.Save(directoryPath);
+            testSettings.Text = "";
             testSettings.Load(directoryPath);
 
             Assert.AreEqual(testSettings.Text, "test", "SettingsBase");
@@ -33,13 +34,30 @@ namespace Library.UnitTest
                     new SettingsContext<string>() { Name = "Text", Value = "" },
                 })
             {
+
+            }
+
+            public override void Load(string directoryPath)
+            {
+                lock (this.ThisLock)
+                {
+                    base.Load(directoryPath);
+                }
+            }
+
+            public override void Save(string directoryPath)
+            {
+                lock (this.ThisLock)
+                {
+                    base.Save(directoryPath);
+                }
             }
 
             public string Text
             {
                 get
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         return (string)this["Text"];
                     }
@@ -47,7 +65,7 @@ namespace Library.UnitTest
 
                 set
                 {
-                    using (DeadlockMonitor.Lock(this.ThisLock))
+                    lock (this.ThisLock)
                     {
                         this["Text"] = value;
                     }
@@ -65,22 +83,6 @@ namespace Library.UnitTest
             }
 
             #endregion
-
-            public override void Load(string directoryPath)
-            {
-                using (DeadlockMonitor.Lock(this.ThisLock))
-                {
-                    base.Load(directoryPath);
-                }
-            }
-
-            public override void Save(string directoryPath)
-            {
-                using (DeadlockMonitor.Lock(this.ThisLock))
-                {
-                    base.Save(directoryPath);
-                }
-            }
         }
     }
 }

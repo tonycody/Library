@@ -40,10 +40,7 @@
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="nunit.framework, Version=2.6.0.12051, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Program Files (x86)\NUnit 2.6\bin\framework\nunit.framework.dll</HintPath>
-    </Reference>
+    <Reference Include="nunit.framework, Version=2.6.3.13283, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL" />
     <Reference Include="System">
     </Reference>
     <Reference Include="System.Core">
@@ -74,12 +71,12 @@
     <Compile Include="Test_Library.Configuration.cs" />
     <Compile Include="Test_Library.Correction.cs" />
     <Compile Include="Test_Library.Net.Connection.cs" />
-    <Compile Include="Test_Library.Net.Lair.cs" />
     <Compile Include="Test_Library.Net.Upnp.cs" />
     <Compile Include="Test_Library.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Test_Library.Security.cs.cs" />
     <Compile Include="Tool\RandomString.cs" />
+    <Compile Include="Tool\Sha512.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Io\Library.Io.csproj">
@@ -93,10 +90,6 @@
     <ProjectReference Include="..\Library.Net.Amoeba\Library.Net.Amoeba.csproj">
       <Project>{82230C99-6599-4130-AAC9-FC926ABC0724}</Project>
       <Name>Library.Net.Amoeba</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Library.Net.Lair\Library.Net.Lair.csproj">
-      <Project>{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}</Project>
-      <Name>Library.Net.Lair</Name>
     </ProjectReference>
     <ProjectReference Include="..\Library.Net\Library.Net.csproj">
       <Project>{7CFDE01D-4A0E-4E10-ACC2-34DB897DBE0F}</Project>

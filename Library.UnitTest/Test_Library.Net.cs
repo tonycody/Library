@@ -17,30 +17,45 @@ namespace Library.UnitTest
             var kademlia = new Kademlia<Node>(512, 20);
 
             {
-                var node = new Node();
-                var id = new byte[64];
-                _random.NextBytes(id);
-                node.Id = id;
+                Node node = null;
+
+                {
+                    var id = new byte[64];
+                    _random.NextBytes(id);
+                    var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
+
+                    node = new Node(id, uris);
+                }
 
                 kademlia.BaseNode = node;
             }
 
             for (int i = 0; i < 1024; i++)
             {
-                var node = new Node();
-                var id = new byte[64];
-                _random.NextBytes(id);
-                node.Id = id;
+                Node node = null;
+
+                {
+                    var id = new byte[64];
+                    _random.NextBytes(id);
+                    var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
+
+                    node = new Node(id, uris);
+                }
 
                 kademlia.Add(node);
             }
 
             for (int i = 0; i < 1024; i++)
             {
-                var node = new Node();
-                var id = new byte[64];
-                _random.NextBytes(id);
-                node.Id = id;
+                Node node = null;
+
+                {
+                    var id = new byte[64];
+                    _random.NextBytes(id);
+                    var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
+
+                    node = new Node(id, uris);
+                }
 
                 kademlia.Live(node);
             }
@@ -59,12 +74,10 @@ namespace Library.UnitTest
             }
 
             {
-                var tnode = new Node();
                 var id = new byte[64];
                 _random.NextBytes(id);
-                tnode.Id = id;
 
-                var slist = Kademlia<Node>.Sort(kademlia.BaseNode, tnode.Id, kademlia.ToArray());
+                var slist = Kademlia<Node>.Sort(kademlia.BaseNode.Id, id, kademlia.ToArray());
             }
         }
     }

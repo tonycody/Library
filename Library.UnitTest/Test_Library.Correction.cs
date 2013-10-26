@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using Library.Correction;
 using NUnit.Framework;
@@ -76,7 +76,7 @@ namespace Library.UnitTest
                 }
             }
 
-            // ‚±‚ê‚¾‚ÆToArray‚ÅØ‚è—£‚³‚êADecode“à•”‚©‚çIList‚ğƒVƒƒƒbƒtƒ‹‚µ‚Ä‚¢‚éˆÓ–¡‚ª–³‚­‚È‚é‚½‚ßA³í‚ÉƒfƒR[ƒh‚Å‚«‚È‚¢
+            // ã“ã‚Œã ã¨(å‚ç…§ãŒ)ToArrayã§åˆ‡ã‚Šé›¢ã•ã‚Œã€Decodeå†…éƒ¨ã‹ã‚‰IListã‚’ã‚·ãƒ£ãƒƒãƒ•ãƒ«ã—ã¦ã„ã‚‹æ„å‘³ãŒç„¡ããªã‚‹ãŸã‚ã€æ­£å¸¸ã«ãƒ‡ã‚³ãƒ¼ãƒ‰ã§ããªã„
             //pc.Decode(buffList3.ToArray(), intList2.ToArray());          
 
             pc.Decode(ref buffList3, intList2.ToArray());

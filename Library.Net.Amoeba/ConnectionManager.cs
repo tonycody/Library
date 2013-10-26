@@ -582,6 +582,18 @@ namespace Library.Net.Amoeba
                     if (sw.ElapsedMilliseconds < 1000) Thread.Sleep(1000 - (int)sw.ElapsedMilliseconds);
                 }
             }
+#if DEBUG
+            catch (Exception e)
+            {
+                Log.Information(e);
+
+                if (!_disposed)
+                {
+                    this.OnClose(new EventArgs());
+                }
+            }
+
+#else    
             catch (Exception)
             {
                 if (!_disposed)
@@ -589,6 +601,7 @@ namespace Library.Net.Amoeba
                     this.OnClose(new EventArgs());
                 }
             }
+#endif
         }
 
         protected virtual void OnPullNodes(PullNodesEventArgs e)
@@ -918,11 +931,11 @@ namespace Library.Net.Amoeba
                 Node = 0,
             }
 
-            private NodeCollection _nodes = new NodeCollection();
+            private NodeCollection _nodes = null;
 
             public NodesMessage(IEnumerable<Node> nodes)
             {
-                _nodes.AddRange(nodes);
+                if (nodes != null) this.ProtectedNodes.AddRange(nodes);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -940,7 +953,7 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Node)
                         {
-                            _nodes.Add(Node.Import(rangeStream, bufferManager));
+                            this.ProtectedNodes.Add(Node.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -978,6 +991,18 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
+                    return this.ProtectedNodes;
+                }
+            }
+
+            [DataMember(Name = "Nodes")]
+            private NodeCollection ProtectedNodes
+            {
+                get
+                {
+                    if (_nodes == null)
+                        _nodes = new NodeCollection(128);
+
                     return _nodes;
                 }
             }
@@ -990,11 +1015,11 @@ namespace Library.Net.Amoeba
                 Key = 0,
             }
 
-            private KeyCollection _keys = new KeyCollection();
+            private KeyCollection _keys = null;
 
             public BlocksLinkMessage(IEnumerable<Key> keys)
             {
-                _keys.AddRange(keys);
+                if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -1012,7 +1037,7 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Key)
                         {
-                            _keys.Add(Key.Import(rangeStream, bufferManager));
+                            this.ProtectedKeys.Add(Key.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1050,6 +1075,18 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
+                    return this.ProtectedKeys;
+                }
+            }
+
+            [DataMember(Name = "Keys")]
+            private KeyCollection ProtectedKeys
+            {
+                get
+                {
+                    if (_keys == null)
+                        _keys = new KeyCollection(8192);
+
                     return _keys;
                 }
             }
@@ -1062,11 +1099,11 @@ namespace Library.Net.Amoeba
                 Key = 0,
             }
 
-            private KeyCollection _keys = new KeyCollection();
+            private KeyCollection _keys = null;
 
             public BlocksRequestMessage(IEnumerable<Key> keys)
             {
-                _keys.AddRange(keys);
+                if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -1084,7 +1121,7 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Key)
                         {
-                            _keys.Add(Key.Import(rangeStream, bufferManager));
+                            this.ProtectedKeys.Add(Key.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1122,6 +1159,18 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
+                    return this.ProtectedKeys;
+                }
+            }
+
+            [DataMember(Name = "Keys")]
+            private KeyCollection ProtectedKeys
+            {
+                get
+                {
+                    if (_keys == null)
+                        _keys = new KeyCollection(8192);
+
                     return _keys;
                 }
             }
@@ -1233,11 +1282,11 @@ namespace Library.Net.Amoeba
                 Signature = 0,
             }
 
-            private SignatureCollection _signatures = new SignatureCollection();
+            private SignatureCollection _signatures = null;
 
             public SeedsRequestMessage(IEnumerable<string> signatures)
             {
-                _signatures.AddRange(signatures);
+                if (signatures != null) this.ProtectedSignatures.AddRange(signatures);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -1257,7 +1306,7 @@ namespace Library.Net.Amoeba
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                _signatures.Add(reader.ReadToEnd());
+                                this.ProtectedSignatures.Add(reader.ReadToEnd());
                             }
                         }
                     }
@@ -1304,6 +1353,18 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
+                    return this.ProtectedSignatures;
+                }
+            }
+
+            [DataMember(Name = "Signatures")]
+            private SignatureCollection ProtectedSignatures
+            {
+                get
+                {
+                    if (_signatures == null)
+                        _signatures = new SignatureCollection(2048);
+
                     return _signatures;
                 }
             }
