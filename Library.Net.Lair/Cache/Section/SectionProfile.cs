@@ -15,17 +15,15 @@ namespace Library.Net.Lair
         {
             Comment = 0,
             TrustSignature = 1,
-            Document = 2,
-            Chat = 3,
+            Link = 2,
 
-            ExchangeAlgorithm = 4,
-            PublicKey = 5,
+            ExchangeAlgorithm = 3,
+            PublicKey = 4,
         }
 
         private string _comment;
         private SignatureCollection _trustSignatures = null;
-        private KeyCollection _documents = null;
-        private KeyCollection _chats = null;
+        private TagCollection _links = null;
 
         private ExchangeAlgorithm _exchangeAlgorithm;
         private byte[] _publicKey;
@@ -34,17 +32,15 @@ namespace Library.Net.Lair
 
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxTrustSignaturesCount = 1024;
-        public static readonly int MaxDocumentsCount = 1024;
-        public static readonly int MaxChatsCount = 1024;
+        public static readonly int MaxLinksCount = 1024;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfile(string comment, IEnumerable<string> trustSignatures, IEnumerable<Key> documents, IEnumerable<Key> chats, IExchangeEncrypt exchangeEncrypt)
+        public SectionProfile(string comment, IEnumerable<string> trustSignatures, IEnumerable<Tag> links, IExchangeEncrypt exchangeEncrypt)
         {
             this.Comment = comment;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            if (documents != null) this.ProtectedDocuments.AddRange(documents);
-            if (chats != null) this.ProtectedChats.AddRange(chats);
+            if (links != null) this.ProtectedLinks.AddRange(links);
 
             this.ExchangeAlgorithm = exchangeEncrypt.ExchangeAlgorithm;
             this.PublicKey = exchangeEncrypt.PublicKey;
@@ -77,13 +73,9 @@ namespace Library.Net.Lair
                             this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
                         }
                     }
-                    else if (id == (byte)SerializeId.Document)
+                    else if (id == (byte)SerializeId.Link)
                     {
-                        this.ProtectedDocuments.Add(Key.Import(rangeStream, bufferManager));
-                    }
-                    else if (id == (byte)SerializeId.Chat)
-                    {
-                        this.ProtectedChats.Add(Key.Import(rangeStream, bufferManager));
+                        this.ProtectedLinks.Add(Tag.Import(rangeStream, bufferManager));
                     }
 
                     else if (id == (byte)SerializeId.ExchangeAlgorithm)
@@ -147,25 +139,14 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Documents
-            foreach (var d in this.ProtectedDocuments)
+            // Links
+            foreach (var l in this.ProtectedLinks)
             {
-                Stream exportStream = d.Export(bufferManager);
+                Stream exportStream = l.Export(bufferManager);
 
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Document);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-            // Chats
-            foreach (var c in this.ProtectedChats)
-            {
-                Stream exportStream = c.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Chat);
+                bufferStream.WriteByte((byte)SerializeId.Link);
 
                 streams.Add(new JoinStream(bufferStream, exportStream));
             }
@@ -223,8 +204,7 @@ namespace Library.Net.Lair
 
             if (this.Comment != other.Comment
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
-                || (this.Documents == null) != (other.Documents == null)
-                || (this.Chats == null) != (other.Chats == null)
+                || (this.Links == null) != (other.Links == null)
 
                 || this.ExchangeAlgorithm != other.ExchangeAlgorithm
                 || ((this.PublicKey == null) != (other.PublicKey == null)))
@@ -237,14 +217,9 @@ namespace Library.Net.Lair
                 if (!Collection.Equals(this.TrustSignatures, other.TrustSignatures)) return false;
             }
 
-            if (this.Documents != null && other.Documents != null)
+            if (this.Links != null && other.Links != null)
             {
-                if (!Collection.Equals(this.Documents, other.Documents)) return false;
-            }
-
-            if (this.Chats != null && other.Chats != null)
-            {
-                if (!Collection.Equals(this.Chats, other.Chats)) return false;
+                if (!Collection.Equals(this.Links, other.Links)) return false;
             }
 
             if (this.PublicKey != null && other.PublicKey != null)
@@ -263,7 +238,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IProfileContent<Document, Chat>
+        #region ISectionProfile<Tag>
 
         [DataMember(Name = "Comment")]
         public string Comment
@@ -305,43 +280,23 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Key> Documents
+        public IEnumerable<Tag> Links
         {
             get
             {
-                return this.ProtectedDocuments;
+                return this.ProtectedLinks;
             }
         }
 
-        [DataMember(Name = "Documents")]
-        private KeyCollection ProtectedDocuments
+        [DataMember(Name = "Links")]
+        private TagCollection ProtectedLinks
         {
             get
             {
-                if (_documents == null)
-                    _documents = new KeyCollection(SectionProfile.MaxDocumentsCount);
+                if (_links == null)
+                    _links = new TagCollection(SectionProfile.MaxLinksCount);
 
-                return _documents;
-            }
-        }
-
-        public IEnumerable<Key> Chats
-        {
-            get
-            {
-                return this.ProtectedChats;
-            }
-        }
-
-        [DataMember(Name = "Chats")]
-        private KeyCollection ProtectedChats
-        {
-            get
-            {
-                if (_chats == null)
-                    _chats = new KeyCollection(SectionProfile.MaxChatsCount);
-
-                return _chats;
+                return _links;
             }
         }
 

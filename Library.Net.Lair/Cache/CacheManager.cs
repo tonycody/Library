@@ -13,6 +13,8 @@ using Library.Correction;
 namespace Library.Net.Lair
 {
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
+    delegate void SetKeyEventHandler(object sender, IEnumerable<Key> keys);
+    delegate void RemoveKeyEventHandler(object sender, IEnumerable<Key> keys);
     delegate bool WatchEventHandler(object sender);
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
@@ -26,15 +28,20 @@ namespace Library.Net.Lair
         private bool _spaceClustersInitialized = false;
 
         private volatile AutoResetEvent _resetEvent = new AutoResetEvent(false);
-        private long _freeSpace = 0;
         private long _lockSpace = 0;
+        private long _freeSpace = 0;
+
+        private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
 
         private Thread _watchThread = null;
+
+        private SetKeyEventHandler _setKeyEvent;
+        private RemoveKeyEventHandler _removeKeyEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        public static readonly int ClusterSize = 1024 * 4;
+        public static readonly int ClusterSize = 1024 * 32;
 
         private int _threadCount = 2;
 
@@ -43,7 +50,7 @@ namespace Library.Net.Lair
             _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             _bufferManager = bufferManager;
 
-            _settings = new Settings();
+            _settings = new Settings(this.ThisLock);
 
             _spaceClusters = new HashSet<long>();
 
@@ -65,7 +72,7 @@ namespace Library.Net.Lair
                     _resetEvent.WaitOne(1000 * 60 * 5);
 
                     var usingHeaders = new HashSet<Key>();
-                    usingHeaders.UnionWith(_settings.ClustersIndex.Keys);
+                    usingHeaders.UnionWith(_lockedKeys.Keys);
 
                     long size = 0;
 
@@ -86,6 +93,42 @@ namespace Library.Net.Lair
             catch (Exception)
             {
 
+            }
+        }
+
+        public event SetKeyEventHandler SetKeyEvent
+        {
+            add
+            {
+                lock (this.ThisLock)
+                {
+                    _setKeyEvent += value;
+                }
+            }
+            remove
+            {
+                lock (this.ThisLock)
+                {
+                    _setKeyEvent -= value;
+                }
+            }
+        }
+
+        public event RemoveKeyEventHandler RemoveKeyEvent
+        {
+            add
+            {
+                lock (this.ThisLock)
+                {
+                    _removeKeyEvent += value;
+                }
+            }
+            remove
+            {
+                lock (this.ThisLock)
+                {
+                    _removeKeyEvent -= value;
+                }
             }
         }
 
@@ -180,6 +223,66 @@ namespace Library.Net.Lair
             }
         }
 
+        private void CreatingSpace(long clusterCount)
+        {
+            lock (this.ThisLock)
+            {
+                this.CheckSpace(clusterCount);
+                if (clusterCount <= _spaceClusters.Count) return;
+
+                var usingHeaders = new HashSet<Key>();
+                usingHeaders.UnionWith(_lockedKeys.Keys);
+
+                var removeKeys = _settings.ClustersIndex.Keys
+                    .Where(n => !usingHeaders.Contains(n))
+                    .ToList();
+
+                removeKeys.Sort((x, y) =>
+                {
+                    var xc = _settings.ClustersIndex[x];
+                    var yc = _settings.ClustersIndex[y];
+
+                    return xc.UpdateTime.CompareTo(yc.UpdateTime);
+                });
+
+                foreach (var key in removeKeys)
+                {
+                    if (clusterCount <= _spaceClusters.Count) return;
+
+                    this.Remove(key);
+                }
+            }
+        }
+
+        public void Lock(Key key)
+        {
+            lock (this.ThisLock)
+            {
+                if (_lockedKeys.ContainsKey(key))
+                {
+                    _lockedKeys[key]++;
+                }
+                else
+                {
+                    _lockedKeys[key] = 1;
+                }
+            }
+        }
+
+        public void Unlock(Key key)
+        {
+            lock (this.ThisLock)
+            {
+                if (_lockedKeys.ContainsKey(key))
+                {
+                    if (--_lockedKeys[key] == 0)
+                    {
+                        _lockedKeys.Remove(key);
+                    }
+                }
+            }
+        }
+
         private long GetEndCluster()
         {
             lock (this.ThisLock)
@@ -198,6 +301,22 @@ namespace Library.Net.Lair
                 }
 
                 return endCluster;
+            }
+        }
+
+        protected virtual void OnSetKeyEvent(IEnumerable<Key> keys)
+        {
+            if (_setKeyEvent != null)
+            {
+                _setKeyEvent(this, keys);
+            }
+        }
+
+        protected virtual void OnRemoveKeyEvent(IEnumerable<Key> keys)
+        {
+            if (_removeKeyEvent != null)
+            {
+                _removeKeyEvent(this, keys);
             }
         }
 
@@ -229,6 +348,8 @@ namespace Library.Net.Lair
 
         public void Remove(Key key)
         {
+            bool flag = false;
+
             lock (this.ThisLock)
             {
                 Clusters clusters = null;
@@ -237,8 +358,12 @@ namespace Library.Net.Lair
                 {
                     _settings.ClustersIndex.Remove(key);
                     _spaceClusters.UnionWith(clusters.Indexes);
+
+                    flag = true;
                 }
             }
+
+            if (flag) this.OnRemoveKeyEvent(new Key[] { key });
         }
 
         public void Resize(long size)
@@ -250,11 +375,11 @@ namespace Library.Net.Lair
                 long cc = 256 * 1024 * 1024;
                 size = (long)((size + (cc - 1)) / cc) * cc;
 
-                foreach (var header in _settings.ClustersIndex.Keys.ToArray()
+                foreach (var key in _settings.ClustersIndex.Keys.ToArray()
                     .Where(n => _settings.ClustersIndex[n].Indexes.Any(o => size < ((o + 1) * CacheManager.ClusterSize)))
                     .ToArray())
                 {
-                    this.Remove(header);
+                    this.Remove(key);
                 }
 
                 long count = (size + (long)CacheManager.ClusterSize - 1) / (long)CacheManager.ClusterSize;
@@ -268,7 +393,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
             List<Key> list = null;
 
@@ -322,75 +447,75 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
+                    Clusters clusters = null;
+
+                    if (_settings.ClustersIndex.TryGetValue(key, out clusters))
                     {
-                        Clusters clusters = null;
-
-                        if (_settings.ClustersIndex.TryGetValue(key, out clusters))
+                        if ((clusters.Indexes[0] * CacheManager.ClusterSize) > _fileStream.Length)
                         {
-                            if ((clusters.Indexes[0] * CacheManager.ClusterSize) > _fileStream.Length)
+                            this.Remove(key);
+
+                            throw new BlockNotFoundException();
+                        }
+
+                        clusters.UpdateTime = DateTime.UtcNow;
+
+                        byte[] buffer = _bufferManager.TakeBuffer(clusters.Length);
+
+                        try
+                        {
+                            for (int i = 0, remain = clusters.Length; i < clusters.Indexes.Length; i++, remain -= CacheManager.ClusterSize)
                             {
-                                this.Remove(key);
-
-                                throw new BlockNotFoundException();
-                            }
-
-                            byte[] buffer = _bufferManager.TakeBuffer(clusters.Length);
-
-                            try
-                            {
-                                for (int i = 0, remain = clusters.Length; i < clusters.Indexes.Length; i++, remain -= CacheManager.ClusterSize)
+                                try
                                 {
-                                    try
-                                    {
-                                        if ((clusters.Indexes[i] * CacheManager.ClusterSize) > _fileStream.Length)
-                                        {
-                                            this.Remove(key);
-
-                                            throw new BlockNotFoundException();
-                                        }
-
-                                        int length = Math.Min(remain, CacheManager.ClusterSize);
-                                        _fileStream.Seek(clusters.Indexes[i] * CacheManager.ClusterSize, SeekOrigin.Begin);
-                                        _fileStream.Read(buffer, CacheManager.ClusterSize * i, length);
-                                    }
-                                    catch (EndOfStreamException)
+                                    if ((clusters.Indexes[i] * CacheManager.ClusterSize) > _fileStream.Length)
                                     {
                                         this.Remove(key);
 
                                         throw new BlockNotFoundException();
                                     }
-                                    catch (IOException)
-                                    {
-                                        this.Remove(key);
 
-                                        throw new BlockNotFoundException();
-                                    }
-                                    catch (ArgumentOutOfRangeException)
-                                    {
-                                        this.Remove(key);
-
-                                        throw new BlockNotFoundException();
-                                    }
+                                    int length = Math.Min(remain, CacheManager.ClusterSize);
+                                    _fileStream.Seek(clusters.Indexes[i] * CacheManager.ClusterSize, SeekOrigin.Begin);
+                                    _fileStream.Read(buffer, CacheManager.ClusterSize * i, length);
                                 }
-
-                                if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                                catch (EndOfStreamException)
                                 {
-                                    if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
-                                    {
-                                        this.Remove(key);
+                                    this.Remove(key);
 
-                                        throw new BlockNotFoundException();
-                                    }
+                                    throw new BlockNotFoundException();
                                 }
+                                catch (IOException)
+                                {
+                                    this.Remove(key);
 
-                                return new ArraySegment<byte>(buffer, 0, clusters.Length);
+                                    throw new BlockNotFoundException();
+                                }
+                                catch (ArgumentOutOfRangeException)
+                                {
+                                    this.Remove(key);
+
+                                    throw new BlockNotFoundException();
+                                }
                             }
-                            catch (Exception)
+
+                            if (key.HashAlgorithm == HashAlgorithm.Sha512)
                             {
-                                _bufferManager.ReturnBuffer(buffer);
+                                if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
+                                {
+                                    this.Remove(key);
 
-                                throw;
+                                    throw new BlockNotFoundException();
+                                }
                             }
+
+                            return new ArraySegment<byte>(buffer, 0, clusters.Length);
+                        }
+                        catch (Exception)
+                        {
+                            _bufferManager.ReturnBuffer(buffer);
+
+                            throw;
                         }
                     }
 
@@ -418,7 +543,7 @@ namespace Library.Net.Lair
 
                         if (_spaceClusters.Count < count)
                         {
-                            this.CheckSpace(8192); // 32KB(cluster size) * 8192(clusters count) = 256MB
+                            this.CreatingSpace(8192); // 32KB(cluster size) * 8192(clusters count) = 256MB
                         }
 
                         if (_spaceClusters.Count < count) throw new SpaceNotFoundException();
@@ -461,8 +586,11 @@ namespace Library.Net.Lair
                     var clusters = new Clusters();
                     clusters.Indexes = clusterList.ToArray();
                     clusters.Length = value.Count;
+                    clusters.UpdateTime = DateTime.UtcNow;
                     _settings.ClustersIndex[key] = clusters;
                 }
+
+                this.OnSetKeyEvent(new Key[] { key });
             }
         }
 
@@ -552,15 +680,15 @@ namespace Library.Net.Lair
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock = new object();
+            private object _thisLock;
 
-            public Settings()
+            public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
                     new Library.Configuration.SettingsContext<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
-                    new Library.Configuration.SettingsContext<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 8 },
+                    new Library.Configuration.SettingsContext<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
                 })
             {
-
+                _thisLock = lockObject;
             }
 
             public override void Load(string directoryPath)
@@ -614,8 +742,9 @@ namespace Library.Net.Lair
         {
             private long[] _indexes;
             private int _length;
-            private object _thisLock;
             private DateTime _updateTime = DateTime.UtcNow;
+
+            private object _thisLock;
             private static object _thisStaticLock = new object();
 
             [DataMember(Name = "Indexs")]
@@ -652,6 +781,25 @@ namespace Library.Net.Lair
                     lock (this.ThisLock)
                     {
                         _length = value;
+                    }
+                }
+            }
+
+            [DataMember(Name = "UpdateTime")]
+            public DateTime UpdateTime
+            {
+                get
+                {
+                    lock (this.ThisLock)
+                    {
+                        return _updateTime;
+                    }
+                }
+                set
+                {
+                    lock (this.ThisLock)
+                    {
+                        _updateTime = value;
                     }
                 }
             }

@@ -27,10 +27,10 @@ namespace Library.Net.Lair
         public static readonly int MaxIdLength = 64;
         public static readonly int MaxArgumentCount = 32;
 
-        public Tag(string name, byte[] id, IEnumerable<string> arguments)
+        public Tag(string type, byte[] id, IEnumerable<string> arguments)
         {
+            this.Type = type;
             this.Id = id;
-            this.Type = name;
             if (arguments != null) this.ProtectedArguments.AddRange(arguments);
         }
 

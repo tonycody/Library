@@ -98,10 +98,12 @@
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\Chat\ChatMessage.cs" />
     <Compile Include="Cache\Chat\ChatTopic.cs" />
+    <Compile Include="Cache\HeaderCollection.cs" />
     <Compile Include="Cache\Document\DocumentPageCollection.cs" />
     <Compile Include="Cache\Document\DocumentPage.cs" />
     <Compile Include="Cache\Header.cs" />
     <Compile Include="Cache\ArgumentCollection.cs" />
+    <Compile Include="Cache\TagCollection.cs" />
     <Compile Include="Cache\Tag.cs" />
     <Compile Include="Cache\Section\SectionProfileCollection.cs" />
     <Compile Include="Cache\Section\SectionProfile.cs" />

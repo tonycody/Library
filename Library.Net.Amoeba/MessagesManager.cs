@@ -150,18 +150,18 @@ namespace Library.Net.Amoeba
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
 
-        private CirculationCollection<Key> _pushBlocks;
-        private CirculationDictionary<string, DateTime> _pushLinkSeeds;
-        private CirculationDictionary<string, DateTime> _pushStoreSeeds;
+        private VolatileCollection<Key> _pushBlocks;
+        private VolatileDictionary<string, DateTime> _pushLinkSeeds;
+        private VolatileDictionary<string, DateTime> _pushStoreSeeds;
 
-        private CirculationCollection<Key> _pushBlocksLink;
-        private CirculationCollection<Key> _pullBlocksLink;
+        private VolatileCollection<Key> _pushBlocksLink;
+        private VolatileCollection<Key> _pullBlocksLink;
 
-        private CirculationCollection<Key> _pushBlocksRequest;
-        private CirculationCollection<Key> _pullBlocksRequest;
+        private VolatileCollection<Key> _pushBlocksRequest;
+        private VolatileCollection<Key> _pullBlocksRequest;
 
-        private CirculationCollection<string> _pushSeedsRequest;
-        private CirculationCollection<string> _pullSeedsRequest;
+        private VolatileCollection<string> _pushSeedsRequest;
+        private VolatileCollection<string> _pullSeedsRequest;
 
         private object _thisLock = new object();
 
@@ -171,18 +171,18 @@ namespace Library.Net.Amoeba
 
             _surroundingNodes = new LockedHashSet<Node>(128);
 
-            _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushLinkSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
-            _pushStoreSeeds = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
+            _pushBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushLinkSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
+            _pushStoreSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
 
-            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
 
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
 
-            _pushSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 60, 0));
-            _pullSeedsRequest = new CirculationCollection<string>(new TimeSpan(0, 30, 0));
+            _pushSeedsRequest = new VolatileCollection<string>(new TimeSpan(0, 60, 0));
+            _pullSeedsRequest = new VolatileCollection<string>(new TimeSpan(0, 60, 0));
         }
 
         public int Id
@@ -297,7 +297,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<Key> PushBlocks
+        public VolatileCollection<Key> PushBlocks
         {
             get
             {
@@ -308,7 +308,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationDictionary<string, DateTime> PushLinkSeeds
+        public VolatileDictionary<string, DateTime> PushLinkSeeds
         {
             get
             {
@@ -319,7 +319,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationDictionary<string, DateTime> PushStoreSeeds
+        public VolatileDictionary<string, DateTime> PushStoreSeeds
         {
             get
             {
@@ -330,7 +330,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<Key> PushBlocksLink
+        public VolatileCollection<Key> PushBlocksLink
         {
             get
             {
@@ -341,7 +341,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<Key> PullBlocksLink
+        public VolatileCollection<Key> PullBlocksLink
         {
             get
             {
@@ -352,7 +352,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<Key> PushBlocksRequest
+        public VolatileCollection<Key> PushBlocksRequest
         {
             get
             {
@@ -363,7 +363,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<Key> PullBlocksRequest
+        public VolatileCollection<Key> PullBlocksRequest
         {
             get
             {
@@ -374,7 +374,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<string> PushSeedsRequest
+        public VolatileCollection<string> PushSeedsRequest
         {
             get
             {
@@ -385,7 +385,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public CirculationCollection<string> PullSeedsRequest
+        public VolatileCollection<string> PullSeedsRequest
         {
             get
             {

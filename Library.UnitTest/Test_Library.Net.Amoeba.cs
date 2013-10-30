@@ -486,37 +486,44 @@ namespace Library.UnitTest
                 connectionManagers.Randomize();
 
                 {
-                    var queue = new WaitQueue<PullSeedEventArgs>();
+                    var queue = new WaitQueue<PullSeedsEventArgs>();
 
                     var receiverConnection = connectionManagers[0];
                     var senderConnection = connectionManagers[1];
 
-                    receiverConnection.PullSeedEvent += (object sender, PullSeedEventArgs e) =>
+                    receiverConnection.PullSeedsEvent += (object sender, PullSeedsEventArgs e) =>
                     {
                         queue.Enqueue(e);
                     };
 
-                    var seed = new Seed();
-                    seed.Name = "aaaa.zip";
-                    seed.Keywords.AddRange(new KeywordCollection 
-                    {
-                        "bbbb",
-                        "cccc",
-                        "dddd",
-                    });
-                    seed.CreationTime = DateTime.Now;
-                    seed.Length = 10000;
-                    seed.Comment = "eeee";
-                    seed.Rank = 1;
-                    seed.Key = new Key(new byte[64], HashAlgorithm.Sha512);
-                    seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
-                    seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
-                    seed.CryptoKey = new byte[32 + 32];
+                    List<Seed> seeds = new List<Seed>();
 
-                    senderConnection.PushSeed(seed);
+                    for (int j = 0; j < 32; j++)
+                    {
+                        var seed = new Seed();
+                        seed.Name = "aaaa.zip";
+                        seed.Keywords.AddRange(new KeywordCollection 
+                        {
+                            "bbbb",
+                            "cccc",
+                            "dddd",
+                        });
+                        seed.CreationTime = DateTime.Now;
+                        seed.Length = 10000;
+                        seed.Comment = "eeee";
+                        seed.Rank = 1;
+                        seed.Key = new Key(new byte[64], HashAlgorithm.Sha512);
+                        seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                        seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                        seed.CryptoKey = new byte[32 + 32];
+
+                        seeds.Add(seed);
+                    }
+
+                    senderConnection.PushSeeds(seeds);
 
                     var item = queue.Dequeue();
-                    Assert.AreEqual(seed, item.Seed, "ConnectionManager #7");
+                    Assert.IsTrue(Collection.Equals(seeds, item.Seeds), "ConnectionManager #7");
                 }
 
                 foreach (var connectionManager in connectionManagers)

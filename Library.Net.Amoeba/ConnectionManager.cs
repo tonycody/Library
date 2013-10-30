@@ -38,9 +38,9 @@ namespace Library.Net.Amoeba
         public IEnumerable<string> Signatures { get; set; }
     }
 
-    class PullSeedEventArgs : EventArgs
+    class PullSeedsEventArgs : EventArgs
     {
-        public Seed Seed { get; set; }
+        public IEnumerable<Seed> Seeds { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -50,7 +50,7 @@ namespace Library.Net.Amoeba
     delegate void PullBlockEventHandler(object sender, PullBlockEventArgs e);
 
     delegate void PullSeedsRequestEventHandler(object sender, PullSeedsRequestEventArgs e);
-    delegate void PullSeedEventHandler(object sender, PullSeedEventArgs e);
+    delegate void PullSeedsEventHandler(object sender, PullSeedsEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
 
@@ -79,7 +79,8 @@ namespace Library.Net.Amoeba
             Block = 7,
 
             SeedsRequest = 8,
-            Seed = 9,
+            // Seed = 9,
+            Seeds = 10,
         }
 
         private byte[] _mySessionId;
@@ -109,6 +110,12 @@ namespace Library.Net.Amoeba
         private object _thisLock = new object();
         private volatile bool _disposed = false;
 
+        private const int _maxNodeCount = 1024;
+        private const int _maxBlockLinkCount = 8192;
+        private const int _maxBlockRequestCount = 8192;
+        private const int _maxSeedRequestCount = 1024;
+        private const int _maxSeedCount = 1024;
+
         public event PullNodesEventHandler PullNodesEvent;
 
         public event PullBlocksLinkEventHandler PullBlocksLinkEvent;
@@ -116,7 +123,7 @@ namespace Library.Net.Amoeba
         public event PullBlockEventHandler PullBlockEvent;
 
         public event PullSeedsRequestEventHandler PullSeedsRequestEvent;
-        public event PullSeedEventHandler PullSeedEvent;
+        public event PullSeedsEventHandler PullSeedsEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
 
@@ -125,11 +132,12 @@ namespace Library.Net.Amoeba
         public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectionManagerType type, BufferManager bufferManager)
         {
             _connection = connection;
-            _myProtocolVersion = ProtocolVersion.Version1;
-            _baseNode = baseNode;
             _mySessionId = mySessionId;
-            _bufferManager = bufferManager;
+            _baseNode = baseNode;
             _type = type;
+            _bufferManager = bufferManager;
+
+            _myProtocolVersion = ProtocolVersion.Version1;
         }
 
         public byte[] SesstionId
@@ -286,7 +294,7 @@ namespace Library.Net.Amoeba
 
                     _protocolVersion = _myProtocolVersion & _otherProtocolVersion;
 
-                    if (_protocolVersion == ProtocolVersion.Version1)
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
                     {
                         using (Stream stream = new MemoryStream(_mySessionId))
                         {
@@ -391,7 +399,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -425,7 +433,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -458,7 +466,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -501,7 +509,7 @@ namespace Library.Net.Amoeba
 
                     sw.Restart();
 
-                    if (_protocolVersion == ProtocolVersion.Version1)
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
                     {
                         using (Stream stream = _connection.Receive(_receiveTimeSpan))
                         {
@@ -564,10 +572,10 @@ namespace Library.Net.Amoeba
                                     var message = SeedsRequestMessage.Import(stream2, _bufferManager);
                                     this.OnPullSeedsRequest(new PullSeedsRequestEventArgs() { Signatures = message.Signatures });
                                 }
-                                else if (type == (byte)SerializeId.Seed)
+                                else if (type == (byte)SerializeId.Seeds)
                                 {
-                                    var seed = Seed.Import(stream2, _bufferManager);
-                                    this.OnPullSeed(new PullSeedEventArgs() { Seed = seed });
+                                    var message = SeedsMessage.Import(stream2, _bufferManager);
+                                    this.OnPullSeeds(new PullSeedsEventArgs() { Seeds = message.Seeds });
                                 }
                             }
                         }
@@ -579,7 +587,7 @@ namespace Library.Net.Amoeba
 
                     sw.Stop();
 
-                    if (sw.ElapsedMilliseconds < 1000) Thread.Sleep(1000 - (int)sw.ElapsedMilliseconds);
+                    if (1000 > sw.ElapsedMilliseconds) Thread.Sleep(1000 - (int)sw.ElapsedMilliseconds);
                 }
             }
 #if DEBUG
@@ -592,8 +600,7 @@ namespace Library.Net.Amoeba
                     this.OnClose(new EventArgs());
                 }
             }
-
-#else    
+#else
             catch (Exception)
             {
                 if (!_disposed)
@@ -644,11 +651,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual void OnPullSeed(PullSeedEventArgs e)
+        protected virtual void OnPullSeeds(PullSeedsEventArgs e)
         {
-            if (this.PullSeedEvent != null)
+            if (this.PullSeedsEvent != null)
             {
-                this.PullSeedEvent(this, e);
+                this.PullSeedsEvent(this, e);
             }
         }
 
@@ -675,7 +682,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -712,7 +719,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -749,7 +756,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -786,7 +793,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -823,7 +830,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -856,20 +863,22 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void PushSeed(Seed seed)
+        public void PushSeeds(IEnumerable<Seed> seeds)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Seed);
+                    stream.WriteByte((byte)SerializeId.Seeds);
                     stream.Flush();
 
-                    stream = new JoinStream(stream, seed.Export(_bufferManager));
+                    var message = new SeedsMessage(seeds);
+
+                    stream = new JoinStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -895,7 +904,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion == ProtocolVersion.Version1)
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -1001,7 +1010,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_nodes == null)
-                        _nodes = new NodeCollection(128);
+                        _nodes = new NodeCollection(_maxNodeCount);
 
                     return _nodes;
                 }
@@ -1085,7 +1094,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_keys == null)
-                        _keys = new KeyCollection(8192);
+                        _keys = new KeyCollection(_maxBlockLinkCount);
 
                     return _keys;
                 }
@@ -1169,7 +1178,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_keys == null)
-                        _keys = new KeyCollection(8192);
+                        _keys = new KeyCollection(_maxBlockRequestCount);
 
                     return _keys;
                 }
@@ -1363,9 +1372,93 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_signatures == null)
-                        _signatures = new SignatureCollection(2048);
+                        _signatures = new SignatureCollection(_maxSeedRequestCount);
 
                     return _signatures;
+                }
+            }
+        }
+
+        private sealed class SeedsMessage : ItemBase<SeedsMessage>
+        {
+            private enum SerializeId : byte
+            {
+                Seed = 0,
+            }
+
+            private SeedCollection _seeds = null;
+
+            public SeedsMessage(IEnumerable<Seed> seeds)
+            {
+                if (seeds != null) this.ProtectedSeeds.AddRange(seeds);
+            }
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            {
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
+                {
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    {
+                        if (id == (byte)SerializeId.Seed)
+                        {
+                            this.ProtectedSeeds.Add(Seed.Import(rangeStream, bufferManager));
+                        }
+                    }
+                }
+            }
+
+            public override Stream Export(BufferManager bufferManager)
+            {
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
+
+                // Seeds
+                foreach (var s in this.Seeds)
+                {
+                    Stream exportStream = s.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Seed);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+
+                return new JoinStream(streams);
+            }
+
+            public override SeedsMessage DeepClone()
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return SeedsMessage.Import(stream, BufferManager.Instance);
+                }
+            }
+
+            public IEnumerable<Seed> Seeds
+            {
+                get
+                {
+                    return this.ProtectedSeeds;
+                }
+            }
+
+            [DataMember(Name = "Seeds")]
+            private SeedCollection ProtectedSeeds
+            {
+                get
+                {
+                    if (_seeds == null)
+                        _seeds = new SeedCollection(_maxSeedCount);
+
+                    return _seeds;
                 }
             }
         }

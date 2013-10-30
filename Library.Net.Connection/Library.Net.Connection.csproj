@@ -83,7 +83,6 @@
     <Compile Include="Tools\Crc32_Castagnoli.cs" />
     <Compile Include="Tools\Rsa2048.cs" />
     <Compile Include="Tools\ANSI_X963_KDF.cs" />
-    <Compile Include="AsyncResult.cs" />
     <Compile Include="CompressConnection.cs" />
     <Compile Include="ConnectionBase.cs" />
     <Compile Include="CrcConnection.cs" />

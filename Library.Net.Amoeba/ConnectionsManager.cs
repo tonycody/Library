@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using Library.Collections;
 using Library.Net.Connection;
 using Library.Security;
-using System.Security.Cryptography;
 
 namespace Library.Net.Amoeba
 {
@@ -36,13 +36,13 @@ namespace Library.Net.Amoeba
         private LockedDictionary<Node, HashSet<string>> _pushSeedsRequestDictionary = new LockedDictionary<Node, HashSet<string>>();
 
         private LockedList<Node> _creatingNodes;
-        private CirculationCollection<Node> _waitingNodes;
-        private CirculationCollection<Node> _cuttingNodes;
-        private CirculationCollection<Node> _removeNodes;
-        private CirculationDictionary<Node, int> _nodesStatus;
+        private VolatileCollection<Node> _waitingNodes;
+        private VolatileCollection<Node> _cuttingNodes;
+        private VolatileCollection<Node> _removeNodes;
+        private VolatileDictionary<Node, int> _nodesStatus;
 
-        private CirculationCollection<string> _pushSeedsRequestList;
-        private CirculationCollection<Key> _downloadBlocks;
+        private VolatileCollection<string> _pushSeedsRequestList;
+        private VolatileCollection<Key> _downloadBlocks;
 
         private LockedDictionary<string, DateTime> _lastUsedSeedTimes = new LockedDictionary<string, DateTime>();
 
@@ -77,7 +77,7 @@ namespace Library.Net.Amoeba
         private volatile int _pullSeedRequestCount;
         private volatile int _pullSeedCount;
 
-        private CirculationCollection<Key> _relayBlocks;
+        private VolatileCollection<Key> _relayBlocks;
         private volatile int _relayBlockCount;
 
         private volatile int _acceptConnectionCount;
@@ -92,7 +92,8 @@ namespace Library.Net.Amoeba
         private const int _maxNodeCount = 128;
         private const int _maxBlockLinkCount = 2048;
         private const int _maxBlockRequestCount = 2048;
-        private const int _maxSeedRequestCount = 32;
+        private const int _maxSeedRequestCount = 1024;
+        private const int _maxSeedCount = 1024;
 
         private const int _routeTableMinCount = 100;
 
@@ -131,15 +132,15 @@ namespace Library.Net.Amoeba
             };
 
             _creatingNodes = new LockedList<Node>();
-            _waitingNodes = new CirculationCollection<Node>(new TimeSpan(0, 0, 30));
-            _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
-            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
-            _nodesStatus = new CirculationDictionary<Node, int>(new TimeSpan(0, 30, 0));
+            _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 30));
+            _cuttingNodes = new VolatileCollection<Node>(new TimeSpan(0, 30, 0));
+            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
+            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
-            _downloadBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
-            _pushSeedsRequestList = new CirculationCollection<string>(new TimeSpan(0, 3, 0));
+            _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _pushSeedsRequestList = new VolatileCollection<string>(new TimeSpan(0, 3, 0));
 
-            _relayBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _relayBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
             this.UpdateSessionId();
         }
@@ -683,7 +684,7 @@ namespace Library.Net.Amoeba
                 connectionManager.PullBlocksRequestEvent += new PullBlocksRequestEventHandler(connectionManager_BlocksRequestEvent);
                 connectionManager.PullBlockEvent += new PullBlockEventHandler(connectionManager_BlockEvent);
                 connectionManager.PullSeedsRequestEvent += new PullSeedsRequestEventHandler(connectionManager_SeedsRequestEvent);
-                connectionManager.PullSeedEvent += new PullSeedEventHandler(connectionManager_SeedEvent);
+                connectionManager.PullSeedsEvent += new PullSeedsEventHandler(connectionManager_SeedsEvent);
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 
@@ -1412,7 +1413,7 @@ namespace Library.Net.Amoeba
                                 .Randomize()
                                 .ToList();
 
-                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushSeedsRequest.Contains(list[i])))
                                 {
@@ -1430,7 +1431,7 @@ namespace Library.Net.Amoeba
                                 .Randomize()
                                 .ToList();
 
-                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushSeedsRequest.Contains(list[i])))
                                 {
@@ -1824,7 +1825,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (seedUpdateTime.Elapsed.TotalSeconds > 10)
+                    if (seedUpdateTime.Elapsed.TotalSeconds > 60)
                     {
                         seedUpdateTime.Restart();
 
@@ -1839,7 +1840,7 @@ namespace Library.Net.Amoeba
                                 {
                                     var seeds = new List<Seed>();
 
-                                    foreach (var signature in signatures)
+                                    foreach (var signature in signatures.Randomize())
                                     {
                                         Seed tempSeed = this.GetLinkSeed(signature);
                                         if (tempSeed == null) continue;
@@ -1851,20 +1852,20 @@ namespace Library.Net.Amoeba
                                         {
                                             seeds.Add(tempSeed);
 
-                                            if (seeds.Count >= 1) goto End;
+                                            if (seeds.Count >= _maxSeedCount) goto End;
                                         }
                                     }
 
                                 End: ;
 
-                                    foreach (var seed in seeds.Randomize())
+                                    connectionManager.PushSeeds(seeds);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Seeds ({0})", seeds.Count));
+                                    _pushSeedCount += seeds.Count;
+
+                                    foreach (var seed in seeds)
                                     {
                                         var signature = seed.Certificate.ToString();
-
-                                        connectionManager.PushSeed(seed);
-
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push Seed ({0})", seed.Keywords[0]));
-                                        _pushSeedCount++;
 
                                         messageManager.PushLinkSeeds[signature] = seed.CreationTime;
                                     }
@@ -1874,7 +1875,7 @@ namespace Library.Net.Amoeba
                                 {
                                     var seeds = new List<Seed>();
 
-                                    foreach (var signature in signatures)
+                                    foreach (var signature in signatures.Randomize())
                                     {
                                         Seed tempSeed = this.GetStoreSeed(signature);
                                         if (tempSeed == null) continue;
@@ -1886,20 +1887,20 @@ namespace Library.Net.Amoeba
                                         {
                                             seeds.Add(tempSeed);
 
-                                            if (seeds.Count >= 1) goto End;
+                                            if (seeds.Count >= _maxSeedCount) goto End;
                                         }
                                     }
 
                                 End: ;
 
-                                    foreach (var seed in seeds.Randomize())
+                                    connectionManager.PushSeeds(seeds);
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Seeds ({0})", seeds.Count));
+                                    _pushSeedCount += seeds.Count;
+
+                                    foreach (var seed in seeds)
                                     {
                                         var signature = seed.Certificate.ToString();
-
-                                        connectionManager.PushSeed(seed);
-
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push Seed ({0})", seed.Keywords[0]));
-                                        _pushSeedCount++;
 
                                         messageManager.PushStoreSeeds[signature] = seed.CreationTime;
                                     }
@@ -1973,8 +1974,8 @@ namespace Library.Net.Amoeba
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Keys == null
-                || messageManager.PullBlocksLink.Count > _maxBlockLinkCount * 60) return;
+            if (e.Keys == null) return;
+            if (messageManager.PullBlocksLink.Count > _maxBlockLinkCount * messageManager.PullBlocksLink.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksLink ({0})", e.Keys.Count()));
 
@@ -1994,8 +1995,8 @@ namespace Library.Net.Amoeba
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Keys == null
-                || messageManager.PullBlocksRequest.Count > _maxBlockRequestCount * 60) return;
+            if (e.Keys == null) return;
+            if (messageManager.PullBlocksRequest.Count > _maxBlockRequestCount * messageManager.PullBlocksRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksRequest ({0})", e.Keys.Count()));
 
@@ -2031,7 +2032,7 @@ namespace Library.Net.Amoeba
                     messageManager.LastPullTime = DateTime.UtcNow;
                     messageManager.Priority++;
 
-                    // Infomathon
+                    // Information
                     {
                         _relayBlocks.Add(e.Key);
                     }
@@ -2057,8 +2058,8 @@ namespace Library.Net.Amoeba
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Signatures == null
-                || messageManager.PullSeedsRequest.Count > _maxSeedRequestCount * 60) return;
+            if (e.Signatures == null) return;
+            if (messageManager.PullSeedsRequest.Count > _maxSeedRequestCount * messageManager.PullSeedsRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull SeedsRequest ({0})", e.Signatures.Count()));
 
@@ -2073,39 +2074,42 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void connectionManager_SeedEvent(object sender, PullSeedEventArgs e)
+        private void connectionManager_SeedsEvent(object sender, PullSeedsEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Seed == null) return;
+            if (e.Seeds == null) return;
+            if (messageManager.PushLinkSeeds.Count > _maxSeedCount * messageManager.PushLinkSeeds.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushStoreSeeds.Count > _maxSeedCount * messageManager.PushStoreSeeds.SurvivalTime.TotalMinutes) return;
 
-            if (_settings.SetLinkSeed(e.Seed))
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Seeds ({0})", e.Seeds.Count()));
+
+            foreach (var seed in e.Seeds.Take(_maxSeedCount))
             {
-                var signature = e.Seed.Certificate.ToString();
+                if (_settings.SetLinkSeed(seed))
+                {
+                    var signature = seed.Certificate.ToString();
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed ({0})", ConnectionsManager.Keyword_Link));
+                    messageManager.PushLinkSeeds[signature] = seed.CreationTime;
+                    messageManager.LastPullTime = DateTime.UtcNow;
 
-                messageManager.PushLinkSeeds[signature] = e.Seed.CreationTime;
-                messageManager.LastPullTime = DateTime.UtcNow;
+                    _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                }
+                else if (_settings.SetStoreSeed(seed))
+                {
+                    var signature = seed.Certificate.ToString();
 
-                _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                    messageManager.PushStoreSeeds[signature] = seed.CreationTime;
+                    messageManager.LastPullTime = DateTime.UtcNow;
+
+                    _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                }
+
+                _pullSeedCount++;
             }
-            else if (_settings.SetStoreSeed(e.Seed))
-            {
-                var signature = e.Seed.Certificate.ToString();
-
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed ({0})", ConnectionsManager.Keyword_Store));
-
-                messageManager.PushStoreSeeds[signature] = e.Seed.CreationTime;
-                messageManager.LastPullTime = DateTime.UtcNow;
-
-                _lastUsedSeedTimes[signature] = DateTime.UtcNow;
-            }
-
-            _pullSeedCount++;
         }
 
         private void connectionManager_PullCancelEvent(object sender, EventArgs e)
@@ -2279,11 +2283,10 @@ namespace Library.Net.Amoeba
         public Seed GetLinkSeed(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!Signature.HasSignature(signature)) return null;
 
             lock (this.ThisLock)
             {
-                if (!Signature.HasSignature(signature)) return null;
-
                 return _settings.GetLinkSeed(signature);
             }
         }
@@ -2291,11 +2294,10 @@ namespace Library.Net.Amoeba
         public Seed GetStoreSeed(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!Signature.HasSignature(signature)) return null;
 
             lock (this.ThisLock)
             {
-                if (!Signature.HasSignature(signature)) return null;
-
                 return _settings.GetStoreSeed(signature);
             }
         }
@@ -2448,8 +2450,8 @@ namespace Library.Net.Amoeba
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
+                    new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
                     new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
                     new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
@@ -2495,6 +2497,7 @@ namespace Library.Net.Amoeba
                 {
                     foreach (var signature in signatures)
                     {
+                        this.LinkSeeds.Remove(signature);
                         this.StoreSeeds.Remove(signature);
                     }
                 }
@@ -2592,17 +2595,6 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public NodeCollection OtherNodes
-            {
-                get
-                {
-                    lock (_thisLock)
-                    {
-                        return (NodeCollection)this["OtherNodes"];
-                    }
-                }
-            }
-
             public Node BaseNode
             {
                 get
@@ -2617,6 +2609,17 @@ namespace Library.Net.Amoeba
                     lock (_thisLock)
                     {
                         this["BaseNode"] = value;
+                    }
+                }
+            }
+
+            public NodeCollection OtherNodes
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (NodeCollection)this["OtherNodes"];
                     }
                 }
             }
@@ -2679,17 +2682,6 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            private Dictionary<string, Seed> StoreSeeds
-            {
-                get
-                {
-                    lock (_thisLock)
-                    {
-                        return (Dictionary<string, Seed>)this["StoreSeeds"];
-                    }
-                }
-            }
-
             private Dictionary<string, Seed> LinkSeeds
             {
                 get
@@ -2697,6 +2689,17 @@ namespace Library.Net.Amoeba
                     lock (_thisLock)
                     {
                         return (Dictionary<string, Seed>)this["LinkSeeds"];
+                    }
+                }
+            }
+
+            private Dictionary<string, Seed> StoreSeeds
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<string, Seed>)this["StoreSeeds"];
                     }
                 }
             }

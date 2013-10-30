@@ -2,11 +2,58 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Library.Net.Connection
 {
     public abstract class ConnectionBase : ManagerBase
     {
+        public abstract IEnumerable<ConnectionBase> GetLayers();
+
+        public abstract long ReceivedByteCount { get; }
+
+        public abstract long SentByteCount { get; }
+
+        public abstract void Connect(TimeSpan timeout);
+
+        public virtual Task ConnectAsync(TimeSpan timeout)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                this.Connect(timeout);
+            });
+        }
+
+        public abstract void Close(TimeSpan timeout);
+
+        public virtual Task CloseAsync(TimeSpan timeout)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                this.Close(timeout);
+            });
+        }
+
+        public abstract Stream Receive(TimeSpan timeout);
+
+        public virtual Task<Stream> ReceiveAsync(TimeSpan timeout)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                return this.Receive(timeout);
+            });
+        }
+
+        public abstract void Send(Stream stream, TimeSpan timeout);
+
+        public virtual Task SendAsync(Stream stream, TimeSpan timeout)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                this.Send(stream, timeout);
+            });
+        }
+
         protected static TimeSpan CheckTimeout(TimeSpan elapsedTime, TimeSpan timeout)
         {
             var value = timeout - elapsedTime;
@@ -19,125 +66,6 @@ namespace Library.Net.Connection
             {
                 throw new TimeoutException();
             }
-        }
-
-        public abstract IEnumerable<ConnectionBase> GetLayers();
-
-        public abstract long ReceivedByteCount { get; }
-
-        public abstract long SentByteCount { get; }
-
-        public abstract void Connect(TimeSpan timeout);
-
-        public virtual IAsyncResult BeginConnect(TimeSpan timeout, AsyncCallback callback, object state)
-        {
-            var ar = new AsyncResult(callback, state);
-
-            ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
-            {
-                try
-                {
-                    this.Connect(timeout);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                ar.Complete(false);
-            }));
-
-            return ar;
-        }
-
-        public virtual void EndConnect(IAsyncResult result)
-        {
-            AsyncResult.End(result);
-        }
-
-        public abstract void Close(TimeSpan timeout);
-
-        public virtual IAsyncResult BeginClose(TimeSpan timeout, AsyncCallback callback, object state)
-        {
-            var ar = new AsyncResult(callback, state);
-
-            ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
-            {
-                try
-                {
-                    this.Close(timeout);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                ar.Complete(false);
-            }));
-
-            return ar;
-        }
-
-        public virtual void EndClose(IAsyncResult result)
-        {
-            AsyncResult.End(result);
-        }
-
-        public abstract Stream Receive(TimeSpan timeout);
-
-        public virtual IAsyncResult BeginReceive(TimeSpan timeout, AsyncCallback callback, object state)
-        {
-            var ar = new ReturnAsyncResult<Stream>(callback, state);
-
-            ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
-            {
-                try
-                {
-                    ar.ReturnObject = this.Receive(timeout);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                ar.Complete(false);
-            }));
-
-            return ar;
-        }
-
-        public virtual Stream EndReceive(IAsyncResult result)
-        {
-            ReturnAsyncResult<Stream>.End(result);
-            return ((ReturnAsyncResult<Stream>)result).ReturnObject;
-        }
-
-        public abstract void Send(Stream stream, TimeSpan timeout);
-
-        public virtual IAsyncResult BeginSend(Stream stream, TimeSpan timeout, AsyncCallback callback, object state)
-        {
-            var ar = new AsyncResult(callback, state);
-
-            ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
-            {
-                try
-                {
-                    this.Send(stream, timeout);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                ar.Complete(false);
-            }));
-
-            return ar;
-        }
-
-        public virtual void EndSend(IAsyncResult result)
-        {
-            AsyncResult.End(result);
         }
     }
 

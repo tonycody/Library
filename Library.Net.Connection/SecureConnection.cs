@@ -311,8 +311,7 @@ namespace Library.Net.Connection
                                             }
                                         }
                                     }
-
-                                    if (xml.GetAttribute("Version") == "2")
+                                    else if (xml.GetAttribute("Version") == "2")
                                     {
                                         _otherVersion |= SecureConnectionVersion.Version2;
                                     }
@@ -391,7 +390,7 @@ namespace Library.Net.Connection
                                     if (connectionSignature.Certificate != null)
                                     {
                                         DateTime now = DateTime.UtcNow;
-                                        TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
+                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
 
                                         if (!Collection.Equals(connectionSignature.OtherHash, myHash)) throw new ConnectionException();
@@ -444,7 +443,7 @@ namespace Library.Net.Connection
                                     if (connectionSignature.Certificate != null)
                                     {
                                         DateTime now = DateTime.UtcNow;
-                                        TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
+                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
 
                                         if (!Collection.Equals(connectionSignature.OtherHash, myHash)) throw new ConnectionException();
@@ -597,7 +596,7 @@ namespace Library.Net.Connection
                                     if (connectionSignature.Certificate != null)
                                     {
                                         DateTime now = DateTime.UtcNow;
-                                        TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
+                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
 
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
                                     }
@@ -683,7 +682,7 @@ namespace Library.Net.Connection
                                     if (connectionSignature.Certificate != null)
                                     {
                                         DateTime now = DateTime.UtcNow;
-                                        TimeSpan span = (now < connectionSignature.CreationTime) ? connectionSignature.CreationTime - now : now - connectionSignature.CreationTime;
+                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
 
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
                                     }

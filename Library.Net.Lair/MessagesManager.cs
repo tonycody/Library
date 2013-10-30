@@ -10,8 +10,8 @@ namespace Library.Net.Lair
 
     sealed class MessagesManager : IThisLock
     {
-        private LockedDictionary<Node, MessageManager> _messageManagerDictionary = new LockedDictionary<Node, MessageManager>();
-        private LockedDictionary<Node, DateTime> _updateTimeDictionary = new LockedDictionary<Node, DateTime>();
+        private Dictionary<Node, MessageManager> _messageManagerDictionary = new Dictionary<Node, MessageManager>();
+        private Dictionary<Node, DateTime> _updateTimeDictionary = new Dictionary<Node, DateTime>();
         private int _id = 0;
         private DateTime _lastCircularTime = DateTime.UtcNow;
         private object _thisLock = new object();
@@ -36,28 +36,17 @@ namespace Library.Net.Lair
                     {
                         var messageManager = _messageManagerDictionary[node];
 
-                        messageManager.PushSignatureProfiles.TrimExcess();
-                        messageManager.PushDocumentSites.TrimExcess();
-                        messageManager.PushDocumentOpinions.TrimExcess();
-                        messageManager.PushChatTopics.TrimExcess();
-                        messageManager.PushChatMessages.TrimExcess();
-                        messageManager.PushWhisperMessages.TrimExcess();
-                        messageManager.PushMailMessages.TrimExcess();
+                        messageManager.PushBlocks.TrimExcess();
+                        messageManager.PushHeaders.TrimExcess();
 
-                        messageManager.PushSignaturesRequest.TrimExcess();
-                        messageManager.PullSignaturesRequest.TrimExcess();
+                        messageManager.PushBlocksLink.TrimExcess();
+                        messageManager.PullBlocksLink.TrimExcess();
 
-                        messageManager.PushDocumentsRequest.TrimExcess();
-                        messageManager.PullDocumentsRequest.TrimExcess();
+                        messageManager.PushBlocksRequest.TrimExcess();
+                        messageManager.PullBlocksRequest.TrimExcess();
 
-                        messageManager.PushChatsRequest.TrimExcess();
-                        messageManager.PullChatsRequest.TrimExcess();
-
-                        messageManager.PushWhispersRequest.TrimExcess();
-                        messageManager.PullWhispersRequest.TrimExcess();
-
-                        messageManager.PushMailsRequest.TrimExcess();
-                        messageManager.PullMailsRequest.TrimExcess();
+                        messageManager.PushHeadersRequest.TrimExcess();
+                        messageManager.PullHeadersRequest.TrimExcess();
                     }
 
                     _lastCircularTime = now;
@@ -110,18 +99,19 @@ namespace Library.Net.Lair
                 {
                     this.Circular();
 
-                    if (!_messageManagerDictionary.ContainsKey(node))
+                    MessageManager messageManager = null;
+
+                    if (!_messageManagerDictionary.TryGetValue(node, out messageManager))
                     {
                         while (_messageManagerDictionary.Any(n => n.Value.Id == _id)) _id++;
-                        _messageManagerDictionary[node] = new MessageManager(_id);
+
+                        messageManager = new MessageManager(_id);
+                        _messageManagerDictionary[node] = messageManager;
                     }
 
-                    if (!_updateTimeDictionary.ContainsKey(node))
-                    {
-                        _updateTimeDictionary[node] = DateTime.UtcNow;
-                    }
+                    _updateTimeDictionary[node] = DateTime.UtcNow;
 
-                    return _messageManagerDictionary[node];
+                    return messageManager;
                 }
             }
         }
@@ -160,28 +150,17 @@ namespace Library.Net.Lair
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
 
-        private CirculationDictionary<string, DateTime> _pushSignatureProfiles;
-        private CirculationCollection<Key> _pushDocumentSites;
-        private CirculationDictionary<string, DateTime> _pushDocumentOpinions;
-        private CirculationDictionary<string, DateTime> _pushChatTopics;
-        private CirculationCollection<Key> _pushChatMessages;
-        private CirculationCollection<Key> _pushWhisperMessages;
-        private CirculationCollection<Key> _pushMailMessages;
+        private CirculationCollection<Key> _pushBlocks;
+        private CirculationCollection<Key> _pushHeaders;
 
-        private CirculationCollection<string> _pushSignaturesRequest;
-        private CirculationCollection<string> _pullSignaturesRequest;
+        private CirculationCollection<Key> _pushBlocksLink;
+        private CirculationCollection<Key> _pullBlocksLink;
 
-        private CirculationCollection<Document> _pushDocumentsRequest;
-        private CirculationCollection<Document> _pullDocumentsRequest;
+        private CirculationCollection<Key> _pushBlocksRequest;
+        private CirculationCollection<Key> _pullBlocksRequest;
 
-        private CirculationCollection<Chat> _pushChatsRequest;
-        private CirculationCollection<Chat> _pullChatsRequest;
-
-        private CirculationCollection<Whisper> _pushWhispersRequest;
-        private CirculationCollection<Whisper> _pullWhispersRequest;
-
-        private CirculationCollection<Mail> _pushMailsRequest;
-        private CirculationCollection<Mail> _pullMailsRequest;
+        private CirculationCollection<Tag> _pushHeadersRequest;
+        private CirculationCollection<Tag> _pullHeadersRequest;
 
         private object _thisLock = new object();
 
@@ -191,28 +170,17 @@ namespace Library.Net.Lair
 
             _surroundingNodes = new LockedHashSet<Node>(128);
 
-            _pushSignatureProfiles = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
-            _pushDocumentSites = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushDocumentOpinions = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
-            _pushChatTopics = new CirculationDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
-            _pushChatMessages = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushWhisperMessages = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushMailMessages = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushHeaders = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
-            _pushSignaturesRequest = new CirculationCollection<string>(new TimeSpan(0, 60, 0));
-            _pullSignaturesRequest = new CirculationCollection<string>(new TimeSpan(0, 30, 0));
+            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushDocumentsRequest = new CirculationCollection<Document>(new TimeSpan(0, 60, 0));
-            _pullDocumentsRequest = new CirculationCollection<Document>(new TimeSpan(0, 30, 0));
+            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushChatsRequest = new CirculationCollection<Chat>(new TimeSpan(0, 60, 0));
-            _pullChatsRequest = new CirculationCollection<Chat>(new TimeSpan(0, 30, 0));
-
-            _pushWhispersRequest = new CirculationCollection<Whisper>(new TimeSpan(0, 60, 0));
-            _pullWhispersRequest = new CirculationCollection<Whisper>(new TimeSpan(0, 30, 0));
-
-            _pushMailsRequest = new CirculationCollection<Mail>(new TimeSpan(0, 60, 0));
-            _pullMailsRequest = new CirculationCollection<Mail>(new TimeSpan(0, 30, 0));
+            _pushHeadersRequest = new CirculationCollection<Tag>(new TimeSpan(0, 60, 0));
+            _pullHeadersRequest = new CirculationCollection<Tag>(new TimeSpan(0, 30, 0));
         }
 
         public int Id
@@ -327,189 +295,90 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationDictionary<string, DateTime> PushSignatureProfiles
+        public CirculationCollection<Key> PushBlocks
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSignatureProfiles;
+                    return _pushBlocks;
                 }
             }
         }
 
-        public CirculationCollection<Key> PushDocumentSites
+        public CirculationCollection<Key> PushHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushDocumentSites;
+                    return _pushHeaders;
                 }
             }
         }
 
-        public CirculationDictionary<string, DateTime> PushDocumentOpinions
+        public CirculationCollection<Key> PushBlocksLink
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushDocumentOpinions;
+                    return _pushBlocksLink;
                 }
             }
         }
 
-        public CirculationDictionary<string, DateTime> PushChatTopics
+        public CirculationCollection<Key> PullBlocksLink
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushChatTopics;
+                    return _pullBlocksLink;
                 }
             }
         }
 
-        public CirculationCollection<Key> PushChatMessages
+        public CirculationCollection<Key> PushBlocksRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushChatMessages;
+                    return _pushBlocksRequest;
                 }
             }
         }
 
-        public CirculationCollection<Key> PushWhisperMessages
+        public CirculationCollection<Key> PullBlocksRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushWhisperMessages;
+                    return _pullBlocksRequest;
                 }
             }
         }
 
-        public CirculationCollection<Key> PushMailMessages
+        public CirculationCollection<Tag> PushHeadersRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushMailMessages;
+                    return _pushHeadersRequest;
                 }
             }
         }
 
-        public CirculationCollection<string> PushSignaturesRequest
+        public CirculationCollection<Tag> PullHeadersRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSignaturesRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<string> PullSignaturesRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullSignaturesRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Document> PushDocumentsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushDocumentsRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Document> PullDocumentsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullDocumentsRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Chat> PushChatsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushChatsRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Chat> PullChatsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullChatsRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Whisper> PushWhispersRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushWhispersRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Whisper> PullWhispersRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullWhispersRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Mail> PushMailsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushMailsRequest;
-                }
-            }
-        }
-
-        public CirculationCollection<Mail> PullMailsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullMailsRequest;
+                    return _pullHeadersRequest;
                 }
             }
         }

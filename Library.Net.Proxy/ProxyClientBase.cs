@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Library.Net.Proxy
 {
@@ -8,30 +9,12 @@ namespace Library.Net.Proxy
     {
         public abstract Socket CreateConnection(TimeSpan timeout);
 
-        public virtual IAsyncResult BeginCreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, AsyncCallback callback, object state)
+        public virtual Task<Socket> CreateConnectionAsync(TimeSpan timeout)
         {
-            var ar = new ReturnAsyncResult<Socket>(callback, state);
-
-            ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
+            return Task.Factory.StartNew(() =>
             {
-                try
-                {
-                    ar.ReturnObject = this.CreateConnection(timeout);
-                }
-                catch (Exception)
-                {
-
-                }
-
-                ar.Complete(false);
-            }));
-
-            return ar;
-        }
-
-        public virtual void EndCreateConnection(IAsyncResult result)
-        {
-            ReturnAsyncResult<Socket>.End(result);
+                return this.CreateConnection(timeout);
+            });
         }
 
         protected static TimeSpan CheckTimeout(TimeSpan elapsedTime, TimeSpan timeout)

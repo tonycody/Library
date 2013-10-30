@@ -5,66 +5,73 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class CirculationCollection<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
+    public class VolatileCollection<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private HashSet<T> _hashSet;
-        private Dictionary<T, DateTime> _circularDictionary;
+        private Dictionary<T, DateTime> _volatileDictionary;
 
-        private DateTime _lastCircularTime = DateTime.MinValue;
-        private readonly TimeSpan _circularTime;
+        private DateTime _lastCheckTime = DateTime.MinValue;
+        private readonly TimeSpan _survivalTime;
 
         private object _thisLock = new object();
 
-        public CirculationCollection(TimeSpan circularTime)
+        public VolatileCollection(TimeSpan survivalTime)
         {
             _hashSet = new HashSet<T>();
-            _circularDictionary = new Dictionary<T, DateTime>();
-            _circularTime = circularTime;
+            _volatileDictionary = new Dictionary<T, DateTime>();
+            _survivalTime = survivalTime;
         }
 
-        public CirculationCollection(TimeSpan circularTime, IEqualityComparer<T> comparer)
+        public VolatileCollection(TimeSpan survivalTime, IEqualityComparer<T> comparer)
         {
             _hashSet = new HashSet<T>(comparer);
-            _circularDictionary = new Dictionary<T, DateTime>(comparer);
-            _circularTime = circularTime;
+            _volatileDictionary = new Dictionary<T, DateTime>(comparer);
+            _survivalTime = survivalTime;
+        }
+
+        public TimeSpan SurvivalTime
+        {
+            get
+            {
+                return _survivalTime;
+            }
         }
 
         public T[] ToArray()
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _hashSet.ToArray();
             }
         }
 
-        private void Circular(TimeSpan circularTime)
+        private void Check(TimeSpan survivalTime)
         {
             lock (this.ThisLock)
             {
                 var now = DateTime.UtcNow;
 
-                if ((now - _lastCircularTime) > new TimeSpan(0, 0, 30))
+                if ((now - _lastCheckTime).TotalSeconds > 10)
                 {
                     foreach (var item in _hashSet.ToArray())
                     {
-                        if ((now - _circularDictionary[item]) > circularTime)
+                        if ((now - _volatileDictionary[item]) > survivalTime)
                         {
                             _hashSet.Remove(item);
                         }
                     }
 
-                    foreach (var item in _circularDictionary.Keys.ToArray())
+                    foreach (var item in _volatileDictionary.Keys.ToArray())
                     {
                         if (!_hashSet.Contains(item))
                         {
-                            _circularDictionary.Remove(item);
+                            _volatileDictionary.Remove(item);
                         }
                     }
 
-                    _hashSet.TrimExcess();
-                    _lastCircularTime = now;
+                    _lastCheckTime = now;
                 }
             }
         }
@@ -86,7 +93,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
+                    this.Check(_survivalTime);
 
                     return _hashSet.Count;
                 }
@@ -97,11 +104,11 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 foreach (var item in collection)
                 {
-                    _circularDictionary[item] = DateTime.UtcNow;
+                    _volatileDictionary[item] = DateTime.UtcNow;
                     _hashSet.Add(item);
                 }
             }
@@ -111,9 +118,9 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
-                _circularDictionary[item] = DateTime.UtcNow;
+                _volatileDictionary[item] = DateTime.UtcNow;
                 return _hashSet.Add(item);
             }
         }
@@ -122,7 +129,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                _circularDictionary.Clear();
+                _volatileDictionary.Clear();
                 _hashSet.Clear();
             }
         }
@@ -131,7 +138,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _hashSet.Contains(item);
             }
@@ -141,7 +148,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 _hashSet.CopyTo(array, arrayIndex);
             }
@@ -151,7 +158,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _hashSet.Remove(item);
             }
@@ -161,7 +168,9 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
+
+                _hashSet.TrimExcess();
             }
         }
 
@@ -169,7 +178,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 foreach (var item in _hashSet)
                 {

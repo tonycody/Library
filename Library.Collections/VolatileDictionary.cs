@@ -5,28 +5,36 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class CirculationDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable, IThisLock
+    public class VolatileDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable, IThisLock
     {
         private Dictionary<TKey, TValue> _dic;
-        private Dictionary<TKey, DateTime> _circularDictionary;
+        private Dictionary<TKey, DateTime> _volatileDictionary;
 
-        private DateTime _lastCircularTime = DateTime.MinValue;
-        private readonly TimeSpan _circularTime;
+        private DateTime _lastCheckTime = DateTime.MinValue;
+        private readonly TimeSpan _survivalTime;
 
         private object _thisLock = new object();
 
-        public CirculationDictionary(TimeSpan circularTime)
+        public VolatileDictionary(TimeSpan survivalTime)
         {
             _dic = new Dictionary<TKey, TValue>();
-            _circularDictionary = new Dictionary<TKey, DateTime>();
-            _circularTime = circularTime;
+            _volatileDictionary = new Dictionary<TKey, DateTime>();
+            _survivalTime = survivalTime;
         }
 
-        public CirculationDictionary(TimeSpan circularTime, IEqualityComparer<TKey> comparer)
+        public VolatileDictionary(TimeSpan survivalTime, IEqualityComparer<TKey> comparer)
         {
             _dic = new Dictionary<TKey, TValue>(comparer);
-            _circularDictionary = new Dictionary<TKey, DateTime>(comparer);
-            _circularTime = circularTime;
+            _volatileDictionary = new Dictionary<TKey, DateTime>(comparer);
+            _survivalTime = survivalTime;
+        }
+
+        public TimeSpan SurvivalTime
+        {
+            get
+            {
+                return _survivalTime;
+            }
         }
 
         public KeyValuePair<TKey, TValue>[] ToArray()
@@ -40,31 +48,31 @@ namespace Library.Collections
             }
         }
 
-        private void Circular(TimeSpan circularTime)
+        private void Check(TimeSpan survivalTime)
         {
             lock (this.ThisLock)
             {
                 var now = DateTime.UtcNow;
 
-                if ((now - _lastCircularTime) > new TimeSpan(0, 0, 30))
+                if ((now - _lastCheckTime).TotalSeconds > 10)
                 {
                     foreach (var item in _dic.ToArray())
                     {
-                        if ((now - _circularDictionary[item.Key]) > circularTime)
+                        if ((now - _volatileDictionary[item.Key]) > survivalTime)
                         {
                             _dic.Remove(item.Key);
                         }
                     }
 
-                    foreach (var item in _circularDictionary.Keys.ToArray())
+                    foreach (var item in _volatileDictionary.Keys.ToArray())
                     {
                         if (!_dic.ContainsKey(item))
                         {
-                            _circularDictionary.Remove(item);
+                            _volatileDictionary.Remove(item);
                         }
                     }
 
-                    _lastCircularTime = now;
+                    _lastCheckTime = now;
                 }
             }
         }
@@ -73,7 +81,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
             }
         }
 
@@ -83,7 +91,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
+                    this.Check(_survivalTime);
 
                     return new CirculationKeyCollection(_dic.Keys, this.ThisLock);
                 }
@@ -96,7 +104,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
+                    this.Check(_survivalTime);
 
                     return new CirculationValueCollection(_dic.Values, this.ThisLock);
                 }
@@ -120,7 +128,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
+                    this.Check(_survivalTime);
 
                     return _dic.Count;
                 }
@@ -133,7 +141,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
+                    this.Check(_survivalTime);
 
                     return _dic[key];
                 }
@@ -142,9 +150,9 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular(_circularTime);
+                    this.Check(_survivalTime);
 
-                    _circularDictionary[key] = DateTime.UtcNow;
+                    _volatileDictionary[key] = DateTime.UtcNow;
                     _dic[key] = value;
                 }
             }
@@ -184,11 +192,11 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 int count = _dic.Count;
                 _dic[key] = value;
-                _circularDictionary[key] = DateTime.UtcNow;
+                _volatileDictionary[key] = DateTime.UtcNow;
 
                 return (count != _dic.Count);
             }
@@ -198,7 +206,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                _circularDictionary.Clear();
+                _volatileDictionary.Clear();
                 _dic.Clear();
             }
         }
@@ -207,7 +215,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _dic.ContainsKey(key);
             }
@@ -217,7 +225,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _dic.ContainsValue(value);
             }
@@ -227,7 +235,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 foreach (var item in _dic)
                 {
@@ -240,7 +248,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _dic.Remove(key);
             }
@@ -250,7 +258,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _dic.TryGetValue(key, out value);
             }
@@ -268,7 +276,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return _dic.Contains(item);
             }
@@ -278,7 +286,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 ((IDictionary<TKey, TValue>)_dic).CopyTo(array, arrayIndex);
             }
@@ -288,7 +296,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 return ((IDictionary<TKey, TValue>)_dic).Remove(keyValuePair);
             }
@@ -298,7 +306,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Circular(_circularTime);
+                this.Check(_survivalTime);
 
                 ((ICollection)_dic).CopyTo(array, index);
             }
