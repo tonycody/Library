@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
-using System.Threading.Tasks;
 using Library.Collections;
 using Library.Net.Connection;
 using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public delegate IEnumerable<string> LockSeedSignaturesEventHandler(object sender);
+    public delegate IEnumerable<Tag> LockHeaderTagsEventHandler(object sender);
     delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -33,16 +33,16 @@ namespace Library.Net.Lair
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksLinkDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksRequestDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksDictionary = new LockedDictionary<Node, HashSet<Key>>();
-        private LockedDictionary<Node, HashSet<string>> _pushHeadersRequestDictionary = new LockedDictionary<Node, HashSet<string>>();
+        private LockedDictionary<Node, HashSet<Tag>> _pushHeadersRequestDictionary = new LockedDictionary<Node, HashSet<Tag>>();
 
         private LockedList<Node> _creatingNodes;
-        private CirculationCollection<Node> _waitingNodes;
-        private CirculationCollection<Node> _cuttingNodes;
-        private CirculationCollection<Node> _removeNodes;
-        private CirculationDictionary<Node, int> _nodesStatus;
+        private VolatileCollection<Node> _waitingNodes;
+        private VolatileCollection<Node> _cuttingNodes;
+        private VolatileCollection<Node> _removeNodes;
+        private VolatileDictionary<Node, int> _nodesStatus;
 
-        private CirculationCollection<Tag> _pushHeadersRequestList;
-        private CirculationCollection<Key> _downloadBlocks;
+        private VolatileCollection<Tag> _pushHeadersRequestList;
+        private VolatileCollection<Key> _downloadBlocks;
 
         private LockedDictionary<Tag, DateTime> _lastUsedHeaderTimes = new LockedDictionary<Tag, DateTime>();
 
@@ -77,13 +77,13 @@ namespace Library.Net.Lair
         private volatile int _pullHeaderRequestCount;
         private volatile int _pullHeaderCount;
 
-        private CirculationCollection<Key> _relayBlocks;
+        private VolatileCollection<Key> _relayBlocks;
         private volatile int _relayBlockCount;
 
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        private LockHeaderSignaturesEventHandler _lockHeaderSignaturesEvent;
+        private LockHeaderTagsEventHandler _lockHeaderTagsEvent;
         private UploadedEventHandler _uploadedEvent;
 
         private volatile bool _disposed = false;
@@ -92,7 +92,8 @@ namespace Library.Net.Lair
         private const int _maxNodeCount = 128;
         private const int _maxBlockLinkCount = 2048;
         private const int _maxBlockRequestCount = 2048;
-        private const int _maxHeaderRequestCount = 32;
+        private const int _maxHeaderRequestCount = 1024;
+        private const int _maxHeaderCount = 1024;
 
         private const int _routeTableMinCount = 100;
 
@@ -131,26 +132,26 @@ namespace Library.Net.Lair
             };
 
             _creatingNodes = new LockedList<Node>();
-            _waitingNodes = new CirculationCollection<Node>(new TimeSpan(0, 0, 30));
-            _cuttingNodes = new CirculationCollection<Node>(new TimeSpan(0, 30, 0));
-            _removeNodes = new CirculationCollection<Node>(new TimeSpan(0, 10, 0));
-            _nodesStatus = new CirculationDictionary<Node, int>(new TimeSpan(0, 30, 0));
+            _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 30));
+            _cuttingNodes = new VolatileCollection<Node>(new TimeSpan(0, 30, 0));
+            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
+            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
-            _downloadBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
-            _pushHeadersRequestList = new CirculationCollection<Tag>(new TimeSpan(0, 3, 0));
+            _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _pushHeadersRequestList = new VolatileCollection<Tag>(new TimeSpan(0, 3, 0));
 
-            _relayBlocks = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _relayBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
             this.UpdateSessionId();
         }
 
-        public LockSeedSignaturesEventHandler LockSeedSignaturesEvent
+        public LockHeaderTagsEventHandler LockHeaderTagsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockSeedSignaturesEvent = value;
+                    _lockHeaderTagsEvent = value;
                 }
             }
         }
@@ -288,15 +289,15 @@ namespace Library.Net.Lair
                     contexts.Add(new InformationContext("PushBlockLinkCount", _pushBlockLinkCount));
                     contexts.Add(new InformationContext("PushBlockRequestCount", _pushBlockRequestCount));
                     contexts.Add(new InformationContext("PushBlockCount", _pushBlockCount));
-                    contexts.Add(new InformationContext("PushSeedRequestCount", _pushSeedRequestCount));
-                    contexts.Add(new InformationContext("PushSeedCount", _pushSeedCount));
+                    contexts.Add(new InformationContext("PushHeaderRequestCount", _pushHeaderRequestCount));
+                    contexts.Add(new InformationContext("PushHeaderCount", _pushHeaderCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", _pullNodeCount));
                     contexts.Add(new InformationContext("PullBlockLinkCount", _pullBlockLinkCount));
                     contexts.Add(new InformationContext("PullBlockRequestCount", _pullBlockRequestCount));
                     contexts.Add(new InformationContext("PullBlockCount", _pullBlockCount));
-                    contexts.Add(new InformationContext("PullSeedRequestCount", _pullSeedRequestCount));
-                    contexts.Add(new InformationContext("PullSeedCount", _pullSeedCount));
+                    contexts.Add(new InformationContext("PullHeaderRequestCount", _pullHeaderRequestCount));
+                    contexts.Add(new InformationContext("PullHeaderCount", _pullHeaderCount));
 
                     contexts.Add(new InformationContext("AcceptConnectionCount", _acceptConnectionCount));
                     contexts.Add(new InformationContext("CreateConnectionCount", _createConnectionCount));
@@ -353,11 +354,11 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual IEnumerable<string> OnLockSeedSignaturesEvent()
+        protected virtual IEnumerable<Tag> OnLockHeaderTagsEvent()
         {
-            if (_lockSeedSignaturesEvent != null)
+            if (_lockHeaderTagsEvent != null)
             {
-                return _lockSeedSignaturesEvent(this);
+                return _lockHeaderTagsEvent(this);
             }
 
             return null;
@@ -682,8 +683,8 @@ namespace Library.Net.Lair
                 connectionManager.PullBlocksLinkEvent += new PullBlocksLinkEventHandler(connectionManager_BlocksLinkEvent);
                 connectionManager.PullBlocksRequestEvent += new PullBlocksRequestEventHandler(connectionManager_BlocksRequestEvent);
                 connectionManager.PullBlockEvent += new PullBlockEventHandler(connectionManager_BlockEvent);
-                connectionManager.PullSeedsRequestEvent += new PullSeedsRequestEventHandler(connectionManager_SeedsRequestEvent);
-                connectionManager.PullSeedEvent += new PullSeedEventHandler(connectionManager_SeedEvent);
+                connectionManager.PullHeadersRequestEvent += new PullHeadersRequestEventHandler(connectionManager_HeadersRequestEvent);
+                connectionManager.PullHeadersEvent += new PullHeadersEventHandler(connectionManager_HeadersEvent);
                 connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
                 connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
 
@@ -930,7 +931,6 @@ namespace Library.Net.Lair
             Stopwatch connectionCheckStopwatch = new Stopwatch();
             connectionCheckStopwatch.Start();
 
-            Stopwatch checkSeedsStopwatch = new Stopwatch();
             Stopwatch refreshStopwatch = new Stopwatch();
 
             Stopwatch pushBlockUploadStopwatch = new Stopwatch();
@@ -938,10 +938,10 @@ namespace Library.Net.Lair
             Stopwatch pushBlockDownloadStopwatch = new Stopwatch();
             pushBlockDownloadStopwatch.Start();
 
-            Stopwatch pushSeedUploadStopwatch = new Stopwatch();
-            pushSeedUploadStopwatch.Start();
-            Stopwatch pushSeedDownloadStopwatch = new Stopwatch();
-            pushSeedDownloadStopwatch.Start();
+            Stopwatch pushHeaderUploadStopwatch = new Stopwatch();
+            pushHeaderUploadStopwatch.Start();
+            Stopwatch pushHeaderDownloadStopwatch = new Stopwatch();
+            pushHeaderDownloadStopwatch.Start();
 
             for (; ; )
             {
@@ -1023,13 +1023,6 @@ namespace Library.Net.Lair
                     }
                 }
 
-                if (!checkSeedsStopwatch.IsRunning || checkSeedsStopwatch.Elapsed.TotalMinutes >= 30)
-                {
-                    checkSeedsStopwatch.Restart();
-
-                    _cacheManager.CheckSeeds();
-                }
-
                 if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     refreshStopwatch.Restart();
@@ -1044,36 +1037,36 @@ namespace Library.Net.Lair
                         try
                         {
                             {
-                                var lockSeedSignatures = this.OnLockSeedSignaturesEvent();
+                                var lockHeaderTags = this.OnLockHeaderTagsEvent();
 
-                                if (lockSeedSignatures != null)
+                                if (lockHeaderTags != null)
                                 {
-                                    var removeSignatures = new HashSet<string>();
-                                    removeSignatures.UnionWith(_settings.GetSeedSignatures());
-                                    removeSignatures.ExceptWith(lockSeedSignatures);
+                                    var removeTags = new HashSet<Tag>();
+                                    removeTags.UnionWith(_settings.GetHeaderTags());
+                                    removeTags.ExceptWith(lockHeaderTags);
 
-                                    var sortList = removeSignatures.ToList();
+                                    var sortList = removeTags.ToList();
 
                                     sortList.Sort((x, y) =>
                                     {
                                         DateTime tx;
                                         DateTime ty;
 
-                                        _lastUsedSeedTimes.TryGetValue(x, out tx);
-                                        _lastUsedSeedTimes.TryGetValue(y, out ty);
+                                        _lastUsedHeaderTimes.TryGetValue(x, out tx);
+                                        _lastUsedHeaderTimes.TryGetValue(y, out ty);
 
                                         return tx.CompareTo(ty);
                                     });
 
-                                    _settings.RemoveSeedSignatures(sortList.Take(sortList.Count - 1024));
+                                    _settings.RemoveHeaderTags(sortList.Take(sortList.Count - 1024));
 
-                                    var liveSignatures = new HashSet<string>(_settings.GetSeedSignatures());
+                                    var liveTags = new HashSet<Tag>(_settings.GetHeaderTags());
 
-                                    foreach (var signature in _lastUsedSeedTimes.Keys.ToArray())
+                                    foreach (var signature in _lastUsedHeaderTimes.Keys.ToArray())
                                     {
-                                        if (liveSignatures.Contains(signature)) continue;
+                                        if (liveTags.Contains(signature)) continue;
 
-                                        _lastUsedSeedTimes.Remove(signature);
+                                        _lastUsedHeaderTimes.Remove(signature);
                                     }
                                 }
                             }
@@ -1367,22 +1360,22 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
-                    && pushSeedUploadStopwatch.Elapsed.TotalMinutes > 3)
+                    && pushHeaderUploadStopwatch.Elapsed.TotalMinutes > 3)
                 {
-                    pushSeedUploadStopwatch.Restart();
+                    pushHeaderUploadStopwatch.Restart();
 
-                    foreach (var item in _settings.GetSeedSignatures())
+                    foreach (var item in _settings.GetHeaderTags())
                     {
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 1));
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
                                 var messageManager = _messagesManager[requestNodes[i]];
 
-                                messageManager.PullSeedsRequest.Add(item);
+                                messageManager.PullHeadersRequest.Add(item);
                             }
                         }
                         catch (Exception e)
@@ -1393,11 +1386,11 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
-                    && pushSeedDownloadStopwatch.Elapsed.TotalSeconds > 60)
+                    && pushHeaderDownloadStopwatch.Elapsed.TotalSeconds > 60)
                 {
-                    pushSeedDownloadStopwatch.Restart();
+                    pushHeaderDownloadStopwatch.Restart();
 
-                    HashSet<string> pushSeedsRequestList = new HashSet<string>();
+                    HashSet<Tag> pushHeadersRequestList = new HashSet<Tag>();
                     List<Node> nodes = new List<Node>();
 
                     lock (this.ThisLock)
@@ -1412,11 +1405,11 @@ namespace Library.Net.Lair
                                 .Randomize()
                                 .ToList();
 
-                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushSeedsRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushHeadersRequest.Contains(list[i])))
                                 {
-                                    pushSeedsRequestList.Add(list[i]);
+                                    pushHeadersRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1425,16 +1418,16 @@ namespace Library.Net.Lair
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
-                            var list = messageManager.PullSeedsRequest
+                            var list = messageManager.PullHeadersRequest
                                 .ToArray()
                                 .Randomize()
                                 .ToList();
 
-                            for (int i = 0, j = 0; j < 32 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushSeedsRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushHeadersRequest.Contains(list[i])))
                                 {
-                                    pushSeedsRequestList.Add(list[i]);
+                                    pushHeadersRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1442,23 +1435,23 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        Dictionary<Node, HashSet<string>> pushSeedsRequestDictionary = new Dictionary<Node, HashSet<string>>();
+                        Dictionary<Node, HashSet<Tag>> pushHeadersRequestDictionary = new Dictionary<Node, HashSet<Tag>>();
 
-                        foreach (var item in pushSeedsRequestList)
+                        foreach (var item in pushHeadersRequestList)
                         {
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(Signature.GetSignatureHash(item), 1));
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    HashSet<string> hashset;
+                                    HashSet<Tag> hashset;
 
-                                    if (!pushSeedsRequestDictionary.TryGetValue(requestNodes[i], out hashset))
+                                    if (!pushHeadersRequestDictionary.TryGetValue(requestNodes[i], out hashset))
                                     {
-                                        hashset = new HashSet<string>();
-                                        pushSeedsRequestDictionary[requestNodes[i]] = hashset;
+                                        hashset = new HashSet<Tag>();
+                                        pushHeadersRequestDictionary[requestNodes[i]] = hashset;
                                     }
 
                                     hashset.Add(item);
@@ -1470,13 +1463,13 @@ namespace Library.Net.Lair
                             }
                         }
 
-                        lock (_pushSeedsRequestDictionary.ThisLock)
+                        lock (_pushHeadersRequestDictionary.ThisLock)
                         {
-                            _pushSeedsRequestDictionary.Clear();
+                            _pushHeadersRequestDictionary.Clear();
 
-                            foreach (var item in pushSeedsRequestDictionary)
+                            foreach (var item in pushHeadersRequestDictionary)
                             {
-                                _pushSeedsRequestDictionary.Add(item.Key, item.Value);
+                                _pushHeadersRequestDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1501,8 +1494,8 @@ namespace Library.Net.Lair
                 Stopwatch nodeUpdateTime = new Stopwatch();
                 Stopwatch updateTime = new Stopwatch();
                 updateTime.Start();
-                Stopwatch seedUpdateTime = new Stopwatch();
-                seedUpdateTime.Start();
+                Stopwatch headerUpdateTime = new Stopwatch();
+                headerUpdateTime.Start();
 
                 for (; ; )
                 {
@@ -1660,22 +1653,22 @@ namespace Library.Net.Lair
                             }
                         }
 
-                        // PushSeedsRequest
+                        // PushHeadersRequest
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
-                            SignatureCollection tempList = null;
-                            int count = (int)(_maxSeedRequestCount * this.ResponseTimePriority(connectionManager.Node));
+                            TagCollection tempList = null;
+                            int count = (int)(_maxHeaderRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
-                            lock (_pushSeedsRequestDictionary.ThisLock)
+                            lock (_pushHeadersRequestDictionary.ThisLock)
                             {
-                                HashSet<string> hashset;
+                                HashSet<Tag> hashset;
 
-                                if (_pushSeedsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                if (_pushHeadersRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new SignatureCollection(hashset.Randomize().Take(count));
+                                    tempList = new TagCollection(hashset.Randomize().Take(count));
 
                                     hashset.ExceptWith(tempList);
-                                    messageManager.PushSeedsRequest.AddRange(tempList);
+                                    messageManager.PushHeadersRequest.AddRange(tempList);
                                 }
                             }
 
@@ -1683,21 +1676,21 @@ namespace Library.Net.Lair
                             {
                                 try
                                 {
-                                    connectionManager.PushSeedsRequest(tempList);
+                                    connectionManager.PushHeadersRequest(tempList);
 
                                     foreach (var item in tempList)
                                     {
                                         _pushHeadersRequestList.Remove(item);
                                     }
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push SeedsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
-                                    _pushSeedRequestCount += tempList.Count;
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                    _pushHeaderRequestCount += tempList.Count;
                                 }
                                 catch (Exception e)
                                 {
                                     foreach (var item in tempList)
                                     {
-                                        messageManager.PushSeedsRequest.Remove(item);
+                                        messageManager.PushHeadersRequest.Remove(item);
                                     }
 
                                     throw e;
@@ -1824,85 +1817,46 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (seedUpdateTime.Elapsed.TotalSeconds > 10)
+                    if (headerUpdateTime.Elapsed.TotalSeconds > 60)
                     {
-                        seedUpdateTime.Restart();
+                        headerUpdateTime.Restart();
 
-                        // PushSeed
+                        // PushHeader
                         if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                         {
-                            var signatures = new List<string>(messageManager.PullSeedsRequest.Randomize());
+                            var tags = new List<Tag>(messageManager.PullHeadersRequest.Randomize());
 
-                            if (signatures.Count > 0)
+                            if (tags.Count > 0)
                             {
-                                // Link
+                                var headers = new List<Header>();
+
+                                foreach (var tag in tags.Randomize())
                                 {
-                                    var seeds = new List<Seed>();
-
-                                    foreach (var signature in signatures)
+                                    foreach (var header in this.GetHeaders(tag))
                                     {
-                                        Seed tempSeed = this.GetLinkSeed(signature);
-                                        if (tempSeed == null) continue;
+                                        var key = new Key(header.GetHash(_hashAlgorithm), _hashAlgorithm);
 
-                                        DateTime creationTime;
-
-                                        if (!messageManager.PushLinkSeeds.TryGetValue(signature, out creationTime)
-                                            || tempSeed.CreationTime > creationTime)
+                                        if (!messageManager.PushHeaders.Contains(key))
                                         {
-                                            seeds.Add(tempSeed);
+                                            headers.Add(header);
 
-                                            if (seeds.Count >= 1) goto End;
+                                            if (headers.Count >= _maxHeaderCount) goto End;
                                         }
-                                    }
-
-                                End: ;
-
-                                    foreach (var seed in seeds.Randomize())
-                                    {
-                                        var signature = seed.Certificate.ToString();
-
-                                        connectionManager.PushSeed(seed);
-
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push Seed ({0})", seed.Keywords[0]));
-                                        _pushSeedCount++;
-
-                                        messageManager.PushLinkSeeds[signature] = seed.CreationTime;
                                     }
                                 }
 
-                                // Store
+                            End: ;
+
+                                connectionManager.PushHeaders(headers);
+
+                                Debug.WriteLine(string.Format("ConnectionManager: Push Headers ({0})", headers.Count));
+                                _pushHeaderCount += headers.Count;
+
+                                foreach (var header in headers)
                                 {
-                                    var seeds = new List<Seed>();
+                                    var key = new Key(header.GetHash(_hashAlgorithm), _hashAlgorithm);
 
-                                    foreach (var signature in signatures)
-                                    {
-                                        Seed tempSeed = this.GetStoreSeed(signature);
-                                        if (tempSeed == null) continue;
-
-                                        DateTime creationTime;
-
-                                        if (!messageManager.PushStoreSeeds.TryGetValue(signature, out creationTime)
-                                            || tempSeed.CreationTime > creationTime)
-                                        {
-                                            seeds.Add(tempSeed);
-
-                                            if (seeds.Count >= 1) goto End;
-                                        }
-                                    }
-
-                                End: ;
-
-                                    foreach (var seed in seeds.Randomize())
-                                    {
-                                        var signature = seed.Certificate.ToString();
-
-                                        connectionManager.PushSeed(seed);
-
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push Seed ({0})", seed.Keywords[0]));
-                                        _pushSeedCount++;
-
-                                        messageManager.PushStoreSeeds[signature] = seed.CreationTime;
-                                    }
+                                    messageManager.PushHeaders.Add(key);
                                 }
                             }
                         }
@@ -1973,8 +1927,8 @@ namespace Library.Net.Lair
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Keys == null
-                || messageManager.PullBlocksLink.Count > _maxBlockLinkCount * 60) return;
+            if (e.Keys == null) return;
+            if (messageManager.PullBlocksLink.Count > _maxBlockLinkCount * messageManager.PullBlocksLink.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksLink ({0})", e.Keys.Count()));
 
@@ -1994,8 +1948,8 @@ namespace Library.Net.Lair
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Keys == null
-                || messageManager.PullBlocksRequest.Count > _maxBlockRequestCount * 60) return;
+            if (e.Keys == null) return;
+            if (messageManager.PullBlocksRequest.Count > _maxBlockRequestCount * messageManager.PullBlocksRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksRequest ({0})", e.Keys.Count()));
 
@@ -2031,7 +1985,7 @@ namespace Library.Net.Lair
                     messageManager.LastPullTime = DateTime.UtcNow;
                     messageManager.Priority++;
 
-                    // Infomathon
+                    // Information
                     {
                         _relayBlocks.Add(e.Key);
                     }
@@ -2057,8 +2011,8 @@ namespace Library.Net.Lair
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Tags == null
-                || messageManager.PullHeadersRequest.Count > _maxHeaderRequestCount * 60) return;
+            if (e.Tags == null) return;
+            if (messageManager.PullHeadersRequest.Count > _maxHeaderRequestCount * messageManager.PullHeadersRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})", e.Tags.Count()));
 
@@ -2080,18 +2034,25 @@ namespace Library.Net.Lair
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Headers == null || e.Headers.Count() == 0) return;
+            if (e.Headers == null) return;
+            if (messageManager.PushHeaders.Count > _maxHeaderCount * messageManager.PushHeaders.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Messages ({0})", e.Headers.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})", e.Headers.Count()));
 
-            _settings.SetHeaders(e.Headers);
+            foreach (var header in e.Headers.Take(_maxHeaderCount))
+            {
+                if (_settings.SetHeader(header))
+                {
+                    var key = new Key(header.GetHash(_hashAlgorithm), _hashAlgorithm);
 
-                messageManager.PushMessages.Add(key);
-                _pullMessageCount++;
+                    messageManager.PushHeaders.Add(key);
+                    messageManager.LastPullTime = DateTime.UtcNow;
+
+                    _lastUsedHeaderTimes[header.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount++;
             }
-
-            messageManager.Priority += (priority + (priority - messageList.Count));
-            messageManager.LastPullTime = DateTime.UtcNow;
         }
 
         private void connectionManager_PullCancelEvent(object sender, EventArgs e)
@@ -2272,13 +2233,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(IEnumerable<Header> headers)
+        public void Upload(Header header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _settings.SetHeaders(headers);
+                _settings.SetHeader(header);
             }
         }
 
@@ -2451,10 +2412,11 @@ namespace Library.Net.Lair
             {
                 lock (_thisLock)
                 {
-                    HashSet<Tag> tags = new HashSet<Tag>();
-                    tags.UnionWith(this.Headers.Keys);
+                    HashSet<Tag> hashset = new HashSet<Tag>();
 
-                    return tags;
+                    hashset.UnionWith(this.Headers.Keys);
+
+                    return hashset;
                 }
             }
 
@@ -2473,44 +2435,38 @@ namespace Library.Net.Lair
             {
                 lock (_thisLock)
                 {
-                    HashSet<Header> headers;
+                    HashSet<Header> hashset = null;
 
-                    if (this.Headers.TryGetValue(tag, out headers))
+                    if (this.Headers.TryGetValue(tag, out hashset))
                     {
-                        return headers;
+                        return hashset;
                     }
 
-                    return null;
+                    return new Header[0];
                 }
             }
 
-            public bool SetHeaders(IEnumerable<Header> headers)
+            public bool SetHeader(Header header)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
-                    bool flag = false;
 
-                    foreach (var header in headers)
+                    if (header == null
+                        || header.Tag == null || header.Tag.Id == null || header.Tag.Type == null
+                        || header.Type == null
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null || !header.VerifyCertificate()) return false;
+
+                    HashSet<Header> hashset = null;
+
+                    if (!this.Headers.TryGetValue(header.Tag, out hashset))
                     {
-                        if (header == null
-                            || header.Tag == null || header.Tag.Id == null || header.Tag.Type == null
-                            || header.Type == null
-                            || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
-                            || header.Certificate == null || !header.VerifyCertificate()) return false;
-
-                        HashSet<Header> hashset = null;
-
-                        if (!this.Headers.TryGetValue(header.Tag, out hashset))
-                        {
-                            hashset = new HashSet<Header>();
-                            this.Headers[header.Tag] = hashset;
-                        }
-
-                        flag |= hashset.Add(header);
+                        hashset = new HashSet<Header>();
+                        this.Headers[header.Tag] = hashset;
                     }
 
-                    return flag;
+                    return hashset.Add(header);
                 }
             }
 

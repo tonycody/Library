@@ -41,7 +41,7 @@ namespace Library.Net.Lair
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
-        public static readonly int ClusterSize = 1024 * 32;
+        public static readonly int ClusterSize = 1024 * 4;
 
         private int _threadCount = 2;
 

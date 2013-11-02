@@ -20,6 +20,19 @@ namespace Library
             }
         }
 
+        private static byte[] Reverse(byte[] value, int offset, int length)
+        {
+            byte[] buffer = new byte[length];
+            int r = length - 1;
+
+            for (int i = 0; i < length; i++)
+            {
+                buffer[r - i] = value[offset + i];
+            }
+
+            return buffer;
+        }
+
         public static string ToBase64UrlString(byte[] bytes)
         {
             if (bytes == null) throw new ArgumentNullException("bytes");
@@ -260,8 +273,6 @@ namespace Library
 
         public static bool ToBoolean(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToBoolean(value, 0);
         }
 
@@ -271,14 +282,12 @@ namespace Library
             if (value.Length < 1) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 1) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToBoolean(value.Reverse().ToArray(), (value.Length - 1) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToBoolean(NetworkConverter.Reverse(value, offset, 1), 0);
             else return System.BitConverter.ToBoolean(value, offset);
         }
 
         public static char ToChar(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToChar(value, 0);
         }
 
@@ -288,14 +297,12 @@ namespace Library
             if (value.Length < 2) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 2) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToChar(value.Reverse().ToArray(), (value.Length - 2) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToChar(NetworkConverter.Reverse(value, offset, 2), 0);
             else return System.BitConverter.ToChar(value, offset);
         }
 
         public static float ToSingle(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToSingle(value, 0);
         }
 
@@ -305,14 +312,12 @@ namespace Library
             if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToSingle(value.Reverse().ToArray(), (value.Length - 4) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToSingle(NetworkConverter.Reverse(value, offset, 4), 0);
             else return System.BitConverter.ToSingle(value, offset);
         }
 
         public static double ToDouble(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToDouble(value, 0);
         }
 
@@ -322,14 +327,12 @@ namespace Library
             if (value.Length < 8) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 8) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToDouble(value.Reverse().ToArray(), (value.Length - 8) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToDouble(NetworkConverter.Reverse(value, offset, 8), 0);
             else return System.BitConverter.ToDouble(value, offset);
         }
 
         public static short ToInt16(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToInt16(value, 0);
         }
 
@@ -339,14 +342,12 @@ namespace Library
             if (value.Length < 2) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 2) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt16(value.Reverse().ToArray(), (value.Length - 2) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt16(NetworkConverter.Reverse(value, offset, 2), 0);
             else return System.BitConverter.ToInt16(value, offset);
         }
 
         public static int ToInt32(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToInt32(value, 0);
         }
 
@@ -356,14 +357,12 @@ namespace Library
             if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt32(value.Reverse().ToArray(), (value.Length - 4) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt32(NetworkConverter.Reverse(value, offset, 4), 0);
             else return System.BitConverter.ToInt32(value, offset);
         }
 
         public static long ToInt64(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToInt64(value, 0);
         }
 
@@ -373,14 +372,12 @@ namespace Library
             if (value.Length < 8) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 8) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt64(value.Reverse().ToArray(), (value.Length - 8) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt64(NetworkConverter.Reverse(value, offset, 8), 0);
             else return System.BitConverter.ToInt64(value, offset);
         }
 
         public static ushort ToUInt16(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToUInt16(value, 0);
         }
 
@@ -390,14 +387,12 @@ namespace Library
             if (value.Length < 2) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 2) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt16(value.Reverse().ToArray(), (value.Length - 2) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt16(NetworkConverter.Reverse(value, offset, 2), 0);
             else return System.BitConverter.ToUInt16(value, offset);
         }
 
         public static uint ToUInt32(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToUInt32(value, 0);
         }
 
@@ -407,14 +402,12 @@ namespace Library
             if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt32(value.Reverse().ToArray(), (value.Length - 4) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt32(NetworkConverter.Reverse(value, offset, 4), 0);
             else return System.BitConverter.ToUInt32(value, offset);
         }
 
         public static ulong ToUInt64(byte[] value)
         {
-            if (value == null) throw new ArgumentNullException("value");
-
             return NetworkConverter.ToUInt64(value, 0);
         }
 
@@ -424,7 +417,7 @@ namespace Library
             if (value.Length < 8) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 8) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt64(value.Reverse().ToArray(), (value.Length - 8) - offset);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt64(NetworkConverter.Reverse(value, offset, 8), 0);
             else return System.BitConverter.ToUInt64(value, offset);
         }
 

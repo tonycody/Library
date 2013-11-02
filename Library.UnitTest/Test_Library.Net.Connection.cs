@@ -240,30 +240,35 @@ namespace Library.UnitTest
                 SecureConnectionVersion clientVersion = 0;
                 SecureConnectionVersion serverVersion = 0;
 
-                switch (_random.Next(0, 3))
+                for (; ; )
                 {
-                    case 0:
-                        clientVersion = SecureConnectionVersion.Version1;
-                        break;
-                    case 1:
-                        clientVersion = SecureConnectionVersion.Version2;
-                        break;
-                    case 2:
-                        clientVersion = SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2;
-                        break;
-                }
+                    switch (_random.Next(0, 3))
+                    {
+                        case 0:
+                            clientVersion = SecureConnectionVersion.Version1;
+                            break;
+                        case 1:
+                            clientVersion = SecureConnectionVersion.Version2;
+                            break;
+                        case 2:
+                            clientVersion = SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2;
+                            break;
+                    }
 
-                switch (_random.Next(0, 3))
-                {
-                    case 0:
-                        serverVersion = SecureConnectionVersion.Version1;
-                        break;
-                    case 1:
-                        serverVersion = SecureConnectionVersion.Version2;
-                        break;
-                    case 2:
-                        serverVersion = SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2;
-                        break;
+                    switch (_random.Next(0, 3))
+                    {
+                        case 0:
+                            serverVersion = SecureConnectionVersion.Version1;
+                            break;
+                        case 1:
+                            serverVersion = SecureConnectionVersion.Version2;
+                            break;
+                        case 2:
+                            serverVersion = SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2;
+                            break;
+                    }
+
+                    if ((clientVersion & serverVersion) != 0) break;
                 }
 
                 ////var TcpClient = new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);

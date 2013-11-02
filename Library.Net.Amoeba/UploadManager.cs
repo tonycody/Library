@@ -861,14 +861,13 @@ namespace Library.Net.Amoeba
 
                 List<int> idList = null;
 
-                if (_shareLink.TryGetValue(filePath, out idList))
+                if (!_shareLink.TryGetValue(filePath, out idList))
                 {
-                    idList.Add(_id);
+                    idList = new List<int>();
+                    _shareLink[filePath] = idList;
                 }
-                else
-                {
-                    _shareLink.Add(filePath, new List<int>() { _id });
-                }
+
+                idList.Add(_id);
 
                 _id++;
             }

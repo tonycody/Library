@@ -20,10 +20,10 @@ namespace Library.Update
             try
             {
                 var pid = int.Parse(args[0]);
-                var source = args[1];
-                var target = args[2];
-                var runPath = args[3];
-                var zipPath = args[4];
+                var sourceDirectoryPath = args[1];
+                var targetDirectoryPath = args[2];
+                var runExePath = args[3];
+                var zipFilePath = args[4];
 
                 try
                 {
@@ -36,8 +36,8 @@ namespace Library.Update
                 }
 
                 {
-                    var temp = GetUniqueDirectoryPath(target);
-                    Program.CopyDirectory(target, temp);
+                    var temp = Program.GetUniqueDirectoryPath(targetDirectoryPath);
+                    Program.CopyDirectory(targetDirectoryPath, temp);
 
                     bool flag = false;
                     Random random = new Random();
@@ -47,7 +47,7 @@ namespace Library.Update
                     {
                         try
                         {
-                            foreach (var path in Directory.GetFiles(target, "*", SearchOption.AllDirectories).OrderBy(n => random.Next()))
+                            foreach (var path in Directory.GetFiles(targetDirectoryPath, "*", SearchOption.AllDirectories).OrderBy(n => random.Next()))
                             {
                                 errorInfo = path;
 
@@ -68,18 +68,18 @@ namespace Library.Update
 
                     if (!flag) throw new Exception(errorInfo);
 
-                    Program.CopyDirectory(source, target);
+                    Program.CopyDirectory(sourceDirectoryPath, targetDirectoryPath);
                     Directory.Delete(temp, true);
                 }
 
-                Directory.Delete(source, true);
+                Directory.Delete(sourceDirectoryPath, true);
 
                 for (int i = 0; i < 100; i++)
                 {
                     try
                     {
-                        if (File.Exists(zipPath))
-                            File.Delete(zipPath);
+                        if (File.Exists(zipFilePath))
+                            File.Delete(zipFilePath);
 
                         break;
                     }
@@ -93,8 +93,8 @@ namespace Library.Update
 
                 {
                     ProcessStartInfo startInfo = new ProcessStartInfo();
-                    startInfo.FileName = runPath;
-                    startInfo.WorkingDirectory = Path.GetDirectoryName(runPath);
+                    startInfo.FileName = runExePath;
+                    startInfo.WorkingDirectory = Path.GetDirectoryName(runExePath);
 
                     Process.Start(startInfo);
                 }

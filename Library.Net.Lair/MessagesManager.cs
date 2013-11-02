@@ -36,17 +36,17 @@ namespace Library.Net.Lair
                     {
                         var messageManager = _messageManagerDictionary[node];
 
-                        messageManager.PushBlocks.TrimExcess();
-                        messageManager.PushHeaders.TrimExcess();
+                        messageManager.PushBlocks.Refresh();
+                        messageManager.PushHeaders.Refresh();
 
-                        messageManager.PushBlocksLink.TrimExcess();
-                        messageManager.PullBlocksLink.TrimExcess();
+                        messageManager.PushBlocksLink.Refresh();
+                        messageManager.PullBlocksLink.Refresh();
 
-                        messageManager.PushBlocksRequest.TrimExcess();
-                        messageManager.PullBlocksRequest.TrimExcess();
+                        messageManager.PushBlocksRequest.Refresh();
+                        messageManager.PullBlocksRequest.Refresh();
 
-                        messageManager.PushHeadersRequest.TrimExcess();
-                        messageManager.PullHeadersRequest.TrimExcess();
+                        messageManager.PushHeadersRequest.Refresh();
+                        messageManager.PullHeadersRequest.Refresh();
                     }
 
                     _lastCircularTime = now;
@@ -150,17 +150,17 @@ namespace Library.Net.Lair
         private DateTime _lastPullTime = DateTime.UtcNow;
         private LockedHashSet<Node> _surroundingNodes;
 
-        private CirculationCollection<Key> _pushBlocks;
-        private CirculationCollection<Key> _pushHeaders;
+        private VolatileCollection<Key> _pushBlocks;
+        private VolatileCollection<Key> _pushHeaders;
 
-        private CirculationCollection<Key> _pushBlocksLink;
-        private CirculationCollection<Key> _pullBlocksLink;
+        private VolatileCollection<Key> _pushBlocksLink;
+        private VolatileCollection<Key> _pullBlocksLink;
 
-        private CirculationCollection<Key> _pushBlocksRequest;
-        private CirculationCollection<Key> _pullBlocksRequest;
+        private VolatileCollection<Key> _pushBlocksRequest;
+        private VolatileCollection<Key> _pullBlocksRequest;
 
-        private CirculationCollection<Tag> _pushHeadersRequest;
-        private CirculationCollection<Tag> _pullHeadersRequest;
+        private VolatileCollection<Tag> _pushHeadersRequest;
+        private VolatileCollection<Tag> _pullHeadersRequest;
 
         private object _thisLock = new object();
 
@@ -170,17 +170,17 @@ namespace Library.Net.Lair
 
             _surroundingNodes = new LockedHashSet<Node>(128);
 
-            _pushBlocks = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushHeaders = new CirculationCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushHeaders = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
 
-            _pushBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksLink = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
 
-            _pushBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksRequest = new CirculationCollection<Key>(new TimeSpan(0, 30, 0));
+            _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
 
-            _pushHeadersRequest = new CirculationCollection<Tag>(new TimeSpan(0, 60, 0));
-            _pullHeadersRequest = new CirculationCollection<Tag>(new TimeSpan(0, 30, 0));
+            _pushHeadersRequest = new VolatileCollection<Tag>(new TimeSpan(0, 60, 0));
+            _pullHeadersRequest = new VolatileCollection<Tag>(new TimeSpan(0, 60, 0));
         }
 
         public int Id
@@ -295,7 +295,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Key> PushBlocks
+        public VolatileCollection<Key> PushBlocks
         {
             get
             {
@@ -306,7 +306,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Key> PushHeaders
+        public VolatileCollection<Key> PushHeaders
         {
             get
             {
@@ -317,7 +317,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Key> PushBlocksLink
+        public VolatileCollection<Key> PushBlocksLink
         {
             get
             {
@@ -328,7 +328,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Key> PullBlocksLink
+        public VolatileCollection<Key> PullBlocksLink
         {
             get
             {
@@ -339,7 +339,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Key> PushBlocksRequest
+        public VolatileCollection<Key> PushBlocksRequest
         {
             get
             {
@@ -350,7 +350,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Key> PullBlocksRequest
+        public VolatileCollection<Key> PullBlocksRequest
         {
             get
             {
@@ -361,7 +361,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Tag> PushHeadersRequest
+        public VolatileCollection<Tag> PushHeadersRequest
         {
             get
             {
@@ -372,7 +372,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public CirculationCollection<Tag> PullHeadersRequest
+        public VolatileCollection<Tag> PullHeadersRequest
         {
             get
             {
