@@ -227,7 +227,7 @@ namespace Library.Tool
 
                     StringBuilder builder = new StringBuilder();
                     StringBuilder builder2 = new StringBuilder();
-                    Regex regex = new Regex("new Library\\.Configuration\\.SettingsContext<(.*)>\\(\\) { Name = \"(.*)\", Value = (.*) },");
+                    Regex regex = new Regex("new Library\\.Configuration\\.SettingContent<(.*)>\\(\\) { Name = \"(.*)\", Value = (.*) },");
 
                     using (FileStream inStream = new FileStream(settingsPath, FileMode.Open))
                     using (StreamReader reader = new StreamReader(inStream))
@@ -242,7 +242,7 @@ namespace Library.Tool
                                 break;
                             }
 
-                            if (line.Contains("new Library.Configuration.SettingsContext"))
+                            if (line.Contains("new Library.Configuration.SettingContent"))
                             {
                                 builder2.AppendLine(line);
                                 isRead = true;

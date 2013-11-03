@@ -76,14 +76,14 @@ namespace Library
             return _dic.ContainsKey(propertyName);
         }
 
-        public IEnumerator<InformationContext> GetEnumerator()
+        IEnumerator<InformationContext> IEnumerable<InformationContext>.GetEnumerator()
         {
             return _contextList.GetEnumerator();
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            return this.GetEnumerator();
+            return ((IEnumerable<InformationContext>)this).GetEnumerator();
         }
     }
 }

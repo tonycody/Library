@@ -139,7 +139,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public SignatureCollection SearchSignatures
+        public IEnumerable<string> SearchSignatures
         {
             get
             {
@@ -597,6 +597,11 @@ namespace Library.Net.Amoeba
             {
                 return _backgroundDownloadManager.GetStore(signature);
             }
+        }
+
+        public void SetSearchSignatures(IEnumerable<string> signatures)
+        {
+            _backgroundDownloadManager.SetSearchSignatures(signatures);
         }
 
         public void Upload(Link link,

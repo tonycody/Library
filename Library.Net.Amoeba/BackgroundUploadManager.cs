@@ -623,8 +623,8 @@ namespace Library.Net.Amoeba
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedList<BackgroundUploadItem>>() { Name = "BackgroundUploadItems", Value = new LockedList<BackgroundUploadItem>() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<LockedList<BackgroundUploadItem>>() { Name = "BackgroundUploadItems", Value = new LockedList<BackgroundUploadItem>() },
                 })
             {
                 _thisLock = lockObject;

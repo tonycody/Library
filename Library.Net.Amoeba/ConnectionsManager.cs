@@ -443,7 +443,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (!_searchNodeStopwatch.IsRunning || _searchNodeStopwatch.Elapsed.TotalSeconds > 10)
+                if (!_searchNodeStopwatch.IsRunning || _searchNodeStopwatch.Elapsed.TotalSeconds >= 10)
                 {
                     lock (_connectionsNodes.ThisLock)
                     {
@@ -959,7 +959,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes > 30)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 30)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -1091,7 +1091,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
-                    && pushBlockUploadStopwatch.Elapsed.TotalSeconds > 60)
+                    && pushBlockUploadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
                     pushBlockUploadStopwatch.Restart();
 
@@ -1180,7 +1180,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
-                    && pushBlockDownloadStopwatch.Elapsed.TotalSeconds > 60)
+                    && pushBlockDownloadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
                     pushBlockDownloadStopwatch.Restart();
 
@@ -1368,7 +1368,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
-                    && pushSeedUploadStopwatch.Elapsed.TotalMinutes > 3)
+                    && pushSeedUploadStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     pushSeedUploadStopwatch.Restart();
 
@@ -1394,7 +1394,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
-                    && pushSeedDownloadStopwatch.Elapsed.TotalSeconds > 60)
+                    && pushSeedDownloadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
                     pushSeedDownloadStopwatch.Restart();
 
@@ -1521,7 +1521,7 @@ namespace Library.Net.Amoeba
                     }
 
                     // Check
-                    if (checkTime.Elapsed.TotalSeconds > 60)
+                    if (checkTime.Elapsed.TotalSeconds >= 60)
                     {
                         checkTime.Restart();
 
@@ -1541,7 +1541,7 @@ namespace Library.Net.Amoeba
                     }
 
                     // PushNodes
-                    if (!nodeUpdateTime.IsRunning || nodeUpdateTime.Elapsed.TotalSeconds > 60)
+                    if (!nodeUpdateTime.IsRunning || nodeUpdateTime.Elapsed.TotalSeconds >= 60)
                     {
                         nodeUpdateTime.Restart();
 
@@ -1572,7 +1572,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (updateTime.Elapsed.TotalSeconds > 60)
+                    if (updateTime.Elapsed.TotalSeconds >= 60)
                     {
                         updateTime.Restart();
 
@@ -1825,7 +1825,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (seedUpdateTime.Elapsed.TotalSeconds > 60)
+                    if (seedUpdateTime.Elapsed.TotalSeconds >= 60)
                     {
                         seedUpdateTime.Restart();
 
@@ -2417,7 +2417,7 @@ namespace Library.Net.Amoeba
 
                 _routeTable.BaseNode = _settings.BaseNode;
 
-                foreach (var node in _settings.OtherNodes)
+                foreach (var node in _settings.OtherNodes.ToArray())
                 {
                     if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n))) continue;
 
@@ -2435,8 +2435,15 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _settings.OtherNodes.Clear();
-                _settings.OtherNodes.AddRange(_routeTable.ToArray());
+                {
+                    var otherNodes = _routeTable.ToArray();
+
+                    lock (_settings.OtherNodes.ThisLock)
+                    {
+                        _settings.OtherNodes.Clear();
+                        _settings.OtherNodes.AddRange(otherNodes);
+                    }
+                }
 
                 _settings.Save(directoryPath);
             }
@@ -2449,15 +2456,15 @@ namespace Library.Net.Amoeba
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
-                    new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
-                    new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
-                    new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
-                    new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingsContext<Dictionary<string, Seed>>() { Name = "LinkSeeds", Value = new Dictionary<string, Seed>() },
-                    new Library.Configuration.SettingsContext<Dictionary<string, Seed>>() { Name = "StoreSeeds", Value = new Dictionary<string, Seed>() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
+                    new Library.Configuration.SettingContent<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
+                    new Library.Configuration.SettingContent<int>() { Name = "ConnectionCountLimit", Value = 12 },
+                    new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
+                    new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
+                    new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
+                    new Library.Configuration.SettingContent<Dictionary<string, Seed>>() { Name = "LinkSeeds", Value = new Dictionary<string, Seed>() },
+                    new Library.Configuration.SettingContent<Dictionary<string, Seed>>() { Name = "StoreSeeds", Value = new Dictionary<string, Seed>() },
                 })
             {
                 _thisLock = lockObject;

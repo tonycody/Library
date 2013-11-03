@@ -186,14 +186,6 @@ namespace Library.Collections
             }
         }
 
-        void ICollection<T>.Add(T item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Add(item);
-            }
-        }
-
         public void Clear()
         {
             lock (this.ThisLock)
@@ -248,42 +240,11 @@ namespace Library.Collections
             }
         }
 
-        public IEnumerator<T> GetEnumerator()
+        void ICollection<T>.Add(T item)
         {
             lock (this.ThisLock)
             {
-                foreach (var item in _hashSet)
-                {
-                    yield return item;
-                }
-            }
-        }
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                return _thisLock;
-            }
-        }
-
-        #endregion
-
-        void ICollection.CopyTo(Array array, int arrayIndex)
-        {
-            lock (this.ThisLock)
-            {
-                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+                this.Add(item);
             }
         }
 
@@ -305,5 +266,44 @@ namespace Library.Collections
                 return this.ThisLock;
             }
         }
+
+        void ICollection.CopyTo(Array array, int arrayIndex)
+        {
+            lock (this.ThisLock)
+            {
+                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+            }
+        }
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var item in _hashSet)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                return ((IEnumerable<T>)this).GetEnumerator();
+            }
+        }
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                return _thisLock;
+            }
+        }
+
+        #endregion
     }
 }

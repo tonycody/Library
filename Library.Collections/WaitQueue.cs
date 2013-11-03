@@ -277,19 +277,6 @@ namespace Library.Collections
             return _upperResetEvent.WaitOne(timeout, false);
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                foreach (var item in _queue)
-                {
-                    yield return item;
-                }
-            }
-        }
-
         public void Close()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -297,51 +284,6 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 this.Dispose();
-            }
-        }
-
-        void ICollection.CopyTo(Array array, int index)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                ((ICollection)_queue).CopyTo(array.OfType<T>().ToArray(), index);
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        bool ICollection.IsSynchronized
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return true;
-                }
-            }
-        }
-
-        #region ICollection<T>
-
-        void ICollection<T>.Add(T item)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                this.Enqueue(item);
             }
         }
 
@@ -358,6 +300,16 @@ namespace Library.Collections
             }
         }
 
+        void ICollection<T>.Add(T item)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                this.Enqueue(item);
+            }
+        }
+
         bool ICollection<T>.Remove(T item)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -371,7 +323,18 @@ namespace Library.Collections
             }
         }
 
-        #endregion
+        bool ICollection.IsSynchronized
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return true;
+                }
+            }
+        }
 
         object ICollection.SyncRoot
         {
@@ -380,6 +343,39 @@ namespace Library.Collections
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return this.ThisLock;
+            }
+        }
+
+        void ICollection.CopyTo(Array array, int index)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                ((ICollection)_queue).CopyTo(array.OfType<T>().ToArray(), index);
+            }
+        }
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                foreach (var item in _queue)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return ((IEnumerable<T>)this).GetEnumerator();
             }
         }
 

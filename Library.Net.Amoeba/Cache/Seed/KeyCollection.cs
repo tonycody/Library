@@ -15,29 +15,5 @@ namespace Library.Net.Amoeba
 
             return false;
         }
-
-        #region IEnumerable<Key>
-
-        IEnumerator<Key> IEnumerable<Key>.GetEnumerator()
-        {
-            lock (base.ThisLock)
-            {
-                return base.GetEnumerator();
-            }
-        }
-
-        #endregion
-
-        #region IEnumerable
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            lock (base.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        #endregion
     }
 }

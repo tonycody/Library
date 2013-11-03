@@ -53,7 +53,7 @@ namespace Library.Collections
             {
                 var now = DateTime.UtcNow;
 
-                if ((now - _lastCheckTime).TotalSeconds > 10)
+                if ((now - _lastCheckTime).TotalSeconds >= 10)
                 {
                     foreach (var item in _hashSet.ToArray())
                     {
@@ -174,21 +174,6 @@ namespace Library.Collections
             }
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                this.Refresh();
-
-                foreach (var item in _hashSet)
-                {
-                    yield return item;
-                }
-            }
-        }
-
-        #region ICollection<T>
-
         bool ICollection<T>.IsReadOnly
         {
             get
@@ -205,18 +190,6 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 this.Add(item);
-            }
-        }
-
-        #endregion
-
-        #region ICollection
-
-        void ICollection.CopyTo(Array array, int arrayIndex)
-        {
-            lock (this.ThisLock)
-            {
-                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
             }
         }
 
@@ -239,19 +212,34 @@ namespace Library.Collections
             }
         }
 
-        #endregion
+        void ICollection.CopyTo(Array array, int arrayIndex)
+        {
+            lock (this.ThisLock)
+            {
+                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+            }
+        }
 
-        #region IEnumerable
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                this.Refresh();
+
+                foreach (var item in _hashSet)
+                {
+                    yield return item;
+                }
+            }
+        }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             lock (this.ThisLock)
             {
-                return this.GetEnumerator();
+                return ((IEnumerable<T>)this).GetEnumerator();
             }
         }
-
-        #endregion
 
         #region IThisLock
 

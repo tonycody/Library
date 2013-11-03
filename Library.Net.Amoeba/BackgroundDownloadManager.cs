@@ -111,13 +111,13 @@ namespace Library.Net.Amoeba
             };
         }
 
-        public SignatureCollection SearchSignatures
+        public IEnumerable<string> SearchSignatures
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _settings.Signatures;
+                    return _settings.Signatures.ToArray();
                 }
             }
         }
@@ -928,6 +928,18 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public void SetSearchSignatures(IEnumerable<string> signatures)
+        {
+            lock (this.ThisLock)
+            {
+                lock (_settings.Signatures.ThisLock)
+                {
+                    _settings.Signatures.Clear();
+                    _settings.Signatures.AddRange(signatures);
+                }
+            }
+        }
+
         public Link GetLink(string signature)
         {
             lock (this.ThisLock)
@@ -1102,9 +1114,9 @@ namespace Library.Net.Amoeba
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedList<BackgroundDownloadItem>>() { Name = "BackgroundDownloadItems", Value = new LockedList<BackgroundDownloadItem>() },
-                    new Library.Configuration.SettingsContext<SignatureCollection>() { Name = "Signatures", Value = new SignatureCollection() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<LockedList<BackgroundDownloadItem>>() { Name = "BackgroundDownloadItems", Value = new LockedList<BackgroundDownloadItem>() },
+                    new Library.Configuration.SettingContent<SignatureCollection>() { Name = "Signatures", Value = new SignatureCollection() },
                 })
             {
                 _thisLock = lockObject;

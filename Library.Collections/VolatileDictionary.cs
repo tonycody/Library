@@ -54,7 +54,7 @@ namespace Library.Collections
             {
                 var now = DateTime.UtcNow;
 
-                if ((now - _lastCheckTime).TotalSeconds > 10)
+                if ((now - _lastCheckTime).TotalSeconds >= 10)
                 {
                     foreach (var item in _dic.ToArray())
                     {
@@ -77,15 +77,7 @@ namespace Library.Collections
             }
         }
 
-        public void TrimExcess()
-        {
-            lock (this.ThisLock)
-            {
-                this.Refresh();
-            }
-        }
-
-        public CirculationKeyCollection Keys
+        public VolatileKeyCollection Keys
         {
             get
             {
@@ -93,12 +85,12 @@ namespace Library.Collections
                 {
                     this.Refresh();
 
-                    return new CirculationKeyCollection(_dic.Keys, this.ThisLock);
+                    return new VolatileKeyCollection(_dic.Keys, this.ThisLock);
                 }
             }
         }
 
-        public CirculationValueCollection Values
+        public VolatileValueCollection Values
         {
             get
             {
@@ -106,7 +98,7 @@ namespace Library.Collections
                 {
                     this.Refresh();
 
-                    return new CirculationValueCollection(_dic.Values, this.ThisLock);
+                    return new VolatileValueCollection(_dic.Values, this.ThisLock);
                 }
             }
         }
@@ -158,36 +150,6 @@ namespace Library.Collections
             }
         }
 
-        ICollection<TKey> IDictionary<TKey, TValue>.Keys
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return this.Keys;
-                }
-            }
-        }
-
-        ICollection<TValue> IDictionary<TKey, TValue>.Values
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return this.Values;
-                }
-            }
-        }
-
-        void IDictionary<TKey, TValue>.Add(TKey key, TValue value)
-        {
-            lock (this.ThisLock)
-            {
-                this.Add(key, value);
-            }
-        }
-
         public bool Add(TKey key, TValue value)
         {
             lock (this.ThisLock)
@@ -231,19 +193,6 @@ namespace Library.Collections
             }
         }
 
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                this.Refresh();
-
-                foreach (var item in _dic)
-                {
-                    yield return item;
-                }
-            }
-        }
-
         public bool Remove(TKey key)
         {
             lock (this.ThisLock)
@@ -261,6 +210,138 @@ namespace Library.Collections
                 this.Refresh();
 
                 return _dic.TryGetValue(key, out value);
+            }
+        }
+
+        ICollection<TKey> IDictionary<TKey, TValue>.Keys
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this.Keys;
+                }
+            }
+        }
+
+        ICollection<TValue> IDictionary<TKey, TValue>.Values
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this.Values;
+                }
+            }
+        }
+
+        void IDictionary<TKey, TValue>.Add(TKey key, TValue value)
+        {
+            lock (this.ThisLock)
+            {
+                this.Add(key, value);
+            }
+        }
+
+        bool IDictionary.IsFixedSize
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return false;
+                }
+            }
+        }
+
+        bool IDictionary.IsReadOnly
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return false;
+                }
+            }
+        }
+
+        ICollection IDictionary.Keys
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return (ICollection)this.Keys;
+                }
+            }
+        }
+
+        ICollection IDictionary.Values
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return (ICollection)this.Values;
+                }
+            }
+        }
+
+        object IDictionary.this[object key]
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this[(TKey)key];
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    this[(TKey)key] = (TValue)value;
+                }
+            }
+        }
+
+        void IDictionary.Add(object key, object value)
+        {
+            lock (this.ThisLock)
+            {
+                this.Add((TKey)key, (TValue)value);
+            }
+        }
+
+        bool IDictionary.Contains(object key)
+        {
+            lock (this.ThisLock)
+            {
+                return this.ContainsKey((TKey)key);
+            }
+        }
+
+        IDictionaryEnumerator IDictionary.GetEnumerator()
+        {
+            throw new NotSupportedException();
+        }
+
+        void IDictionary.Remove(object key)
+        {
+            lock (this.ThisLock)
+            {
+                this.Remove((TKey)key);
+            }
+        }
+
+        bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return false;
+                }
             }
         }
 
@@ -302,67 +383,6 @@ namespace Library.Collections
             }
         }
 
-        void ICollection.CopyTo(Array array, int index)
-        {
-            lock (this.ThisLock)
-            {
-                this.Refresh();
-
-                ((ICollection)_dic).CopyTo(array, index);
-            }
-        }
-
-        void IDictionary.Add(object key, object value)
-        {
-            lock (this.ThisLock)
-            {
-                this.Add((TKey)key, (TValue)value);
-            }
-        }
-
-        bool IDictionary.Contains(object key)
-        {
-            lock (this.ThisLock)
-            {
-                return this.ContainsKey((TKey)key);
-            }
-        }
-
-        IDictionaryEnumerator IDictionary.GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                return (IDictionaryEnumerator)this.GetEnumerator();
-            }
-        }
-
-        void IDictionary.Remove(object key)
-        {
-            lock (this.ThisLock)
-            {
-                this.Remove((TKey)key);
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return false;
-                }
-            }
-        }
-
         bool ICollection.IsSynchronized
         {
             get
@@ -374,73 +394,42 @@ namespace Library.Collections
             }
         }
 
-        bool IDictionary.IsFixedSize
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return false;
-                }
-            }
-        }
-
-        bool IDictionary.IsReadOnly
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return false;
-                }
-            }
-        }
-
-        object IDictionary.this[object key]
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return this[(TKey)key];
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    this[(TKey)key] = (TValue)value;
-                }
-            }
-        }
-
-        ICollection IDictionary.Keys
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return (ICollection)this.Keys;
-                }
-            }
-        }
-
-        ICollection IDictionary.Values
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return (ICollection)this.Values;
-                }
-            }
-        }
-
         object ICollection.SyncRoot
         {
             get
             {
                 return this.ThisLock;
+            }
+        }
+
+        void ICollection.CopyTo(Array array, int index)
+        {
+            lock (this.ThisLock)
+            {
+                this.Refresh();
+
+                ((ICollection)_dic).CopyTo(array, index);
+            }
+        }
+
+        IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                this.Refresh();
+
+                foreach (var item in _dic)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                return ((IEnumerable<KeyValuePair<TKey, TValue>>)this).GetEnumerator();
             }
         }
 
@@ -456,12 +445,12 @@ namespace Library.Collections
 
         #endregion
 
-        public sealed class CirculationKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
+        public sealed class VolatileKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
         {
             private ICollection<TKey> _collection;
             private object _thisLock;
 
-            internal CirculationKeyCollection(ICollection<TKey> collection, object thisLock)
+            internal VolatileKeyCollection(ICollection<TKey> collection, object thisLock)
             {
                 _collection = collection;
                 _thisLock = thisLock;
@@ -475,30 +464,6 @@ namespace Library.Collections
                     _collection.CopyTo(array, 0);
 
                     return array;
-                }
-            }
-
-            void ICollection<TKey>.Add(TKey item)
-            {
-                lock (this.ThisLock)
-                {
-                    throw new NotSupportedException();
-                }
-            }
-
-            void ICollection<TKey>.Clear()
-            {
-                lock (this.ThisLock)
-                {
-                    throw new NotSupportedException();
-                }
-            }
-
-            bool ICollection<TKey>.Contains(TKey item)
-            {
-                lock (this.ThisLock)
-                {
-                    return _collection.Contains(item);
                 }
             }
 
@@ -532,7 +497,7 @@ namespace Library.Collections
                 }
             }
 
-            bool ICollection<TKey>.Remove(TKey item)
+            void ICollection<TKey>.Add(TKey item)
             {
                 lock (this.ThisLock)
                 {
@@ -540,30 +505,27 @@ namespace Library.Collections
                 }
             }
 
-            public IEnumerator<TKey> GetEnumerator()
+            void ICollection<TKey>.Clear()
             {
                 lock (this.ThisLock)
                 {
-                    foreach (var item in _collection)
-                    {
-                        yield return item;
-                    }
+                    throw new NotSupportedException();
                 }
             }
 
-            IEnumerator IEnumerable.GetEnumerator()
+            bool ICollection<TKey>.Contains(TKey item)
             {
                 lock (this.ThisLock)
                 {
-                    return this.GetEnumerator();
+                    return _collection.Contains(item);
                 }
             }
 
-            void ICollection.CopyTo(Array array, int arrayIndex)
+            bool ICollection<TKey>.Remove(TKey item)
             {
                 lock (this.ThisLock)
                 {
-                    this.CopyTo(array.OfType<TKey>().ToArray(), arrayIndex);
+                    throw new NotSupportedException();
                 }
             }
 
@@ -586,6 +548,33 @@ namespace Library.Collections
                 }
             }
 
+            void ICollection.CopyTo(Array array, int arrayIndex)
+            {
+                lock (this.ThisLock)
+                {
+                    this.CopyTo(array.OfType<TKey>().ToArray(), arrayIndex);
+                }
+            }
+
+            IEnumerator<TKey> IEnumerable<TKey>.GetEnumerator()
+            {
+                lock (this.ThisLock)
+                {
+                    foreach (var item in _collection)
+                    {
+                        yield return item;
+                    }
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                lock (this.ThisLock)
+                {
+                    return ((IEnumerable<TKey>)this).GetEnumerator();
+                }
+            }
+
             #region IThisLock
 
             public object ThisLock
@@ -599,12 +588,12 @@ namespace Library.Collections
             #endregion
         }
 
-        public sealed class CirculationValueCollection : ICollection<TValue>, IEnumerable<TValue>, ICollection, IEnumerable, IThisLock
+        public sealed class VolatileValueCollection : ICollection<TValue>, IEnumerable<TValue>, ICollection, IEnumerable, IThisLock
         {
             private ICollection<TValue> _collection;
             private object _thisLock;
 
-            internal CirculationValueCollection(ICollection<TValue> collection, object thisLock)
+            internal VolatileValueCollection(ICollection<TValue> collection, object thisLock)
             {
                 _collection = collection;
                 _thisLock = thisLock;
@@ -618,30 +607,6 @@ namespace Library.Collections
                     _collection.CopyTo(array, 0);
 
                     return array;
-                }
-            }
-
-            void ICollection<TValue>.Add(TValue item)
-            {
-                lock (this.ThisLock)
-                {
-                    throw new NotSupportedException();
-                }
-            }
-
-            void ICollection<TValue>.Clear()
-            {
-                lock (this.ThisLock)
-                {
-                    throw new NotSupportedException();
-                }
-            }
-
-            bool ICollection<TValue>.Contains(TValue item)
-            {
-                lock (this.ThisLock)
-                {
-                    return _collection.Contains(item);
                 }
             }
 
@@ -675,7 +640,7 @@ namespace Library.Collections
                 }
             }
 
-            bool ICollection<TValue>.Remove(TValue item)
+            void ICollection<TValue>.Add(TValue item)
             {
                 lock (this.ThisLock)
                 {
@@ -683,30 +648,27 @@ namespace Library.Collections
                 }
             }
 
-            public IEnumerator<TValue> GetEnumerator()
+            void ICollection<TValue>.Clear()
             {
                 lock (this.ThisLock)
                 {
-                    foreach (var item in _collection)
-                    {
-                        yield return item;
-                    }
+                    throw new NotSupportedException();
                 }
             }
 
-            IEnumerator IEnumerable.GetEnumerator()
+            bool ICollection<TValue>.Contains(TValue item)
             {
                 lock (this.ThisLock)
                 {
-                    return this.GetEnumerator();
+                    return _collection.Contains(item);
                 }
             }
 
-            void ICollection.CopyTo(Array array, int arrayIndex)
+            bool ICollection<TValue>.Remove(TValue item)
             {
                 lock (this.ThisLock)
                 {
-                    this.CopyTo(array.OfType<TValue>().ToArray(), arrayIndex);
+                    throw new NotSupportedException();
                 }
             }
 
@@ -726,6 +688,33 @@ namespace Library.Collections
                 get
                 {
                     return this.ThisLock;
+                }
+            }
+
+            void ICollection.CopyTo(Array array, int arrayIndex)
+            {
+                lock (this.ThisLock)
+                {
+                    this.CopyTo(array.OfType<TValue>().ToArray(), arrayIndex);
+                }
+            }
+
+            IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator()
+            {
+                lock (this.ThisLock)
+                {
+                    foreach (var item in _collection)
+                    {
+                        yield return item;
+                    }
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                lock (this.ThisLock)
+                {
+                    return ((IEnumerable<TValue>)this).GetEnumerator();
                 }
             }
 

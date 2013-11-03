@@ -464,8 +464,8 @@ namespace Library.Net.Amoeba
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<ConnectionFilterCollection>() { Name = "ConnectionFilters", Value = new ConnectionFilterCollection() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<ConnectionFilterCollection>() { Name = "ConnectionFilters", Value = new ConnectionFilterCollection() },
                  })
             {
                 _thisLock = lockObject;

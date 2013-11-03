@@ -175,17 +175,6 @@ namespace Library.Collections
             }
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                foreach (var item in _list)
-                {
-                    yield return item;
-                }
-            }
-        }
-
         public LockedList<T> GetRange(int index, int count)
         {
             lock (this.ThisLock)
@@ -282,63 +271,6 @@ namespace Library.Collections
             }
         }
 
-        void ICollection.CopyTo(Array array, int arrayIndex)
-        {
-            lock (this.ThisLock)
-            {
-                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        int IList.Add(object item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Add((T)item);
-                return _list.Count - 1;
-            }
-        }
-
-        bool IList.Contains(object item)
-        {
-            lock (this.ThisLock)
-            {
-                return this.Contains((T)item);
-            }
-        }
-
-        int IList.IndexOf(object item)
-        {
-            lock (this.ThisLock)
-            {
-                return this.IndexOf((T)item);
-            }
-        }
-
-        void IList.Insert(int index, object item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Insert(index, (T)item);
-            }
-        }
-
-        void IList.Remove(object item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Remove((T)item);
-            }
-        }
-
         bool ICollection<T>.IsReadOnly
         {
             get
@@ -346,17 +278,6 @@ namespace Library.Collections
                 lock (this.ThisLock)
                 {
                     return false;
-                }
-            }
-        }
-
-        bool ICollection.IsSynchronized
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return true;
                 }
             }
         }
@@ -401,11 +322,90 @@ namespace Library.Collections
             }
         }
 
+        int IList.Add(object item)
+        {
+            lock (this.ThisLock)
+            {
+                this.Add((T)item);
+                return _list.Count - 1;
+            }
+        }
+
+        bool IList.Contains(object item)
+        {
+            lock (this.ThisLock)
+            {
+                return this.Contains((T)item);
+            }
+        }
+
+        int IList.IndexOf(object item)
+        {
+            lock (this.ThisLock)
+            {
+                return this.IndexOf((T)item);
+            }
+        }
+
+        void IList.Insert(int index, object item)
+        {
+            lock (this.ThisLock)
+            {
+                this.Insert(index, (T)item);
+            }
+        }
+
+        void IList.Remove(object item)
+        {
+            lock (this.ThisLock)
+            {
+                this.Remove((T)item);
+            }
+        }
+
+        bool ICollection.IsSynchronized
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return true;
+                }
+            }
+        }
+
         object ICollection.SyncRoot
         {
             get
             {
                 return this.ThisLock;
+            }
+        }
+
+        void ICollection.CopyTo(Array array, int arrayIndex)
+        {
+            lock (this.ThisLock)
+            {
+                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+            }
+        }
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var item in _list)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                return ((IEnumerable<T>)this).GetEnumerator();
             }
         }
 

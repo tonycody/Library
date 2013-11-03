@@ -1564,11 +1564,11 @@ namespace Library.Net.Amoeba
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedDictionary<string, ShareIndex>>() { Name = "ShareIndex", Value = new LockedDictionary<string, ShareIndex>() },
-                    new Library.Configuration.SettingsContext<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
-                    new Library.Configuration.SettingsContext<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
-                    new Library.Configuration.SettingsContext<LockedList<SeedInformation>>() { Name = "SeedInformation", Value = new LockedList<SeedInformation>() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<LockedDictionary<string, ShareIndex>>() { Name = "ShareIndex", Value = new LockedDictionary<string, ShareIndex>() },
+                    new Library.Configuration.SettingContent<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
+                    new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
+                    new Library.Configuration.SettingContent<LockedList<SeedInformation>>() { Name = "SeedInformation", Value = new LockedList<SeedInformation>() },
                 })
             {
                 _thisLock = lockObject;

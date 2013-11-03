@@ -1182,10 +1182,10 @@ namespace Library.Net.Amoeba
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<string>() { Name = "BaseDirectory", Value = "" },
-                    new Library.Configuration.SettingsContext<LockedList<DownloadItem>>() { Name = "DownloadItems", Value = new LockedList<DownloadItem>() },
-                    new Library.Configuration.SettingsContext<SeedCollection>() { Name = "DownloadedSeeds", Value = new SeedCollection() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<string>() { Name = "BaseDirectory", Value = "" },
+                    new Library.Configuration.SettingContent<LockedList<DownloadItem>>() { Name = "DownloadItems", Value = new LockedList<DownloadItem>() },
+                    new Library.Configuration.SettingContent<SeedCollection>() { Name = "DownloadedSeeds", Value = new SeedCollection() },
                 })
             {
                 _thisLock = lockObject;

@@ -10,16 +10,16 @@ using Library.Io;
 
 namespace Library.Configuration
 {
-    public interface ISettingsContext
+    public interface ISettingContent
     {
         Type Type { get; }
         string Name { get; }
         object Value { get; set; }
     }
 
-    public class SettingsContext<T> : ISettingsContext
+    public class SettingContent<T> : ISettingContent
     {
-        public SettingsContext()
+        public SettingContent()
         {
 
         }
@@ -38,7 +38,7 @@ namespace Library.Configuration
 
         public string Name { get; set; }
 
-        object ISettingsContext.Value
+        object ISettingContent.Value
         {
             get
             {
@@ -55,27 +55,30 @@ namespace Library.Configuration
 
     public abstract class SettingsBase : ISettings
     {
-        private IList<ISettingsContext> _contextList;
+        private Dictionary<string, Content> _dic = new Dictionary<string, Content>();
         private const int _cacheSize = 1024 * 64;
 
-        protected SettingsBase(IEnumerable<ISettingsContext> contextList)
+        protected SettingsBase(IEnumerable<ISettingContent> contentList)
         {
-            _contextList = contextList.ToList();
+            foreach (var content in contentList)
+            {
+                _dic[content.Name] = new Content()
+                {
+                    Type = content.Type,
+                    Value = content.Value
+                };
+            }
         }
 
         protected object this[string propertyName]
         {
             get
             {
-                ISettingsContext t = _contextList.First(n => n.Name == propertyName);
-
-                return t.Value;
+                return _dic[propertyName].Value;
             }
             set
             {
-                ISettingsContext t = _contextList.First(n => n.Name == propertyName);
-
-                t.Value = value;
+                _dic[propertyName].Value = value;
             }
         }
 
@@ -96,8 +99,8 @@ namespace Library.Configuration
 
                 var name = Path.GetFileNameWithoutExtension(configPath);
 
-                var context = _contextList.FirstOrDefault(n => n.Name == name);
-                if (context == null) continue;
+                Content content = null;
+                if (!_dic.TryGetValue(name, out content)) continue;
 
                 try
                 {
@@ -107,12 +110,12 @@ namespace Library.Configuration
                     {
                         using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
                         {
-                            var ds = new DataContractSerializer(context.Type);
-                            context.Value = ds.ReadObject(textDictionaryReader);
+                            var ds = new DataContractSerializer(content.Type);
+                            content.Value = ds.ReadObject(textDictionaryReader);
                         }
                     }
 
-                    successNames.Add(context.Name);
+                    successNames.Add(name);
                 }
                 catch (Exception)
                 {
@@ -127,8 +130,8 @@ namespace Library.Configuration
                 var name = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(configPath));
                 if (successNames.Contains(name)) continue;
 
-                var context = _contextList.FirstOrDefault(n => n.Name == name);
-                if (context == null) continue;
+                Content content = null;
+                if (!_dic.TryGetValue(name, out content)) continue;
 
                 try
                 {
@@ -138,8 +141,8 @@ namespace Library.Configuration
                     {
                         using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
                         {
-                            var ds = new DataContractSerializer(context.Type);
-                            context.Value = ds.ReadObject(textDictionaryReader);
+                            var ds = new DataContractSerializer(content.Type);
+                            content.Value = ds.ReadObject(textDictionaryReader);
                         }
                     }
                 }
@@ -154,13 +157,17 @@ namespace Library.Configuration
         {
             if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
 
-            foreach (var value in _contextList)
+            foreach (var item in _dic)
             {
                 try
                 {
+                    var name = item.Key;
+                    var type = item.Value.Type;
+                    var value = item.Value.Value;
+
                     string uniquePath = null;
 
-                    using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, value.Name + ".temp")))
+                    using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, name + ".temp")))
                     using (CacheStream cacheStream = new CacheStream(stream, _cacheSize, BufferManager.Instance))
                     {
                         uniquePath = stream.Name;
@@ -168,14 +175,14 @@ namespace Library.Configuration
                         using (GZipStream compressStream = new GZipStream(cacheStream, CompressionMode.Compress))
                         using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(compressStream, new UTF8Encoding(false)))
                         {
-                            var ds = new DataContractSerializer(value.Type);
+                            var ds = new DataContractSerializer(type);
                             textDictionaryWriter.WriteStartDocument();
-                            ds.WriteObject(textDictionaryWriter, value.Value);
+                            ds.WriteObject(textDictionaryWriter, value);
                         }
                     }
 
-                    string newPath = Path.Combine(directoryPath, value.Name + ".gz");
-                    string bakPath = Path.Combine(directoryPath, value.Name + ".gz.bak");
+                    string newPath = Path.Combine(directoryPath, name + ".gz");
+                    string bakPath = Path.Combine(directoryPath, name + ".gz.bak");
 
                     if (File.Exists(newPath))
                     {
@@ -189,7 +196,7 @@ namespace Library.Configuration
 
                     File.Move(uniquePath, newPath);
                 }
-                catch (Exception e) 
+                catch (Exception e)
                 {
                     Log.Warning(e);
                 }
@@ -200,7 +207,7 @@ namespace Library.Configuration
 
         protected bool Contains(string propertyName)
         {
-            return _contextList.Any(n => n.Name == propertyName);
+            return _dic.ContainsKey(propertyName);
         }
 
         private static FileStream GetUniqueFileStream(string path)
@@ -222,10 +229,9 @@ namespace Library.Configuration
                 }
             }
 
-            for (int index = 1, count = 0; ; index++)
+            for (int index = 1; ; index++)
             {
-                string text = string.Format(
-                    @"{0}\{1} ({2}){3}",
+                string text = string.Format(@"{0}\{1} ({2}){3}",
                     Path.GetDirectoryName(path),
                     Path.GetFileNameWithoutExtension(path),
                     index,
@@ -244,14 +250,16 @@ namespace Library.Configuration
                     }
                     catch (IOException)
                     {
-                        count++;
-                        if (count > 1024)
-                        {
-                            throw;
-                        }
+                        if (index > 1024) throw;
                     }
                 }
             }
+        }
+
+        private class Content
+        {
+            public Type Type { get; set; }
+            public object Value { get; set; }
         }
     }
 }

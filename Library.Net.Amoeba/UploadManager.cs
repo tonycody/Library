@@ -1077,9 +1077,9 @@ namespace Library.Net.Amoeba
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<LockedList<UploadItem>>() { Name = "UploadItems", Value = new LockedList<UploadItem>() },
-                    new Library.Configuration.SettingsContext<SeedCollection>() { Name = "UploadedSeeds", Value = new SeedCollection() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<LockedList<UploadItem>>() { Name = "UploadItems", Value = new LockedList<UploadItem>() },
+                    new Library.Configuration.SettingContent<SeedCollection>() { Name = "UploadedSeeds", Value = new SeedCollection() },
                 })
             {
                 _thisLock = lockObject;

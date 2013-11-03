@@ -127,54 +127,6 @@ namespace Library.Collections
             }
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                foreach (var item in _queue)
-                {
-                    yield return item;
-                }
-            }
-        }
-
-        void ICollection.CopyTo(Array array, int index)
-        {
-            lock (this.ThisLock)
-            {
-                this.CopyTo(array.OfType<T>().ToArray(), index);
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            lock (this.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        bool ICollection.IsSynchronized
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return true;
-                }
-            }
-        }
-
-        #region ICollection<T>
-
-        void ICollection<T>.Add(T item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Enqueue(item);
-            }
-        }
-
         bool ICollection<T>.IsReadOnly
         {
             get
@@ -183,6 +135,14 @@ namespace Library.Collections
                 {
                     return false;
                 }
+            }
+        }
+
+        void ICollection<T>.Add(T item)
+        {
+            lock (this.ThisLock)
+            {
+                this.Enqueue(item);
             }
         }
 
@@ -197,13 +157,49 @@ namespace Library.Collections
             }
         }
 
-        #endregion
+        bool ICollection.IsSynchronized
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return true;
+                }
+            }
+        }
 
         object ICollection.SyncRoot
         {
             get
             {
                 return this.ThisLock;
+            }
+        }
+
+        void ICollection.CopyTo(Array array, int index)
+        {
+            lock (this.ThisLock)
+            {
+                this.CopyTo(array.OfType<T>().ToArray(), index);
+            }
+        }
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var item in _queue)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            lock (this.ThisLock)
+            {
+                return ((IEnumerable<T>)this).GetEnumerator();
             }
         }
 
