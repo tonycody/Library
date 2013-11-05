@@ -356,7 +356,7 @@ namespace Library.Collections
             }
         }
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        public IEnumerator<T> GetEnumerator()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -375,7 +375,7 @@ namespace Library.Collections
 
             lock (this.ThisLock)
             {
-                return ((IEnumerable<T>)this).GetEnumerator();
+                return this.GetEnumerator();
             }
         }
 

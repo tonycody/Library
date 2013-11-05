@@ -275,7 +275,7 @@ namespace Library.Collections
             }
         }
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        public IEnumerator<T> GetEnumerator()
         {
             lock (this.ThisLock)
             {
@@ -286,11 +286,11 @@ namespace Library.Collections
             }
         }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        IEnumerator IEnumerable.GetEnumerator()
         {
             lock (this.ThisLock)
             {
-                return ((IEnumerable<T>)this).GetEnumerator();
+                return this.GetEnumerator();
             }
         }
 

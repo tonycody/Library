@@ -412,7 +412,7 @@ namespace Library.Collections
             }
         }
 
-        IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
             lock (this.ThisLock)
             {
@@ -429,7 +429,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return ((IEnumerable<KeyValuePair<TKey, TValue>>)this).GetEnumerator();
+                return this.GetEnumerator();
             }
         }
 
@@ -556,7 +556,7 @@ namespace Library.Collections
                 }
             }
 
-            IEnumerator<TKey> IEnumerable<TKey>.GetEnumerator()
+            public IEnumerator<TKey> GetEnumerator()
             {
                 lock (this.ThisLock)
                 {
@@ -571,7 +571,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return ((IEnumerable<TKey>)this).GetEnumerator();
+                    return this.GetEnumerator();
                 }
             }
 
@@ -699,7 +699,7 @@ namespace Library.Collections
                 }
             }
 
-            IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator()
+            public IEnumerator<TValue> GetEnumerator()
             {
                 lock (this.ThisLock)
                 {
@@ -714,7 +714,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return ((IEnumerable<TValue>)this).GetEnumerator();
+                    return this.GetEnumerator();
                 }
             }
 
