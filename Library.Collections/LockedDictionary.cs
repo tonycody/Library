@@ -92,7 +92,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return _capacity.Value;
+                    return _capacity ?? 0;
                 }
             }
             set

@@ -333,7 +333,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void CheckSpace(long clusterCount)
+        private void CheckSpace(int clusterCount)
         {
             lock (this.ThisLock)
             {
@@ -371,21 +371,41 @@ namespace Library.Net.Amoeba
                     _spaceClustersInitialized = true;
                 }
 
+                if (_spaceClusters.Count < clusterCount)
                 {
-                    long fileEndCluster = ((this.Size + CacheManager.ClusterSize - 1) / CacheManager.ClusterSize) - 1;
-                    long endCluster = this.GetEndCluster();
-                    long j = endCluster + 1;
-                    long count = fileEndCluster - endCluster;
+                    long maxEndCluster = ((this.Size + CacheManager.ClusterSize - 1) / CacheManager.ClusterSize) - 1;
+                    long cluster = this.GetEndCluster() + 1;
 
-                    for (int k = _spaceClusters.Count; k < count && k < clusterCount; k++, j++)
+                    for (int i = (clusterCount - _spaceClusters.Count) - 1; i >= 0 && cluster <= maxEndCluster; i--)
                     {
-                        _spaceClusters.Add(j);
+                        _spaceClusters.Add(cluster++);
                     }
                 }
             }
         }
 
-        private void CreatingSpace(long clusterCount)
+        private long GetEndCluster()
+        {
+            lock (this.ThisLock)
+            {
+                long endCluster = -1;
+
+                foreach (var clusters in _settings.ClustersIndex.Values)
+                {
+                    foreach (var cluster in clusters.Indexes)
+                    {
+                        if (endCluster < cluster)
+                        {
+                            endCluster = cluster;
+                        }
+                    }
+                }
+
+                return endCluster;
+            }
+        }
+
+        private void CreatingSpace(int clusterCount)
         {
             lock (this.ThisLock)
             {
@@ -433,14 +453,10 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (_lockedKeys.ContainsKey(key))
-                {
-                    _lockedKeys[key]++;
-                }
-                else
-                {
-                    _lockedKeys[key] = 1;
-                }
+                int count = 0;
+                _lockedKeys.TryGetValue(key, out count);
+
+                _lockedKeys[key] = ++count;
             }
         }
 
@@ -448,34 +464,23 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (_lockedKeys.ContainsKey(key))
-                {
-                    if (--_lockedKeys[key] == 0)
-                    {
-                        _lockedKeys.Remove(key);
-                    }
-                }
-            }
-        }
+                int count = 0;
 
-        private long GetEndCluster()
-        {
-            lock (this.ThisLock)
-            {
-                long endCluster = -1;
-
-                foreach (var clusters in _settings.ClustersIndex.Values)
+                if (!_lockedKeys.TryGetValue(key, out count))
                 {
-                    foreach (var cluster in clusters.Indexes)
-                    {
-                        if (endCluster < cluster)
-                        {
-                            endCluster = cluster;
-                        }
-                    }
+                    throw new KeyNotFoundException();
                 }
 
-                return endCluster;
+                count--;
+
+                if (count == 0)
+                {
+                    _lockedKeys.Remove(key);
+                }
+                else
+                {
+                    _lockedKeys[key] = count;
+                }
             }
         }
 
@@ -514,10 +519,10 @@ namespace Library.Net.Amoeba
 
                 foreach (var item in _settings.ShareIndex)
                 {
-                    if (item.Value.KeyAndCluster.ContainsKey(key))
-                    {
-                        int i = item.Value.KeyAndCluster[key];
+                    int i = -1;
 
+                    if (item.Value.KeyAndCluster.TryGetValue(key, out i))
+                    {
                         if (i < item.Value.KeyAndCluster.Count - 1)
                         {
                             return item.Value.BlockLength;
@@ -580,8 +585,8 @@ namespace Library.Net.Amoeba
             {
                 size = (long)Math.Min(size, NetworkConverter.FromSizeString("16TB"));
 
-                long cc = 256 * 1024 * 1024;
-                size = (long)((size + (cc - 1)) / cc) * cc;
+                long unit = 256 * 1024 * 1024;
+                size = (long)((size + (unit - 1)) / unit) * unit;
 
                 foreach (var key in _settings.ClustersIndex.Keys.ToArray()
                     .Where(n => _settings.ClustersIndex[n].Indexes.Any(o => size < ((o + 1) * CacheManager.ClusterSize)))
@@ -1256,13 +1261,6 @@ namespace Library.Net.Amoeba
 
                         if (_settings.ClustersIndex.TryGetValue(key, out clusters))
                         {
-                            if ((clusters.Indexes[0] * CacheManager.ClusterSize) > _fileStream.Length)
-                            {
-                                this.Remove(key);
-
-                                throw new BlockNotFoundException();
-                            }
-
                             clusters.UpdateTime = DateTime.UtcNow;
 
                             byte[] buffer = _bufferManager.TakeBuffer(clusters.Length);
@@ -1312,6 +1310,10 @@ namespace Library.Net.Amoeba
 
                                         throw new BlockNotFoundException();
                                     }
+                                }
+                                else
+                                {
+                                    throw new FormatException();
                                 }
 
                                 return new ArraySegment<byte>(buffer, 0, clusters.Length);
@@ -1364,6 +1366,10 @@ namespace Library.Net.Amoeba
                                             throw new BlockNotFoundException();
                                         }
                                     }
+                                    else
+                                    {
+                                        throw new FormatException();
+                                    }
 
                                     return new ArraySegment<byte>(buffer, 0, length);
                                 }
@@ -1390,6 +1396,10 @@ namespace Library.Net.Amoeba
                     {
                         if (!Collection.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
+                    else
+                    {
+                        throw new FormatException();
+                    }
 
                     if (this.Contains(key)) return;
 
@@ -1401,7 +1411,7 @@ namespace Library.Net.Amoeba
 
                         if (_spaceClusters.Count < count)
                         {
-                            this.CreatingSpace(8192); // 32KB(cluster size) * 8192(clusters count) = 256MB
+                            this.CreatingSpace(8192);// 256MB
                         }
 
                         if (_spaceClusters.Count < count) throw new SpaceNotFoundException();
@@ -1411,18 +1421,22 @@ namespace Library.Net.Amoeba
 
                         for (int i = 0, remain = value.Count; i < clusterList.Count && 0 < remain; i++, remain -= CacheManager.ClusterSize)
                         {
-                            if ((_fileStream.Length < ((clusterList[i] + 1) * CacheManager.ClusterSize)))
-                            {
-                                long endCluster = this.GetEndCluster();
-                                long size = (endCluster + 1) * CacheManager.ClusterSize;
-                                long space = 1024 * 1024 * 256;
+                            long posision = clusterList[i] * CacheManager.ClusterSize;
 
-                                size = (((size + space - 1) / space) + 1) * space;
+                            if ((_fileStream.Length < posision + CacheManager.ClusterSize))
+                            {
+                                int unit = 1024 * 1024 * 256;// 256MB
+                                long size = (((posision + CacheManager.ClusterSize) + unit - 1) / unit) * unit;
+
                                 _fileStream.SetLength(Math.Min(size, this.Size));
                             }
 
+                            if (_fileStream.Position != posision)
+                            {
+                                _fileStream.Seek(posision, SeekOrigin.Begin);
+                            }
+
                             int length = Math.Min(remain, CacheManager.ClusterSize);
-                            _fileStream.Seek(clusterList[i] * CacheManager.ClusterSize, SeekOrigin.Begin);
                             _fileStream.Write(value.Array, CacheManager.ClusterSize * i, length);
                         }
 

@@ -443,7 +443,7 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (!_searchNodeStopwatch.IsRunning || _searchNodeStopwatch.Elapsed.TotalSeconds > 10)
+                if (!_searchNodeStopwatch.IsRunning || _searchNodeStopwatch.Elapsed.TotalSeconds >= 10)
                 {
                     lock (_connectionsNodes.ThisLock)
                     {
@@ -958,7 +958,7 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes > 30)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 30)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -1083,7 +1083,7 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
-                    && pushBlockUploadStopwatch.Elapsed.TotalSeconds > 60)
+                    && pushBlockUploadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
                     pushBlockUploadStopwatch.Restart();
 
@@ -1172,7 +1172,7 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
-                    && pushBlockDownloadStopwatch.Elapsed.TotalSeconds > 60)
+                    && pushBlockDownloadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
                     pushBlockDownloadStopwatch.Restart();
 
@@ -1360,7 +1360,7 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
-                    && pushHeaderUploadStopwatch.Elapsed.TotalMinutes > 3)
+                    && pushHeaderUploadStopwatch.Elapsed.TotalMinutes >= 3)
                 {
                     pushHeaderUploadStopwatch.Restart();
 
@@ -1386,7 +1386,7 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
-                    && pushHeaderDownloadStopwatch.Elapsed.TotalSeconds > 60)
+                    && pushHeaderDownloadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
                     pushHeaderDownloadStopwatch.Restart();
 
@@ -1513,7 +1513,7 @@ namespace Library.Net.Lair
                     }
 
                     // Check
-                    if (checkTime.Elapsed.TotalSeconds > 60)
+                    if (checkTime.Elapsed.TotalSeconds >= 60)
                     {
                         checkTime.Restart();
 
@@ -1533,7 +1533,7 @@ namespace Library.Net.Lair
                     }
 
                     // PushNodes
-                    if (!nodeUpdateTime.IsRunning || nodeUpdateTime.Elapsed.TotalSeconds > 60)
+                    if (!nodeUpdateTime.IsRunning || nodeUpdateTime.Elapsed.TotalSeconds >= 60)
                     {
                         nodeUpdateTime.Restart();
 
@@ -1564,7 +1564,7 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (updateTime.Elapsed.TotalSeconds > 60)
+                    if (updateTime.Elapsed.TotalSeconds >= 60)
                     {
                         updateTime.Restart();
 
@@ -1817,7 +1817,7 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (headerUpdateTime.Elapsed.TotalSeconds > 60)
+                    if (headerUpdateTime.Elapsed.TotalSeconds >= 60)
                     {
                         headerUpdateTime.Restart();
 
@@ -2379,14 +2379,14 @@ namespace Library.Net.Lair
             private object _thisLock;
 
             public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingsContext>() { 
-                    new Library.Configuration.SettingsContext<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
-                    new Library.Configuration.SettingsContext<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
-                    new Library.Configuration.SettingsContext<int>() { Name = "ConnectionCountLimit", Value = 12 },
-                    new Library.Configuration.SettingsContext<int>() { Name = "BandwidthLimit", Value = 0 },
-                    new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingsContext<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingsContext<Dictionary<Tag, HashSet<Header>>>() { Name = "Headers", Value = new Dictionary<Tag, HashSet<Header>>() },
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
+                    new Library.Configuration.SettingContent<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
+                    new Library.Configuration.SettingContent<int>() { Name = "ConnectionCountLimit", Value = 12 },
+                    new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
+                    new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
+                    new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
+                    new Library.Configuration.SettingContent<Dictionary<Tag, HashSet<Header>>>() { Name = "Headers", Value = new Dictionary<Tag, HashSet<Header>>() },
                 })
             {
                 _thisLock = lockObject;

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using Library.Collections;
 using Library.Net.Connection;
@@ -2551,22 +2550,20 @@ namespace Library.Net.Amoeba
                     var now = DateTime.UtcNow;
 
                     if (seed == null || seed.Name != null || seed.Comment != null
+                        || seed.Keywords.Count != 1 || seed.Keywords[0] != ConnectionsManager.Keyword_Link
                         || (seed.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || seed.Certificate == null || !seed.VerifyCertificate()) return false;
 
                     var signature = seed.Certificate.ToString();
 
-                    if ((seed.Keywords[0] == ConnectionsManager.Keyword_Link && seed.Keywords.Count == 1))
+                    Seed tempSeed;
+
+                    if (!this.LinkSeeds.TryGetValue(signature, out tempSeed)
+                        || seed.CreationTime > tempSeed.CreationTime)
                     {
-                        Seed tempSeed;
+                        this.LinkSeeds[signature] = seed;
 
-                        if (!this.LinkSeeds.TryGetValue(signature, out tempSeed)
-                            || seed.CreationTime > tempSeed.CreationTime)
-                        {
-                            this.LinkSeeds[signature] = seed;
-
-                            return true;
-                        }
+                        return true;
                     }
 
                     return false;
@@ -2580,22 +2577,20 @@ namespace Library.Net.Amoeba
                     var now = DateTime.UtcNow;
 
                     if (seed == null || seed.Name != null || seed.Comment != null
+                        || seed.Keywords.Count != 1 || seed.Keywords[0] != ConnectionsManager.Keyword_Store
                         || (seed.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || seed.Certificate == null || !seed.VerifyCertificate()) return false;
 
                     var signature = seed.Certificate.ToString();
 
-                    if ((seed.Keywords[0] == ConnectionsManager.Keyword_Store && seed.Keywords.Count == 1))
+                    Seed tempSeed;
+
+                    if (!this.StoreSeeds.TryGetValue(signature, out tempSeed)
+                        || seed.CreationTime > tempSeed.CreationTime)
                     {
-                        Seed tempSeed;
+                        this.StoreSeeds[signature] = seed;
 
-                        if (!this.StoreSeeds.TryGetValue(signature, out tempSeed)
-                            || seed.CreationTime > tempSeed.CreationTime)
-                        {
-                            this.StoreSeeds[signature] = seed;
-
-                            return true;
-                        }
+                        return true;
                     }
 
                     return false;

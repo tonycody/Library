@@ -798,7 +798,6 @@ namespace Library.Net.Amoeba
             {
                 UploadItem item = new UploadItem();
 
-                item.Priority = 0;
                 item.State = UploadState.Encoding;
                 item.Type = UploadType.Upload;
                 item.Rank = 1;
@@ -838,7 +837,6 @@ namespace Library.Net.Amoeba
             {
                 UploadItem item = new UploadItem();
 
-                item.Priority = 0;
                 item.State = UploadState.Encoding;
                 item.Type = UploadType.Share;
                 item.Rank = 1;

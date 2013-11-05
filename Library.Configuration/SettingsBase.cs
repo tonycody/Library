@@ -117,9 +117,9 @@ namespace Library.Configuration
 
                     successNames.Add(name);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-
+                    Log.Warning(e);
                 }
             }
 
