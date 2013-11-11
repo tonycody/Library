@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Library.Security;
+using Library.Net.Connection;
 
 namespace Library.Net.Amoeba
 {
@@ -24,6 +25,9 @@ namespace Library.Net.Amoeba
         private ManagerState _encodeState = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 
+        private CreateConnectionEventHandler _createConnectionEvent;
+        private AcceptConnectionEventHandler _acceptConnectionEvent;
+
         private volatile bool _disposed = false;
         private object _thisLock = new object();
 
@@ -40,6 +44,50 @@ namespace Library.Net.Amoeba
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
             _backgroundDownloadManager = new BackgroundDownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _backgroundUploadManager = new BackgroundUploadManager(_connectionsManager, _cacheManager, _bufferManager);
+
+            _clientManager.CreateConnectionEvent = (object sender, string uri) =>
+            {
+                if (_createConnectionEvent != null)
+                {
+                    return _createConnectionEvent(this, uri);
+                }
+
+                return null;
+            };
+
+            _serverManager.AcceptConnectionEvent = (object sender, out string uri) =>
+            {
+                uri = null;
+
+                if (_acceptConnectionEvent != null)
+                {
+                    return _acceptConnectionEvent(this, out uri);
+                }
+
+                return null;
+            };
+        }
+
+        public CreateConnectionEventHandler CreateConnectionEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _createConnectionEvent = value;
+                }
+            }
+        }
+
+        public AcceptConnectionEventHandler AcceptConnectionEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _acceptConnectionEvent = value;
+                }
+            }
         }
 
         public Information Information

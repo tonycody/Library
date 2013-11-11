@@ -32,7 +32,7 @@ namespace Library.Net.Upnp
             {
                 try
                 {
-                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), new TimeSpan(0, 0, 30));
+                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), timeout);
                     if (_services != null) return;
                 }
                 catch (Exception)
@@ -94,8 +94,8 @@ namespace Library.Net.Upnp
 
             using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
             {
-                client.ReceiveTimeout = 1000 * 30;
-                client.SendTimeout = 1000 * 30;
+                client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
+                client.SendTimeout = (int)timeout.TotalMilliseconds;
 
                 for (int i = 0; i < querys.Count; i++)
                 {

@@ -11,9 +11,9 @@ namespace Library.UnitTest
         public void Test_UpnpClient()
         {
             UpnpClient client = new UpnpClient();
-            client.Connect(new TimeSpan(0, 0, 30));
+            client.Connect(new TimeSpan(0, 0, 10));
 
-            var ip = client.GetExternalIpAddress(new TimeSpan(0, 0, 30));
+            var ip = client.GetExternalIpAddress(new TimeSpan(0, 0, 10));
             Assert.AreNotEqual(ip, null, "UPnPClient #1");
         }
     }

@@ -255,8 +255,8 @@ namespace Library.UnitTest
                 var server = listener.EndAcceptSocket(listenerAcceptSocket);
                 listener.Stop();
 
-                var tcpClient = new TcpConnection(client.Client, null, Test_Library_Net_Amoeba.MaxReceiveCount, _bufferManager);
-                var tcpServer = new TcpConnection(server, null, Test_Library_Net_Amoeba.MaxReceiveCount, _bufferManager);
+                var tcpClient = new CapConnection(new SocketCap(client.Client), null, Test_Library_Net_Amoeba.MaxReceiveCount, _bufferManager);
+                var tcpServer = new CapConnection(new SocketCap(server), null, Test_Library_Net_Amoeba.MaxReceiveCount, _bufferManager);
 
                 List<ConnectionManager> connectionManagers = new List<ConnectionManager>();
 

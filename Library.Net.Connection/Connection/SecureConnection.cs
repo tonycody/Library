@@ -774,21 +774,25 @@ namespace Library.Net.Connection
         public override void Close(TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_connect) throw new ConnectionException();
 
             lock (this.ThisLock)
             {
-                try
+                if (_connection != null)
                 {
-                    _connection.Close(timeout);
+                    try
+                    {
+                        _connection.Close(timeout);
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _connection = null;
                 }
-                catch (ConnectionException ex)
-                {
-                    throw ex;
-                }
-                catch (Exception ex)
-                {
-                    throw new ConnectionException(ex.Message, ex);
-                }
+
+                _connect = false;
             }
         }
 

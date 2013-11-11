@@ -9,11 +9,15 @@ using Library.Net.Proxy;
 
 namespace Library.Net.Amoeba
 {
+    public delegate CapBase CreateConnectionEventHandler(object sender, string uri);
+
     class ClientManager : ManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private BufferManager _bufferManager;
 
         private Settings _settings;
+
+        private CreateConnectionEventHandler _createConnectionEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -27,6 +31,17 @@ namespace Library.Net.Amoeba
             _settings = new Settings(this.ThisLock);
         }
 
+        public CreateConnectionEventHandler CreateConnectionEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _createConnectionEvent = value;
+                }
+            }
+        }
+
         public ConnectionFilterCollection Filters
         {
             get
@@ -36,6 +51,16 @@ namespace Library.Net.Amoeba
                     return _settings.ConnectionFilters;
                 }
             }
+        }
+
+        protected virtual CapBase OnCreateConnectionEvent(string uri)
+        {
+            if (_createConnectionEvent != null)
+            {
+                return _createConnectionEvent(this, uri);
+            }
+
+            return null;
         }
 
         private static IEnumerable<KeyValuePair<string, string>> DecodeCommand(string option)
@@ -215,8 +240,7 @@ namespace Library.Net.Amoeba
 
         public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
-            Socket socket = null;
-            ConnectionBase connection = null;
+            List<IDisposable> garbages = new List<IDisposable>();
 
             try
             {
@@ -234,47 +258,61 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                if (connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None) return null;
+                ConnectionBase connection = null;
 
-                string scheme = null;
-                string host = null;
-                int port = -1;
-
+                if (connectionFilter == null)
                 {
-                    Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                    var match = regex.Match(uri);
+                    var cap = this.OnCreateConnectionEvent(uri);
+                    if (cap == null) return null;
 
-                    if (match.Success)
-                    {
-                        scheme = match.Groups[1].Value;
-                        host = match.Groups[2].Value;
-                        port = int.Parse(match.Groups[3].Value);
-                    }
-                    else
-                    {
-                        Regex regex2 = new Regex(@"(.*?):(.*)");
-                        var match2 = regex2.Match(uri);
+                    garbages.Add(cap);
 
-                        if (match2.Success)
+                    connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                    garbages.Add(connection);
+                }
+                else
+                {
+                    if (connectionFilter.ConnectionType == ConnectionType.None) return null;
+
+                    string scheme = null;
+                    string host = null;
+                    int port = -1;
+
+                    {
+                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                        var match = regex.Match(uri);
+
+                        if (match.Success)
                         {
-                            scheme = match2.Groups[1].Value;
-                            host = match2.Groups[2].Value;
-                            port = 4050;
+                            scheme = match.Groups[1].Value;
+                            host = match.Groups[2].Value;
+                            port = int.Parse(match.Groups[3].Value);
+                        }
+                        else
+                        {
+                            Regex regex2 = new Regex(@"(.*?):(.*)");
+                            var match2 = regex2.Match(uri);
+
+                            if (match2.Success)
+                            {
+                                scheme = match2.Groups[1].Value;
+                                host = match2.Groups[2].Value;
+                                port = 4050;
+                            }
                         }
                     }
-                }
 
-                if (host == null) return null;
+                    if (host == null) return null;
 
-                IList<KeyValuePair<string, string>> options = null;
+                    IList<KeyValuePair<string, string>> options = null;
 
-                if (!string.IsNullOrWhiteSpace(connectionFilter.Option))
-                {
-                    options = ClientManager.DecodeCommand(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
-                }
+                    if (!string.IsNullOrWhiteSpace(connectionFilter.Option))
+                    {
+                        options = ClientManager.DecodeCommand(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
+                    }
 
-                if (connectionFilter.ConnectionType == ConnectionType.Tcp)
-                {
+                    if (connectionFilter.ConnectionType == ConnectionType.Tcp)
+                    {
 #if !DEBUG
                     {
                         Uri url = new Uri(string.Format("{0}://{1}:{2}", scheme, host, port));
@@ -327,113 +365,133 @@ namespace Library.Net.Amoeba
                         }
                     }
 #endif
-                    socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
-                    connection = new TcpConnection(socket, bandwidthLimit, _maxReceiveCount, _bufferManager);
-                }
-                else
-                {
-                    string proxyScheme = null;
-                    string proxyHost = null;
-                    int proxyPort = -1;
+                        var socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
+                        garbages.Add(socket);
 
+                        var cap = new SocketCap(socket);
+                        garbages.Add(cap);
+
+                        connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                        garbages.Add(connection);
+                    }
+                    else
                     {
-                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                        var match = regex.Match(connectionFilter.ProxyUri);
+                        string proxyScheme = null;
+                        string proxyHost = null;
+                        int proxyPort = -1;
 
-                        if (match.Success)
                         {
-                            proxyScheme = match.Groups[1].Value;
-                            proxyHost = match.Groups[2].Value;
-                            proxyPort = int.Parse(match.Groups[3].Value);
-                        }
-                        else
-                        {
-                            Regex regex2 = new Regex(@"(.*?):(.*)");
-                            var match2 = regex2.Match(connectionFilter.ProxyUri);
+                            Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                            var match = regex.Match(connectionFilter.ProxyUri);
 
-                            if (match2.Success)
+                            if (match.Success)
                             {
-                                proxyScheme = match2.Groups[1].Value;
-                                proxyHost = match2.Groups[2].Value;
+                                proxyScheme = match.Groups[1].Value;
+                                proxyHost = match.Groups[2].Value;
+                                proxyPort = int.Parse(match.Groups[3].Value);
+                            }
+                            else
+                            {
+                                Regex regex2 = new Regex(@"(.*?):(.*)");
+                                var match2 = regex2.Match(connectionFilter.ProxyUri);
 
-                                if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
-                                    || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
-                                    || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                                if (match2.Success)
                                 {
-                                    proxyPort = 1080;
-                                }
-                                else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
-                                {
-                                    proxyPort = 80;
+                                    proxyScheme = match2.Groups[1].Value;
+                                    proxyHost = match2.Groups[2].Value;
+
+                                    if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
+                                        || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
+                                        || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                                    {
+                                        proxyPort = 1080;
+                                    }
+                                    else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                                    {
+                                        proxyPort = 80;
+                                    }
                                 }
                             }
                         }
+
+                        if (proxyHost == null) return null;
+
+                        if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
+                            || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
+                            || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy
+                            || connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                        {
+                            var socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
+                            garbages.Add(socket);
+
+                            if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
+                            {
+                                var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                                var proxy = new Socks4ProxyClient(socket, user, host, port);
+
+                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
+                                garbages.Add(cap);
+
+                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                                garbages.Add(connection);
+                            }
+                            else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
+                            {
+                                var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                                var proxy = new Socks4aProxyClient(socket, user, host, port);
+
+                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
+                                garbages.Add(cap);
+
+                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                                garbages.Add(connection);
+                            }
+                            else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                            {
+                                var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                                var pass = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("pass")).Select(n => n.Value).FirstOrDefault() : null;
+                                var proxy = new Socks5ProxyClient(socket, user, pass, host, port);
+
+                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
+                                garbages.Add(cap);
+
+                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                                garbages.Add(connection);
+                            }
+                            else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                            {
+                                var proxy = new HttpProxyClient(socket, host, port);
+
+                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
+                                garbages.Add(cap);
+
+                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                                garbages.Add(connection);
+                            }
+                        }
                     }
-
-                    if (proxyHost == null) return null;
-
-                    socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
-                    ProxyClientBase proxy = null;
-
-                    if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
-                    {
-                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-
-                        proxy = new Socks4ProxyClient(socket, user, host, port);
-                    }
-                    else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
-                    {
-                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-
-                        proxy = new Socks4aProxyClient(socket, user, host, port);
-                    }
-                    else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
-                    {
-                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-                        var pass = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("pass")).Select(n => n.Value).FirstOrDefault() : null;
-
-                        proxy = new Socks5ProxyClient(socket, user, pass, host, port);
-                    }
-                    else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
-                    {
-                        proxy = new HttpProxyClient(socket, host, port);
-                    }
-
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), bandwidthLimit, _maxReceiveCount, _bufferManager);
                 }
+
+                if (connection == null) return null;
 
                 var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2, connection, null, _bufferManager);
+                garbages.Add(secureConnection);
 
-                try
-                {
-                    secureConnection.Connect(new TimeSpan(0, 0, 30));
-                }
-                catch (Exception)
-                {
-                    secureConnection.Dispose();
-
-                    throw;
-                }
+                secureConnection.Connect(new TimeSpan(0, 0, 30));
 
                 var compressConnection = new CompressConnection(secureConnection, _maxReceiveCount, _bufferManager);
+                garbages.Add(compressConnection);
 
-                try
-                {
-                    compressConnection.Connect(new TimeSpan(0, 0, 10));
-                }
-                catch (Exception)
-                {
-                    compressConnection.Dispose();
-
-                    throw;
-                }
+                compressConnection.Connect(new TimeSpan(0, 0, 10));
 
                 return compressConnection;
             }
             catch (Exception)
             {
-                if (socket != null) socket.Dispose();
-                if (connection != null) connection.Dispose();
+                foreach (var item in garbages)
+                {
+                    item.Dispose();
+                }
             }
 
             return null;

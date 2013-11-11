@@ -695,7 +695,7 @@ namespace Library.Net.Lair
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
-                    new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
+                    new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 10 },
                 })
             {
                 _thisLock = lockObject;

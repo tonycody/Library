@@ -18,7 +18,7 @@ namespace Library.UnitTest
         private const int MaxReceiveCount = 1 * 1024 * 1024;
 
         [Test]
-        public void Test_TcpConnection()
+        public void Test_CapConnection()
         {
             TcpListener listener = new TcpListener(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 60000));
             listener.Start();
@@ -30,8 +30,8 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            var tcpClient = new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-            var tcpServer = new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
+            var tcpClient = new CapConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
+            var tcpServer = new CapConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
 
             using (MemoryStream stream = new MemoryStream())
             {
@@ -51,7 +51,7 @@ namespace Library.UnitTest
                 var buff2 = new byte[(int)returnStream.Length];
                 returnStream.Read(buff2, 0, buff2.Length);
 
-                Assert.IsTrue(Collection.Equals(buffer, buff2), "TcpConnection #1");
+                Assert.IsTrue(Collection.Equals(buffer, buff2), "CapConnection #1");
             }
 
             using (MemoryStream stream = new MemoryStream())
@@ -72,7 +72,7 @@ namespace Library.UnitTest
                 var buff2 = new byte[(int)returnStream.Length];
                 returnStream.Read(buff2, 0, buff2.Length);
 
-                Assert.IsTrue(Collection.Equals(buffer, buff2), "TcpConnection #2");
+                Assert.IsTrue(Collection.Equals(buffer, buff2), "CapConnection #2");
             }
 
             client.Close();
@@ -92,8 +92,8 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            var crcClient = new CrcConnection(new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
-            var crcServer = new CrcConnection(new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
+            var crcClient = new CrcConnection(new CapConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
+            var crcServer = new CrcConnection(new CapConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
 
             using (MemoryStream stream = new MemoryStream())
             {
@@ -154,8 +154,8 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            using (var compressClient = new CompressConnection(new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
-            using (var compressServer = new CompressConnection(new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
+            using (var compressClient = new CompressConnection(new CapConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
+            using (var compressServer = new CompressConnection(new CapConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
             {
                 var clientConnectTask = compressClient.ConnectAsync(new TimeSpan(0, 0, 20));
                 var serverConnectTask = compressServer.ConnectAsync(new TimeSpan(0, 0, 20));
@@ -271,9 +271,9 @@ namespace Library.UnitTest
                     if ((clientVersion & serverVersion) != 0) break;
                 }
 
-                ////var TcpClient = new TcpConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-                using (var secureClient = new SecureConnection(SecureConnectionType.Client, clientVersion, new TcpConnection(client.Client, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
-                using (var secureServer = new SecureConnection(SecureConnectionType.Server, serverVersion, new TcpConnection(server, null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
+                ////var TcpClient = new CapConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
+                using (var secureClient = new SecureConnection(SecureConnectionType.Client, clientVersion, new CapConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
+                using (var secureServer = new SecureConnection(SecureConnectionType.Server, serverVersion, new CapConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
                 {
                     try
                     {
