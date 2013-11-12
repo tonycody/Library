@@ -5,9 +5,10 @@ using NUnit.Framework;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Net;
-using Library.Net.Connection;
+using Library.Net.Connections;
 using Library.Collections;
 using System.Threading;
+using Library.Net.Caps;
 
 namespace Library.UnitTest
 {

@@ -66,10 +66,6 @@
       <Project>{197C654F-2461-446A-B531-4A789F14BE19}</Project>
       <Name>Library.Collections</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Library.Io\Library.Io.csproj">
-      <Project>{74597E45-7F3C-4958-8B6A-B16DE8DE47B9}</Project>
-      <Name>Library.Io</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Library\Library.csproj">
       <Project>{63EADC1F-9A8A-4945-A562-DA666D0BCB7B}</Project>
       <Name>Library</Name>

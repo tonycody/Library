@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Library.Net.Proxy
@@ -21,13 +20,13 @@ namespace Library.Net.Proxy
             }
         }
 
-        public abstract Socket CreateConnection(TimeSpan timeout);
+        public abstract Socket Create(TimeSpan timeout);
 
-        public virtual Task<Socket> CreateConnectionAsync(TimeSpan timeout)
+        public virtual Task<Socket> CreateAsync(TimeSpan timeout)
         {
             return Task.Factory.StartNew(() =>
             {
-                return this.CreateConnection(timeout);
+                return this.Create(timeout);
             });
         }
     }

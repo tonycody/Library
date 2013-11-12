@@ -149,7 +149,7 @@ namespace Library.Net.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        public override Socket CreateConnection(TimeSpan timeout)
+        public override Socket Create(TimeSpan timeout)
         {
             try
             {

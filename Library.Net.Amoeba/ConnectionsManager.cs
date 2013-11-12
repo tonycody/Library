@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Library.Collections;
-using Library.Net.Connection;
+using Library.Net.Connections;
 using Library.Security;
 
 namespace Library.Net.Amoeba

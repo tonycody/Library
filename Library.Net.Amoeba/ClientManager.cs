@@ -4,12 +4,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
-using Library.Net.Connection;
+using Library.Net.Caps;
+using Library.Net.Connections;
 using Library.Net.Proxy;
 
 namespace Library.Net.Amoeba
 {
-    public delegate CapBase CreateConnectionEventHandler(object sender, string uri);
+    public delegate bool CheckUriEventHandler(object sender, string uri);
+    public delegate CapBase CreateCapEventHandler(object sender, string uri);
 
     class ClientManager : ManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -17,7 +19,8 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private CreateConnectionEventHandler _createConnectionEvent;
+        private CheckUriEventHandler _checkUriEvent;
+        private CreateCapEventHandler _createConnectionEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -31,7 +34,18 @@ namespace Library.Net.Amoeba
             _settings = new Settings(this.ThisLock);
         }
 
-        public CreateConnectionEventHandler CreateConnectionEvent
+        public CheckUriEventHandler CheckUriEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _checkUriEvent = value;
+                }
+            }
+        }
+
+        public CreateCapEventHandler CreateCapEvent
         {
             set
             {
@@ -53,7 +67,17 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual CapBase OnCreateConnectionEvent(string uri)
+        protected virtual bool OnCheckUriEvent(string uri)
+        {
+            if (_checkUriEvent != null)
+            {
+                return _checkUriEvent(this, uri);
+            }
+
+            return false;
+        }
+
+        protected virtual CapBase OnCreateCapEvent(string uri)
         {
             if (_createConnectionEvent != null)
             {
@@ -221,21 +245,32 @@ namespace Library.Net.Amoeba
         {
             if (uri == null) return false;
 
-            ConnectionFilter connectionFilter = null;
-
-            lock (this.ThisLock)
+            if (this.OnCheckUriEvent(uri))
             {
-                foreach (var filter in this.Filters)
+                return true;
+            }
+            else
+            {
+                bool flag = false;
+
+                lock (this.ThisLock)
                 {
-                    if (filter.UriCondition.IsMatch(uri))
+                    foreach (var filter in this.Filters)
                     {
-                        connectionFilter = filter;
-                        break;
+                        if (filter.UriCondition.IsMatch(uri))
+                        {
+                            if (filter.ConnectionType != ConnectionType.None)
+                            {
+                                flag = true;
+                            }
+
+                            break;
+                        }
                     }
                 }
-            }
 
-            return !(connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None);
+                return flag;
+            }
         }
 
         public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
@@ -244,25 +279,11 @@ namespace Library.Net.Amoeba
 
             try
             {
-                ConnectionFilter connectionFilter = null;
-
-                lock (this.ThisLock)
-                {
-                    foreach (var filter in this.Filters)
-                    {
-                        if (filter.UriCondition.IsMatch(uri))
-                        {
-                            connectionFilter = filter;
-                            break;
-                        }
-                    }
-                }
-
                 ConnectionBase connection = null;
 
-                if (connectionFilter == null)
+                if (this.OnCheckUriEvent(uri))
                 {
-                    var cap = this.OnCreateConnectionEvent(uri);
+                    var cap = this.OnCreateCapEvent(uri);
                     if (cap == null) return null;
 
                     garbages.Add(cap);
@@ -272,7 +293,25 @@ namespace Library.Net.Amoeba
                 }
                 else
                 {
-                    if (connectionFilter.ConnectionType == ConnectionType.None) return null;
+                    ConnectionFilter connectionFilter = null;
+
+                    lock (this.ThisLock)
+                    {
+                        foreach (var filter in this.Filters)
+                        {
+                            if (filter.UriCondition.IsMatch(uri))
+                            {
+                                if (filter.ConnectionType != ConnectionType.None)
+                                {
+                                    connectionFilter = filter.DeepClone();
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+
+                    if (connectionFilter == null) return null;
 
                     string scheme = null;
                     string host = null;
@@ -424,50 +463,34 @@ namespace Library.Net.Amoeba
                             var socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
                             garbages.Add(socket);
 
+                            ProxyClientBase proxy = null;
+
                             if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
                             {
                                 var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-                                var proxy = new Socks4ProxyClient(socket, user, host, port);
-
-                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
-                                garbages.Add(cap);
-
-                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
-                                garbages.Add(connection);
+                                proxy = new Socks4ProxyClient(socket, user, host, port);
                             }
                             else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
                             {
                                 var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-                                var proxy = new Socks4aProxyClient(socket, user, host, port);
-
-                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
-                                garbages.Add(cap);
-
-                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
-                                garbages.Add(connection);
+                                proxy = new Socks4aProxyClient(socket, user, host, port);
                             }
                             else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
                             {
                                 var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
                                 var pass = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("pass")).Select(n => n.Value).FirstOrDefault() : null;
-                                var proxy = new Socks5ProxyClient(socket, user, pass, host, port);
-
-                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
-                                garbages.Add(cap);
-
-                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
-                                garbages.Add(connection);
+                                proxy = new Socks5ProxyClient(socket, user, pass, host, port);
                             }
                             else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
                             {
-                                var proxy = new HttpProxyClient(socket, host, port);
-
-                                var cap = new SocketCap(proxy.CreateConnection(new TimeSpan(0, 0, 30)));
-                                garbages.Add(cap);
-
-                                connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
-                                garbages.Add(connection);
+                                proxy = new HttpProxyClient(socket, host, port);
                             }
+
+                            var cap = new SocketCap(proxy.Create(new TimeSpan(0, 0, 30)));
+                            garbages.Add(cap);
+
+                            connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                            garbages.Add(connection);
                         }
                     }
                 }

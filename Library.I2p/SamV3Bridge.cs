@@ -958,10 +958,10 @@ namespace Library.I2p
                 session = new SamV3Session(bridgeHost, bridgePort);
                 session.Handshake();
                 session.Create(null, options);
+                this.Session = session;
 
                 this.Create(false);
 
-                this.Session = session;
                 session = null;
             }
             catch (Exception)

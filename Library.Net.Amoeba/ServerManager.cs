@@ -5,12 +5,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Library;
-using Library.Net.Connection;
+using Library.Net.Caps;
+using Library.Net.Connections;
 
 namespace Library.Net.Amoeba
 {
-    public delegate CapBase AcceptConnectionEventHandler(object sender, out string uri);
+    public delegate CapBase AcceptCapEventHandler(object sender, out string uri);
 
     class ServerManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -27,7 +27,7 @@ namespace Library.Net.Amoeba
 
         private ManagerState _state = ManagerState.Stop;
 
-        private AcceptConnectionEventHandler _acceptConnectionEvent;
+        private AcceptCapEventHandler _acceptConnectionEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -43,7 +43,7 @@ namespace Library.Net.Amoeba
             _watchTimer = new Timer(new TimerCallback(this.WatchTimer), null, Timeout.Infinite, Timeout.Infinite);
         }
 
-        public AcceptConnectionEventHandler AcceptConnectionEvent
+        public AcceptCapEventHandler AcceptCapEvent
         {
             set
             {
@@ -65,7 +65,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual CapBase OnAcceptConnectionEvent(out string uri)
+        protected virtual CapBase OnAcceptCapEvent(out string uri)
         {
             uri = null;
 
@@ -114,7 +114,7 @@ namespace Library.Net.Amoeba
                     }
                     else if (type == 1)
                     {
-                        var cap = this.OnAcceptConnectionEvent(out uri);
+                        var cap = this.OnAcceptCapEvent(out uri);
                         if (cap == null) continue;
 
                         garbages.Add(cap);

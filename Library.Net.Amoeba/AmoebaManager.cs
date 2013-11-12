@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Library.Security;
-using Library.Net.Connection;
 
 namespace Library.Net.Amoeba
 {
@@ -25,8 +24,9 @@ namespace Library.Net.Amoeba
         private ManagerState _encodeState = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 
-        private CreateConnectionEventHandler _createConnectionEvent;
-        private AcceptConnectionEventHandler _acceptConnectionEvent;
+        private CheckUriEventHandler _checkUriEvent;
+        private CreateCapEventHandler _createConnectionEvent;
+        private AcceptCapEventHandler _acceptConnectionEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -45,7 +45,17 @@ namespace Library.Net.Amoeba
             _backgroundDownloadManager = new BackgroundDownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _backgroundUploadManager = new BackgroundUploadManager(_connectionsManager, _cacheManager, _bufferManager);
 
-            _clientManager.CreateConnectionEvent = (object sender, string uri) =>
+            _clientManager.CheckUriEvent = (object sender, string uri) =>
+            {
+                if (_checkUriEvent != null)
+                {
+                    return _checkUriEvent(this, uri);
+                }
+
+                return false;
+            };
+
+            _clientManager.CreateCapEvent = (object sender, string uri) =>
             {
                 if (_createConnectionEvent != null)
                 {
@@ -55,7 +65,7 @@ namespace Library.Net.Amoeba
                 return null;
             };
 
-            _serverManager.AcceptConnectionEvent = (object sender, out string uri) =>
+            _serverManager.AcceptCapEvent = (object sender, out string uri) =>
             {
                 uri = null;
 
@@ -68,7 +78,18 @@ namespace Library.Net.Amoeba
             };
         }
 
-        public CreateConnectionEventHandler CreateConnectionEvent
+        public CheckUriEventHandler CheckUriEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _checkUriEvent = value;
+                }
+            }
+        }
+
+        public CreateCapEventHandler CreateCapEvent
         {
             set
             {
@@ -79,7 +100,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public AcceptConnectionEventHandler AcceptConnectionEvent
+        public AcceptCapEventHandler AcceptCapEvent
         {
             set
             {
