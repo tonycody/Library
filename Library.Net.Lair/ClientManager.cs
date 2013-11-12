@@ -4,16 +4,23 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
-using Library.Net.Connection;
+using Library.Net.Caps;
+using Library.Net.Connections;
 using Library.Net.Proxy;
 
 namespace Library.Net.Lair
 {
+    public delegate bool CheckUriEventHandler(object sender, string uri);
+    public delegate CapBase CreateCapEventHandler(object sender, string uri);
+
     class ClientManager : ManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private BufferManager _bufferManager;
 
         private Settings _settings;
+
+        private CheckUriEventHandler _checkUriEvent;
+        private CreateCapEventHandler _createConnectionEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -24,7 +31,29 @@ namespace Library.Net.Lair
         {
             _bufferManager = bufferManager;
 
-            _settings = new Settings();
+            _settings = new Settings(this.ThisLock);
+        }
+
+        public CheckUriEventHandler CheckUriEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _checkUriEvent = value;
+                }
+            }
+        }
+
+        public CreateCapEventHandler CreateCapEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _createConnectionEvent = value;
+                }
+            }
         }
 
         public ConnectionFilterCollection Filters
@@ -36,6 +65,26 @@ namespace Library.Net.Lair
                     return _settings.ConnectionFilters;
                 }
             }
+        }
+
+        protected virtual bool OnCheckUriEvent(string uri)
+        {
+            if (_checkUriEvent != null)
+            {
+                return _checkUriEvent(this, uri);
+            }
+
+            return false;
+        }
+
+        protected virtual CapBase OnCreateCapEvent(string uri)
+        {
+            if (_createConnectionEvent != null)
+            {
+                return _createConnectionEvent(this, uri);
+            }
+
+            return null;
         }
 
         private static IEnumerable<KeyValuePair<string, string>> DecodeCommand(string option)
@@ -196,31 +245,13 @@ namespace Library.Net.Lair
         {
             if (uri == null) return false;
 
-            ConnectionFilter connectionFilter = null;
-
-            lock (this.ThisLock)
+            if (this.OnCheckUriEvent(uri))
             {
-                foreach (var filter in this.Filters)
-                {
-                    if (filter.UriCondition.IsMatch(uri))
-                    {
-                        connectionFilter = filter;
-                        break;
-                    }
-                }
+                return true;
             }
-
-            return !(connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None);
-        }
-
-        public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
-        {
-            Socket socket = null;
-            ConnectionBase connection = null;
-
-            try
+            else
             {
-                ConnectionFilter connectionFilter = null;
+                bool flag = false;
 
                 lock (this.ThisLock)
                 {
@@ -228,53 +259,99 @@ namespace Library.Net.Lair
                     {
                         if (filter.UriCondition.IsMatch(uri))
                         {
-                            connectionFilter = filter;
+                            if (filter.ConnectionType != ConnectionType.None)
+                            {
+                                flag = true;
+                            }
+
                             break;
                         }
                     }
                 }
 
-                if (connectionFilter == null || connectionFilter.ConnectionType == ConnectionType.None) return null;
+                return flag;
+            }
+        }
 
-                string scheme = null;
-                string host = null;
-                int port = -1;
+        public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
+        {
+            List<IDisposable> garbages = new List<IDisposable>();
 
+            try
+            {
+                ConnectionBase connection = null;
+
+                if (this.OnCheckUriEvent(uri))
                 {
-                    Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                    var match = regex.Match(uri);
+                    var cap = this.OnCreateCapEvent(uri);
+                    if (cap == null) return null;
 
-                    if (match.Success)
-                    {
-                        scheme = match.Groups[1].Value;
-                        host = match.Groups[2].Value;
-                        port = int.Parse(match.Groups[3].Value);
-                    }
-                    else
-                    {
-                        Regex regex2 = new Regex(@"(.*?):(.*)");
-                        var match2 = regex2.Match(uri);
+                    garbages.Add(cap);
 
-                        if (match2.Success)
+                    connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                    garbages.Add(connection);
+                }
+                else
+                {
+                    ConnectionFilter connectionFilter = null;
+
+                    lock (this.ThisLock)
+                    {
+                        foreach (var filter in this.Filters)
                         {
-                            scheme = match2.Groups[1].Value;
-                            host = match2.Groups[2].Value;
-                            port = 4050;
+                            if (filter.UriCondition.IsMatch(uri))
+                            {
+                                if (filter.ConnectionType != ConnectionType.None)
+                                {
+                                    connectionFilter = filter.DeepClone();
+                                }
+
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (host == null) return null;
+                    if (connectionFilter == null) return null;
 
-                IList<KeyValuePair<string, string>> options = null;
+                    string scheme = null;
+                    string host = null;
+                    int port = -1;
 
-                if (!string.IsNullOrWhiteSpace(connectionFilter.Option))
-                {
-                    options = ClientManager.DecodeCommand(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
-                }
+                    {
+                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                        var match = regex.Match(uri);
 
-                if (connectionFilter.ConnectionType == ConnectionType.Tcp)
-                {
+                        if (match.Success)
+                        {
+                            scheme = match.Groups[1].Value;
+                            host = match.Groups[2].Value;
+                            port = int.Parse(match.Groups[3].Value);
+                        }
+                        else
+                        {
+                            Regex regex2 = new Regex(@"(.*?):(.*)");
+                            var match2 = regex2.Match(uri);
+
+                            if (match2.Success)
+                            {
+                                scheme = match2.Groups[1].Value;
+                                host = match2.Groups[2].Value;
+                                port = 4050;
+                            }
+                        }
+                    }
+
+                    if (host == null) return null;
+
+                    IList<KeyValuePair<string, string>> options = null;
+
+                    if (!string.IsNullOrWhiteSpace(connectionFilter.Option))
+                    {
+                        options = ClientManager.DecodeCommand(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
+                    }
+
+                    if (connectionFilter.ConnectionType == ConnectionType.Tcp)
+                    {
 #if !DEBUG
                     {
                         Uri url = new Uri(string.Format("{0}://{1}:{2}", scheme, host, port));
@@ -327,113 +404,117 @@ namespace Library.Net.Lair
                         }
                     }
 #endif
-                    socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
-                    connection = new TcpConnection(socket, bandwidthLimit, _maxReceiveCount, _bufferManager);
-                }
-                else
-                {
-                    string proxyScheme = null;
-                    string proxyHost = null;
-                    int proxyPort = -1;
+                        var socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
+                        garbages.Add(socket);
 
+                        var cap = new SocketCap(socket);
+                        garbages.Add(cap);
+
+                        connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                        garbages.Add(connection);
+                    }
+                    else
                     {
-                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                        var match = regex.Match(connectionFilter.ProxyUri);
+                        string proxyScheme = null;
+                        string proxyHost = null;
+                        int proxyPort = -1;
 
-                        if (match.Success)
                         {
-                            proxyScheme = match.Groups[1].Value;
-                            proxyHost = match.Groups[2].Value;
-                            proxyPort = int.Parse(match.Groups[3].Value);
-                        }
-                        else
-                        {
-                            Regex regex2 = new Regex(@"(.*?):(.*)");
-                            var match2 = regex2.Match(connectionFilter.ProxyUri);
+                            Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                            var match = regex.Match(connectionFilter.ProxyUri);
 
-                            if (match2.Success)
+                            if (match.Success)
                             {
-                                proxyScheme = match2.Groups[1].Value;
-                                proxyHost = match2.Groups[2].Value;
+                                proxyScheme = match.Groups[1].Value;
+                                proxyHost = match.Groups[2].Value;
+                                proxyPort = int.Parse(match.Groups[3].Value);
+                            }
+                            else
+                            {
+                                Regex regex2 = new Regex(@"(.*?):(.*)");
+                                var match2 = regex2.Match(connectionFilter.ProxyUri);
 
-                                if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
-                                    || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
-                                    || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                                if (match2.Success)
                                 {
-                                    proxyPort = 1080;
-                                }
-                                else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
-                                {
-                                    proxyPort = 80;
+                                    proxyScheme = match2.Groups[1].Value;
+                                    proxyHost = match2.Groups[2].Value;
+
+                                    if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
+                                        || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
+                                        || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                                    {
+                                        proxyPort = 1080;
+                                    }
+                                    else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                                    {
+                                        proxyPort = 80;
+                                    }
                                 }
                             }
                         }
+
+                        if (proxyHost == null) return null;
+
+                        if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy
+                            || connectionFilter.ConnectionType == ConnectionType.Socks4aProxy
+                            || connectionFilter.ConnectionType == ConnectionType.Socks5Proxy
+                            || connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                        {
+                            var socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
+                            garbages.Add(socket);
+
+                            ProxyClientBase proxy = null;
+
+                            if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
+                            {
+                                var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                                proxy = new Socks4ProxyClient(socket, user, host, port);
+                            }
+                            else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
+                            {
+                                var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                                proxy = new Socks4aProxyClient(socket, user, host, port);
+                            }
+                            else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
+                            {
+                                var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
+                                var pass = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("pass")).Select(n => n.Value).FirstOrDefault() : null;
+                                proxy = new Socks5ProxyClient(socket, user, pass, host, port);
+                            }
+                            else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
+                            {
+                                proxy = new HttpProxyClient(socket, host, port);
+                            }
+
+                            var cap = new SocketCap(proxy.Create(new TimeSpan(0, 0, 30)));
+                            garbages.Add(cap);
+
+                            connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                            garbages.Add(connection);
+                        }
                     }
-
-                    if (proxyHost == null) return null;
-
-                    socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(proxyHost), proxyPort), new TimeSpan(0, 0, 10));
-                    ProxyClientBase proxy = null;
-
-                    if (connectionFilter.ConnectionType == ConnectionType.Socks4Proxy)
-                    {
-                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-
-                        proxy = new Socks4ProxyClient(socket, user, host, port);
-                    }
-                    else if (connectionFilter.ConnectionType == ConnectionType.Socks4aProxy)
-                    {
-                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-
-                        proxy = new Socks4aProxyClient(socket, user, host, port);
-                    }
-                    else if (connectionFilter.ConnectionType == ConnectionType.Socks5Proxy)
-                    {
-                        var user = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("user")).Select(n => n.Value).FirstOrDefault() : null;
-                        var pass = (options != null) ? options.Where(n => n.Key.ToLower().StartsWith("pass")).Select(n => n.Value).FirstOrDefault() : null;
-
-                        proxy = new Socks5ProxyClient(socket, user, pass, host, port);
-                    }
-                    else if (connectionFilter.ConnectionType == ConnectionType.HttpProxy)
-                    {
-                        proxy = new HttpProxyClient(socket, host, port);
-                    }
-
-                    connection = new TcpConnection(proxy.CreateConnection(new TimeSpan(0, 0, 30)), bandwidthLimit, _maxReceiveCount, _bufferManager);
                 }
 
-                var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version2, connection, null, _bufferManager);
+                if (connection == null) return null;
 
-                try
-                {
-                    secureConnection.Connect(new TimeSpan(0, 0, 30));
-                }
-                catch (Exception)
-                {
-                    secureConnection.Dispose();
+                var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2, connection, null, _bufferManager);
+                garbages.Add(secureConnection);
 
-                    throw;
-                }
+                secureConnection.Connect(new TimeSpan(0, 0, 30));
 
                 var compressConnection = new CompressConnection(secureConnection, _maxReceiveCount, _bufferManager);
+                garbages.Add(compressConnection);
 
-                try
-                {
-                    compressConnection.Connect(new TimeSpan(0, 0, 10));
-                }
-                catch (Exception)
-                {
-                    compressConnection.Dispose();
-
-                    throw;
-                }
+                compressConnection.Connect(new TimeSpan(0, 0, 10));
 
                 return compressConnection;
             }
             catch (Exception)
             {
-                if (socket != null) socket.Dispose();
-                if (connection != null) connection.Dispose();
+                foreach (var item in garbages)
+                {
+                    item.Dispose();
+                }
             }
 
             return null;
@@ -461,24 +542,30 @@ namespace Library.Net.Lair
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock = new object();
+            private object _thisLock;
 
-            public Settings()
+            public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<ConnectionFilterCollection>() { Name = "ConnectionFilters", Value = new ConnectionFilterCollection() },
                  })
             {
-
+                _thisLock = lockObject;
             }
 
-            public override void Load(string path)
+            public override void Load(string directoryPath)
             {
-                base.Load(path);
+                lock (_thisLock)
+                {
+                    base.Load(directoryPath);
+                }
             }
 
-            public override void Save(string path)
+            public override void Save(string directoryPath)
             {
-                base.Save(path);
+                lock (_thisLock)
+                {
+                    base.Save(directoryPath);
+                }
             }
 
             public ConnectionFilterCollection ConnectionFilters

@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Library.Net.Connection;
+using Library.Net.Caps;
+using Library.Net.Connections;
 
 namespace Library.Net.Lair
 {
+    public delegate CapBase AcceptCapEventHandler(object sender, out string uri);
+
     class ServerManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private BufferManager _bufferManager;
@@ -16,9 +20,14 @@ namespace Library.Net.Lair
         private Dictionary<string, TcpListener> _tcpListeners = new Dictionary<string, TcpListener>();
         private List<string> _urisHistory = new List<string>();
 
+        private static Random _random = new Random();
+        private Regex _regex = new Regex(@"(.*?):(.*):(\d*)");
+
         private System.Threading.Timer _watchTimer;
 
         private ManagerState _state = ManagerState.Stop;
+
+        private AcceptCapEventHandler _acceptConnectionEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -29,9 +38,20 @@ namespace Library.Net.Lair
         {
             _bufferManager = bufferManager;
 
-            _settings = new Settings();
+            _settings = new Settings(this.ThisLock);
 
             _watchTimer = new Timer(new TimerCallback(this.WatchTimer), null, Timeout.Infinite, Timeout.Infinite);
+        }
+
+        public AcceptCapEventHandler AcceptCapEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _acceptConnectionEvent = value;
+                }
+            }
         }
 
         public UriCollection ListenUris
@@ -45,63 +65,87 @@ namespace Library.Net.Lair
             }
         }
 
+        protected virtual CapBase OnAcceptCapEvent(out string uri)
+        {
+            uri = null;
+
+            if (_acceptConnectionEvent != null)
+            {
+                return _acceptConnectionEvent(this, out uri);
+            }
+
+            return null;
+        }
+
         public ConnectionBase AcceptConnection(out string uri, BandwidthLimit bandwidthLimit)
         {
             uri = null;
-            ConnectionBase connection = null;
+            List<IDisposable> garbages = new List<IDisposable>();
 
             try
             {
-                lock (this.ThisLock)
+                ConnectionBase connection = null;
+
+                foreach (var type in (new int[] { 0, 1 }).Randomize())
                 {
                     if (this.State == ManagerState.Stop) return null;
 
-                    foreach (var item in _tcpListeners)
+                    if (type == 0)
                     {
-                        if (item.Value.Pending())
+                        lock (this.ThisLock)
                         {
-                            var socket = item.Value.AcceptTcpClient().Client;
+                            foreach (var item in _tcpListeners)
+                            {
+                                if (item.Value.Pending())
+                                {
+                                    uri = item.Key;
 
-                            uri = item.Key;
-                            connection = new TcpConnection(socket, bandwidthLimit, _maxReceiveCount, _bufferManager);
-                            break;
+                                    var socket = item.Value.AcceptTcpClient().Client;
+                                    garbages.Add(socket);
+
+                                    var cap = new SocketCap(socket);
+                                    garbages.Add(cap);
+
+                                    connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                                    garbages.Add(connection);
+                                }
+                            }
                         }
                     }
+                    else if (type == 1)
+                    {
+                        var cap = this.OnAcceptCapEvent(out uri);
+                        if (cap == null) continue;
+
+                        garbages.Add(cap);
+
+                        connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                        garbages.Add(connection);
+                    }
+
+                    if (connection != null) break;
                 }
 
                 if (connection == null) return null;
 
-                var secureConnection = new SecureConnection(SecureConnectionType.Server, SecureConnectionVersion.Version2, connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionType.Server, SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2, connection, null, _bufferManager);
+                garbages.Add(secureConnection);
 
-                try
-                {
-                    secureConnection.Connect(new TimeSpan(0, 0, 30));
-                }
-                catch (Exception)
-                {
-                    secureConnection.Dispose();
-
-                    throw;
-                }
+                secureConnection.Connect(new TimeSpan(0, 0, 30));
 
                 var compressConnection = new CompressConnection(secureConnection, _maxReceiveCount, _bufferManager);
+                garbages.Add(compressConnection);
 
-                try
-                {
-                    compressConnection.Connect(new TimeSpan(0, 0, 10));
-                }
-                catch (Exception)
-                {
-                    compressConnection.Dispose();
-
-                    throw;
-                }
+                compressConnection.Connect(new TimeSpan(0, 0, 10));
 
                 return compressConnection;
             }
             catch (Exception)
             {
-                if (connection != null) connection.Dispose();
+                foreach (var item in garbages)
+                {
+                    item.Dispose();
+                }
             }
 
             return null;
@@ -111,39 +155,36 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
+                if (this.State == ManagerState.Stop) return;
+
                 if (!Collection.Equals(_urisHistory, this.ListenUris))
                 {
-                    // Stop
+                    foreach (var item in _tcpListeners.ToArray())
                     {
-                        foreach (var tcpListener in _tcpListeners.Values)
-                        {
-                            tcpListener.Stop();
-                        }
+                        if (this.ListenUris.Contains(item.Key)) continue;
 
-                        _tcpListeners.Clear();
+                        item.Value.Stop();
+                        _tcpListeners.Remove(item.Key);
                     }
 
-                    // Start
+                    foreach (var uri in this.ListenUris)
                     {
-                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
+                        if (this.ListenUris.Contains(uri)) continue;
 
-                        foreach (var uri in this.ListenUris)
+                        var match = _regex.Match(uri);
+                        if (!match.Success) continue;
+
+                        if (match.Groups[1].Value == "tcp")
                         {
-                            var match = regex.Match(uri);
-                            if (!match.Success) continue;
-
-                            if (match.Groups[1].Value == "tcp")
+                            try
                             {
-                                try
-                                {
-                                    var listener = new TcpListener(IPAddress.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
-                                    listener.Start(3);
-                                    _tcpListeners[uri] = listener;
-                                }
-                                catch (Exception)
-                                {
+                                var listener = new TcpListener(IPAddress.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
+                                listener.Start(3);
+                                _tcpListeners[uri] = listener;
+                            }
+                            catch (Exception)
+                            {
 
-                                }
                             }
                         }
                     }
@@ -174,7 +215,7 @@ namespace Library.Net.Lair
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
 
-                _watchTimer.Change(1000 * 10, 1000 * 10);
+                _watchTimer.Change(0, 1000 * 10);
             }
         }
 
@@ -188,6 +229,14 @@ namespace Library.Net.Lair
                 _state = ManagerState.Stop;
 
                 _watchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+                foreach (var tcpListener in _tcpListeners.Values)
+                {
+                    tcpListener.Stop();
+                }
+
+                _tcpListeners.Clear();
+                _urisHistory.Clear();
             }
         }
 
@@ -213,14 +262,14 @@ namespace Library.Net.Lair
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock = new object();
+            private object _thisLock;
 
-            public Settings()
+            public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<UriCollection>() { Name = "ListenUris", Value = new UriCollection() },
                 })
             {
-
+                _thisLock = lockObject;
             }
 
             public override void Load(string directoryPath)

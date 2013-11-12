@@ -169,9 +169,13 @@
       <Project>{74597E45-7F3C-4958-8B6A-B16DE8DE47B9}</Project>
       <Name>Library.Io</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Library.Net.Connection\Library.Net.Connection.csproj">
+    <ProjectReference Include="..\Library.Net.Caps\Library.Net.Caps.csproj">
+      <Project>{364FD425-45B7-41D5-A180-1CE912C7BA31}</Project>
+      <Name>Library.Net.Caps</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Net.Connections\Library.Net.Connections.csproj">
       <Project>{38994E3C-0699-4D6C-AD02-F9F657340347}</Project>
-      <Name>Library.Net.Connection</Name>
+      <Name>Library.Net.Connections</Name>
     </ProjectReference>
     <ProjectReference Include="..\Library.Net\Library.Net.csproj">
       <Project>{7CFDE01D-4A0E-4E10-ACC2-34DB897DBE0F}</Project>

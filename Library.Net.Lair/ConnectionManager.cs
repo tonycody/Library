@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Xml;
 using Library.Io;
-using Library.Net.Connection;
+using Library.Net.Connections;
 using Library.Security;
 
 namespace Library.Net.Lair

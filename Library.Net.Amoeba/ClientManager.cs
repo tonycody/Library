@@ -552,14 +552,20 @@ namespace Library.Net.Amoeba
                 _thisLock = lockObject;
             }
 
-            public override void Load(string path)
+            public override void Load(string directoryPath)
             {
-                base.Load(path);
+                lock (_thisLock)
+                {
+                    base.Load(directoryPath);
+                }
             }
 
-            public override void Save(string path)
+            public override void Save(string directoryPath)
             {
-                base.Save(path);
+                lock (_thisLock)
+                {
+                    base.Save(directoryPath);
+                }
             }
 
             public ConnectionFilterCollection ConnectionFilters

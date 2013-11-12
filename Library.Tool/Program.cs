@@ -66,52 +66,26 @@ namespace Library.Tool
                 }
                 else if (args.Length >= 4 && args[0] == "define")
                 {
-                    StringBuilder stringBuilder = new StringBuilder();
-                    var path = args[2];
+                    List<string> list = new List<string>();
 
-                    if (args[1] == "on")
-                    {
-                        stringBuilder.AppendLine("#define " + args[3]);
-                    }
-
-                    using (FileStream inStream = new FileStream(path, FileMode.Open))
+                    using (FileStream inStream = new FileStream(args[2], FileMode.Open))
                     using (StreamReader reader = new StreamReader(inStream))
                     {
-                        bool f = false;
-                        string line;
-
-                        while (null != (line = reader.ReadLine()))
+                        for (; ; )
                         {
-                            if (!f && line.StartsWith("using"))
-                            {
-                                f = true;
+                            string line = reader.ReadLine();
+                            if (line == null) break;
 
-                                var temp = stringBuilder.ToString().Trim('\r', '\n');
-                                stringBuilder.Clear();
-                                stringBuilder.Append(temp);
-                                stringBuilder.AppendLine();
-                                stringBuilder.AppendLine();
-                            }
-
-                            if (!f && line == ("#define " + args[3]))
-                            {
-
-                            }
-                            else
-                            {
-                                stringBuilder.AppendLine(line);
-                            }
+                            list.Add(line);
                         }
                     }
 
-                    using (FileStream outStream = new FileStream(path + ".tmp", FileMode.Create))
-                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
-                    {
-                        writer.Write(stringBuilder.ToString().TrimStart('\r', '\n'));
-                    }
+                    bool flag = (args[1] == "on");
 
-                    File.Delete(path);
-                    File.Move(path + ".tmp", path);
+                    foreach (var item in list)
+                    {
+                        Program.Define(item, flag, args[3]);
+                    }
                 }
                 else if (args.Length >= 3 && args[0] == "increment")
                 {
@@ -489,6 +463,80 @@ namespace Library.Tool
                         File.Move(Path.Combine(basePath, pathz), Path.Combine(basePath, pathx));
                     }
                 }
+                else if (args.Length >= 3 && args[0] == "CodeClone")
+                {
+                    string pathListPath = args[1];
+                    string wordListPath = args[2];
+
+                    Dictionary<string, string> pathDic = new Dictionary<string, string>();
+
+                    using (FileStream inStream = new FileStream(pathListPath, FileMode.Open))
+                    using (StreamReader reader = new StreamReader(inStream))
+                    {
+                        var tempList = new List<string>();
+
+                        for (; ; )
+                        {
+                            string line = reader.ReadLine();
+                            if (line == null) break;
+
+                            tempList.Add(line);
+
+                            if (tempList.Count == 2)
+                            {
+                                pathDic[tempList[0]] = tempList[1];
+
+                                reader.ReadLine(); //空白読み捨て
+                                tempList.Clear();
+                            }
+                        }
+                    }
+
+                    Dictionary<string, string> wordDic = new Dictionary<string, string>();
+
+                    using (FileStream inStream = new FileStream(wordListPath, FileMode.Open))
+                    using (StreamReader reader = new StreamReader(inStream))
+                    {
+                        var tempList = new List<string>();
+
+                        for (; ; )
+                        {
+                            string line = reader.ReadLine();
+                            if (line == null) break;
+
+                            tempList.Add(line);
+
+                            if (tempList.Count == 2)
+                            {
+                                wordDic[tempList[0]] = tempList[1];
+
+                                reader.ReadLine(); //空白読み捨て
+                                tempList.Clear();
+                            }
+                        }
+                    }
+
+                    foreach (var item in pathDic)
+                    {
+                        var sourcePath = item.Key;
+                        var targetPath = item.Value;
+
+                        using (FileStream inStream = new FileStream(sourcePath, FileMode.Open))
+                        using (StreamReader reader = new StreamReader(inStream))
+                        using (FileStream outStream = new FileStream(targetPath, FileMode.Create))
+                        using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
+                        {
+                            StringBuilder sb = new StringBuilder(reader.ReadToEnd());
+
+                            foreach (var word in wordDic)
+                            {
+                                sb.Replace(word.Key, word.Value);
+                            }
+
+                            writer.Write(sb.ToString());
+                        }
+                    }
+                }
                 else if (args.Length >= 2 && args[0] == "linecount")
                 {
                     string basePath = args[1];
@@ -534,6 +582,65 @@ namespace Library.Tool
             {
                 MessageBox.Show(e.Message, "Library.Tool Error", MessageBoxButtons.OK);
             }
+        }
+
+        private static void Define(string path, bool on, string name)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+
+            if (on)
+            {
+                stringBuilder.AppendLine("#define " + name);
+            }
+
+            using (FileStream inStream = new FileStream(path, FileMode.Open))
+            using (StreamReader reader = new StreamReader(inStream))
+            {
+                bool f = false;
+                string line;
+
+                while (null != (line = reader.ReadLine()))
+                {
+                    if (!f && (line.StartsWith("using")))
+                    {
+                        f = true;
+
+                        var temp = stringBuilder.ToString().Trim('\r', '\n');
+                        stringBuilder.Clear();
+                        stringBuilder.Append(temp);
+                        stringBuilder.AppendLine();
+                        stringBuilder.AppendLine();
+                    }
+                    else if (!f && (line.StartsWith("namespace")))
+                    {
+                        f = true;
+
+                        var temp = stringBuilder.ToString().Trim('\r', '\n');
+                        stringBuilder.Clear();
+                        stringBuilder.Append(temp);
+                        stringBuilder.AppendLine();
+                        stringBuilder.AppendLine();
+                    }
+
+                    if (!f && line == ("#define " + name))
+                    {
+
+                    }
+                    else
+                    {
+                        stringBuilder.AppendLine(line);
+                    }
+                }
+            }
+
+            using (FileStream outStream = new FileStream(path + ".tmp", FileMode.Create))
+            using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
+            {
+                writer.Write(stringBuilder.ToString().TrimStart('\r', '\n'));
+            }
+
+            File.Delete(path);
+            File.Move(path + ".tmp", path);
         }
 
         private static void LanguageSetting(string languageXmlPath)

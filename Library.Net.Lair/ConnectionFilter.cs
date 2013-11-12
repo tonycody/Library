@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -219,6 +218,7 @@ namespace Library.Net.Lair
     {
         private string _value = null;
         private Regex _regex;
+
         private object _thisLock;
         private static object _thisStaticLock = new object();
 
@@ -262,7 +262,7 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Value != other.Value)
+            if ((this.Value != other.Value))
             {
                 return false;
             }
