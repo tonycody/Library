@@ -5,7 +5,7 @@ namespace Library.Net.Lair
     public interface ITag
     {
         string Type { get; }
+        string Name { get; }
         byte[] Id { get; }
-        IEnumerable<string> Arguments { get; }
     }
 }

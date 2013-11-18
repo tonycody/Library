@@ -2,7 +2,7 @@
 
 namespace Library.Net.Lair
 {
-    interface IChatTopic
+    interface IChatTopicContent
     {
         string Comment { get; }
     }

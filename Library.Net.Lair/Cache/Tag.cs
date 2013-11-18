@@ -13,25 +13,25 @@ namespace Library.Net.Lair
         private enum SerializeId : byte
         {
             Type = 0,
-            Id = 1,
-            Argument = 2,
+            Name = 1,
+            Id = 2,
         }
 
         private string _type = null;
+        private string _name = null;
         private byte[] _id = null;
-        private ArgumentCollection _arguments = null;
 
         private int _hashCode = 0;
 
         public static readonly int MaxTypeLength = 256;
+        public static readonly int MaxNameLength = 256;
         public static readonly int MaxIdLength = 64;
-        public static readonly int MaxArgumentCount = 32;
 
-        public Tag(string type, byte[] id, IEnumerable<string> arguments)
+        public Tag(string type, string name, byte[] id)
         {
             this.Type = type;
+            this.Name = name;
             this.Id = id;
-            if (arguments != null) this.ProtectedArguments.AddRange(arguments);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -54,19 +54,19 @@ namespace Library.Net.Lair
                             this.Type = reader.ReadToEnd();
                         }
                     }
+                    else if (id == (byte)SerializeId.Name)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.Name = reader.ReadToEnd();
+                        }
+                    }
                     else if (id == (byte)SerializeId.Id)
                     {
                         byte[] buffer = new byte[rangeStream.Length];
                         rangeStream.Read(buffer, 0, buffer.Length);
 
                         this.Id = buffer;
-                    }
-                    else if (id == (byte)SerializeId.Argument)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ProtectedArguments.Add(reader.ReadToEnd());
-                        }
                     }
                 }
             }
@@ -96,18 +96,8 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Id
-            if (this.Id != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Id);
-                bufferStream.Write(this.Id, 0, this.Id.Length);
-
-                streams.Add(bufferStream);
-            }
-            // Arguments
-            foreach (var a in this.Arguments)
+            // Name
+            if (this.Name != null)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.SetLength(5);
@@ -116,12 +106,22 @@ namespace Library.Net.Lair
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(a);
+                    writer.Write(this.Name);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Argument);
+                bufferStream.WriteByte((byte)SerializeId.Name);
+
+                streams.Add(bufferStream);
+            }
+            // Id
+            if (this.Id != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Id);
+                bufferStream.Write(this.Id, 0, this.Id.Length);
 
                 streams.Add(bufferStream);
             }
@@ -148,8 +148,8 @@ namespace Library.Net.Lair
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Type != other.Type
-                || (this.Id == null) != (other.Id == null)
-                || (this.Arguments == null) != (other.Arguments == null))
+                || this.Name != other.Name
+                || (this.Id == null) != (other.Id == null))
             {
                 return false;
             }
@@ -157,11 +157,6 @@ namespace Library.Net.Lair
             if (this.Id != null && other.Id != null)
             {
                 if (!Collection.Equals(this.Id, other.Id)) return false;
-            }
-
-            if (this.Arguments != null && other.Arguments != null)
-            {
-                if (!Collection.Equals(this.Arguments, other.Arguments)) return false;
             }
 
             return true;
@@ -202,6 +197,26 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "Name")]
+        public string Name
+        {
+            get
+            {
+                return _name;
+            }
+            private set
+            {
+                if (value != null && value.Length > Tag.MaxNameLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _name = value;
+                }
+            }
+        }
+
         [DataMember(Name = "Id")]
         public byte[] Id
         {
@@ -231,55 +246,6 @@ namespace Library.Net.Lair
                     _hashCode = 0;
                 }
             }
-        }
-
-        public IEnumerable<string> Arguments
-        {
-            get
-            {
-                return this.ProtectedArguments;
-            }
-        }
-
-        [DataMember(Name = "Arguments")]
-        private ArgumentCollection ProtectedArguments
-        {
-            get
-            {
-                if (_arguments == null)
-                    _arguments = new ArgumentCollection(Tag.MaxArgumentCount);
-
-                return _arguments;
-            }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private byte[] _sha512_hash = null;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    _sha512_hash = Sha512.ComputeHash(stream);
-                }
-            }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            return Collection.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion

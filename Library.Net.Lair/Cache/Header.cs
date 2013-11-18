@@ -9,30 +9,39 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Header", Namespace = "http://Library/Net/Lair")]
-    public sealed class Header : ReadOnlyCertificateItemBase<Header>, IHeader<Tag, Key>
+    public sealed class Header : ReadOnlyCertificateItemBase<Header>, IHeader<Tag>
     {
         private enum SerializeId : byte
         {
             Tag = 0,
             Type = 1,
-            CreationTime = 2,
-            Content = 3,
+            Option = 2,
+            CreationTime = 3,
+            FormatType = 4,
+            Content = 5,
 
-            Certificate = 4,
+            Certificate = 6,
         }
 
         private Tag _tag = null;
         private string _type = null;
+        private OptionCollection _options = null;
         private DateTime _creationTime = DateTime.MinValue;
-        private Key _content = null;
+        private ContentFormatType _formatType;
+        private byte[] _content = null;
 
         private Certificate _certificate;
 
-        public Header(Tag tag, string type, Key content, DigitalSignature digitalSignature)
+        public static readonly int MaxTypeLength = 256;
+        public static readonly int MaxOptionCount = 32;
+
+        public Header(Tag tag, string type, IEnumerable<string> options, ContentFormatType formatType, byte[] content, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
             this.Type = type;
+            if (options != null) this.ProtectedOptions.AddRange(options);
             this.CreationTime = DateTime.UtcNow;
+            this.FormatType = formatType;
             this.Content = content;
 
             this.CreateCertificate(digitalSignature);
@@ -62,6 +71,13 @@ namespace Library.Net.Lair
                             this.Type = reader.ReadToEnd();
                         }
                     }
+                    else if (id == (byte)SerializeId.Option)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.ProtectedOptions.Add(reader.ReadToEnd());
+                        }
+                    }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
                         using (StreamReader reader = new StreamReader(rangeStream, encoding))
@@ -69,9 +85,19 @@ namespace Library.Net.Lair
                             this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                     }
+                    else if (id == (byte)SerializeId.FormatType)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.FormatType = (ContentFormatType)Enum.Parse(typeof(ContentFormatType), reader.ReadToEnd());
+                        }
+                    }
                     else if (id == (byte)SerializeId.Content)
                     {
-                        this.Content = Key.Import(rangeStream, bufferManager);
+                        byte[] buffer = new byte[rangeStream.Length];
+                        rangeStream.Read(buffer, 0, buffer.Length);
+
+                        this.Content = buffer;
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -117,6 +143,25 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
+            // Options
+            foreach (var o in this.Options)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(o);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Option);
+
+                streams.Add(bufferStream);
+            }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
             {
@@ -136,16 +181,34 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
+            // FormatType
+            if (this.FormatType != 0)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(this.FormatType.ToString());
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.FormatType);
+
+                streams.Add(bufferStream);
+            }
             // Content
             if (this.Content != null)
             {
-                Stream exportStream = this.Content.Export(bufferManager);
-
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.Content.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Content);
+                bufferStream.Write(this.Content, 0, this.Content.Length);
 
-                streams.Add(new JoinStream(bufferStream, exportStream));
+                streams.Add(bufferStream);
             }
 
             // Certificate
@@ -184,11 +247,24 @@ namespace Library.Net.Lair
 
             if (this.Tag != other.Tag
                 || this.Type != other.Type
+                || (this.Options == null) != (other.Options == null)
                 || this.CreationTime != other.CreationTime
+                || this.FormatType != other.FormatType
+                || (this.Content == null) != (other.Content == null)
 
                 || this.Certificate != other.Certificate)
             {
                 return false;
+            }
+
+            if (this.Options != null && other.Options != null)
+            {
+                if (!Collection.Equals(this.Options, other.Options)) return false;
+            }
+
+            if (this.Content != null && other.Content != null)
+            {
+                if (!Collection.Equals(this.Content, other.Content)) return false;
             }
 
             return true;
@@ -229,7 +305,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IHeader<Tag, Key>
+        #region IHeader<Tag>
 
         [DataMember(Name = "Tag")]
         public Tag Tag
@@ -253,7 +329,34 @@ namespace Library.Net.Lair
             }
             private set
             {
-                _type = value;
+                if (value != null && value.Length > Header.MaxTypeLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _type = value;
+                }
+            }
+        }
+
+        public IEnumerable<string> Options
+        {
+            get
+            {
+                return this.ProtectedOptions;
+            }
+        }
+
+        [DataMember(Name = "Options")]
+        private OptionCollection ProtectedOptions
+        {
+            get
+            {
+                if (_options == null)
+                    _options = new OptionCollection(Header.MaxOptionCount);
+
+                return _options;
             }
         }
 
@@ -271,8 +374,28 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "FormatType")]
+        public ContentFormatType FormatType
+        {
+            get
+            {
+                return _formatType;
+            }
+            set
+            {
+                if (!Enum.IsDefined(typeof(ContentFormatType), value))
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _formatType = value;
+                }
+            }
+        }
+
         [DataMember(Name = "Content")]
-        public Key Content
+        public byte[] Content
         {
             get
             {

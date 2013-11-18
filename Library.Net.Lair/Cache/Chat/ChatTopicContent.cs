@@ -8,25 +8,21 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "ChatMessage", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatMessage : ItemBase<ChatMessage>, IChatMessage<Key>
+    [DataContract(Name = "ChatTopicContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent
     {
         private enum SerializeId : byte
         {
             Comment = 0,
-            Anchor = 1,
         }
 
         private string _comment = null;
-        private KeyCollection _anchors = null;
 
-        public static readonly int MaxCommentLength = 1024 * 4;
-        public static readonly int MaxAnchorCount = 32;
+        public static readonly int MaxCommentLength = 1024 * 32;
 
-        public ChatMessage(string comment, IEnumerable<Key> anchors)
+        public ChatTopicContent(string comment)
         {
             this.Comment = comment;
-            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -48,10 +44,6 @@ namespace Library.Net.Lair
                         {
                             this.Comment = reader.ReadToEnd();
                         }
-                    }
-                    else if (id == (byte)SerializeId.Anchor)
-                    {
-                        this.ProtectedAnchors.Add(Key.Import(rangeStream, bufferManager));
                     }
                 }
             }
@@ -81,17 +73,6 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
-            // Anchors
-            foreach (var a in this.Anchors)
-            {
-                Stream exportStream = a.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Anchor);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
 
             return new JoinStream(streams);
         }
@@ -104,26 +85,20 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is ChatMessage)) return false;
+            if ((object)obj == null || !(obj is ChatTopicContent)) return false;
 
-            return this.Equals((ChatMessage)obj);
+            return this.Equals((ChatTopicContent)obj);
         }
 
-        public override bool Equals(ChatMessage other)
+        public override bool Equals(ChatTopicContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Comment != other.Comment
-                || (this.Anchors == null) != (other.Anchors == null))
+            if (this.Comment != other.Comment)
             {
                 return false;
-            }
-
-            if (this.Anchors != null && other.Anchors != null)
-            {
-                if (!Collection.Equals(this.Anchors, other.Anchors)) return false;
             }
 
             return true;
@@ -134,15 +109,15 @@ namespace Library.Net.Lair
             return this.Comment;
         }
 
-        public override ChatMessage DeepClone()
+        public override ChatTopicContent DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return ChatMessage.Import(stream, BufferManager.Instance);
+                return ChatTopicContent.Import(stream, BufferManager.Instance);
             }
         }
 
-        #region IMessageContent<Key>
+        #region ITopicContent
 
         [DataMember(Name = "Comment")]
         public string Comment
@@ -153,7 +128,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > ChatMessage.MaxCommentLength)
+                if (value != null && value.Length > ChatTopicContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
@@ -161,26 +136,6 @@ namespace Library.Net.Lair
                 {
                     _comment = value;
                 }
-            }
-        }
-
-        public IEnumerable<Key> Anchors
-        {
-            get
-            {
-                return this.ProtectedAnchors;
-            }
-        }
-
-        [DataMember(Name = "Anchors")]
-        private KeyCollection ProtectedAnchors
-        {
-            get
-            {
-                if (_anchors == null)
-                    _anchors = new KeyCollection(ChatMessage.MaxAnchorCount);
-
-                return _anchors;
             }
         }
 

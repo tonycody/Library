@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace Library.Net.Lair
 {
-    interface ISectionMessage<TKey>
+    interface IChatMessageContent<TKey>
         where TKey : IKey
     {
         string Comment { get; }
-        TKey Anchor { get; }
+        IEnumerable<TKey> Anchors { get; }
     }
 }

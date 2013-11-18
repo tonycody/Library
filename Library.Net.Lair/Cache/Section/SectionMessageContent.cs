@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "SectionMessage", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionMessage : ItemBase<SectionMessage>, ISectionMessage<Key>
+    [DataContract(Name = "SectionMessageContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class SectionMessageContent : ItemBase<SectionMessageContent>, ISectionMessageContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -24,7 +24,7 @@ namespace Library.Net.Lair
 
         public static readonly int MaxCommentLength = 1024 * 4;
 
-        public SectionMessage(string comment, Key anchor)
+        public SectionMessageContent(string comment, Key anchor)
         {
             this.Comment = comment;
             this.Anchor = anchor;
@@ -104,12 +104,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is SectionMessage)) return false;
+            if ((object)obj == null || !(obj is SectionMessageContent)) return false;
 
-            return this.Equals((SectionMessage)obj);
+            return this.Equals((SectionMessageContent)obj);
         }
 
-        public override bool Equals(SectionMessage other)
+        public override bool Equals(SectionMessageContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -124,11 +124,11 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override SectionMessage DeepClone()
+        public override SectionMessageContent DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return SectionMessage.Import(stream, BufferManager.Instance);
+                return SectionMessageContent.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -143,7 +143,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > SectionMessage.MaxCommentLength)
+                if (value != null && value.Length > SectionMessageContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }

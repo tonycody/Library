@@ -262,7 +262,7 @@ namespace Library.Net.Amoeba
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Value != other.Value))
+            if (this.Value != other.Value)
             {
                 return false;
             }

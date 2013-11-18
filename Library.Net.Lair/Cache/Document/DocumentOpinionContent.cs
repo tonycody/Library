@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentOpinion", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentOpinion : ItemBase<DocumentOpinion>, IDocumentOpinion<Key>
+    [DataContract(Name = "DocumentOpinionContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -23,7 +23,7 @@ namespace Library.Net.Lair
         public static readonly int MaxGoodsCount = 1024;
         public static readonly int MaxBadsCount = 1024;
 
-        public DocumentOpinion(IEnumerable<Key> goods, IEnumerable<Key> bads)
+        public DocumentOpinionContent(IEnumerable<Key> goods, IEnumerable<Key> bads)
         {
             if (goods != null) this.ProtectedGoods.AddRange(goods);
             if (bads != null) this.ProtectedBads.AddRange(bads);
@@ -93,12 +93,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is DocumentOpinion)) return false;
+            if ((object)obj == null || !(obj is DocumentOpinionContent)) return false;
 
-            return this.Equals((DocumentOpinion)obj);
+            return this.Equals((DocumentOpinionContent)obj);
         }
 
-        public override bool Equals(DocumentOpinion other)
+        public override bool Equals(DocumentOpinionContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -123,11 +123,11 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override DocumentOpinion DeepClone()
+        public override DocumentOpinionContent DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return DocumentOpinion.Import(stream, BufferManager.Instance);
+                return DocumentOpinionContent.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -147,7 +147,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_goods == null)
-                    _goods = new KeyCollection(DocumentOpinion.MaxGoodsCount);
+                    _goods = new KeyCollection(DocumentOpinionContent.MaxGoodsCount);
 
                 return _goods;
             }
@@ -167,7 +167,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_bads == null)
-                    _bads = new KeyCollection(DocumentOpinion.MaxBadsCount);
+                    _bads = new KeyCollection(DocumentOpinionContent.MaxBadsCount);
 
                 return _bads;
             }

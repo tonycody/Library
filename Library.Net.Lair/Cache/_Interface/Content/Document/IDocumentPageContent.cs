@@ -11,7 +11,7 @@ namespace Library.Net.Lair
         MiniWiki = 0,
     }
 
-    interface IDocumentPage
+    interface IDocumentPageContent
     {
         HypertextFormatType FormatType { get; }
         string Hypertext { get; }

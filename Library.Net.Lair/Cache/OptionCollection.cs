@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class ArgumentCollection : FilterList<string>, IEnumerable<string>
+    public sealed class OptionCollection : FilterList<string>, IEnumerable<string>
     {
-        public ArgumentCollection() : base() { }
-        public ArgumentCollection(int capacity) : base(capacity) { }
-        public ArgumentCollection(IEnumerable<string> collections) : base(collections) { }
+        public OptionCollection() : base() { }
+        public OptionCollection(int capacity) : base(capacity) { }
+        public OptionCollection(IEnumerable<string> collections) : base(collections) { }
 
-        public static readonly int MaxArgumentLength = 1024;
+        public static readonly int MaxOptionLength = 1024;
 
         protected override bool Filter(string item)
         {
-            if (item == null || item.Length > ArgumentCollection.MaxArgumentLength) return true;
+            if (item == null || item.Length > OptionCollection.MaxOptionLength) return true;
 
             return false;
         }
 
-        #region IEnumerable<Argument>
+        #region IEnumerable<Option>
 
         IEnumerator<string> IEnumerable<string>.GetEnumerator()
         {

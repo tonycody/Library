@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentPage", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentPage : ItemBase<DocumentPage>, IDocumentPage
+    [DataContract(Name = "DocumentPageContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent
     {
         private enum SerializeId : byte
         {
@@ -25,7 +25,7 @@ namespace Library.Net.Lair
         public static readonly int MaxHypertextLength = 1024 * 32;
         public static readonly int MaxCommentLength = 1024 * 4;
 
-        public DocumentPage(HypertextFormatType formatType, string hypertext, string comment)
+        public DocumentPageContent(HypertextFormatType formatType, string hypertext, string comment)
         {
             this.FormatType = formatType;
             this.Hypertext = hypertext;
@@ -144,12 +144,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is DocumentPage)) return false;
+            if ((object)obj == null || !(obj is DocumentPageContent)) return false;
 
-            return this.Equals((DocumentPage)obj);
+            return this.Equals((DocumentPageContent)obj);
         }
 
-        public override bool Equals(DocumentPage other)
+        public override bool Equals(DocumentPageContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -170,11 +170,11 @@ namespace Library.Net.Lair
             return this.Hypertext;
         }
 
-        public override DocumentPage DeepClone()
+        public override DocumentPageContent DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return DocumentPage.Import(stream, BufferManager.Instance);
+                return DocumentPageContent.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -209,7 +209,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > DocumentPage.MaxHypertextLength)
+                if (value != null && value.Length > DocumentPageContent.MaxHypertextLength)
                 {
                     throw new ArgumentException();
                 }
@@ -229,7 +229,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > DocumentPage.MaxCommentLength)
+                if (value != null && value.Length > DocumentPageContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }

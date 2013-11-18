@@ -9,7 +9,7 @@ using Library.Security;
 
 namespace Library.Net.Amoeba
 {
-    public delegate IEnumerable<string> LockSeedSignaturesEventHandler(object sender);
+    public delegate IEnumerable<string> LockSignaturesEventHandler(object sender);
     delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -82,7 +82,7 @@ namespace Library.Net.Amoeba
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        private LockSeedSignaturesEventHandler _lockSeedSignaturesEvent;
+        private LockSignaturesEventHandler _lockSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
 
         private volatile bool _disposed = false;
@@ -144,13 +144,13 @@ namespace Library.Net.Amoeba
             this.UpdateSessionId();
         }
 
-        public LockSeedSignaturesEventHandler LockSeedSignaturesEvent
+        public LockSignaturesEventHandler LockSignaturesEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockSeedSignaturesEvent = value;
+                    _lockSignaturesEvent = value;
                 }
             }
         }
@@ -353,11 +353,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        protected virtual IEnumerable<string> OnLockSeedSignaturesEvent()
+        protected virtual IEnumerable<string> OnLockSignaturesEvent()
         {
-            if (_lockSeedSignaturesEvent != null)
+            if (_lockSignaturesEvent != null)
             {
-                return _lockSeedSignaturesEvent(this);
+                return _lockSignaturesEvent(this);
             }
 
             return null;
@@ -1044,12 +1044,12 @@ namespace Library.Net.Amoeba
                         try
                         {
                             {
-                                var lockSeedSignatures = this.OnLockSeedSignaturesEvent();
+                                var lockSeedSignatures = this.OnLockSignaturesEvent();
 
                                 if (lockSeedSignatures != null)
                                 {
                                     var removeSignatures = new HashSet<string>();
-                                    removeSignatures.UnionWith(_settings.GetSeedSignatures());
+                                    removeSignatures.UnionWith(_settings.GetSignatures());
                                     removeSignatures.ExceptWith(lockSeedSignatures);
 
                                     var sortList = removeSignatures.ToList();
@@ -1067,7 +1067,7 @@ namespace Library.Net.Amoeba
 
                                     _settings.RemoveSeedSignatures(sortList.Take(sortList.Count - 1024));
 
-                                    var liveSignatures = new HashSet<string>(_settings.GetSeedSignatures());
+                                    var liveSignatures = new HashSet<string>(_settings.GetSignatures());
 
                                     foreach (var signature in _lastUsedSeedTimes.Keys.ToArray())
                                     {
@@ -1371,7 +1371,7 @@ namespace Library.Net.Amoeba
                 {
                     pushSeedUploadStopwatch.Restart();
 
-                    foreach (var item in _settings.GetSeedSignatures())
+                    foreach (var item in _settings.GetSignatures())
                     {
                         try
                         {
@@ -2269,13 +2269,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<string> GetSeedSignatures()
+        public IEnumerable<string> GetSignatures()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetSeedSignatures();
+                return _settings.GetSignatures();
             }
         }
 
@@ -2485,7 +2485,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public IEnumerable<string> GetSeedSignatures()
+            public IEnumerable<string> GetSignatures()
             {
                 lock (_thisLock)
                 {

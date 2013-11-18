@@ -586,49 +586,93 @@ namespace Library.Tool
 
         private static void Define(string path, bool on, string name)
         {
-            StringBuilder stringBuilder = new StringBuilder();
+            Regex regex = new Regex(@"(.*)#(.*)define(\s*)(?<name>\S*)(.*)");
+
+            List<string> items = new List<string>();
+            StringBuilder content = new StringBuilder();
 
             if (on)
             {
-                stringBuilder.AppendLine("#define " + name);
-            }
+                bool writed = false;
 
-            using (FileStream inStream = new FileStream(path, FileMode.Open))
-            using (StreamReader reader = new StreamReader(inStream))
-            {
-                bool f = false;
-                string line;
-
-                while (null != (line = reader.ReadLine()))
+                using (FileStream inStream = new FileStream(path, FileMode.Open))
+                using (StreamReader reader = new StreamReader(inStream))
                 {
-                    if (!f && (line.StartsWith("using")))
-                    {
-                        f = true;
+                    string line;
+                    bool flag = false;
 
-                        var temp = stringBuilder.ToString().Trim('\r', '\n');
-                        stringBuilder.Clear();
-                        stringBuilder.Append(temp);
-                        stringBuilder.AppendLine();
-                        stringBuilder.AppendLine();
+                    while (null != (line = reader.ReadLine()))
+                    {
+                        if (!flag)
+                        {
+                            var match = regex.Match(line);
+
+                            if (match.Success)
+                            {
+                                items.Add(line);
+
+                                if (match.Groups["name"].Value == name)
+                                {
+                                    writed = true;
+                                }
+                            }
+                            else
+                            {
+                                content.AppendLine(line);
+
+                                if (!string.IsNullOrWhiteSpace(line))
+                                {
+                                    flag = true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            content.AppendLine(line);
+                        }
                     }
-                    else if (!f && (line.StartsWith("namespace")))
-                    {
-                        f = true;
+                }
 
-                        var temp = stringBuilder.ToString().Trim('\r', '\n');
-                        stringBuilder.Clear();
-                        stringBuilder.Append(temp);
-                        stringBuilder.AppendLine();
-                        stringBuilder.AppendLine();
-                    }
+                if (!writed)
+                {
+                    items.Add("#define " + name);
+                }
+            }
+            else
+            {
+                using (FileStream inStream = new FileStream(path, FileMode.Open))
+                using (StreamReader reader = new StreamReader(inStream))
+                {
+                    string line;
+                    bool flag = false;
 
-                    if (!f && line == ("#define " + name))
+                    while (null != (line = reader.ReadLine()))
                     {
+                        if (!flag)
+                        {
+                            var match = regex.Match(line);
 
-                    }
-                    else
-                    {
-                        stringBuilder.AppendLine(line);
+                            if (match.Success)
+                            {
+                                if (match.Groups["name"].Value != name)
+                                {
+                                    items.Add(line);
+                                }
+                            }
+                            else
+                            {
+                                content.AppendLine(line);
+
+                                if (!string.IsNullOrWhiteSpace(line))
+                                {
+                                    flag = true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            content.AppendLine(line);
+                        }
                     }
                 }
             }
@@ -636,7 +680,17 @@ namespace Library.Tool
             using (FileStream outStream = new FileStream(path + ".tmp", FileMode.Create))
             using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
             {
-                writer.Write(stringBuilder.ToString().TrimStart('\r', '\n'));
+                if (items.Count != 0)
+                {
+                    foreach (var line in items)
+                    {
+                        writer.WriteLine(line);
+                    }
+
+                    writer.WriteLine();
+                }
+
+                writer.Write(content.ToString().TrimStart('\r', '\n'));
             }
 
             File.Delete(path);

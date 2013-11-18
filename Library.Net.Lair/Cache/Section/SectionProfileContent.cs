@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "SectionProfile", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfile : ItemBase<SectionProfile>, ISectionProfile<Tag>
+    [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Tag>
     {
         private enum SerializeId : byte
         {
@@ -36,7 +36,7 @@ namespace Library.Net.Lair
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfile(string comment, IEnumerable<string> trustSignatures, IEnumerable<Tag> links, IExchangeEncrypt exchangeEncrypt)
+        public SectionProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<Tag> links, IExchangeEncrypt exchangeEncrypt)
         {
             this.Comment = comment;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
@@ -191,12 +191,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is SectionProfile)) return false;
+            if ((object)obj == null || !(obj is SectionProfileContent)) return false;
 
-            return this.Equals((SectionProfile)obj);
+            return this.Equals((SectionProfileContent)obj);
         }
 
-        public override bool Equals(SectionProfile other)
+        public override bool Equals(SectionProfileContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -230,11 +230,11 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override SectionProfile DeepClone()
+        public override SectionProfileContent DeepClone()
         {
             using (var stream = this.Export(BufferManager.Instance))
             {
-                return SectionProfile.Import(stream, BufferManager.Instance);
+                return SectionProfileContent.Import(stream, BufferManager.Instance);
             }
         }
 
@@ -249,7 +249,7 @@ namespace Library.Net.Lair
             }
             private set
             {
-                if (value != null && value.Length > SectionProfile.MaxCommentLength)
+                if (value != null && value.Length > SectionProfileContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
@@ -274,7 +274,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_trustSignatures == null)
-                    _trustSignatures = new SignatureCollection(SectionProfile.MaxTrustSignaturesCount);
+                    _trustSignatures = new SignatureCollection(SectionProfileContent.MaxTrustSignaturesCount);
 
                 return _trustSignatures;
             }
@@ -294,7 +294,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_links == null)
-                    _links = new TagCollection(SectionProfile.MaxLinksCount);
+                    _links = new TagCollection(SectionProfileContent.MaxLinksCount);
 
                 return _links;
             }

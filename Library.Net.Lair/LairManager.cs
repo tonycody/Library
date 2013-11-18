@@ -462,7 +462,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<DocumentOpinion> GetDocumentOpinions(Document document)
+        public IEnumerable<DocumentOpinionContent> GetDocumentOpinions(Document document)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -472,7 +472,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<ChatTopic> GetChatTopics(Chat chat)
+        public IEnumerable<ChatTopicContent> GetChatTopics(Chat chat)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -482,7 +482,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<ChatMessage> GetChatMessages(Chat chat)
+        public IEnumerable<ChatMessageContent> GetChatMessages(Chat chat)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -532,7 +532,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public DocumentOpinion GetContent(DocumentOpinion documentOpinion)
+        public DocumentOpinionContent GetContent(DocumentOpinionContent documentOpinion)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -542,7 +542,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatTopic GetContent(ChatTopic chatTopic)
+        public ChatTopicContent GetContent(ChatTopicContent chatTopic)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -552,7 +552,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ChatMessage GetContent(ChatMessage chatMessage)
+        public ChatMessageContent GetContent(ChatMessageContent chatMessage)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -593,7 +593,7 @@ namespace Library.Net.Lair
         }
 
         public void UploadDocumentSite(Document document, 
-            IEnumerable<DocumentPage> documentPages, DigitalSignature digitalSignature)
+            IEnumerable<DocumentPageContent> documentPages, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 

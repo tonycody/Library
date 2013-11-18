@@ -1,6 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System;
+using System.Security.Cryptography;
 using System.Text;
-using System;
 
 namespace Library.Net.Connections
 {

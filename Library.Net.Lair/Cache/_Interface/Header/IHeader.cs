@@ -3,13 +3,24 @@ using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface IHeader<TTag, TKey> : IComputeHash
+    [DataContract(Name = "ContentFormatType", Namespace = "http://Library/Net/Lair")]
+    public enum ContentFormatType
+    {
+        [EnumMember(Value = "Raw")]
+        Raw = 0,
+
+        [EnumMember(Value = "Key")]
+        Key = 1,
+    }
+
+    interface IHeader<TTag> : IComputeHash
         where TTag : ITag
-        where TKey : IKey
     {
         TTag Tag { get; }
         string Type { get; }
+        string Opinions { get; }
         DateTime CreationTime { get; }
-        TKey Content { get; }
+        ContentFormatType FormatType { get; }
+        byte[] Content { get; }
     }
 }

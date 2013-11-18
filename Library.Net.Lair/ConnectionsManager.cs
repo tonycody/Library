@@ -10,7 +10,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public delegate IEnumerable<Tag> LockHeaderTagsEventHandler(object sender);
+    public delegate IEnumerable<Tag> LockTagsEventHandler(object sender);
+    public delegate IEnumerable<string> LockSignaturesEventHandler(object sender);
     delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -83,7 +84,8 @@ namespace Library.Net.Lair
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        private LockHeaderTagsEventHandler _lockHeaderTagsEvent;
+        private LockTagsEventHandler _lockTagsEvent;
+        private LockSignaturesEventHandler _lockSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
 
         private volatile bool _disposed = false;
@@ -145,13 +147,24 @@ namespace Library.Net.Lair
             this.UpdateSessionId();
         }
 
-        public LockHeaderTagsEventHandler LockHeaderTagsEvent
+        public LockTagsEventHandler LockTagsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockHeaderTagsEvent = value;
+                    _lockTagsEvent = value;
+                }
+            }
+        }
+
+        public LockSignaturesEventHandler LockSignaturesEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _lockSignaturesEvent = value;
                 }
             }
         }
@@ -354,11 +367,21 @@ namespace Library.Net.Lair
             }
         }
 
-        protected virtual IEnumerable<Tag> OnLockHeaderTagsEvent()
+        protected virtual IEnumerable<Tag> OnLockTagsEvent()
         {
-            if (_lockHeaderTagsEvent != null)
+            if (_lockTagsEvent != null)
             {
-                return _lockHeaderTagsEvent(this);
+                return _lockTagsEvent(this);
+            }
+
+            return null;
+        }
+
+        protected virtual IEnumerable<string> OnLockSignaturesEvent()
+        {
+            if (_lockSignaturesEvent != null)
+            {
+                return _lockSignaturesEvent(this);
             }
 
             return null;
@@ -1042,7 +1065,7 @@ namespace Library.Net.Lair
                                 if (lockHeaderTags != null)
                                 {
                                     var removeTags = new HashSet<Tag>();
-                                    removeTags.UnionWith(_settings.GetHeaderTags());
+                                    removeTags.UnionWith(_settings.GetTags());
                                     removeTags.ExceptWith(lockHeaderTags);
 
                                     var sortList = removeTags.ToList();
@@ -1060,7 +1083,7 @@ namespace Library.Net.Lair
 
                                     _settings.RemoveHeaderTags(sortList.Take(sortList.Count - 1024));
 
-                                    var liveTags = new HashSet<Tag>(_settings.GetHeaderTags());
+                                    var liveTags = new HashSet<Tag>(_settings.GetTags());
 
                                     foreach (var signature in _lastUsedHeaderTimes.Keys.ToArray())
                                     {
@@ -1364,7 +1387,7 @@ namespace Library.Net.Lair
                 {
                     pushHeaderUploadStopwatch.Restart();
 
-                    foreach (var item in _settings.GetHeaderTags())
+                    foreach (var item in _settings.GetTags())
                     {
                         try
                         {
@@ -2213,23 +2236,61 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Tag> GetHeaderTags()
+        public IEnumerable<Tag> GetTags()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetHeaderTags();
+                return _settings.GetTags();
             }
         }
 
-        public IEnumerable<Header> GetHeaders(Tag tag)
+        public IEnumerable<Header> GetSectionProfileHeaders(Tag tag)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
+            lock (_thisLock)
             {
-                return _settings.GetHeaders(tag);
+                return _settings.GetSectionProfileHeaders(tag);
+            }
+        }
+
+        public IEnumerable<Header> GetSectionMessageHeaders(Tag tag)
+        {
+            lock (_thisLock)
+            {
+                return _settings.GetSectionMessageHeaders(tag);
+            }
+        }
+
+        public IEnumerable<Header> GetDocumentPageHeaders(Tag tag)
+        {
+            lock (_thisLock)
+            {
+                return _settings.GetDocumentPageHeaders(tag);
+            }
+        }
+
+        public IEnumerable<Header> GetDocumenOpinionHeaders(Tag tag)
+        {
+            lock (_thisLock)
+            {
+                return _settings.GetDocumenOpinionHeaders(tag);
+            }
+        }
+
+        public IEnumerable<Header> GetChatTopicHeaders(Tag tag)
+        {
+            lock (_thisLock)
+            {
+                return _settings.GetChatTopicHeaders(tag);
+            }
+        }
+
+        public IEnumerable<Header> GetChatMessageHeaders(Tag tag)
+        {
+            lock (_thisLock)
+            {
+                return _settings.GetChatMessageHeaders(tag);
             }
         }
 
@@ -2239,7 +2300,12 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _settings.SetHeader(header);
+                _settings.SetSectionProfileHeader(header);
+                _settings.SetSectionMessageHeader(header);
+                _settings.SetDocumentPageHeader(header);
+                _settings.SetDocumentOpinionHeader(header);
+                _settings.SetChatTopicHeader(header);
+                _settings.SetChatMessageHeader(header);
             }
         }
 
@@ -2386,7 +2452,12 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingContent<Dictionary<Tag, HashSet<Header>>>() { Name = "Headers", Value = new Dictionary<Tag, HashSet<Header>>() },
+                    new Library.Configuration.SettingContent<Dictionary<Tag, Dictionary<string, Header>>>() { Name = "SectionProfileHeaders", Value = new Dictionary<Tag, Dictionary<string, Header>>() },
+                    new Library.Configuration.SettingContent<Dictionary<Tag, Dictionary<string, HashSet<Header>>>>() { Name = "SectionMessageHeaders", Value = new Dictionary<Tag, Dictionary<string, HashSet<Header>>>() },
+                    new Library.Configuration.SettingContent<Dictionary<Tag, Dictionary<string, HashSet<Header>>>>() { Name = "DocumentPageHeaders", Value = new Dictionary<Tag, Dictionary<string, HashSet<Header>>>() },
+                    new Library.Configuration.SettingContent<Dictionary<Tag, Dictionary<string, Header>>>() { Name = "DocumentOpinionHeaders", Value = new Dictionary<Tag, Dictionary<string, Header>>() },
+                    new Library.Configuration.SettingContent<Dictionary<Tag, Dictionary<string, Header>>>() { Name = "ChatTopicHeaders", Value = new Dictionary<Tag, Dictionary<string, Header>>() },
+                    new Library.Configuration.SettingContent<Dictionary<Tag, Dictionary<string, HashSet<Header>>>>() { Name = "ChatMessageHeaders", Value = new Dictionary<Tag, Dictionary<string, HashSet<Header>>>() },
                 })
             {
                 _thisLock = lockObject;
@@ -2408,13 +2479,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<Tag> GetHeaderTags()
+            public IEnumerable<Tag> GetTags()
             {
                 lock (_thisLock)
                 {
                     HashSet<Tag> hashset = new HashSet<Tag>();
 
-                    hashset.UnionWith(this.Headers.Keys);
+                    hashset.UnionWith(this.SectionProfileHeaders.Keys);
 
                     return hashset;
                 }
@@ -2426,44 +2497,352 @@ namespace Library.Net.Lair
                 {
                     foreach (var tag in tags)
                     {
-                        this.Headers.Remove(tag);
+                        this.SectionProfileHeaders.Remove(tag);
                     }
                 }
             }
 
-            public IEnumerable<Header> GetHeaders(Tag tag)
+            public IEnumerable<Header> GetSectionProfileHeaders(Tag tag)
             {
                 lock (_thisLock)
                 {
-                    HashSet<Header> hashset = null;
+                    Dictionary<string, Header> dic = null;
 
-                    if (this.Headers.TryGetValue(tag, out hashset))
+                    if (this.SectionProfileHeaders.TryGetValue(tag, out dic))
                     {
-                        return hashset;
+                        return dic.Values;
                     }
 
                     return new Header[0];
                 }
             }
 
-            public bool SetHeader(Header header)
+            public IEnumerable<Header> GetSectionMessageHeaders(Tag tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, HashSet<Header>> dic = null;
+
+                    if (this.SectionMessageHeaders.TryGetValue(tag, out dic))
+                    {
+                        List<Header> list = new List<Header>();
+
+                        foreach (var hashset in dic.Values)
+                        {
+                            list.AddRange(hashset);
+                        }
+
+                        return list;
+                    }
+
+                    return new Header[0];
+                }
+            }
+
+            public IEnumerable<Header> GetDocumentPageHeaders(Tag tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, HashSet<Header>> dic = null;
+
+                    if (this.DocumentPageHeaders.TryGetValue(tag, out dic))
+                    {
+                        List<Header> list = new List<Header>();
+
+                        foreach (var hashset in dic.Values)
+                        {
+                            list.AddRange(hashset);
+                        }
+
+                        return list;
+                    }
+
+                    return new Header[0];
+                }
+            }
+
+            public IEnumerable<Header> GetDocumenOpinionHeaders(Tag tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, Header> dic = null;
+
+                    if (this.DocumentOpinionHeaders.TryGetValue(tag, out dic))
+                    {
+                        return dic.Values;
+                    }
+
+                    return new Header[0];
+                }
+            }
+
+            public IEnumerable<Header> GetChatTopicHeaders(Tag tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, Header> dic = null;
+
+                    if (this.ChatTopicHeaders.TryGetValue(tag, out dic))
+                    {
+                        return dic.Values;
+                    }
+
+                    return new Header[0];
+                }
+            }
+
+            public IEnumerable<Header> GetChatMessageHeaders(Tag tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, HashSet<Header>> dic = null;
+
+                    if (this.ChatMessageHeaders.TryGetValue(tag, out dic))
+                    {
+                        List<Header> list = new List<Header>();
+
+                        foreach (var hashset in dic.Values)
+                        {
+                            list.AddRange(hashset);
+                        }
+
+                        return list;
+                    }
+
+                    return new Header[0];
+                }
+            }
+
+            public bool SetSectionProfileHeader(Header header)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Tag == null || header.Tag.Id == null || header.Tag.Type == null
-                        || header.Type == null
+                        || header.Tag == null
+                            || header.Tag.Type == "Section"
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || header.Type == "Profile"
+                        || header.Options.Count() != 0
                         || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null || !header.VerifyCertificate()) return false;
 
+                    var signature = header.Certificate.ToString();
+
+                    Dictionary<string, Header> dic = null;
+
+                    if (!this.SectionProfileHeaders.TryGetValue(header.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, Header>();
+                        this.SectionProfileHeaders[header.Tag] = dic;
+                    }
+
+                    Header tempHeader = null;
+
+                    if (!dic.TryGetValue(signature, out tempHeader)
+                        || header.CreationTime > tempHeader.CreationTime)
+                    {
+                        dic[signature] = header;
+
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            public bool SetSectionMessageHeader(Header header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Tag == null
+                            || header.Tag.Type == "Section"
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || header.Type == "Message"
+                        || header.Options.Count() != 0
+                        || (now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null || !header.VerifyCertificate()) return false;
+
+                    var signature = header.Certificate.ToString();
+
+                    Dictionary<string, HashSet<Header>> dic = null;
+
+                    if (!this.SectionMessageHeaders.TryGetValue(header.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, HashSet<Header>>();
+                        this.SectionMessageHeaders[header.Tag] = dic;
+                    }
+
                     HashSet<Header> hashset = null;
 
-                    if (!this.Headers.TryGetValue(header.Tag, out hashset))
+                    if (!dic.TryGetValue(signature, out hashset))
                     {
                         hashset = new HashSet<Header>();
-                        this.Headers[header.Tag] = hashset;
+                        dic[signature] = hashset;
+                    }
+
+                    return hashset.Add(header);
+                }
+            }
+
+            public bool SetDocumentPageHeader(Header header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Tag == null
+                            || header.Tag.Type == "Document"
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || header.Type == "Page"
+                        || !(header.Options.Count() >= 1 && !header.Options.Any(n => string.IsNullOrWhiteSpace(n)))
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null || !header.VerifyCertificate()) return false;
+
+                    var signature = header.Certificate.ToString();
+
+                    Dictionary<string, HashSet<Header>> dic = null;
+
+                    if (!this.DocumentPageHeaders.TryGetValue(header.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, HashSet<Header>>();
+                        this.DocumentPageHeaders[header.Tag] = dic;
+                    }
+
+                    HashSet<Header> hashset = null;
+
+                    if (!dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset = new HashSet<Header>();
+                        dic[signature] = hashset;
+                    }
+
+                    return hashset.Add(header);
+                }
+            }
+
+            public bool SetDocumentOpinionHeader(Header header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Tag == null
+                            || header.Tag.Type == "Document"
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || header.Type == "Opinion"
+                        || header.Options.Count() != 0
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null || !header.VerifyCertificate()) return false;
+
+                    var signature = header.Certificate.ToString();
+
+                    Dictionary<string, Header> dic = null;
+
+                    if (!this.DocumentOpinionHeaders.TryGetValue(header.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, Header>();
+                        this.DocumentOpinionHeaders[header.Tag] = dic;
+                    }
+
+                    Header tempHeader = null;
+
+                    if (!dic.TryGetValue(signature, out tempHeader)
+                        || header.CreationTime > tempHeader.CreationTime)
+                    {
+                        dic[signature] = header;
+
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            public bool SetChatTopicHeader(Header header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Tag == null
+                            || header.Tag.Type == "Chat"
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || header.Type == "Topic"
+                        || !(header.Options.Count() == 1 && !string.IsNullOrWhiteSpace(header.Options.ElementAt(0)))
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null || !header.VerifyCertificate()) return false;
+
+                    var signature = header.Certificate.ToString();
+
+                    Dictionary<string, Header> dic = null;
+
+                    if (!this.ChatTopicHeaders.TryGetValue(header.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, Header>();
+                        this.ChatTopicHeaders[header.Tag] = dic;
+                    }
+
+                    Header tempHeader = null;
+
+                    if (!dic.TryGetValue(signature, out tempHeader)
+                        || header.CreationTime > tempHeader.CreationTime)
+                    {
+                        dic[signature] = header;
+
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            public bool SetChatMessageHeader(Header header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Tag == null
+                            || header.Tag.Type == "Chat"
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || header.Type == "Message"
+                        || !(header.Options.Count() == 1 && !string.IsNullOrWhiteSpace(header.Options.ElementAt(0)))
+                        || (now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null || !header.VerifyCertificate()) return false;
+
+                    var signature = header.Certificate.ToString();
+
+                    Dictionary<string, HashSet<Header>> dic = null;
+
+                    if (!this.ChatMessageHeaders.TryGetValue(header.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, HashSet<Header>>();
+                        this.ChatMessageHeaders[header.Tag] = dic;
+                    }
+
+                    HashSet<Header> hashset = null;
+
+                    if (!dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset = new HashSet<Header>();
+                        dic[signature] = hashset;
                     }
 
                     return hashset.Add(header);
@@ -2557,13 +2936,68 @@ namespace Library.Net.Lair
                 }
             }
 
-            private Dictionary<Tag, HashSet<Header>> Headers
+            private Dictionary<Tag, Dictionary<string, Header>> SectionProfileHeaders
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (Dictionary<Tag, HashSet<Header>>)this["Headers"];
+                        return (Dictionary<Tag, Dictionary<string, Header>>)this["SectionProfileHeaders"];
+                    }
+                }
+            }
+
+            private Dictionary<Tag, Dictionary<string, HashSet<Header>>> SectionMessageHeaders
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<Tag, Dictionary<string, HashSet<Header>>>)this["SectionMessageHeaders"];
+                    }
+                }
+            }
+
+            private Dictionary<Tag, Dictionary<string, HashSet<Header>>> DocumentPageHeaders
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<Tag, Dictionary<string, HashSet<Header>>>)this["DocumentPageHeaders"];
+                    }
+                }
+            }
+
+            private Dictionary<Tag, Dictionary<string, Header>> DocumentOpinionHeaders
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<Tag, Dictionary<string, Header>>)this["DocumentOpinionHeaders"];
+                    }
+                }
+            }
+
+            private Dictionary<Tag, Dictionary<string, Header>> ChatTopicHeaders
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<Tag, Dictionary<string, Header>>)this["ChatTopicHeaders"];
+                    }
+                }
+            }
+
+            private Dictionary<Tag, Dictionary<string, HashSet<Header>>> ChatMessageHeaders
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<Tag, Dictionary<string, HashSet<Header>>>)this["ChatMessageHeaders"];
                     }
                 }
             }
