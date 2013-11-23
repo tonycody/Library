@@ -55,7 +55,7 @@ namespace Library.Net.Amoeba
 
                 if (flag)
                 {
-                    ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
+                    ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         List<Node> lockedNodes = new List<Node>();
 
@@ -87,7 +87,7 @@ namespace Library.Net.Amoeba
                                 }
                             }
                         }
-                    }));
+                    });
                 }
             }
         }

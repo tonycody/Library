@@ -40,7 +40,7 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings(this.ThisLock);
 
-            _watchTimer = new Timer(new TimerCallback(this.WatchTimer), null, Timeout.Infinite, Timeout.Infinite);
+            _watchTimer = new Timer(this.WatchTimer, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public AcceptCapEventHandler AcceptCapEvent

@@ -54,7 +54,7 @@ namespace Library.Net.Amoeba
                 }
             };
 
-            _uploadedThread = new Thread(new ThreadStart(() =>
+            _uploadedThread = new Thread(() =>
             {
                 try
                 {
@@ -88,7 +88,7 @@ namespace Library.Net.Amoeba
                 {
 
                 }
-            }));
+            });
             _uploadedThread.Priority = ThreadPriority.BelowNormal;
             _uploadedThread.Name = "BackgroundUploadManager_UploadedThread";
             _uploadedThread.Start();

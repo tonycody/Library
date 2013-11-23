@@ -4,62 +4,74 @@ using Library.Io;
 
 namespace Library.Compression
 {
-    public static class Lzma
+    public class Lzma
     {
-        private static object _encodeLockObject = new object();
-        private static object _decodeLockObject = new object();
+        private Lazy<LzmaEncoder> _lzmaEncoder;
+        private Lazy<LzmaDecoder> _lzmaDecoder;
 
-        private static Lazy<LzmaEncoder> _lzmaEncoder = new Lazy<LzmaEncoder>(() =>
+        private readonly int _compressDictionarySize;
+        private readonly int _maxDecompressDictionarySize;
+
+        private object _encodeLockObject = new object();
+        private object _decodeLockObject = new object();
+
+        public Lzma(int compressDictionarySize, int maxDecompressDictionarySize)
         {
-            Int32 dictionary = 1 << 20;
-            Int32 posStateBits = 2;
-            Int32 litContextBits = 3; // for normal files
-            // UInt32 litContextBits = 0; // for 32-bit data
-            Int32 litPosBits = 0;
-            // UInt32 litPosBits = 2; // for 32-bit data
-            Int32 algorithm = 2;
-            Int32 numFastBytes = 128;
+            _compressDictionarySize = compressDictionarySize;
+            _maxDecompressDictionarySize = maxDecompressDictionarySize;
 
-            string mf = "bt4";
-            bool eos = true;
-            //bool stdInMode = false;
+            _lzmaEncoder = new Lazy<LzmaEncoder>(() =>
+            {
+                Int32 dictionary = _compressDictionarySize;
+                Int32 posStateBits = 2;
+                Int32 litContextBits = 3; // for normal files
+                // UInt32 litContextBits = 0; // for 32-bit data
+                Int32 litPosBits = 0;
+                // UInt32 litPosBits = 2; // for 32-bit data
+                Int32 algorithm = 2;
+                Int32 numFastBytes = 128;
 
-            CoderPropID[] propIDs =  {
-                CoderPropID.DictionarySize,
-                CoderPropID.PosStateBits,
-                CoderPropID.LitContextBits,
-                CoderPropID.LitPosBits,
-                CoderPropID.Algorithm,
-                CoderPropID.NumFastBytes,
-                CoderPropID.MatchFinder,
-                CoderPropID.EndMarker
-            };
+                string mf = "bt4";
+                bool eos = true;
+                //bool stdInMode = false;
 
-            object[] properties = {
-                (Int32)(dictionary),
-                (Int32)(posStateBits),
-                (Int32)(litContextBits),
-                (Int32)(litPosBits),
-                (Int32)(algorithm),
-                (Int32)(numFastBytes),
-                mf,
-                eos
-            };
+                CoderPropID[] propIDs =  {
+                    CoderPropID.DictionarySize,
+                    CoderPropID.PosStateBits,
+                    CoderPropID.LitContextBits,
+                    CoderPropID.LitPosBits,
+                    CoderPropID.Algorithm,
+                    CoderPropID.NumFastBytes,
+                    CoderPropID.MatchFinder,
+                    CoderPropID.EndMarker
+                };
 
-            var encoder = new LzmaEncoder();
-            encoder.SetCoderProperties(propIDs, properties);
+                object[] properties = {
+                    (Int32)(dictionary),
+                    (Int32)(posStateBits),
+                    (Int32)(litContextBits),
+                    (Int32)(litPosBits),
+                    (Int32)(algorithm),
+                    (Int32)(numFastBytes),
+                    mf,
+                    eos
+                };
 
-            return encoder;
-        });
+                var encoder = new LzmaEncoder();
+                encoder.SetCoderProperties(propIDs, properties);
 
-        private static Lazy<LzmaDecoder> _lzmaDecoder = new Lazy<LzmaDecoder>(() =>
-        {
-            var decoder = new LzmaDecoder();
+                return encoder;
+            });
 
-            return decoder;
-        });
+            _lzmaDecoder = new Lazy<LzmaDecoder>(() =>
+            {
+                var decoder = new LzmaDecoder();
 
-        public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
+                return decoder;
+            });
+        }
+
+        public void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
             lock (_encodeLockObject)
             {
@@ -79,7 +91,7 @@ namespace Library.Compression
             }
         }
 
-        public static void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
+        public void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
             lock (_decodeLockObject)
             {
@@ -95,7 +107,7 @@ namespace Library.Compression
                     for (int i = 0; i < 4; i++)
                         dictionarySize += ((UInt32)(properties[1 + i])) << (i * 8);
 
-                    if (dictionarySize > (1 << 20)) throw new Exception("dictionarySize is too large.");
+                    if (dictionarySize > _maxDecompressDictionarySize) throw new Exception("dictionarySize is too large.");
                 }
 
                 decoder.SetDecoderProperties(properties);

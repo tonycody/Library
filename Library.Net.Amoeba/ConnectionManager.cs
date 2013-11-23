@@ -321,8 +321,8 @@ namespace Library.Net.Amoeba
 
                         _sendUpdateTime = DateTime.UtcNow;
 
-                        ThreadPool.QueueUserWorkItem(new WaitCallback(this.Pull));
-                        _aliveTimer = new Timer(new TimerCallback(this.AliveTimer), null, 1000 * 60, 1000 * 60);
+                        ThreadPool.QueueUserWorkItem(this.Pull);
+                        _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 60, 1000 * 60);
 
                         _pingTime = DateTime.UtcNow;
                         _pingHash = new byte[64];

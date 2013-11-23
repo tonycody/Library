@@ -41,7 +41,7 @@ namespace Library.Net.Connections
         public BandwidthLimit()
         {
             _refreshTimer = new System.Timers.Timer();
-            _refreshTimer.Elapsed += new System.Timers.ElapsedEventHandler(_refreshTimer_Elapsed);
+            _refreshTimer.Elapsed += _refreshTimer_Elapsed;
             _refreshTimer.Interval = 1000;
             _refreshTimer.AutoReset = true;
             _refreshTimer.Start();

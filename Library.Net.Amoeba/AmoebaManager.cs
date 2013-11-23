@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Library.Compression;
 using Library.Security;
 
 namespace Library.Net.Amoeba
@@ -10,6 +11,8 @@ namespace Library.Net.Amoeba
     {
         private string _cachePath;
         private BufferManager _bufferManager;
+
+        private Lzma _lzma;
 
         private ClientManager _clientManager;
         private ServerManager _serverManager;
@@ -25,8 +28,8 @@ namespace Library.Net.Amoeba
         private ManagerState _decodeState = ManagerState.Stop;
 
         private CheckUriEventHandler _checkUriEvent;
-        private CreateCapEventHandler _createConnectionEvent;
-        private AcceptCapEventHandler _acceptConnectionEvent;
+        private CreateCapEventHandler _createCapEvent;
+        private AcceptCapEventHandler _acceptCapEvent;
 
         private volatile bool _disposed = false;
         private object _thisLock = new object();
@@ -34,11 +37,13 @@ namespace Library.Net.Amoeba
         public AmoebaManager(string cachePath, BufferManager bufferManager)
         {
             _cachePath = cachePath;
-
             _bufferManager = bufferManager;
+
+            _lzma = new Lzma(1 << 20, 1 << 20);
+
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
-            _cacheManager = new CacheManager(_cachePath, _bufferManager);
+            _cacheManager = new CacheManager(_cachePath, _bufferManager, _lzma);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
             _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
@@ -57,9 +62,9 @@ namespace Library.Net.Amoeba
 
             _clientManager.CreateCapEvent = (object sender, string uri) =>
             {
-                if (_createConnectionEvent != null)
+                if (_createCapEvent != null)
                 {
-                    return _createConnectionEvent(this, uri);
+                    return _createCapEvent(this, uri);
                 }
 
                 return null;
@@ -69,9 +74,9 @@ namespace Library.Net.Amoeba
             {
                 uri = null;
 
-                if (_acceptConnectionEvent != null)
+                if (_acceptCapEvent != null)
                 {
-                    return _acceptConnectionEvent(this, out uri);
+                    return _acceptCapEvent(this, out uri);
                 }
 
                 return null;
@@ -95,7 +100,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    _createConnectionEvent = value;
+                    _createCapEvent = value;
                 }
             }
         }
@@ -106,7 +111,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    _acceptConnectionEvent = value;
+                    _acceptCapEvent = value;
                 }
             }
         }

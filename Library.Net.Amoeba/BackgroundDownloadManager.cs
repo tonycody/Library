@@ -59,7 +59,7 @@ namespace Library.Net.Amoeba
                 }
             };
 
-            _setThread = new Thread(new ThreadStart(() =>
+            _setThread = new Thread(() =>
             {
                 try
                 {
@@ -77,12 +77,12 @@ namespace Library.Net.Amoeba
                 {
 
                 }
-            }));
+            });
             _setThread.Priority = ThreadPriority.BelowNormal;
             _setThread.Name = "BackgroundDownloadManager_SetThread";
             _setThread.Start();
 
-            _removeThread = new Thread(new ThreadStart(() =>
+            _removeThread = new Thread(() =>
             {
                 try
                 {
@@ -100,12 +100,12 @@ namespace Library.Net.Amoeba
                 {
 
                 }
-            }));
+            });
             _removeThread.Priority = ThreadPriority.BelowNormal;
             _removeThread.Name = "BackgroundDownloadManager_RemoveThread";
             _removeThread.Start();
 
-            _connectionsManager.LockSeedSignaturesEvent = (object sender) =>
+            _connectionsManager.LockSignaturesEvent = (object sender) =>
             {
                 return this.SearchSignatures;
             };

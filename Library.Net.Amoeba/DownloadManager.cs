@@ -61,7 +61,7 @@ namespace Library.Net.Amoeba
                 }
             };
 
-            _setThread = new Thread(new ThreadStart(() =>
+            _setThread = new Thread(() =>
             {
                 try
                 {
@@ -79,12 +79,12 @@ namespace Library.Net.Amoeba
                 {
 
                 }
-            }));
+            });
             _setThread.Priority = ThreadPriority.BelowNormal;
             _setThread.Name = "DownloadManager_SetThread";
             _setThread.Start();
 
-            _removeThread = new Thread(new ThreadStart(() =>
+            _removeThread = new Thread(() =>
             {
                 try
                 {
@@ -102,7 +102,7 @@ namespace Library.Net.Amoeba
                 {
 
                 }
-            }));
+            });
             _removeThread.Priority = ThreadPriority.BelowNormal;
             _removeThread.Name = "DownloadManager_RemoveThread";
             _removeThread.Start();

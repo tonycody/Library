@@ -23,6 +23,8 @@ namespace Library.Net.Amoeba
         private FileStream _fileStream = null;
         private BufferManager _bufferManager;
 
+        private Lzma _lzma;
+
         private Settings _settings;
 
         private HashSet<long> _spaceClusters;
@@ -50,16 +52,17 @@ namespace Library.Net.Amoeba
 
         private int _threadCount = 2;
 
-        public CacheManager(string cachePath, BufferManager bufferManager)
+        public CacheManager(string cachePath, BufferManager bufferManager, Lzma lzma)
         {
             _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             _bufferManager = bufferManager;
+            _lzma = lzma;
 
             _settings = new Settings(this.ThisLock);
 
             _spaceClusters = new HashSet<long>();
 
-            _watchThread = new Thread(new ThreadStart(this.Watch));
+            _watchThread = new Thread(this.Watch);
             _watchThread.Priority = ThreadPriority.Lowest;
             _watchThread.IsBackground = true;
             _watchThread.Name = "CacheManager_WatchThread";
@@ -874,7 +877,7 @@ namespace Library.Net.Amoeba
                     using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
                     using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
                     {
-                        Lzma.Compress(inStream, cs, _bufferManager);
+                        _lzma.Compress(inStream, cs, _bufferManager);
                     }
                 }
                 catch (Exception)
@@ -945,7 +948,7 @@ namespace Library.Net.Amoeba
                 using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
                 using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                 {
-                    Lzma.Decompress(cs, outStream, _bufferManager);
+                    _lzma.Decompress(cs, outStream, _bufferManager);
                 }
             }
             else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
@@ -1052,7 +1055,7 @@ namespace Library.Net.Amoeba
 
                     Exception exception = null;
 
-                    Thread thread = new Thread(new ThreadStart(() =>
+                    Thread thread = new Thread(() =>
                     {
                         try
                         {
@@ -1062,7 +1065,7 @@ namespace Library.Net.Amoeba
                         {
                             exception = e;
                         }
-                    }));
+                    });
                     thread.Name = "CacheManager_ReedSolomon.Encode";
                     thread.Start();
 
@@ -1191,7 +1194,7 @@ namespace Library.Net.Amoeba
 
                     Exception exception = null;
 
-                    Thread thread = new Thread(new ThreadStart(() =>
+                    Thread thread = new Thread(() =>
                     {
                         try
                         {
@@ -1201,7 +1204,7 @@ namespace Library.Net.Amoeba
                         {
                             exception = e;
                         }
-                    }));
+                    });
                     thread.Name = "CacheManager_ReedSolomon.Decode";
                     thread.Start();
 

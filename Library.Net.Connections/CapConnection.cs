@@ -42,7 +42,7 @@ namespace Library.Net.Connections
 
             if (_bandwidthLimit != null) _bandwidthLimit.Join(this);
 
-            _aliveTimer = new Timer(new TimerCallback(this.AliveTimer), null, 1000 * 30, 1000 * 30);
+            _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 30, 1000 * 30);
             _sendUpdateTime = DateTime.UtcNow;
 
             _connect = true;

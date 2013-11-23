@@ -66,7 +66,7 @@ namespace Library.Net.Amoeba
                 _removeShare.Enqueue(path);
             };
 
-            _uploadedThread = new Thread(new ThreadStart(() =>
+            _uploadedThread = new Thread(() =>
             {
                 try
                 {
@@ -102,12 +102,12 @@ namespace Library.Net.Amoeba
                 {
 
                 }
-            }));
+            });
             _uploadedThread.Priority = ThreadPriority.BelowNormal;
             _uploadedThread.Name = "UploadManager_UploadedThread";
             _uploadedThread.Start();
 
-            _removeShareThread = new Thread(new ThreadStart(() =>
+            _removeShareThread = new Thread(() =>
             {
                 try
                 {
@@ -133,7 +133,7 @@ namespace Library.Net.Amoeba
                 {
 
                 }
-            }));
+            });
             _removeShareThread.Priority = ThreadPriority.BelowNormal;
             _removeShareThread.Name = "UploadManager_RemoveShareThread";
             _removeShareThread.Start();

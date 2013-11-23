@@ -241,7 +241,7 @@ namespace Library.Net
             if (targetId == null) throw new ArgumentNullException("targetId");
             if (nodeList == null) throw new ArgumentNullException("nodeList");
 
-            byte[] baseXor = Kademlia<T>.Xor(baseId, targetId);
+            byte[] baseXor = Kademlia<T>.Xor(targetId, baseId);
             var list = new List<KeyValuePair<byte[], T>>();
 
             foreach (var node in nodeList)
