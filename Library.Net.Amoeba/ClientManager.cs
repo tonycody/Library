@@ -22,8 +22,8 @@ namespace Library.Net.Amoeba
         private CheckUriEventHandler _checkUriEvent;
         private CreateCapEventHandler _createConnectionEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         private const int _maxReceiveCount = 1024 * 1024 * 32;
 
@@ -542,7 +542,7 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 

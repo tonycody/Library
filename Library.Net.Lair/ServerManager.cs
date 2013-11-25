@@ -29,8 +29,8 @@ namespace Library.Net.Lair
 
         private AcceptCapEventHandler _acceptConnectionEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         private const int _maxReceiveCount = 1024 * 1024 * 32;
 
@@ -40,7 +40,7 @@ namespace Library.Net.Lair
 
             _settings = new Settings(this.ThisLock);
 
-            _watchTimer = new Timer(new TimerCallback(this.WatchTimer), null, Timeout.Infinite, Timeout.Infinite);
+            _watchTimer = new Timer(this.WatchTimer, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public AcceptCapEventHandler AcceptCapEvent
@@ -262,7 +262,7 @@ namespace Library.Net.Lair
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 

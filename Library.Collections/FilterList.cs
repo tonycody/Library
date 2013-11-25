@@ -8,8 +8,8 @@ namespace Library.Collections
     public class FilterList<T> : IList<T>, ICollection<T>, IList, ICollection, IEnumerable<T>, IEnumerable, IThisLock
     {
         private List<T> _list;
-        private int? _capacity = null;
-        private object _thisLock = new object();
+        private int? _capacity;
+        private readonly object _thisLock = new object();
 
         public FilterList()
         {

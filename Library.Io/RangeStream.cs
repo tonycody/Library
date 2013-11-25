@@ -8,10 +8,10 @@ namespace Library.Io
         private Stream _stream;
         private long _offset;
         private long _length;
-        private bool _leaveInnerStreamOpen = false;
+        private bool _leaveInnerStreamOpen;
 
         private long _orignalLength;
-        private bool _disposed = false;
+        private bool _disposed;
 
         public RangeStream(Stream stream, long offset, long length, bool leaveInnerStreamOpen)
         {

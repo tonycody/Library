@@ -48,13 +48,13 @@ namespace Library.Net.Lair
 
         private LockedDictionary<Tag, DateTime> _lastUsedHeaderTimes = new LockedDictionary<Tag, DateTime>();
 
-        private volatile Thread _connectionsManagerThread = null;
-        private volatile Thread _createClientConnection1Thread = null;
-        private volatile Thread _createClientConnection2Thread = null;
-        private volatile Thread _createClientConnection3Thread = null;
-        private volatile Thread _createServerConnection1Thread = null;
-        private volatile Thread _createServerConnection2Thread = null;
-        private volatile Thread _createServerConnection3Thread = null;
+        private volatile Thread _connectionsManagerThread;
+        private volatile Thread _createClientConnection1Thread;
+        private volatile Thread _createClientConnection2Thread;
+        private volatile Thread _createClientConnection3Thread;
+        private volatile Thread _createServerConnection1Thread;
+        private volatile Thread _createServerConnection2Thread;
+        private volatile Thread _createServerConnection3Thread;
 
         private ManagerState _state = ManagerState.Stop;
 
@@ -62,8 +62,8 @@ namespace Library.Net.Lair
 
         private BandwidthLimit _bandwidthLimit = new BandwidthLimit();
 
-        private long _receivedByteCount = 0;
-        private long _sentByteCount = 0;
+        private long _receivedByteCount;
+        private long _sentByteCount;
 
         private volatile int _pushNodeCount;
         private volatile int _pushBlockLinkCount;
@@ -89,8 +89,8 @@ namespace Library.Net.Lair
         private LockSignaturesEventHandler _lockSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         private const int _maxNodeCount = 128;
         private const int _maxBlockLinkCount = 2048;
@@ -649,9 +649,7 @@ namespace Library.Net.Lair
 
                         lock (this.ThisLock)
                         {
-                            connectionCount = _connectionManagers
-                                .Where(n => n.Type == ConnectionManagerType.Server)
-                                .Count();
+                            connectionCount = _connectionManagers.Count(n => n.Type == ConnectionManagerType.Server);
                         }
 
                         if (connectionCount > ((this.ConnectionCountLimit / 3) * 2))
@@ -667,7 +665,7 @@ namespace Library.Net.Lair
 
                     if (flag)
                     {
-                        ThreadPool.QueueUserWorkItem(new WaitCallback((object state) =>
+                        ThreadPool.QueueUserWorkItem((object state) =>
                         {
                             // PushNodes
                             try
@@ -710,7 +708,7 @@ namespace Library.Net.Lair
                             }
 
                             connectionManager.Dispose();
-                        }));
+                        });
 
                         return;
                     }
@@ -718,14 +716,14 @@ namespace Library.Net.Lair
 
                 Debug.WriteLine("ConnectionManager: Connect");
 
-                connectionManager.PullNodesEvent += new PullNodesEventHandler(connectionManager_NodesEvent);
-                connectionManager.PullBlocksLinkEvent += new PullBlocksLinkEventHandler(connectionManager_BlocksLinkEvent);
-                connectionManager.PullBlocksRequestEvent += new PullBlocksRequestEventHandler(connectionManager_BlocksRequestEvent);
-                connectionManager.PullBlockEvent += new PullBlockEventHandler(connectionManager_BlockEvent);
-                connectionManager.PullHeadersRequestEvent += new PullHeadersRequestEventHandler(connectionManager_HeadersRequestEvent);
-                connectionManager.PullHeadersEvent += new PullHeadersEventHandler(connectionManager_HeadersEvent);
-                connectionManager.PullCancelEvent += new PullCancelEventHandler(connectionManager_PullCancelEvent);
-                connectionManager.CloseEvent += new CloseEventHandler(connectionManager_CloseEvent);
+                connectionManager.PullNodesEvent += this.connectionManager_NodesEvent;
+                connectionManager.PullBlocksLinkEvent += this.connectionManager_BlocksLinkEvent;
+                connectionManager.PullBlocksRequestEvent += this.connectionManager_BlocksRequestEvent;
+                connectionManager.PullBlockEvent += this.connectionManager_BlockEvent;
+                connectionManager.PullHeadersRequestEvent += this.connectionManager_HeadersRequestEvent;
+                connectionManager.PullHeadersEvent += this.connectionManager_HeadersEvent;
+                connectionManager.PullCancelEvent += this.connectionManager_PullCancelEvent;
+                connectionManager.CloseEvent += this.connectionManager_CloseEvent;
 
                 _nodeToUri.Add(connectionManager.Node, uri);
                 _connectionManagers.Add(connectionManager);
@@ -739,7 +737,7 @@ namespace Library.Net.Lair
                 _messagesManager[connectionManager.Node].SessionId = connectionManager.SesstionId;
                 _messagesManager[connectionManager.Node].LastPullTime = DateTime.UtcNow;
 
-                ThreadPool.QueueUserWorkItem(new WaitCallback(this.ConnectionManagerThread), connectionManager);
+                ThreadPool.QueueUserWorkItem(this.ConnectionManagerThread, connectionManager);
             }
         }
 
@@ -961,7 +959,7 @@ namespace Library.Net.Lair
             public DateTime LastPullTime { get; set; }
         }
 
-        private volatile bool _refreshThreadRunning = false;
+        private volatile bool _refreshThreadRunning;
 
         private void ConnectionsManagerThread()
         {
@@ -989,9 +987,7 @@ namespace Library.Net.Lair
 
                 lock (this.ThisLock)
                 {
-                    connectionCount = _connectionManagers
-                        .Where(n => n.Type == ConnectionManagerType.Client)
-                        .Count();
+                    connectionCount = _connectionManagers.Count(n => n.Type == ConnectionManagerType.Client);
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
@@ -1066,7 +1062,7 @@ namespace Library.Net.Lair
 
                     var now = DateTime.UtcNow;
 
-                    ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
+                    ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         if (_refreshThreadRunning) return;
                         _refreshThreadRunning = true;
@@ -1119,7 +1115,7 @@ namespace Library.Net.Lair
                                     {
                                         var removeHeaders = new List<Header>();
 
-                                        foreach (var tag in this.GetTags())
+                                        foreach (var tag in _headerManager.GetTags())
                                         {
                                             var headers = _headerManager.GetHeaders(tag).ToList();
 
@@ -1347,6 +1343,11 @@ namespace Library.Net.Lair
                                                 }
                                             }
                                         }
+
+                                        foreach (var header in removeHeaders)
+                                        {
+                                            _headerManager.RemoveHeader(header);
+                                        }
                                     }
                                 }
                             }
@@ -1359,7 +1360,7 @@ namespace Library.Net.Lair
                         {
                             _refreshThreadRunning = false;
                         }
-                    }));
+                    });
                 }
 
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
@@ -1787,9 +1788,7 @@ namespace Library.Net.Lair
 
                     lock (this.ThisLock)
                     {
-                        connectionCount = _connectionManagers
-                            .Where(n => n.Type == ConnectionManagerType.Client)
-                            .Count();
+                        connectionCount = _connectionManagers.Count(n => n.Type == ConnectionManagerType.Client);
                     }
 
                     // Check
@@ -2112,7 +2111,7 @@ namespace Library.Net.Lair
 
                                 foreach (var tag in tags.Randomize())
                                 {
-                                    foreach (var header in this.GetHeaders(tag))
+                                    foreach (var header in _headerManager.GetHeaders(tag))
                                     {
                                         var key = new Key(header.GetHash(_hashAlgorithm), _hashAlgorithm);
 
@@ -2646,8 +2645,15 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _settings.Headers.Clear();
-                _settings.Headers.AddRange(_headerManager.GetHeaders());
+                {
+                    var headers = _headerManager.GetHeaders();
+
+                    lock (_settings.Headers.ThisLock)
+                    {
+                        _settings.Headers.Clear();
+                        _settings.Headers.AddRange(headers);
+                    }
+                }
 
                 {
                     var otherNodes = _routeTable.ToArray();
@@ -2667,8 +2673,7 @@ namespace Library.Net.Lair
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
-            private HeaderManager _headerManager;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
@@ -2678,7 +2683,7 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingContent<List<Header>>() { Name = "Headers", Value = new List<Header>() },
+                    new Library.Configuration.SettingContent<LockedList<Header>>() { Name = "Headers", Value = new LockedList<Header>() },
                 })
             {
                 _thisLock = lockObject;
@@ -2787,13 +2792,13 @@ namespace Library.Net.Lair
                 }
             }
 
-            public List<Header> Headers
+            public LockedList<Header> Headers
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (List<Header>)this["Headers"];
+                        return (LockedList<Header>)this["Headers"];
                     }
                 }
             }

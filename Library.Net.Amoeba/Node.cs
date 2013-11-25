@@ -19,13 +19,13 @@ namespace Library.Net.Amoeba
             Uri = 1,
         }
 
-        private byte[] _id = null;
-        private UriCollection _uris = null;
+        private byte[] _id;
+        private UriCollection _uris;
 
-        private int _hashCode = 0;
+        private int _hashCode;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxIdLength = 64;
         public static readonly int MaxUrisCount = 32;
@@ -242,13 +242,18 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

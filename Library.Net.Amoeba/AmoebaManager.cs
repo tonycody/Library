@@ -31,8 +31,8 @@ namespace Library.Net.Amoeba
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public AmoebaManager(string cachePath, BufferManager bufferManager)
         {

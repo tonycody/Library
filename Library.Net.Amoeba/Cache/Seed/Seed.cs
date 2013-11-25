@@ -30,26 +30,26 @@ namespace Library.Net.Amoeba
             Certificate = 10,
         }
 
-        private string _name = null;
-        private long _length = 0;
+        private string _name;
+        private long _length;
         private DateTime _creationTime = DateTime.MinValue;
-        private string _comment = null;
-        private int _rank = 0;
-        private Key _key = null;
+        private string _comment;
+        private int _rank;
+        private Key _key;
 
-        private KeywordCollection _keywords = null;
+        private KeywordCollection _keywords;
 
         private CompressionAlgorithm _compressionAlgorithm = 0;
 
         private CryptoAlgorithm _cryptoAlgorithm = 0;
-        private byte[] _cryptoKey = null;
+        private byte[] _cryptoKey;
 
         private Certificate _certificate;
 
-        private int _hashCode = 0;
+        private int _hashCode;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxCommentLength = 1024;
@@ -716,13 +716,18 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

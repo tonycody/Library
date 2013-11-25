@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using Library.Io;
 using Library.Security;
 
@@ -23,14 +26,16 @@ namespace Library.Net.Lair
             Certificate = 6,
         }
 
-        private Tag _tag = null;
-        private string _type = null;
-        private OptionCollection _options = null;
+        private Tag _tag;
+        private string _type;
+        private OptionCollection _options;
         private DateTime _creationTime = DateTime.MinValue;
         private ContentFormatType _formatType;
-        private byte[] _content = null;
+        private byte[] _content;
 
         private Certificate _certificate;
+
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxTypeLength = 256;
         public static readonly int MaxOptionCount = 32;
@@ -340,11 +345,24 @@ namespace Library.Net.Lair
             }
         }
 
+        private volatile ReadOnlyCollection<string> _readOnlyOptions;
+
         public IEnumerable<string> Options
         {
             get
             {
-                return this.ProtectedOptions;
+                if (_readOnlyOptions == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_readOnlyOptions == null)
+                        {
+                            _readOnlyOptions = new ReadOnlyCollection<string>(this.ProtectedOptions);
+                        }
+                    }
+                }
+
+                return _readOnlyOptions;
             }
         }
 
@@ -411,7 +429,7 @@ namespace Library.Net.Lair
 
         #region IComputeHash
 
-        private byte[] _sha512_hash = null;
+        private byte[] _sha512_hash;
 
         public byte[] GetHash(HashAlgorithm hashAlgorithm)
         {

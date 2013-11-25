@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 using Library.Security;
+using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
@@ -17,8 +18,10 @@ namespace Library.Net.Lair
             Bad = 1,
         }
 
-        private KeyCollection _goods = null;
-        private KeyCollection _bads = null;
+        private KeyCollection _goods;
+        private KeyCollection _bads;
+
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxGoodsCount = 1024;
         public static readonly int MaxBadsCount = 1024;
@@ -133,11 +136,24 @@ namespace Library.Net.Lair
 
         #region IDocumentOpinionsContent<Key>
 
+        private volatile ReadOnlyCollection<Key> _readOnlyGoods;
+
         public IEnumerable<Key> Goods
         {
             get
             {
-                return this.ProtectedGoods;
+                if (_readOnlyGoods == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_readOnlyGoods == null)
+                        {
+                            _readOnlyGoods = new ReadOnlyCollection<Key>(this.ProtectedGoods);
+                        }
+                    }
+                }
+
+                return _readOnlyGoods;
             }
         }
 
@@ -153,11 +169,24 @@ namespace Library.Net.Lair
             }
         }
 
+        private volatile ReadOnlyCollection<Key> _readOnlyBads;
+
         public IEnumerable<Key> Bads
         {
             get
             {
-                return this.ProtectedBads;
+                if (_readOnlyBads == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_readOnlyBads == null)
+                        {
+                            _readOnlyBads = new ReadOnlyCollection<Key>(this.ProtectedBads);
+                        }
+                    }
+                }
+
+                return _readOnlyBads;
             }
         }
 

@@ -20,15 +20,15 @@ namespace Library.Net.Amoeba
             CryptoKey = 3,
         }
 
-        private GroupCollection _groups = null;
+        private GroupCollection _groups;
 
         private CompressionAlgorithm _compressionAlgorithm = 0;
 
         private CryptoAlgorithm _cryptoAlgorithm = 0;
-        private byte[] _cryptoKey = null;
+        private byte[] _cryptoKey;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCryptoKeyLength = 64;
 
@@ -336,13 +336,18 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

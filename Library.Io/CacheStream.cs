@@ -19,7 +19,7 @@ namespace Library.Io
         private byte[] _writerBlockBuffer;
         private int _writerBufferPosition;
 
-        private bool _disposed = false;
+        private bool _disposed;
 
         public CacheStream(Stream stream, int bufferSize, bool leaveInnerStreamOpen, BufferManager bufferManager)
         {

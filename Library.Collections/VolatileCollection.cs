@@ -13,7 +13,7 @@ namespace Library.Collections
         private DateTime _lastCheckTime = DateTime.MinValue;
         private readonly TimeSpan _survivalTime;
 
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         public VolatileCollection(TimeSpan survivalTime)
         {

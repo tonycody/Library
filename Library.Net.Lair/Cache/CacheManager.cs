@@ -19,27 +19,27 @@ namespace Library.Net.Lair
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
     {
-        private FileStream _fileStream = null;
+        private FileStream _fileStream;
         private BufferManager _bufferManager;
 
         private Settings _settings;
 
         private HashSet<long> _spaceClusters;
-        private bool _spaceClustersInitialized = false;
+        private bool _spaceClustersInitialized;
 
         private volatile AutoResetEvent _resetEvent = new AutoResetEvent(false);
-        private long _lockSpace = 0;
-        private long _freeSpace = 0;
+        private long _lockSpace;
+        private long _freeSpace;
 
         private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
 
-        private Thread _watchThread = null;
+        private Thread _watchThread;
 
         private SetKeyEventHandler _setKeyEvent;
         private RemoveKeyEventHandler _removeKeyEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public static readonly int ClusterSize = 1024 * 4;
 
@@ -54,7 +54,7 @@ namespace Library.Net.Lair
 
             _spaceClusters = new HashSet<long>();
 
-            _watchThread = new Thread(new ThreadStart(this.Watch));
+            _watchThread = new Thread(this.Watch);
             _watchThread.Priority = ThreadPriority.Lowest;
             _watchThread.IsBackground = true;
             _watchThread.Name = "CacheManager_WatchThread";
@@ -398,7 +398,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
             List<Key> list = null;
 
@@ -690,7 +690,7 @@ namespace Library.Net.Lair
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
@@ -754,8 +754,8 @@ namespace Library.Net.Lair
             private int _length;
             private DateTime _updateTime = DateTime.UtcNow;
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            private volatile object _thisLock;
+            private static readonly object _initializeLock = new object();
 
             [DataMember(Name = "Indexs")]
             public long[] Indexes
@@ -820,13 +820,18 @@ namespace Library.Net.Lair
             {
                 get
                 {
-                    lock (_thisStaticLock)
+                    if (_thisLock == null)
                     {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
+                        lock (_initializeLock)
+                        {
+                            if (_thisLock == null)
+                            {
+                                _thisLock = new object();
+                            }
+                        }
                     }
+
+                    return _thisLock;
                 }
             }
 

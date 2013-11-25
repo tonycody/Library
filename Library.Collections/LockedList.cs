@@ -49,8 +49,8 @@ namespace Library.Collections
     public class LockedList<T> : IList<T>, ICollection<T>, IEnumerable<T>, IList, ICollection, IEnumerable, IThisLock
     {
         private List<T> _list;
-        private int? _capacity = null;
-        private object _thisLock = new object();
+        private int? _capacity;
+        private readonly object _thisLock = new object();
 
         public LockedList()
         {

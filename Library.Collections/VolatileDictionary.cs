@@ -13,7 +13,7 @@ namespace Library.Collections
         private DateTime _lastCheckTime = DateTime.MinValue;
         private readonly TimeSpan _survivalTime;
 
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         public VolatileDictionary(TimeSpan survivalTime)
         {
@@ -448,7 +448,7 @@ namespace Library.Collections
         public sealed class VolatileKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
         {
             private ICollection<TKey> _collection;
-            private object _thisLock;
+            private readonly object _thisLock;
 
             internal VolatileKeyCollection(ICollection<TKey> collection, object thisLock)
             {
@@ -591,7 +591,7 @@ namespace Library.Collections
         public sealed class VolatileValueCollection : ICollection<TValue>, IEnumerable<TValue>, ICollection, IEnumerable, IThisLock
         {
             private ICollection<TValue> _collection;
-            private object _thisLock;
+            private readonly object _thisLock;
 
             internal VolatileValueCollection(ICollection<TValue> collection, object thisLock)
             {

@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 using Library.Security;
+using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
@@ -17,8 +18,10 @@ namespace Library.Net.Lair
             Anchor = 1,
         }
 
-        private string _comment = null;
-        private KeyCollection _anchors = null;
+        private string _comment;
+        private KeyCollection _anchors;
+
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxAnchorCount = 32;
@@ -164,11 +167,24 @@ namespace Library.Net.Lair
             }
         }
 
+        private volatile ReadOnlyCollection<Key> _readOnlyAnchors;
+
         public IEnumerable<Key> Anchors
         {
             get
             {
-                return this.ProtectedAnchors;
+                if (_readOnlyAnchors == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_readOnlyAnchors == null)
+                        {
+                            _readOnlyAnchors = new ReadOnlyCollection<Key>(this.ProtectedAnchors);
+                        }
+                    }
+                }
+
+                return _readOnlyAnchors;
             }
         }
 

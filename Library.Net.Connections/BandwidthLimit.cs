@@ -21,8 +21,8 @@ namespace Library.Net.Connections
         private ManualResetEvent _outResetEvent = new ManualResetEvent(false);
         private ManualResetEvent _inResetEvent = new ManualResetEvent(false);
 
-        private long _totalOutSize = 0;
-        private long _totalInSize = 0;
+        private long _totalOutSize;
+        private long _totalInSize;
 
         private object _outLockObject = new object();
         private object _inLockObject = new object();
@@ -33,10 +33,10 @@ namespace Library.Net.Connections
         private volatile int _out;
         private volatile int _in;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
-        private volatile bool _disposed = false;
+        private volatile bool _disposed;
 
         public BandwidthLimit()
         {
@@ -272,13 +272,18 @@ namespace Library.Net.Connections
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

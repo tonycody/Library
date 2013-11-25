@@ -13,25 +13,25 @@ namespace Library.Net.Lair
         private enum SerializeId : byte
         {
             Type = 0,
-            Name = 1,
-            Id = 2,
+            Id = 1,
+            Name = 2,
         }
 
-        private string _type = null;
-        private string _name = null;
-        private byte[] _id = null;
+        private string _type;
+        private byte[] _id;
+        private string _name;
 
-        private int _hashCode = 0;
+        private int _hashCode;
 
         public static readonly int MaxTypeLength = 256;
-        public static readonly int MaxNameLength = 256;
         public static readonly int MaxIdLength = 64;
+        public static readonly int MaxNameLength = 256;
 
-        public Tag(string type, string name, byte[] id)
+        public Tag(string type, byte[] id, string name)
         {
             this.Type = type;
-            this.Name = name;
             this.Id = id;
+            this.Name = name;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -54,19 +54,19 @@ namespace Library.Net.Lair
                             this.Type = reader.ReadToEnd();
                         }
                     }
-                    else if (id == (byte)SerializeId.Name)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.Name = reader.ReadToEnd();
-                        }
-                    }
                     else if (id == (byte)SerializeId.Id)
                     {
                         byte[] buffer = new byte[rangeStream.Length];
                         rangeStream.Read(buffer, 0, buffer.Length);
 
                         this.Id = buffer;
+                    }
+                    else if (id == (byte)SerializeId.Name)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.Name = reader.ReadToEnd();
+                        }
                     }
                 }
             }
@@ -96,6 +96,16 @@ namespace Library.Net.Lair
 
                 streams.Add(bufferStream);
             }
+            // Id
+            if (this.Id != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Id);
+                bufferStream.Write(this.Id, 0, this.Id.Length);
+
+                streams.Add(bufferStream);
+            }
             // Name
             if (this.Name != null)
             {
@@ -112,16 +122,6 @@ namespace Library.Net.Lair
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Name);
-
-                streams.Add(bufferStream);
-            }
-            // Id
-            if (this.Id != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Id);
-                bufferStream.Write(this.Id, 0, this.Id.Length);
 
                 streams.Add(bufferStream);
             }
@@ -148,8 +148,8 @@ namespace Library.Net.Lair
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Type != other.Type
-                || this.Name != other.Name
-                || (this.Id == null) != (other.Id == null))
+                || (this.Id == null) != (other.Id == null)
+                || this.Name != other.Name)
             {
                 return false;
             }
@@ -197,26 +197,6 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Name")]
-        public string Name
-        {
-            get
-            {
-                return _name;
-            }
-            private set
-            {
-                if (value != null && value.Length > Tag.MaxNameLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _name = value;
-                }
-            }
-        }
-
         [DataMember(Name = "Id")]
         public byte[] Id
         {
@@ -244,6 +224,26 @@ namespace Library.Net.Lair
                 else
                 {
                     _hashCode = 0;
+                }
+            }
+        }
+
+        [DataMember(Name = "Name")]
+        public string Name
+        {
+            get
+            {
+                return _name;
+            }
+            private set
+            {
+                if (value != null && value.Length > Tag.MaxNameLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _name = value;
                 }
             }
         }

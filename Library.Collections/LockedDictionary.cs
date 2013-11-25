@@ -8,8 +8,8 @@ namespace Library.Collections
     public class LockedDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable<KeyValuePair<TKey, TValue>>, IEnumerable, IThisLock
     {
         private Dictionary<TKey, TValue> _dic;
-        private int? _capacity = null;
-        private object _thisLock = new object();
+        private int? _capacity;
+        private readonly object _thisLock = new object();
 
         public LockedDictionary()
         {
@@ -422,7 +422,7 @@ namespace Library.Collections
         public sealed class LockedKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
         {
             private ICollection<TKey> _collection;
-            private object _thisLock;
+            private readonly object _thisLock;
 
             internal LockedKeyCollection(ICollection<TKey> collection, object thisLock)
             {
@@ -565,7 +565,7 @@ namespace Library.Collections
         public sealed class LockedValueCollection : ICollection<TValue>, IEnumerable<TValue>, ICollection, IEnumerable, IThisLock
         {
             private ICollection<TValue> _collection;
-            private object _thisLock;
+            private readonly object _thisLock;
 
             internal LockedValueCollection(ICollection<TValue> collection, object thisLock)
             {

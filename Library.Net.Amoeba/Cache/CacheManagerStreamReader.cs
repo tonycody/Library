@@ -10,15 +10,15 @@ namespace Library.Net.Amoeba
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private ArraySegment<byte> _blockBuffer = new ArraySegment<byte>();
-        private int _blockBufferPosition = 0;
+        private ArraySegment<byte> _blockBuffer;
+        private int _blockBufferPosition;
 
-        private int _keysIndex = 0;
+        private int _keysIndex;
 
-        private long _position = 0;
-        private long _length = 0;
+        private long _position;
+        private long _length;
 
-        private volatile bool _disposed = false;
+        private volatile bool _disposed;
 
         public CacheManagerStreamReader(KeyCollection keys, CacheManager cacheManager, BufferManager bufferManager)
         {

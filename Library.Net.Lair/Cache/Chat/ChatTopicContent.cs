@@ -16,7 +16,7 @@ namespace Library.Net.Lair
             Comment = 0,
         }
 
-        private string _comment = null;
+        private string _comment;
 
         public static readonly int MaxCommentLength = 1024 * 32;
 

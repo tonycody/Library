@@ -19,8 +19,8 @@ namespace Library
         private List<byte[]>[] _buffers;
         private long[] _callCounts;
 
-        private object _thisLock = new object();
-        private volatile bool _disposed = false;
+        private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public BufferManager(long maxBufferPoolSize, int maxBufferSize)
         {
@@ -87,6 +87,7 @@ namespace Library
         public void ReturnBuffer(byte[] buffer)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (buffer == null) throw new ArgumentNullException("buffer");
 
             lock (this.ThisLock)
             {
@@ -177,7 +178,7 @@ namespace Library
         private System.ServiceModel.Channels.BufferManager _bufferManager;
         private ConditionalWeakTable<byte[], BufferTracker> _trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();
 
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
         private volatile bool _disposed = false;
 
         public BufferManager(long maxBufferPoolSize, int maxBufferSize)

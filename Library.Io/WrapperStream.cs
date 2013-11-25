@@ -6,8 +6,8 @@ namespace Library.Io
     public class WrapperStream : Stream
     {
         private Stream _stream;
-        private bool _leaveInnerStreamOpen = false;
-        private bool _disposed = false;
+        private bool _leaveInnerStreamOpen;
+        private bool _disposed;
 
         public WrapperStream(Stream stream, bool leaveInnerStreamOpen)
         {

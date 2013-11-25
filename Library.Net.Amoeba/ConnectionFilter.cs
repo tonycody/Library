@@ -37,8 +37,8 @@ namespace Library.Net.Amoeba
         private string _proxyUri;
         private string _option;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static bool operator ==(ConnectionFilter x, ConnectionFilter y)
         {
@@ -200,13 +200,18 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 
@@ -216,11 +221,11 @@ namespace Library.Net.Amoeba
     [DataContract(Name = "UriCondition", Namespace = "http://Library/Net/Amoeba")]
     public sealed class UriCondition : IDeepCloneable<UriCondition>, IEquatable<UriCondition>, IThisLock
     {
-        private string _value = null;
+        private string _value;
         private Regex _regex;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static bool operator ==(UriCondition x, UriCondition y)
         {
@@ -333,13 +338,18 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

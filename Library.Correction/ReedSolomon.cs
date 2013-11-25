@@ -15,7 +15,7 @@ namespace Library.Correction
 
         private volatile byte[] _encMatrix;
 
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         public ReedSolomon(int gfBits, int k, int n, int threadCount, BufferManager bufferManager)
         {

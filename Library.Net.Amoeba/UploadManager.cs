@@ -19,11 +19,11 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _uploadManagerThread = null;
+        private volatile Thread _uploadManagerThread;
         private LockedDictionary<Key, bool> _keyCount = new LockedDictionary<Key, bool>();
         private Dictionary<int, UploadItem> _ids = new Dictionary<int, UploadItem>();
         private Dictionary<string, List<int>> _shareLink = new Dictionary<string, List<int>>();
-        private int _id = 0;
+        private int _id;
 
         private ManagerState _state = ManagerState.Stop;
         private ManagerState _encodeState = ManagerState.Stop;
@@ -34,8 +34,8 @@ namespace Library.Net.Amoeba
         private WaitQueue<Key> _uploadedKeys = new WaitQueue<Key>();
         private WaitQueue<string> _removeShare = new WaitQueue<string>();
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public UploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
@@ -1072,7 +1072,7 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 

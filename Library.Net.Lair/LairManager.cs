@@ -16,14 +16,15 @@ namespace Library.Net.Lair
 
         private ManagerState _state = ManagerState.Stop;
 
-        private TrustSignaturesEventHandler _trustSignaturesEvent;
-        private LockDocumentsEventHandler _lockDocumentsEvent;
-        private LockChatsEventHandler _lockChatsEvent;
-        private LockWhispersEventHandler _lockWhispersEvent;
-        private LockMailsEventHandler _lockMailsEvent;
+        private LockTagsEventHandler _lockTagsEvent;
+        private LockSignaturesEventHandler _lockSignaturesEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private CheckUriEventHandler _checkUriEvent;
+        private CreateCapEventHandler _createCapEvent;
+        private AcceptCapEventHandler _acceptCapEvent;
+
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public LairManager(string cachePath, BufferManager bufferManager)
         {
@@ -35,108 +36,110 @@ namespace Library.Net.Lair
             _cacheManager = new CacheManager(_cachePath, _bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
 
-            _connectionsManager.TrustSignaturesEvent = (object sender) =>
+            _clientManager.CheckUriEvent = (object sender, string uri) =>
             {
-                if (_trustSignaturesEvent != null)
+                if (_checkUriEvent != null)
                 {
-                    return _trustSignaturesEvent(this);
+                    return _checkUriEvent(this, uri);
+                }
+
+                return false;
+            };
+
+            _clientManager.CreateCapEvent = (object sender, string uri) =>
+            {
+                if (_createCapEvent != null)
+                {
+                    return _createCapEvent(this, uri);
                 }
 
                 return null;
             };
 
-            _connectionsManager.LockDocumentsEvent = (object sender) =>
+            _serverManager.AcceptCapEvent = (object sender, out string uri) =>
             {
-                if (_lockDocumentsEvent != null)
+                uri = null;
+
+                if (_acceptCapEvent != null)
                 {
-                    return _lockDocumentsEvent(this);
+                    return _acceptCapEvent(this, out uri);
                 }
 
                 return null;
             };
 
-            _connectionsManager.LockChatsEvent = (object sender) =>
+            _connectionsManager.LockTagsEvent = (object sender) =>
             {
-                if (_lockChatsEvent != null)
+                if (_lockTagsEvent != null)
                 {
-                    return _lockChatsEvent(this);
+                    return _lockTagsEvent(this);
                 }
 
                 return null;
             };
 
-            _connectionsManager.LockWhispersEvent = (object sender) =>
+            _connectionsManager.LockSignaturesEvent = (object sender) =>
             {
-                if (_lockWhispersEvent != null)
+                if (_lockSignaturesEvent != null)
                 {
-                    return _lockWhispersEvent(this);
-                }
-
-                return null;
-            };
-
-            _connectionsManager.LockMailsEvent = (object sender) =>
-            {
-                if (_lockMailsEvent != null)
-                {
-                    return _lockMailsEvent(this);
+                    return _lockSignaturesEvent(this);
                 }
 
                 return null;
             };
         }
 
-        public TrustSignaturesEventHandler TrustSignaturesEvent
+        public CheckUriEventHandler CheckUriEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _trustSignaturesEvent = value;
+                    _checkUriEvent = value;
                 }
             }
         }
 
-        public LockDocumentsEventHandler LockDocumentsEvent
+        public CreateCapEventHandler CreateCapEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockDocumentsEvent = value;
+                    _createCapEvent = value;
                 }
             }
         }
 
-        public LockChatsEventHandler LockChatsEvent
+        public AcceptCapEventHandler AcceptCapEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockChatsEvent = value;
+                    _acceptCapEvent = value;
                 }
             }
         }
 
-        public LockWhispersEventHandler LockWhispersEvent
+        public LockTagsEventHandler LockTagsEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockWhispersEvent = value;
+                    _lockTagsEvent = value;
                 }
             }
         }
 
-        public LockMailsEventHandler LockMailsEvent
+        public LockSignaturesEventHandler LockSignaturesEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockMailsEvent = value;
+                    _lockSignaturesEvent = value;
                 }
             }
         }
@@ -180,15 +183,6 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _connectionsManager.BaseNode;
-                }
-            }
-            set
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.BaseNode = value;
                 }
             }
         }
@@ -315,6 +309,16 @@ namespace Library.Net.Lair
             }
         }
 
+        public void SetBaseNode(Node baseNode)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _connectionsManager.SetBaseNode(baseNode);
+            }
+        }
+
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -331,7 +335,19 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                if (this.State == ManagerState.Start)
+                {
+                    //_downloadManager.Stop();
+                    //_uploadManager.Stop();
+                }
+
                 _cacheManager.Resize(size);
+
+                if (this.State == ManagerState.Start)
+                {
+                    //_downloadManager.Start();
+                    //_uploadManager.Start();
+                }
             }
         }
 
@@ -340,322 +356,6 @@ namespace Library.Net.Lair
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             _cacheManager.CheckBlocks(getProgressEvent);
-        }
-
-        public void SendSignatureRequest(string signature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.SendSignatureRequest(signature);
-            }
-        }
-
-        public void SendDocumentRequest(Document document)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.SendDocumentRequest(document);
-            }
-        }
-
-        public void SendChatRequest(Chat chat)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.SendChatRequest(chat);
-            }
-        }
-
-        public void SendWhisperRequest(Whisper whisper)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.SendWhisperRequest(whisper);
-            }
-        }
-
-        public void SendMailRequest(Mail mail)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.SendMailRequest(mail);
-            }
-        }
-
-        public IEnumerable<string> GetSignatures()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetSignatures();
-            }
-        }
-
-        public IEnumerable<Document> GetDocuments()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetDocuments();
-            }
-        }
-
-        public IEnumerable<Chat> GetChats()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetChats();
-            }
-        }
-
-        public IEnumerable<Whisper> GetWhispers()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetWhispers();
-            }
-        }
-
-        public IEnumerable<Mail> GetMails()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetMails();
-            }
-        }
-
-        public SignatureProfile GetSignatureProfile(string signature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetSignatureProfile(signature);
-            }
-        }
-
-        public IEnumerable<DocumentArchive> GetDocumentSites(Document document)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetDocumentSites(document);
-            }
-        }
-
-        public IEnumerable<DocumentOpinionContent> GetDocumentOpinions(Document document)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetDocumentOpinions(document);
-            }
-        }
-
-        public IEnumerable<ChatTopicContent> GetChatTopics(Chat chat)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetChatTopics(chat);
-            }
-        }
-
-        public IEnumerable<ChatMessageContent> GetChatMessages(Chat chat)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetChatMessages(chat);
-            }
-        }
-
-        public IEnumerable<WhisperMessage> GetWhisperMessages(Whisper whisper)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetWhisperMessages(whisper);
-            }
-        }
-
-        public IEnumerable<MailMessage> GetMailMessages(Mail mail)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetMailMessages(mail);
-            }
-        }
-
-        public SignatureProfileContent GetContent(SignatureProfile signatureProfile)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetContent(signatureProfile);
-            }
-        }
-
-        public DocumentArchive GetContent(DocumentArchive documentSite)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetContent(documentSite);
-            }
-        }
-
-        public DocumentOpinionContent GetContent(DocumentOpinionContent documentOpinion)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetContent(documentOpinion);
-            }
-        }
-
-        public ChatTopicContent GetContent(ChatTopicContent chatTopic)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetContent(chatTopic);
-            }
-        }
-
-        public ChatMessageContent GetContent(ChatMessageContent chatMessage)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetContent(chatMessage);
-            }
-        }
-
-        public WhisperMessageContent GetContent(WhisperMessage whisperMessage, WhisperCryptoInformation cryptoInformation)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetContent(whisperMessage, cryptoInformation);
-            }
-        }
-
-        public MailMessage GetContent(MailMessage mailMessage, IExchangeDecrypt exchangeDecrypt)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetContent(mailMessage, exchangeDecrypt);
-            }
-        }
-
-        public void UploadSignatureProfile(string comment, IExchangeEncrypt exchangeEncrypt, IEnumerable<string> trustSignatures, IEnumerable<Document> documents, IEnumerable<Chat> chats, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.UploadSignatureProfile(comment, exchangeEncrypt, trustSignatures, documents, chats, digitalSignature);
-            }
-        }
-
-        public void UploadDocumentSite(Document document, 
-            IEnumerable<DocumentPageContent> documentPages, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.UploadDocumentSite(document, documentPages, digitalSignature);
-            }
-        }
-
-        public void UploadDocumentOpinion(Document document,
-             IEnumerable<Key> goods, IEnumerable<Key> bads, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.UploadDocumentOpinion(document, goods, bads, digitalSignature);
-            }
-        }
-
-        public void UploadChatTopic(Chat chat,
-            string comment, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.UploadChatTopic(chat, comment, digitalSignature);
-            }
-        }
-
-        public void UploadChatMessage(Chat chat,
-            string comment, IEnumerable<Key> anchors, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.UploadChatMessage(chat, comment, anchors, digitalSignature);
-            }
-        }
-
-        public void UploadWhisperMessage(Whisper whisper,
-            string comment, IEnumerable<Key> anchors, WhisperCryptoInformation cryptoInformation, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.UploadWhisperMessage(whisper, comment, anchors, cryptoInformation, digitalSignature);
-            }
-        }
-
-        public void UploadMailMessage(Mail mail,
-            string text, IExchangeEncrypt exchangeEncrypt, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connectionsManager.UploadMailMessage(mail, text, exchangeEncrypt, digitalSignature);
-            }
         }
 
         public override ManagerState State

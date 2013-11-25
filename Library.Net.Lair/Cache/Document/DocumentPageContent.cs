@@ -19,7 +19,7 @@ namespace Library.Net.Lair
         }
 
         private HypertextFormatType _formatType;
-        private string _hypertext = null;
+        private string _hypertext;
         private string _comment;
 
         public static readonly int MaxHypertextLength = 1024 * 32;

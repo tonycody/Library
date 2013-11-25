@@ -9,10 +9,10 @@ namespace Library.Io
     {
         private BufferManager _bufferManager;
         private List<byte[]> _buffers = new List<byte[]>();
-        private long _position = 0;
-        private long _length = 0;
+        private long _position;
+        private long _length;
         private int _bufferSize = 128;
-        private bool _disposed = false;
+        private bool _disposed;
 
         public BufferStream(BufferManager bufferManager)
         {

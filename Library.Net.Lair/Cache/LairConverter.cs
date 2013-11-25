@@ -244,15 +244,15 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToDocumentString(Document item)
+        public static string ToTagString(Tag item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
             try
             {
-                using (Stream stream = LairConverter.ToStream<Document>(item))
+                using (Stream stream = LairConverter.ToStream<Tag>(item))
                 {
-                    return "Document:" + LairConverter.ToBase64String(stream);
+                    return "Tag:" + LairConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -261,98 +261,16 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Document FromDocumentString(string item)
+        public static Tag FromTagString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Document:") && !item.StartsWith("Document@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Tag:") && !item.StartsWith("Tag@")) throw new ArgumentException("item");
 
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Document:".Length)))
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Tag:".Length)))
                 {
-                    return LairConverter.FromStream<Document>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToChatString(Chat item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Chat>(item))
-                {
-                    return "Chat:" + LairConverter.ToBase64String(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Chat FromChatString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
-                {
-                    return LairConverter.FromStream<Chat>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToWhisperString(Whisper item, WhisperCryptoInformation cryptoInformation)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (cryptoInformation == null) throw new ArgumentNullException("cryptoInformation");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Whisper>(item))
-                using (Stream cryptoInformationStream = LairConverter.ToStream<WhisperCryptoInformation>(cryptoInformation))
-                {
-                    return "Whisper:" + LairConverter.ToBase64String(stream) + "," + LairConverter.ToBase64String(cryptoInformationStream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Whisper FromWhisperString(string item, out WhisperCryptoInformation cryptoInformation)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Whisper:") && !item.StartsWith("Whisper@")) throw new ArgumentException("item");
-            if (!item.Contains(",")) throw new ArgumentException("item");
-
-            cryptoInformation = null;
-
-            try
-            {
-                var list = item.Split(new char[] { ',' }, 2);
-
-                using (Stream stream = LairConverter.FromBase64String(list[1]))
-                {
-                    cryptoInformation = LairConverter.FromStream<WhisperCryptoInformation>(stream);
-                }
-
-                using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, "Whisper:".Length)))
-                {
-                    return LairConverter.FromStream<Whisper>(stream);
+                    return LairConverter.FromStream<Tag>(stream);
                 }
             }
             catch (Exception)

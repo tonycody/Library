@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using Library.Io;
 using Library.Security;
 
@@ -22,13 +24,15 @@ namespace Library.Net.Lair
         }
 
         private string _comment;
-        private SignatureCollection _trustSignatures = null;
-        private TagCollection _links = null;
+        private SignatureCollection _trustSignatures;
+        private LinkCollection _links;
 
         private ExchangeAlgorithm _exchangeAlgorithm;
         private byte[] _publicKey;
 
-        private int _hashCode = 0;
+        private int _hashCode;
+
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxTrustSignaturesCount = 1024;
@@ -36,7 +40,7 @@ namespace Library.Net.Lair
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<Tag> links, IExchangeEncrypt exchangeEncrypt)
+        public SectionProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<string> links, IExchangeEncrypt exchangeEncrypt)
         {
             this.Comment = comment;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
@@ -75,7 +79,10 @@ namespace Library.Net.Lair
                     }
                     else if (id == (byte)SerializeId.Link)
                     {
-                        this.ProtectedLinks.Add(Tag.Import(rangeStream, bufferManager));
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        {
+                            this.ProtectedLinks.Add(reader.ReadToEnd());
+                        }
                     }
 
                     else if (id == (byte)SerializeId.ExchangeAlgorithm)
@@ -142,13 +149,21 @@ namespace Library.Net.Lair
             // Links
             foreach (var l in this.ProtectedLinks)
             {
-                Stream exportStream = l.Export(bufferManager);
-
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Link);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
 
-                streams.Add(new JoinStream(bufferStream, exportStream));
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(l);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.TrustSignature);
+
+                streams.Add(bufferStream);
             }
 
             // ExchangeAlgorithm
@@ -260,11 +275,24 @@ namespace Library.Net.Lair
             }
         }
 
+        private volatile ReadOnlyCollection<string> _readOnlyTrustSignatures;
+
         public IEnumerable<string> TrustSignatures
         {
             get
             {
-                return this.ProtectedTrustSignatures;
+                if (_readOnlyTrustSignatures == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_readOnlyTrustSignatures == null)
+                        {
+                            _readOnlyTrustSignatures = new ReadOnlyCollection<string>(this.ProtectedTrustSignatures);
+                        }
+                    }
+                }
+
+                return _readOnlyTrustSignatures;
             }
         }
 
@@ -280,21 +308,34 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Tag> Links
+        private volatile ReadOnlyCollection<string> _readOnlyLinks;
+
+        public IEnumerable<string> Links
         {
             get
             {
-                return this.ProtectedLinks;
+                if (_readOnlyLinks == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_readOnlyLinks == null)
+                        {
+                            _readOnlyLinks = new ReadOnlyCollection<string>(this.ProtectedLinks);
+                        }
+                    }
+                }
+
+                return _readOnlyLinks;
             }
         }
 
         [DataMember(Name = "Links")]
-        private TagCollection ProtectedLinks
+        private LinkCollection ProtectedLinks
         {
             get
             {
                 if (_links == null)
-                    _links = new TagCollection(SectionProfileContent.MaxLinksCount);
+                    _links = new LinkCollection(SectionProfileContent.MaxLinksCount);
 
                 return _links;
             }

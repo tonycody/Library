@@ -22,14 +22,14 @@ namespace Library.Net.Connections.SecureVersion2
         }
 
         private DateTime _creationTime = DateTime.MinValue;
-        private byte[] _key = null;
-        private byte[] _myHash = null;
-        private byte[] _otherHash = null;
+        private byte[] _key;
+        private byte[] _myHash;
+        private byte[] _otherHash;
 
         private Certificate _certificate;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxKeyLength = 8192;
         public static readonly int MaxMyHashLength = 64;
@@ -366,13 +366,18 @@ namespace Library.Net.Connections.SecureVersion2
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

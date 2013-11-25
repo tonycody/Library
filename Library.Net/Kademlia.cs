@@ -29,7 +29,7 @@ namespace Library.Net
         private T _baseNode;
         private static byte[] _distanceHashtable = new byte[256];
 
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         static Kademlia()
         {

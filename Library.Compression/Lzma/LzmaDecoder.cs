@@ -13,7 +13,7 @@ namespace Library.Compression
             BitTreeDecoder[] m_LowCoder = new BitTreeDecoder[Base.kNumPosStatesMax];
             BitTreeDecoder[] m_MidCoder = new BitTreeDecoder[Base.kNumPosStatesMax];
             BitTreeDecoder m_HighCoder = new BitTreeDecoder(Base.kNumHighLenBits);
-            uint m_NumPosStates = 0;
+            uint m_NumPosStates;
 
             public void Create(uint numPosStates)
             {
@@ -192,7 +192,7 @@ namespace Library.Compression
             m_PosStateMask = numPosStates - 1;
         }
 
-        bool _solid = false;
+        bool _solid;
         void Init(System.IO.Stream inStream, System.IO.Stream outStream)
         {
             m_RangeDecoder.Init(inStream);

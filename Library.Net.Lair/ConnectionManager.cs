@@ -98,7 +98,7 @@ namespace Library.Net.Lair
         private DateTime _pingTime = DateTime.UtcNow;
         private byte[] _pingHash;
         private TimeSpan _responseTime = TimeSpan.MaxValue;
-        private bool _onClose = false;
+        private bool _onClose;
 
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 12, 0);
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 12, 0);
@@ -106,8 +106,8 @@ namespace Library.Net.Lair
 
         private System.Threading.Timer _aliveTimer;
 
-        private object _thisLock = new object();
-        private volatile bool _disposed = false;
+        private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         private const int _maxNodeCount = 1024;
         private const int _maxBlockLinkCount = 8192;
@@ -320,8 +320,8 @@ namespace Library.Net.Lair
 
                         _sendUpdateTime = DateTime.UtcNow;
 
-                        ThreadPool.QueueUserWorkItem(new WaitCallback(this.Pull));
-                        _aliveTimer = new Timer(new TimerCallback(this.AliveTimer), null, 1000 * 60, 1000 * 60);
+                        ThreadPool.QueueUserWorkItem(this.Pull);
+                        _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 60, 1000 * 60);
 
                         _pingTime = DateTime.UtcNow;
                         _pingHash = new byte[64];
@@ -359,7 +359,7 @@ namespace Library.Net.Lair
             }
         }
 
-        private bool _aliveSending = false;
+        private bool _aliveSending;
 
         private void AliveTimer(object state)
         {
@@ -939,7 +939,7 @@ namespace Library.Net.Lair
                 Node = 0,
             }
 
-            private NodeCollection _nodes = null;
+            private NodeCollection _nodes;
 
             public NodesMessage(IEnumerable<Node> nodes)
             {
@@ -1023,7 +1023,7 @@ namespace Library.Net.Lair
                 Key = 0,
             }
 
-            private KeyCollection _keys = null;
+            private KeyCollection _keys;
 
             public BlocksLinkMessage(IEnumerable<Key> keys)
             {
@@ -1107,7 +1107,7 @@ namespace Library.Net.Lair
                 Key = 0,
             }
 
-            private KeyCollection _keys = null;
+            private KeyCollection _keys;
 
             public BlocksRequestMessage(IEnumerable<Key> keys)
             {
@@ -1290,7 +1290,7 @@ namespace Library.Net.Lair
                 Tag = 0,
             }
 
-            private TagCollection _tags = null;
+            private TagCollection _tags;
 
             public HeadersRequestMessage(IEnumerable<Tag> tags)
             {
@@ -1374,7 +1374,7 @@ namespace Library.Net.Lair
                 Header = 0,
             }
 
-            private HeaderCollection _headers = null;
+            private HeaderCollection _headers;
 
             public HeadersMessage(IEnumerable<Header> headers)
             {

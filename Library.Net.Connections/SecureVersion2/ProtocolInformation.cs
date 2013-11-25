@@ -25,10 +25,10 @@ namespace Library.Net.Connections.SecureVersion2
         private HashAlgorithm _hashAlgorithm;
         private byte[] _sessionId;
 
-        private int _hashCode = 0;
+        private int _hashCode;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxSessionIdLength = 64;
 
@@ -347,13 +347,18 @@ namespace Library.Net.Connections.SecureVersion2
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

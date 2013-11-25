@@ -9,7 +9,7 @@ namespace Library.Net.Amoeba
     {
         private Dictionary<Group, GroupManager> _groupManagers = new Dictionary<Group, GroupManager>();
 
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         public void SetGroup(Group group)
         {

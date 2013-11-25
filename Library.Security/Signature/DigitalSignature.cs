@@ -24,14 +24,14 @@ namespace Library.Security
             Stream = 1,
         }
 
-        private string _nickname = null;
+        private string _nickname;
         private DigitalSignatureAlgorithm _digitalSignatureAlgorithm = 0;
-        private byte[] _publicKey = null;
-        private byte[] _privateKey = null;
+        private byte[] _publicKey;
+        private byte[] _privateKey;
 
-        private int _hashCode = 0;
+        private int _hashCode;
 
-        private volatile string _toString = null;
+        private volatile string _toString;
 
         public static readonly int MaxNickNameLength = 256;
         public static readonly int MaxPublickeyLength = 1024 * 8;

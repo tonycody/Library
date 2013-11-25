@@ -903,7 +903,7 @@ namespace Library.I2p
     }
     public class SamV3StatefulAcceptor : SamV3Connector
     {
-        bool isAcceptRequested = false;
+        bool isAcceptRequested;
 
         public SamV3StatefulAcceptor(SamV3Session session, Socket bridgeSocket = null) :
             base(session, bridgeSocket)
@@ -937,7 +937,7 @@ namespace Library.I2p
         public SamV3Session Session;
         public SamV3StatefulAcceptor Listener;
 
-        bool isAccepting = false;
+        bool isAccepting;
         public bool IsAccepting
         {
             get

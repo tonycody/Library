@@ -10,7 +10,7 @@ namespace Library.Io
         private List<Stream> _streams = new List<Stream>();
         private long _position;
         private long _length;
-        private bool _disposed = false;
+        private bool _disposed;
 
         public JoinStream(params Stream[] streams)
         {

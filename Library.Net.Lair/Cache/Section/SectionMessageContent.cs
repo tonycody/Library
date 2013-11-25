@@ -17,10 +17,10 @@ namespace Library.Net.Lair
             Anchor = 1,
         }
 
-        private string _comment = null;
-        private Key _anchor = null;
+        private string _comment;
+        private Key _anchor;
 
-        private int _hashCode = 0;
+        private int _hashCode;
 
         public static readonly int MaxCommentLength = 1024 * 4;
 

@@ -9,15 +9,15 @@ namespace Library.Net.Amoeba
     {
         private CacheManager _cacheManager;
         private byte[] _blockBuffer;
-        private int _blockBufferPosition = 0;
-        private int _blockBufferLength = 0;
+        private int _blockBufferPosition;
+        private int _blockBufferLength;
         private HashAlgorithm _hashAlgorithm;
         private BufferManager _bufferManager;
 
         private LockedList<Key> _keyList = new LockedList<Key>();
         private long _length;
 
-        private volatile bool _disposed = false;
+        private volatile bool _disposed;
 
         public CacheManagerStreamWriter(out IList<Key> keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
         {

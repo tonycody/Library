@@ -299,7 +299,7 @@ namespace Library.Compression
             public bool IsShortRep() { return (BackPrev == 0); }
         };
         Optimal[] _optimum = new Optimal[kNumOpts];
-        IMatchFinder _matchFinder = null;
+        IMatchFinder _matchFinder;
         Encoder _rangeEncoder = new Encoder();
 
         BitEncoder[] _isMatch = new BitEncoder[Base.kNumStates << Base.kNumPosStatesBitsMax];
@@ -341,7 +341,7 @@ namespace Library.Compression
 
         int _posStateBits = 2;
         UInt32 _posStateMask = (4 - 1);
-        int _numLiteralPosStateBits = 0;
+        int _numLiteralPosStateBits;
         int _numLiteralContextBits = 3;
 
         UInt32 _dictionarySize = (1 << kDefaultDictionaryLogSize);
@@ -353,7 +353,7 @@ namespace Library.Compression
         System.IO.Stream _inStream;
 
         EMatchFinderType _matchFinderType = EMatchFinderType.BT4;
-        bool _writeEndMark = false;
+        bool _writeEndMark;
 
         bool _needReleaseMFStream;
 
@@ -1468,7 +1468,7 @@ namespace Library.Compression
             }
         }
 
-        uint _trainSize = 0;
+        uint _trainSize;
         public void SetTrainSize(uint trainSize)
         {
             _trainSize = trainSize;

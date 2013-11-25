@@ -20,7 +20,7 @@ namespace Library.Net.Amoeba
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
     {
-        private FileStream _fileStream = null;
+        private FileStream _fileStream;
         private BufferManager _bufferManager;
 
         private Lzma _lzma;
@@ -28,25 +28,25 @@ namespace Library.Net.Amoeba
         private Settings _settings;
 
         private HashSet<long> _spaceClusters;
-        private bool _spaceClustersInitialized = false;
+        private bool _spaceClustersInitialized;
         private Dictionary<int, string> _ids = new Dictionary<int, string>();
-        private volatile Dictionary<Key, string> _shareIndexLink = null;
-        private int _id = 0;
+        private volatile Dictionary<Key, string> _shareIndexLink;
+        private int _id;
 
         private volatile AutoResetEvent _resetEvent = new AutoResetEvent(false);
-        private long _lockSpace = 0;
-        private long _freeSpace = 0;
+        private long _lockSpace;
+        private long _freeSpace;
 
         private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
 
-        private Thread _watchThread = null;
+        private Thread _watchThread;
 
         private SetKeyEventHandler _setKeyEvent;
         private RemoveShareEventHandler _removeShareEvent;
         private RemoveKeyEventHandler _removeKeyEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public static readonly int ClusterSize = 1024 * 32;
 
@@ -1578,7 +1578,7 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
@@ -1666,8 +1666,8 @@ namespace Library.Net.Amoeba
             private string _path;
             private IndexCollection _indexes;
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            private volatile object _thisLock;
+            private static readonly object _initializeLock = new object();
 
             [DataMember(Name = "Seed")]
             public Seed Seed
@@ -1728,13 +1728,18 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (_thisStaticLock)
+                    if (_thisLock == null)
                     {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
+                        lock (_initializeLock)
+                        {
+                            if (_thisLock == null)
+                            {
+                                _thisLock = new object();
+                            }
+                        }
                     }
+
+                    return _thisLock;
                 }
             }
 
@@ -1748,8 +1753,8 @@ namespace Library.Net.Amoeba
             private int _length;
             private DateTime _updateTime = DateTime.UtcNow;
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            private volatile object _thisLock;
+            private static readonly object _initializeLock = new object();
 
             [DataMember(Name = "Indexs")]
             public long[] Indexes
@@ -1814,13 +1819,18 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (_thisStaticLock)
+                    if (_thisLock == null)
                     {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
+                        lock (_initializeLock)
+                        {
+                            if (_thisLock == null)
+                            {
+                                _thisLock = new object();
+                            }
+                        }
                     }
+
+                    return _thisLock;
                 }
             }
 
@@ -1833,8 +1843,8 @@ namespace Library.Net.Amoeba
             private LockedDictionary<Key, int> _keyAndCluster;
             private int _blockLength;
 
-            private object _thisLock;
-            private static object _thisStaticLock = new object();
+            private volatile object _thisLock;
+            private static readonly object _initializeLock = new object();
 
             [DataMember(Name = "KeyAndCluster")]
             public LockedDictionary<Key, int> KeyAndCluster
@@ -1876,13 +1886,18 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (_thisStaticLock)
+                    if (_thisLock == null)
                     {
-                        if (_thisLock == null)
-                            _thisLock = new object();
-
-                        return _thisLock;
+                        lock (_initializeLock)
+                        {
+                            if (_thisLock == null)
+                            {
+                                _thisLock = new object();
+                            }
+                        }
                     }
+
+                    return _thisLock;
                 }
             }
 

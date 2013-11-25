@@ -19,7 +19,7 @@ namespace Library.Net.Proxy
         private TcpClient _tcpClient;
         private string _destinationHost;
         private int _destinationPort;
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         private enum HttpResponseCodes
         {

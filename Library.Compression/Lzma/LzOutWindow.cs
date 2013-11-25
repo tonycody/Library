@@ -4,9 +4,9 @@ namespace Library.Compression
 {
     class OutWindow
     {
-        byte[] _buffer = null;
+        byte[] _buffer;
         uint _pos;
-        uint _windowSize = 0;
+        uint _windowSize;
         uint _streamPos;
         System.IO.Stream _stream;
 

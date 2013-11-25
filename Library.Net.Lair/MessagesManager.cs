@@ -12,9 +12,9 @@ namespace Library.Net.Lair
     {
         private Dictionary<Node, MessageManager> _messageManagerDictionary = new Dictionary<Node, MessageManager>();
         private Dictionary<Node, DateTime> _updateTimeDictionary = new Dictionary<Node, DateTime>();
-        private int _id = 0;
+        private int _id;
         private DateTime _lastCircularTime = DateTime.UtcNow;
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         public GetLockNodesEventHandler GetLockNodesEvent;
 
@@ -54,7 +54,7 @@ namespace Library.Net.Lair
 
                 if (flag)
                 {
-                    ThreadPool.QueueUserWorkItem(new WaitCallback((object wstate) =>
+                    ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         List<Node> lockedNodes = new List<Node>();
 
@@ -86,7 +86,7 @@ namespace Library.Net.Lair
                                 }
                             }
                         }
-                    }));
+                    });
                 }
             }
         }
@@ -142,7 +142,7 @@ namespace Library.Net.Lair
     {
         private int _id;
         private byte[] _sessionId;
-        private int _priority = 0;
+        private int _priority;
 
         private long _receivedByteCount;
         private long _sentByteCount;
@@ -162,7 +162,7 @@ namespace Library.Net.Lair
         private VolatileCollection<Tag> _pushHeadersRequest;
         private VolatileCollection<Tag> _pullHeadersRequest;
 
-        private object _thisLock = new object();
+        private readonly object _thisLock = new object();
 
         public MessageManager(int id)
         {

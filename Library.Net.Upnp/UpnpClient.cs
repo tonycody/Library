@@ -18,13 +18,13 @@ namespace Library.Net.Upnp
 
     public class UpnpClient : ManagerBase, IThisLock
     {
-        private string _services = null;
+        private string _services;
         private Uri _location;
         private readonly static Regex _deviceTypeRegex = new Regex(@"(\s*)<deviceType>(\s*)urn:schemas-upnp-org:device:InternetGatewayDevice:1(\s*)</deviceType>(\s*)");
         private readonly static Regex _controlUrlRegex = new Regex(@"<controlURL>(\s*)(?<url>.*?)(\s*)</controlURL>");
 
-        private object _thisLock = new object();
-        private volatile bool _disposed = false;
+        private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public void Connect(TimeSpan timeout)
         {

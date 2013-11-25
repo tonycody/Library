@@ -14,7 +14,7 @@ namespace Library.Net.Connections
         private int _maxReceiveCount;
         private BufferManager _bufferManager;
 
-        private BandwidthLimit _bandwidthLimit = null;
+        private BandwidthLimit _bandwidthLimit;
 
         private long _receivedByteCount;
         private long _sentByteCount;
@@ -26,12 +26,12 @@ namespace Library.Net.Connections
 
         private System.Threading.Timer _aliveTimer;
 
-        private object _sendLock = new object();
-        private object _receiveLock = new object();
-        private object _thisLock = new object();
+        private readonly object _sendLock = new object();
+        private readonly object _receiveLock = new object();
+        private readonly object _thisLock = new object();
 
-        private volatile bool _connect = false;
-        private volatile bool _disposed = false;
+        private volatile bool _connect;
+        private volatile bool _disposed;
 
         public CapConnection(CapBase cap, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
         {
@@ -94,7 +94,7 @@ namespace Library.Net.Connections
             }
         }
 
-        private bool _aliveSending = false;
+        private bool _aliveSending;
 
         private void AliveTimer(object state)
         {
@@ -191,7 +191,7 @@ namespace Library.Net.Connections
                         byte[] lengthbuffer = new byte[4];
 
                         var time = CapConnection.CheckTimeout(stopwatch.Elapsed, timeout);
-                        time = (time < _sendTimeSpan) ? time : _sendTimeSpan;
+                        time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
                         if (_cap.Receive(lengthbuffer, time) != lengthbuffer.Length) throw new ConnectionException();
                         _receivedByteCount += 4;
@@ -231,7 +231,7 @@ namespace Library.Net.Connections
                                 }
 
                                 var time = CapConnection.CheckTimeout(stopwatch.Elapsed, timeout);
-                                time = (time < _sendTimeSpan) ? time : _sendTimeSpan;
+                                time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
                                 int i = _cap.Receive(receiveBuffer, 0, receiveLength, time);
 
@@ -247,7 +247,8 @@ namespace Library.Net.Connections
                     }
                     catch (Exception e)
                     {
-                        bufferStream.Dispose();
+                        if (bufferStream != null)
+                            bufferStream.Dispose();
 
                         throw e;
                     }

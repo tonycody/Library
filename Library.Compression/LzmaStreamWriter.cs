@@ -6,7 +6,7 @@ namespace Library.Compression
     class LzmaStreamWriter : Stream
     {
         private Stream _stream;
-        private long _position = 0;
+        private long _position;
 
         public LzmaStreamWriter(Stream stream)
         {

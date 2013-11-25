@@ -18,9 +18,9 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _downloadManagerThread = null;
-        private volatile Thread _decodeManagerThread = null;
-        private volatile Thread _watchThread = null;
+        private volatile Thread _downloadManagerThread;
+        private volatile Thread _decodeManagerThread;
+        private volatile Thread _watchThread;
         private string _workDirectory = Path.GetTempPath();
         private CountCache _countCache = new CountCache();
 
@@ -32,8 +32,8 @@ namespace Library.Net.Amoeba
         private WaitQueue<Key> _setKeys = new WaitQueue<Key>();
         private WaitQueue<Key> _removeKeys = new WaitQueue<Key>();
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public BackgroundDownloadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
@@ -328,8 +328,6 @@ namespace Library.Net.Amoeba
 
         private void DecodeManagerThread()
         {
-            Random random = new Random();
-
             for (; ; )
             {
                 Thread.Sleep(1000 * 1);
@@ -870,15 +868,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void Reset(BackgroundDownloadItem item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Remove(item);
-                this.Download(item.Seed, item.Type);
-            }
-        }
-
         private void Download(Seed seed, BackgroundItemType type)
         {
             lock (this.ThisLock)
@@ -1111,7 +1100,7 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 

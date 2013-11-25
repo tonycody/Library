@@ -18,8 +18,8 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _uploadManagerThread = null;
-        private volatile Thread _watchThread = null;
+        private volatile Thread _uploadManagerThread;
+        private volatile Thread _watchThread;
 
         private ManagerState _state = ManagerState.Stop;
 
@@ -27,8 +27,8 @@ namespace Library.Net.Amoeba
 
         private WaitQueue<Key> _uploadedKeys = new WaitQueue<Key>();
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public BackgroundUploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
@@ -503,33 +503,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void Reset(BackgroundUploadItem item)
-        {
-            lock (this.ThisLock)
-            {
-                this.Remove(item);
-
-                if (item.Type == BackgroundItemType.Link)
-                {
-                    this.Upload((Link)item.Value,
-                        item.CompressionAlgorithm,
-                        item.CryptoAlgorithm,
-                        item.CorrectionAlgorithm,
-                        item.HashAlgorithm,
-                        item.DigitalSignature);
-                }
-                else if (item.Type == BackgroundItemType.Store)
-                {
-                    this.Upload((Store)item.Value,
-                        item.CompressionAlgorithm,
-                        item.CryptoAlgorithm,
-                        item.CorrectionAlgorithm,
-                        item.HashAlgorithm,
-                        item.DigitalSignature);
-                }
-            }
-        }
-
         public override ManagerState State
         {
             get
@@ -620,7 +593,7 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 

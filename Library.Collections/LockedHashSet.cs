@@ -10,8 +10,8 @@ namespace Library.Collections
     public class LockedHashSet<T> : ISet<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private HashSet<T> _hashSet;
-        private int? _capacity = null;
-        private object _thisLock = new object();
+        private int? _capacity;
+        private readonly object _thisLock = new object();
 
         public LockedHashSet()
         {

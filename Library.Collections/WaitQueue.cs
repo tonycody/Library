@@ -9,11 +9,11 @@ namespace Library.Collections
     public class WaitQueue<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock, IDisposable
     {
         private Queue<T> _queue;
-        private int? _capacity = null;
+        private int? _capacity;
         private volatile ManualResetEvent _lowerResetEvent = new ManualResetEvent(false);
         private volatile ManualResetEvent _upperResetEvent = new ManualResetEvent(false);
-        private object _thisLock = new object();
-        private volatile bool _disposed = false;
+        private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public WaitQueue()
         {

@@ -45,13 +45,13 @@ namespace Library.Net.Amoeba
 
         private LockedDictionary<string, DateTime> _lastUsedSeedTimes = new LockedDictionary<string, DateTime>();
 
-        private volatile Thread _connectionsManagerThread = null;
-        private volatile Thread _createClientConnection1Thread = null;
-        private volatile Thread _createClientConnection2Thread = null;
-        private volatile Thread _createClientConnection3Thread = null;
-        private volatile Thread _createServerConnection1Thread = null;
-        private volatile Thread _createServerConnection2Thread = null;
-        private volatile Thread _createServerConnection3Thread = null;
+        private volatile Thread _connectionsManagerThread;
+        private volatile Thread _createClientConnection1Thread;
+        private volatile Thread _createClientConnection2Thread;
+        private volatile Thread _createClientConnection3Thread;
+        private volatile Thread _createServerConnection1Thread;
+        private volatile Thread _createServerConnection2Thread;
+        private volatile Thread _createServerConnection3Thread;
 
         private ManagerState _state = ManagerState.Stop;
 
@@ -59,8 +59,8 @@ namespace Library.Net.Amoeba
 
         private BandwidthLimit _bandwidthLimit = new BandwidthLimit();
 
-        private long _receivedByteCount = 0;
-        private long _sentByteCount = 0;
+        private long _receivedByteCount;
+        private long _sentByteCount;
 
         private volatile int _pushNodeCount;
         private volatile int _pushBlockLinkCount;
@@ -85,8 +85,8 @@ namespace Library.Net.Amoeba
         private LockSignaturesEventHandler _lockSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         private const int _maxNodeCount = 128;
         private const int _maxBlockLinkCount = 2048;
@@ -691,14 +691,14 @@ namespace Library.Net.Amoeba
 
                 Debug.WriteLine("ConnectionManager: Connect");
 
-                connectionManager.PullNodesEvent += connectionManager_NodesEvent;
-                connectionManager.PullBlocksLinkEvent += connectionManager_BlocksLinkEvent;
-                connectionManager.PullBlocksRequestEvent += connectionManager_BlocksRequestEvent;
-                connectionManager.PullBlockEvent += connectionManager_BlockEvent;
-                connectionManager.PullSeedsRequestEvent += connectionManager_SeedsRequestEvent;
-                connectionManager.PullSeedsEvent += connectionManager_SeedsEvent;
-                connectionManager.PullCancelEvent += connectionManager_PullCancelEvent;
-                connectionManager.CloseEvent += connectionManager_CloseEvent;
+                connectionManager.PullNodesEvent += this.connectionManager_NodesEvent;
+                connectionManager.PullBlocksLinkEvent += this.connectionManager_BlocksLinkEvent;
+                connectionManager.PullBlocksRequestEvent += this.connectionManager_BlocksRequestEvent;
+                connectionManager.PullBlockEvent += this.connectionManager_BlockEvent;
+                connectionManager.PullSeedsRequestEvent += this.connectionManager_SeedsRequestEvent;
+                connectionManager.PullSeedsEvent += this.connectionManager_SeedsEvent;
+                connectionManager.PullCancelEvent += this.connectionManager_PullCancelEvent;
+                connectionManager.CloseEvent += this.connectionManager_CloseEvent;
 
                 _nodeToUri.Add(connectionManager.Node, uri);
                 _connectionManagers.Add(connectionManager);
@@ -934,7 +934,7 @@ namespace Library.Net.Amoeba
             public DateTime LastPullTime { get; set; }
         }
 
-        private volatile bool _refreshThreadRunning = false;
+        private volatile bool _refreshThreadRunning;
 
         private void ConnectionsManagerThread()
         {
@@ -2453,7 +2453,7 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 

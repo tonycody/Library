@@ -21,7 +21,7 @@ namespace Library.Net.Lair
 
         private HashAlgorithm _hashAlgorithm = 0;
 
-        private int _hashCode = 0;
+        private int _hashCode;
 
         public static readonly int MaxHashLength = 64;
 

@@ -29,15 +29,15 @@ namespace Library.Net.Connections
 
         private Certificate _certificate;
 
-        private long _totalReceiveSize = 0;
-        private long _totalSendSize = 0;
+        private long _totalReceiveSize;
+        private long _totalSendSize;
 
-        private object _sendLock = new object();
-        private object _receiveLock = new object();
-        private object _thisLock = new object();
+        private readonly object _sendLock = new object();
+        private readonly object _receiveLock = new object();
+        private readonly object _thisLock = new object();
 
-        private volatile bool _connect = false;
-        private volatile bool _disposed = false;
+        private volatile bool _connect;
+        private volatile bool _disposed;
 
         public SecureConnection(SecureConnectionType type, SecureConnectionVersion version, ConnectionBase connection, DigitalSignature digitalSignature, BufferManager bufferManager)
         {

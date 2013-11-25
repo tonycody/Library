@@ -18,12 +18,12 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _downloadManagerThread = null;
-        private volatile Thread _decodeManagerThread = null;
+        private volatile Thread _downloadManagerThread;
+        private volatile Thread _decodeManagerThread;
         private string _workDirectory = Path.GetTempPath();
         private CountCache _countCache = new CountCache();
         private Dictionary<int, DownloadItem> _ids = new Dictionary<int, DownloadItem>();
-        private int _id = 0;
+        private int _id;
 
         private ManagerState _state = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
@@ -34,8 +34,8 @@ namespace Library.Net.Amoeba
         private WaitQueue<Key> _setKeys = new WaitQueue<Key>();
         private WaitQueue<Key> _removeKeys = new WaitQueue<Key>();
 
-        private volatile bool _disposed = false;
-        private object _thisLock = new object();
+        private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public DownloadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
@@ -1179,7 +1179,7 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private object _thisLock;
+            private volatile object _thisLock;
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 

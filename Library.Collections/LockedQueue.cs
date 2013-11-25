@@ -8,8 +8,8 @@ namespace Library.Collections
     public class LockedQueue<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private Queue<T> _queue;
-        private int? _capacity = null;
-        private object _thisLock = new object();
+        private int? _capacity;
+        private readonly object _thisLock = new object();
 
         public LockedQueue()
         {

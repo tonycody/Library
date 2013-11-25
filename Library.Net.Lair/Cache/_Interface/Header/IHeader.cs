@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
@@ -18,7 +19,7 @@ namespace Library.Net.Lair
     {
         TTag Tag { get; }
         string Type { get; }
-        string Opinions { get; }
+        IEnumerable<string> Options { get; }
         DateTime CreationTime { get; }
         ContentFormatType FormatType { get; }
         byte[] Content { get; }

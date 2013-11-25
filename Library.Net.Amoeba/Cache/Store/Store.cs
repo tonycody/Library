@@ -14,10 +14,10 @@ namespace Library.Net.Amoeba
             Box = 0,
         }
 
-        private BoxCollection _boxes = null;
+        private BoxCollection _boxes;
 
-        private object _thisLock;
-        private static object _thisStaticLock = new object();
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public Store()
         {
@@ -28,7 +28,6 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -53,7 +52,6 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
 
                 // Boxes
                 foreach (var b in this.Boxes)
@@ -142,13 +140,18 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (_thisStaticLock)
+                if (_thisLock == null)
                 {
-                    if (_thisLock == null)
-                        _thisLock = new object();
-
-                    return _thisLock;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

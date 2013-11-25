@@ -23,12 +23,12 @@ namespace Library.Net.Connections
         private CompressAlgorithm _myCompressAlgorithm;
         private CompressAlgorithm _otherCompressAlgorithm;
 
-        private object _sendLock = new object();
-        private object _receiveLock = new object();
-        private object _thisLock = new object();
+        private readonly object _sendLock = new object();
+        private readonly object _receiveLock = new object();
+        private readonly object _thisLock = new object();
 
-        private volatile bool _connect = false;
-        private volatile bool _disposed = false;
+        private volatile bool _connect;
+        private volatile bool _disposed;
 
         public CompressConnection(ConnectionBase connection, int maxReceiveCount, BufferManager bufferManager)
         {

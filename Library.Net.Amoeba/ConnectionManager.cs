@@ -99,7 +99,7 @@ namespace Library.Net.Amoeba
         private DateTime _pingTime = DateTime.UtcNow;
         private byte[] _pingHash;
         private TimeSpan _responseTime = TimeSpan.MaxValue;
-        private bool _onClose = false;
+        private bool _onClose;
 
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 12, 0);
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 12, 0);
@@ -107,8 +107,8 @@ namespace Library.Net.Amoeba
 
         private System.Threading.Timer _aliveTimer;
 
-        private object _thisLock = new object();
-        private volatile bool _disposed = false;
+        private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         private const int _maxNodeCount = 1024;
         private const int _maxBlockLinkCount = 8192;
@@ -360,7 +360,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private bool _aliveSending = false;
+        private bool _aliveSending;
 
         private void AliveTimer(object state)
         {
@@ -940,7 +940,7 @@ namespace Library.Net.Amoeba
                 Node = 0,
             }
 
-            private NodeCollection _nodes = null;
+            private NodeCollection _nodes;
 
             public NodesMessage(IEnumerable<Node> nodes)
             {
@@ -1024,7 +1024,7 @@ namespace Library.Net.Amoeba
                 Key = 0,
             }
 
-            private KeyCollection _keys = null;
+            private KeyCollection _keys;
 
             public BlocksLinkMessage(IEnumerable<Key> keys)
             {
@@ -1108,7 +1108,7 @@ namespace Library.Net.Amoeba
                 Key = 0,
             }
 
-            private KeyCollection _keys = null;
+            private KeyCollection _keys;
 
             public BlocksRequestMessage(IEnumerable<Key> keys)
             {
@@ -1291,7 +1291,7 @@ namespace Library.Net.Amoeba
                 Signature = 0,
             }
 
-            private SignatureCollection _signatures = null;
+            private SignatureCollection _signatures;
 
             public SeedsRequestMessage(IEnumerable<string> signatures)
             {
@@ -1386,7 +1386,7 @@ namespace Library.Net.Amoeba
                 Seed = 0,
             }
 
-            private SeedCollection _seeds = null;
+            private SeedCollection _seeds;
 
             public SeedsMessage(IEnumerable<Seed> seeds)
             {

@@ -9,13 +9,13 @@ namespace Library.Io
     {
         private Stream _stream;
         private event GetProgressEventHandler _getProgressEvent;
-        private bool _leaveInnerStreamOpen = false;
+        private bool _leaveInnerStreamOpen;
         private long _totalReadSize;
         private long _totalWriteSize;
         private long _tempReadSize;
         private long _tempWriteSize;
         private int _unit;
-        private bool _disposed = false;
+        private bool _disposed;
 
         public ProgressStream(Stream stream, GetProgressEventHandler getProgressEvent, int unit, bool leaveInnerStreamOpen)
         {

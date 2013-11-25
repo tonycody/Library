@@ -98,6 +98,7 @@
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\Chat\ChatMessageContent.cs" />
     <Compile Include="Cache\Chat\ChatTopicContent.cs" />
+    <Compile Include="Cache\LinkCollection.cs" />
     <Compile Include="Cache\HeaderCollection.cs" />
     <Compile Include="Cache\Document\DocumentPageContent.cs" />
     <Compile Include="Cache\Header.cs" />
@@ -114,7 +115,6 @@
     <Compile Include="Cache\_Interface\Header\ITag.cs" />
     <Compile Include="Cache\_Interface\Content\Section\ISectionMessageContent.cs" />
     <Compile Include="Cache\_Interface\Content\Section\ISectionProfileContent.cs" />
-    <Compile Include="ContentConverter.cs" />
     <Compile Include="Cache\_Interface\IComputeHash.cs" />
     <Compile Include="Cache\_Interface\Content\Chat\IChatMessageContent.cs" />
     <Compile Include="Cache\_Interface\Content\Chat\IChatTopicContent.cs" />
