@@ -98,7 +98,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _list.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
+                if (_capacity != null && _list.Count > _capacity.Value) throw new OverflowException();
                 if (this.Filter(item)) return;
 
                 _list.Add(item);

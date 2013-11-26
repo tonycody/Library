@@ -148,7 +148,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _dic.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
+                if (_capacity != null && _dic.Count > _capacity.Value) throw new OverflowException();
 
                 int count = _dic.Count;
                 _dic[key] = value;

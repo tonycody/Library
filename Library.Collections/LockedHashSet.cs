@@ -97,7 +97,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _hashSet.Count > _capacity.Value) throw new ArgumentOutOfRangeException();
+                if (_capacity != null && _hashSet.Count > _capacity.Value) throw new OverflowException();
 
                 return _hashSet.Add(item);
             }

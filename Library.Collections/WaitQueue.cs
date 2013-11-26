@@ -15,6 +15,8 @@ namespace Library.Collections
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
+        private readonly TimeSpan _neverTimeout = TimeSpan.MinValue;
+
         public WaitQueue()
         {
             _queue = new Queue<T>();
@@ -83,6 +85,7 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 _queue.Clear();
+                if (_capacity != null) _upperResetEvent.Set();
             }
         }
 
@@ -108,25 +111,7 @@ namespace Library.Collections
 
         public T Dequeue()
         {
-            for (; ; )
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    if (_queue.Count > 0)
-                    {
-                        _upperResetEvent.Set();
-                        return _queue.Dequeue();
-                    }
-                    else
-                    {
-                        _lowerResetEvent.Reset();
-                    }
-                }
-
-                if (!_lowerResetEvent.WaitOne()) throw new TimeoutException();
-            }
+            return this.Dequeue(_neverTimeout);
         }
 
         public T Dequeue(TimeSpan timeout)
@@ -139,8 +124,21 @@ namespace Library.Collections
                 {
                     if (_queue.Count > 0)
                     {
-                        _upperResetEvent.Set();
-                        return _queue.Dequeue();
+                        if (_capacity != null)
+                        {
+                            var item = _queue.Dequeue();
+
+                            if (_queue.Count < _capacity.Value)
+                            {
+                                _upperResetEvent.Set();
+                            }
+
+                            return item;
+                        }
+                        else
+                        {
+                            return _queue.Dequeue();
+                        }
                     }
                     else
                     {
@@ -148,63 +146,70 @@ namespace Library.Collections
                     }
                 }
 
-                if (!_lowerResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
+                if (timeout < TimeSpan.Zero)
+                {
+                    _lowerResetEvent.WaitOne();
+                }
+                else
+                {
+                    if (!_lowerResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
+                }
             }
         }
 
         public void Enqueue(T item)
         {
-            if (_capacity != null && _queue.Count > _capacity.Value) _upperResetEvent.WaitOne();
-
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _queue.Enqueue(item);
-
-                _lowerResetEvent.Set();
-                _upperResetEvent.Reset();
-            }
+            this.Enqueue(item, _neverTimeout);
         }
 
         public void Enqueue(T item, TimeSpan timeout)
-        {
-            if (_capacity != null && _queue.Count > _capacity.Value)
-            {
-                if (!_upperResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
-            }
-
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _queue.Enqueue(item);
-
-                _lowerResetEvent.Set();
-                _upperResetEvent.Reset();
-            }
-        }
-
-        public T Peek()
         {
             for (; ; )
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                lock (this.ThisLock)
+                if (_capacity != null && _queue.Count >= _capacity.Value)
                 {
-                    if (_queue.Count > 0)
+                    if (timeout < TimeSpan.Zero)
                     {
-                        return _queue.Peek();
+                        _upperResetEvent.WaitOne();
                     }
                     else
                     {
-                        _lowerResetEvent.Reset();
+                        if (!_upperResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
                     }
                 }
 
-                if (!_lowerResetEvent.WaitOne()) throw new TimeoutException();
+                lock (this.ThisLock)
+                {
+                    if (_capacity != null)
+                    {
+                        if (_queue.Count < _capacity.Value)
+                        {
+                            _queue.Enqueue(item);
+                            _lowerResetEvent.Set();
+
+                            return;
+                        }
+                        else
+                        {
+                            _upperResetEvent.Reset();
+                        }
+                    }
+                    else
+                    {
+                        _queue.Enqueue(item);
+                        _lowerResetEvent.Set();
+
+                        return;
+                    }
+                }
             }
+        }
+
+        public T Peek()
+        {
+            return this.Peek(_neverTimeout);
         }
 
         public T Peek(TimeSpan timeout)
@@ -225,7 +230,14 @@ namespace Library.Collections
                     }
                 }
 
-                if (!_lowerResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
+                if (timeout < TimeSpan.Zero)
+                {
+                    _lowerResetEvent.WaitOne();
+                }
+                else
+                {
+                    if (!_lowerResetEvent.WaitOne(timeout, false)) throw new TimeoutException();
+                }
             }
         }
 
@@ -249,28 +261,28 @@ namespace Library.Collections
             }
         }
 
-        public bool DequeueWait()
+        public bool WaitDequeue()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             return _lowerResetEvent.WaitOne();
         }
 
-        public bool DequeueWait(TimeSpan timeout)
+        public bool WaitDequeue(TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             return _lowerResetEvent.WaitOne(timeout, false);
         }
 
-        public bool EnqueueWait()
+        public bool WaitEnqueue()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             return _upperResetEvent.WaitOne();
         }
 
-        public bool EnqueueWait(TimeSpan timeout)
+        public bool WaitEnqueue(TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -318,6 +330,7 @@ namespace Library.Collections
             {
                 int count = _queue.Count;
                 _queue = new Queue<T>(_queue.Where(n => !n.Equals(item)));
+                if (_capacity != null) _upperResetEvent.Set();
 
                 return (count != _queue.Count);
             }
