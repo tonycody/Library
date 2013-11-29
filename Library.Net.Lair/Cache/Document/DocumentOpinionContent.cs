@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentOpinionContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>
+    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -21,6 +21,7 @@ namespace Library.Net.Lair
         private KeyCollection _goods;
         private KeyCollection _bads;
 
+        private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxGoodsCount = 1024;
@@ -34,24 +35,27 @@ namespace Library.Net.Lair
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            Encoding encoding = new UTF8Encoding(false);
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
+            lock (this.ThisLock)
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
 
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                for (; ; )
                 {
-                    if (id == (byte)SerializeId.Good)
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        this.ProtectedGoods.Add(Key.Import(rangeStream, bufferManager));
-                    }
-                    else if (id == (byte)SerializeId.Bad)
-                    {
-                        this.ProtectedBads.Add(Key.Import(rangeStream, bufferManager));
+                        if (id == (byte)SerializeId.Good)
+                        {
+                            this.ProtectedGoods.Add(Key.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Bad)
+                        {
+                            this.ProtectedBads.Add(Key.Import(rangeStream, bufferManager));
+                        }
                     }
                 }
             }
@@ -59,39 +63,45 @@ namespace Library.Net.Lair
 
         public override Stream Export(BufferManager bufferManager)
         {
-            List<Stream> streams = new List<Stream>();
-            Encoding encoding = new UTF8Encoding(false);
-
-            // Goods
-            foreach (var a in this.Goods)
+            lock (this.ThisLock)
             {
-                Stream exportStream = a.Export(bufferManager);
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
 
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Good);
+                // Goods
+                foreach (var a in this.Goods)
+                {
+                    Stream exportStream = a.Export(bufferManager);
 
-                streams.Add(new JoinStream(bufferStream, exportStream));
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Good);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // Bads
+                foreach (var a in this.Bads)
+                {
+                    Stream exportStream = a.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Bad);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+
+                return new JoinStream(streams);
             }
-            // Bads
-            foreach (var a in this.Bads)
-            {
-                Stream exportStream = a.Export(bufferManager);
-
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Bad);
-
-                streams.Add(new JoinStream(bufferStream, exportStream));
-            }
-
-            return new JoinStream(streams);
         }
 
         public override int GetHashCode()
         {
-            if (this.ProtectedGoods.Count == 0) return 0;
-            else return this.ProtectedGoods[0].GetHashCode();
+            lock (this.ThisLock)
+            {
+                if (this.ProtectedGoods.Count == 0) return 0;
+                else return this.ProtectedGoods[0].GetHashCode();
+            }
         }
 
         public override bool Equals(object obj)
@@ -128,9 +138,12 @@ namespace Library.Net.Lair
 
         public override DocumentOpinionContent DeepClone()
         {
-            using (var stream = this.Export(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                return DocumentOpinionContent.Import(stream, BufferManager.Instance);
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return DocumentOpinionContent.Import(stream, BufferManager.Instance);
+                }
             }
         }
 
@@ -142,18 +155,13 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_readOnlyGoods == null)
+                lock (this.ThisLock)
                 {
-                    lock (_initializeLock)
-                    {
-                        if (_readOnlyGoods == null)
-                        {
-                            _readOnlyGoods = new ReadOnlyCollection<Key>(this.ProtectedGoods);
-                        }
-                    }
-                }
+                    if (_readOnlyGoods == null)
+                        _readOnlyGoods = new ReadOnlyCollection<Key>(this.ProtectedGoods);
 
-                return _readOnlyGoods;
+                    return _readOnlyGoods;
+                }
             }
         }
 
@@ -162,10 +170,13 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_goods == null)
-                    _goods = new KeyCollection(DocumentOpinionContent.MaxGoodsCount);
+                lock (this.ThisLock)
+                {
+                    if (_goods == null)
+                        _goods = new KeyCollection(DocumentOpinionContent.MaxGoodsCount);
 
-                return _goods;
+                    return _goods;
+                }
             }
         }
 
@@ -175,18 +186,13 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_readOnlyBads == null)
+                lock (this.ThisLock)
                 {
-                    lock (_initializeLock)
-                    {
-                        if (_readOnlyBads == null)
-                        {
-                            _readOnlyBads = new ReadOnlyCollection<Key>(this.ProtectedBads);
-                        }
-                    }
-                }
+                    if (_readOnlyBads == null)
+                        _readOnlyBads = new ReadOnlyCollection<Key>(this.ProtectedBads);
 
-                return _readOnlyBads;
+                    return _readOnlyBads;
+                }
             }
         }
 
@@ -195,10 +201,36 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_bads == null)
-                    _bads = new KeyCollection(DocumentOpinionContent.MaxBadsCount);
+                lock (this.ThisLock)
+                {
+                    if (_bads == null)
+                        _bads = new KeyCollection(DocumentOpinionContent.MaxBadsCount);
 
-                return _bads;
+                    return _bads;
+                }
+            }
+        }
+
+        #endregion
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
             }
         }
 

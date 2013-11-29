@@ -11,7 +11,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent
+    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -32,6 +32,7 @@ namespace Library.Net.Lair
 
         private int _hashCode;
 
+        private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 4;
@@ -52,52 +53,55 @@ namespace Library.Net.Lair
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            Encoding encoding = new UTF8Encoding(false);
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
+            lock (this.ThisLock)
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
 
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                for (; ; )
                 {
-                    if (id == (byte)SerializeId.Comment)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.Comment = reader.ReadToEnd();
-                        }
-                    }
-                    else if (id == (byte)SerializeId.TrustSignature)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
-                        }
-                    }
-                    else if (id == (byte)SerializeId.Link)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ProtectedLinks.Add(reader.ReadToEnd());
-                        }
-                    }
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    else if (id == (byte)SerializeId.ExchangeAlgorithm)
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        if (id == (byte)SerializeId.Comment)
                         {
-                            this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Comment = reader.ReadToEnd();
+                            }
                         }
-                    }
-                    else if (id == (byte)SerializeId.PublicKey)
-                    {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
+                        else if (id == (byte)SerializeId.TrustSignature)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
+                            }
+                        }
+                        else if (id == (byte)SerializeId.Link)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.ProtectedLinks.Add(reader.ReadToEnd());
+                            }
+                        }
 
-                        this.PublicKey = buffer;
+                        else if (id == (byte)SerializeId.ExchangeAlgorithm)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
+                            }
+                        }
+                        else if (id == (byte)SerializeId.PublicKey)
+                        {
+                            byte[] buffer = new byte[(int)rangeStream.Length];
+                            rangeStream.Read(buffer, 0, buffer.Length);
+
+                            this.PublicKey = buffer;
+                        }
                     }
                 }
             }
@@ -105,103 +109,109 @@ namespace Library.Net.Lair
 
         public override Stream Export(BufferManager bufferManager)
         {
-            List<Stream> streams = new List<Stream>();
-            Encoding encoding = new UTF8Encoding(false);
-
-            // Comment
-            if (this.Comment != null)
+            lock (this.ThisLock)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                // Comment
+                if (this.Comment != null)
                 {
-                    writer.Write(this.Comment);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.Comment);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Comment);
+
+                    streams.Add(bufferStream);
+                }
+                // TrustSignatures
+                foreach (var t in this.TrustSignatures)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(t);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.TrustSignature);
+
+                    streams.Add(bufferStream);
+                }
+                // Links
+                foreach (var l in this.ProtectedLinks)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(l);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.TrustSignature);
+
+                    streams.Add(bufferStream);
                 }
 
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Comment);
-
-                streams.Add(bufferStream);
-            }
-            // TrustSignatures
-            foreach (var t in this.TrustSignatures)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                // ExchangeAlgorithm
+                if (this.ExchangeAlgorithm != 0)
                 {
-                    writer.Write(t);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.ExchangeAlgorithm.ToString());
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
+
+                    streams.Add(bufferStream);
+                }
+                // PublicKey
+                if (this.PublicKey != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.PublicKey);
+                    bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
+
+                    streams.Add(bufferStream);
                 }
 
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.TrustSignature);
-
-                streams.Add(bufferStream);
+                return new JoinStream(streams);
             }
-            // Links
-            foreach (var l in this.ProtectedLinks)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(l);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.TrustSignature);
-
-                streams.Add(bufferStream);
-            }
-
-            // ExchangeAlgorithm
-            if (this.ExchangeAlgorithm != 0)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.ExchangeAlgorithm.ToString());
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
-
-                streams.Add(bufferStream);
-            }
-            // PublicKey
-            if (this.PublicKey != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.PublicKey);
-                bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
-
-                streams.Add(bufferStream);
-            }
-
-            return new JoinStream(streams);
         }
 
         public override int GetHashCode()
         {
-            return _hashCode;
+            lock (this.ThisLock)
+            {
+                return _hashCode;
+            }
         }
 
         public override bool Equals(object obj)
@@ -247,9 +257,12 @@ namespace Library.Net.Lair
 
         public override SectionProfileContent DeepClone()
         {
-            using (var stream = this.Export(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                return SectionProfileContent.Import(stream, BufferManager.Instance);
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return SectionProfileContent.Import(stream, BufferManager.Instance);
+                }
             }
         }
 
@@ -260,17 +273,24 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _comment;
+                lock (this.ThisLock)
+                {
+                    return _comment;
+                }
             }
             private set
             {
-                if (value != null && value.Length > SectionProfileContent.MaxCommentLength)
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _comment = value;
+
+                    if (value != null && value.Length > SectionProfileContent.MaxCommentLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _comment = value;
+                    }
                 }
             }
         }
@@ -281,18 +301,13 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_readOnlyTrustSignatures == null)
+                lock (this.ThisLock)
                 {
-                    lock (_initializeLock)
-                    {
-                        if (_readOnlyTrustSignatures == null)
-                        {
-                            _readOnlyTrustSignatures = new ReadOnlyCollection<string>(this.ProtectedTrustSignatures);
-                        }
-                    }
-                }
+                    if (_readOnlyTrustSignatures == null)
+                        _readOnlyTrustSignatures = new ReadOnlyCollection<string>(this.ProtectedTrustSignatures);
 
-                return _readOnlyTrustSignatures;
+                    return _readOnlyTrustSignatures;
+                }
             }
         }
 
@@ -301,10 +316,13 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_trustSignatures == null)
-                    _trustSignatures = new SignatureCollection(SectionProfileContent.MaxTrustSignaturesCount);
+                lock (this.ThisLock)
+                {
+                    if (_trustSignatures == null)
+                        _trustSignatures = new SignatureCollection(SectionProfileContent.MaxTrustSignaturesCount);
 
-                return _trustSignatures;
+                    return _trustSignatures;
+                }
             }
         }
 
@@ -314,18 +332,13 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_readOnlyLinks == null)
+                lock (this.ThisLock)
                 {
-                    lock (_initializeLock)
-                    {
-                        if (_readOnlyLinks == null)
-                        {
-                            _readOnlyLinks = new ReadOnlyCollection<string>(this.ProtectedLinks);
-                        }
-                    }
-                }
+                    if (_readOnlyLinks == null)
+                        _readOnlyLinks = new ReadOnlyCollection<string>(this.ProtectedLinks);
 
-                return _readOnlyLinks;
+                    return _readOnlyLinks;
+                }
             }
         }
 
@@ -334,10 +347,13 @@ namespace Library.Net.Lair
         {
             get
             {
-                if (_links == null)
-                    _links = new LinkCollection(SectionProfileContent.MaxLinksCount);
+                lock (this.ThisLock)
+                {
+                    if (_links == null)
+                        _links = new LinkCollection(SectionProfileContent.MaxLinksCount);
 
-                return _links;
+                    return _links;
+                }
             }
         }
 
@@ -350,17 +366,23 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _exchangeAlgorithm;
+                lock (this.ThisLock)
+                {
+                    return _exchangeAlgorithm;
+                }
             }
             private set
             {
-                if (!Enum.IsDefined(typeof(ExchangeAlgorithm), value))
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _exchangeAlgorithm = value;
+                    if (!Enum.IsDefined(typeof(ExchangeAlgorithm), value))
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _exchangeAlgorithm = value;
+                    }
                 }
             }
         }
@@ -370,27 +392,56 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _publicKey;
+                lock (this.ThisLock)
+                {
+                    return _publicKey;
+                }
             }
             private set
             {
-                if (value != null && (value.Length > Exchange.MaxPublickeyLength))
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
+                    if (value != null && (value.Length > Exchange.MaxPublickeyLength))
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _publicKey = value;
+                    }
+
+                    if (value != null && value.Length != 0)
+                    {
+                        _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
+                    }
+                    else
+                    {
+                        _hashCode = 0;
+                    }
                 }
-                else
+            }
+        }
+
+        #endregion
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
                 {
-                    _publicKey = value;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
 
-                if (value != null && value.Length != 0)
-                {
-                    _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
-                }
-                else
-                {
-                    _hashCode = 0;
-                }
+                return _thisLock;
             }
         }
 

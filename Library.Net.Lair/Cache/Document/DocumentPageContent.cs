@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentPageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent
+    public sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -21,6 +21,9 @@ namespace Library.Net.Lair
         private HypertextFormatType _formatType;
         private string _hypertext;
         private string _comment;
+
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxHypertextLength = 1024 * 32;
         public static readonly int MaxCommentLength = 1024 * 4;
@@ -34,36 +37,39 @@ namespace Library.Net.Lair
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            Encoding encoding = new UTF8Encoding(false);
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
+            lock (this.ThisLock)
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
 
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                for (; ; )
                 {
-                    if (id == (byte)SerializeId.FormatType)
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        if (id == (byte)SerializeId.FormatType)
                         {
-                            this.FormatType = (HypertextFormatType)Enum.Parse(typeof(HypertextFormatType), reader.ReadToEnd());
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.FormatType = (HypertextFormatType)Enum.Parse(typeof(HypertextFormatType), reader.ReadToEnd());
+                            }
                         }
-                    }
-                    else if (id == (byte)SerializeId.Hypertext)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        else if (id == (byte)SerializeId.Hypertext)
                         {
-                            this.Hypertext = reader.ReadToEnd();
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Hypertext = reader.ReadToEnd();
+                            }
                         }
-                    }
-                    else if (id == (byte)SerializeId.Comment)
-                    {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        else if (id == (byte)SerializeId.Comment)
                         {
-                            this.Comment = reader.ReadToEnd();
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Comment = reader.ReadToEnd();
+                            }
                         }
                     }
                 }
@@ -72,74 +78,80 @@ namespace Library.Net.Lair
 
         public override Stream Export(BufferManager bufferManager)
         {
-            List<Stream> streams = new List<Stream>();
-            Encoding encoding = new UTF8Encoding(false);
-
-            // FormatType
-            if (this.FormatType != 0)
+            lock (this.ThisLock)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                // FormatType
+                if (this.FormatType != 0)
                 {
-                    writer.Write(this.FormatType.ToString());
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.FormatType.ToString());
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.FormatType);
+
+                    streams.Add(bufferStream);
+                }
+                // Hypertext
+                if (this.Hypertext != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.Hypertext);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Hypertext);
+
+                    streams.Add(bufferStream);
+                }
+                // Comment
+                if (this.Comment != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.Comment);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Comment);
+
+                    streams.Add(bufferStream);
                 }
 
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.FormatType);
-
-                streams.Add(bufferStream);
+                return new JoinStream(streams);
             }
-            // Hypertext
-            if (this.Hypertext != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.Hypertext);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Hypertext);
-
-                streams.Add(bufferStream);
-            }
-            // Comment
-            if (this.Comment != null)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.Comment);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Comment);
-
-                streams.Add(bufferStream);
-            }
-
-            return new JoinStream(streams);
         }
 
         public override int GetHashCode()
         {
-            if (_hypertext == null) return 0;
-            else return _hypertext.GetHashCode();
+            lock (this.ThisLock)
+            {
+                if (_hypertext == null) return 0;
+                else return _hypertext.GetHashCode();
+            }
         }
 
         public override bool Equals(object obj)
@@ -167,14 +179,20 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            return this.Hypertext;
+            lock (this.ThisLock)
+            {
+                return this.Hypertext;
+            }
         }
 
         public override DocumentPageContent DeepClone()
         {
-            using (var stream = this.Export(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                return DocumentPageContent.Import(stream, BufferManager.Instance);
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return DocumentPageContent.Import(stream, BufferManager.Instance);
+                }
             }
         }
 
@@ -185,17 +203,23 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _formatType;
+                lock (this.ThisLock)
+                {
+                    return _formatType;
+                }
             }
             set
             {
-                if (!Enum.IsDefined(typeof(HypertextFormatType), value))
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _formatType = value;
+                    if (!Enum.IsDefined(typeof(HypertextFormatType), value))
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _formatType = value;
+                    }
                 }
             }
         }
@@ -205,17 +229,23 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _hypertext;
+                lock (this.ThisLock)
+                {
+                    return _hypertext;
+                }
             }
             private set
             {
-                if (value != null && value.Length > DocumentPageContent.MaxHypertextLength)
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _hypertext = value;
+                    if (value != null && value.Length > DocumentPageContent.MaxHypertextLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _hypertext = value;
+                    }
                 }
             }
         }
@@ -225,18 +255,47 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _comment;
+                lock (this.ThisLock)
+                {
+                    return _comment;
+                }
             }
             private set
             {
-                if (value != null && value.Length > DocumentPageContent.MaxCommentLength)
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
+                    if (value != null && value.Length > DocumentPageContent.MaxCommentLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _comment = value;
+                    }
                 }
-                else
+            }
+        }
+
+        #endregion
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
                 {
-                    _comment = value;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

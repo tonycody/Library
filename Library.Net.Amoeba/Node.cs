@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using Library.Io;
 
 namespace Library.Net.Amoeba
@@ -28,7 +30,7 @@ namespace Library.Net.Amoeba
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxIdLength = 64;
-        public static readonly int MaxUrisCount = 32;
+        public static readonly int MaxUriCount = 32;
 
         public Node(byte[] id, IEnumerable<string> uris)
         {
@@ -216,11 +218,19 @@ namespace Library.Net.Amoeba
 
         #endregion
 
+        private volatile ReadOnlyCollection<string> _readOnlyUris;
+
         public IEnumerable<string> Uris
         {
             get
             {
-                return this.ProtectedUris;
+                lock (this.ThisLock)
+                {
+                    if (_readOnlyUris == null)
+                        _readOnlyUris = new ReadOnlyCollection<string>(this.ProtectedUris);
+
+                    return _readOnlyUris;
+                }
             }
         }
 
@@ -229,10 +239,13 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_uris == null)
-                    _uris = new UriCollection(Node.MaxUrisCount);
+                lock (this.ThisLock)
+                {
+                    if (_uris == null)
+                        _uris = new UriCollection(Node.MaxUriCount);
 
-                return _uris;
+                    return _uris;
+                }
             }
         }
 

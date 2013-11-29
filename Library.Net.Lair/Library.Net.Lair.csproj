@@ -70,6 +70,7 @@
     <CodeContractsRuntimeCheckingLevel>Full</CodeContractsRuntimeCheckingLevel>
     <CodeContractsReferenceAssembly>%28none%29</CodeContractsReferenceAssembly>
     <CodeContractsAnalysisWarningLevel>0</CodeContractsAnalysisWarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -123,12 +124,16 @@
     <Compile Include="Cache\Key.cs" />
     <Compile Include="Cache\KeyCollection.cs" />
     <Compile Include="Cache\LairConverter.cs" />
+    <Compile Include="DownloadManager.cs" />
+    <Compile Include="EqualityComparer.cs" />
+    <Compile Include="SearchItemCollection.cs" />
     <Compile Include="LairManager.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
+    <Compile Include="SearchItem.cs" />
     <Compile Include="Tools\Crc32_Castagnoli.cs" />
     <Compile Include="Tools\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
@@ -137,6 +142,7 @@
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
+    <Compile Include="Tools\Unsafe.cs" />
     <Compile Include="UriCollection.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -197,7 +203,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Information\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

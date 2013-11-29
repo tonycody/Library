@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Key", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Key : ItemBase<Key>, IKey
+    public sealed class Key : ItemBase<Key>, IKey, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -23,6 +23,9 @@ namespace Library.Net.Amoeba
 
         private int _hashCode;
 
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
+
         public static readonly int MaxHashLength = 64;
 
         public Key(byte[] hash, HashAlgorithm hashAlgorithm)
@@ -34,30 +37,33 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            Encoding encoding = new UTF8Encoding(false);
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
+            lock (this.ThisLock)
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
 
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                for (; ; )
                 {
-                    if (id == (byte)SerializeId.Hash)
-                    {
-                        byte[] buffer = new byte[rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                        this.Hash = buffer;
-                    }
-
-                    else if (id == (byte)SerializeId.HashAlgorithm)
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        if (id == (byte)SerializeId.Hash)
                         {
-                            this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
+                            byte[] buffer = new byte[rangeStream.Length];
+                            rangeStream.Read(buffer, 0, buffer.Length);
+
+                            this.Hash = buffer;
+                        }
+
+                        else if (id == (byte)SerializeId.HashAlgorithm)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
+                            }
                         }
                     }
                 }
@@ -66,46 +72,52 @@ namespace Library.Net.Amoeba
 
         public override Stream Export(BufferManager bufferManager)
         {
-            List<Stream> streams = new List<Stream>();
-            Encoding encoding = new UTF8Encoding(false);
-
-            // Hash
-            if (this.Hash != null)
+            lock (this.ThisLock)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Hash);
-                bufferStream.Write(this.Hash, 0, this.Hash.Length);
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
 
-                streams.Add(bufferStream);
-            }
-
-            // HashAlgorithm
-            if (this.HashAlgorithm != 0)
-            {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                // Hash
+                if (this.Hash != null)
                 {
-                    writer.Write(this.HashAlgorithm.ToString());
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Hash);
+                    bufferStream.Write(this.Hash, 0, this.Hash.Length);
+
+                    streams.Add(bufferStream);
                 }
 
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.HashAlgorithm);
+                // HashAlgorithm
+                if (this.HashAlgorithm != 0)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
 
-                streams.Add(bufferStream);
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.HashAlgorithm.ToString());
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.HashAlgorithm);
+
+                    streams.Add(bufferStream);
+                }
+
+                return new JoinStream(streams);
             }
-
-            return new JoinStream(streams);
         }
 
         public override int GetHashCode()
         {
-            return _hashCode;
+            lock (this.ThisLock)
+            {
+                return _hashCode;
+            }
         }
 
         public override bool Equals(object obj)
@@ -130,7 +142,7 @@ namespace Library.Net.Amoeba
 
             if (this.Hash != null && other.Hash != null)
             {
-                if (!Collection.Equals(this.Hash, other.Hash)) return false;
+                if (!Unsafe.Equals(this.Hash, other.Hash)) return false;
             }
 
             return true;
@@ -138,9 +150,12 @@ namespace Library.Net.Amoeba
 
         public override Key DeepClone()
         {
-            using (var stream = this.Export(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                return Key.Import(stream, BufferManager.Instance);
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return Key.Import(stream, BufferManager.Instance);
+                }
             }
         }
 
@@ -151,28 +166,34 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                return _hash;
+                lock (this.ThisLock)
+                {
+                    return _hash;
+                }
             }
             private set
             {
-                if (value != null && value.Length > Key.MaxHashLength)
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _hash = value;
-                }
+                    if (value != null && value.Length > Key.MaxHashLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _hash = value;
+                    }
 
-                if (value != null && value.Length != 0)
-                {
-                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                    else _hashCode = value[0];
-                }
-                else
-                {
-                    _hashCode = 0;
+                    if (value != null && value.Length != 0)
+                    {
+                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                        else _hashCode = value[0];
+                    }
+                    else
+                    {
+                        _hashCode = 0;
+                    }
                 }
             }
         }
@@ -186,18 +207,47 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                return _hashAlgorithm;
+                lock (this.ThisLock)
+                {
+                    return _hashAlgorithm;
+                }
             }
             private set
             {
-                if (!Enum.IsDefined(typeof(HashAlgorithm), value))
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
+                    if (!Enum.IsDefined(typeof(HashAlgorithm), value))
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _hashAlgorithm = value;
+                    }
                 }
-                else
+            }
+        }
+
+        #endregion
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
                 {
-                    _hashAlgorithm = value;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

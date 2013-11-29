@@ -138,10 +138,13 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_trustSignatures == null)
-                    _trustSignatures = new SignatureCollection(Link.MaxTrustSignatureCount);
+                lock (this.ThisLock)
+                {
+                    if (_trustSignatures == null)
+                        _trustSignatures = new SignatureCollection(Link.MaxTrustSignatureCount);
 
-                return _trustSignatures;
+                    return _trustSignatures;
+                }
             }
         }
 

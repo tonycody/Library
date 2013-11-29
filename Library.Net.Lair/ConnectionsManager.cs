@@ -2113,9 +2113,7 @@ namespace Library.Net.Lair
                                 {
                                     foreach (var header in _headerManager.GetHeaders(tag))
                                     {
-                                        var key = new Key(header.GetHash(_hashAlgorithm), _hashAlgorithm);
-
-                                        if (!messageManager.PushHeaders.Contains(key))
+                                        if (!messageManager.PushHeaders.Contains(header.GetHash(_hashAlgorithm)))
                                         {
                                             headers.Add(header);
 
@@ -2133,9 +2131,7 @@ namespace Library.Net.Lair
 
                                 foreach (var header in headers)
                                 {
-                                    var key = new Key(header.GetHash(_hashAlgorithm), _hashAlgorithm);
-
-                                    messageManager.PushHeaders.Add(key);
+                                    messageManager.PushHeaders.Add(header.GetHash(_hashAlgorithm));
                                 }
                             }
                         }
@@ -2322,9 +2318,7 @@ namespace Library.Net.Lair
             {
                 if (_headerManager.SetHeader(header))
                 {
-                    var key = new Key(header.GetHash(_hashAlgorithm), _hashAlgorithm);
-
-                    messageManager.PushHeaders.Add(key);
+                    messageManager.PushHeaders.Add(header.GetHash(_hashAlgorithm));
                     messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedHeaderTimes[header.Tag] = DateTime.UtcNow;
@@ -2957,7 +2951,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Profile")
                     {
-                        if (header.Options.Count() != 0) return;
+                        if (!(header.Options.Count() == 0)) return;
 
                         Dictionary<string, Header> dic = null;
 
@@ -2973,7 +2967,7 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Message")
                     {
-                        if (header.Options.Count() != 0) return;
+                        if (!(header.Options.Count() == 0)) return;
                         if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return;
 
                         Dictionary<string, HashSet<Header>> dic = null;
@@ -2992,7 +2986,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Page")
                     {
-                        if (header.Options.Count() == 0) return;
+                        if (!(header.Options.Count() > 0)) return;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
@@ -3007,7 +3001,7 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Opinion")
                     {
-                        if (header.Options.Count() != 0) return;
+                        if (!(header.Options.Count() == 0)) return;
 
                         Dictionary<string, Header> dic = null;
 
@@ -3026,7 +3020,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Topic")
                     {
-                        if (header.Options.Count() == 1) return;
+                        if (!(header.Options.Count() == 1)) return;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
@@ -3041,7 +3035,7 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Message")
                     {
-                        if (header.Options.Count() == 1) return;
+                        if (!(header.Options.Count() == 1)) return;
                         if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return;
 
                         Dictionary<string, HashSet<Header>> dic = null;
@@ -3078,7 +3072,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Profile")
                     {
-                        if (header.Options.Count() != 0) return false;
+                        if (!(header.Options.Count() == 0)) return false;
 
                         Dictionary<string, Header> dic = null;
 
@@ -3102,7 +3096,7 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Message")
                     {
-                        if (header.Options.Count() != 0) return false;
+                        if (!(header.Options.Count() == 0)) return false;
                         if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return false;
 
                         Dictionary<string, HashSet<Header>> dic = null;
@@ -3128,7 +3122,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Page")
                     {
-                        if (header.Options.Count() == 0) return false;
+                        if (!(header.Options.Count() > 0)) return false;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
@@ -3172,7 +3166,7 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Opinion")
                     {
-                        if (header.Options.Count() != 0) return false;
+                        if (!(header.Options.Count() == 0)) return false;
 
                         Dictionary<string, Header> dic = null;
 
@@ -3199,7 +3193,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Topic")
                     {
-                        if (header.Options.Count() == 1) return false;
+                        if (!(header.Options.Count() == 1)) return false;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
@@ -3243,7 +3237,7 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Message")
                     {
-                        if (header.Options.Count() == 1) return false;
+                        if (!(header.Options.Count() == 1)) return false;
                         if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return false;
 
                         Dictionary<string, HashSet<Header>> dic = null;

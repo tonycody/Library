@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatTopicContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent
+    public sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -17,6 +17,9 @@ namespace Library.Net.Lair
         }
 
         private string _comment;
+
+        private volatile object _thisLock;
+        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 32;
 
@@ -27,22 +30,25 @@ namespace Library.Net.Lair
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
-            Encoding encoding = new UTF8Encoding(false);
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
+            lock (this.ThisLock)
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                Encoding encoding = new UTF8Encoding(false);
+                byte[] lengthBuffer = new byte[4];
 
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                for (; ; )
                 {
-                    if (id == (byte)SerializeId.Comment)
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                        if (id == (byte)SerializeId.Comment)
                         {
-                            this.Comment = reader.ReadToEnd();
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Comment = reader.ReadToEnd();
+                            }
                         }
                     }
                 }
@@ -51,36 +57,42 @@ namespace Library.Net.Lair
 
         public override Stream Export(BufferManager bufferManager)
         {
-            List<Stream> streams = new List<Stream>();
-            Encoding encoding = new UTF8Encoding(false);
-
-            // Comment
-            if (this.Comment != null)
+            lock (this.ThisLock)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                List<Stream> streams = new List<Stream>();
+                Encoding encoding = new UTF8Encoding(false);
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                // Comment
+                if (this.Comment != null)
                 {
-                    writer.Write(this.Comment);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.Comment);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Comment);
+
+                    streams.Add(bufferStream);
                 }
 
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Comment);
-
-                streams.Add(bufferStream);
+                return new JoinStream(streams);
             }
-
-            return new JoinStream(streams);
         }
 
         public override int GetHashCode()
         {
-            if (_comment == null) return 0;
-            else return _comment.GetHashCode();
+            lock (this.ThisLock)
+            {
+                if (_comment == null) return 0;
+                else return _comment.GetHashCode();
+            }
         }
 
         public override bool Equals(object obj)
@@ -106,14 +118,20 @@ namespace Library.Net.Lair
 
         public override string ToString()
         {
-            return this.Comment;
+            lock (this.ThisLock)
+            {
+                return this.Comment;
+            }
         }
 
         public override ChatTopicContent DeepClone()
         {
-            using (var stream = this.Export(BufferManager.Instance))
+            lock (this.ThisLock)
             {
-                return ChatTopicContent.Import(stream, BufferManager.Instance);
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return ChatTopicContent.Import(stream, BufferManager.Instance);
+                }
             }
         }
 
@@ -124,18 +142,47 @@ namespace Library.Net.Lair
         {
             get
             {
-                return _comment;
+                lock (this.ThisLock)
+                {
+                    return _comment;
+                }
             }
             private set
             {
-                if (value != null && value.Length > ChatTopicContent.MaxCommentLength)
+                lock (this.ThisLock)
                 {
-                    throw new ArgumentException();
+                    if (value != null && value.Length > ChatTopicContent.MaxCommentLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _comment = value;
+                    }
                 }
-                else
+            }
+        }
+
+        #endregion
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
                 {
-                    _comment = value;
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
                 }
+
+                return _thisLock;
             }
         }
 

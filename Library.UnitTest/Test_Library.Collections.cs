@@ -15,6 +15,8 @@ namespace Library.UnitTest
         [Test]
         public void Test_WaitQueue()
         {
+            System.Text.RegularExpressions.Regex regex = new System.Text.RegularExpressions.Regex("oo");
+
             // アイテムが無い場合、Dequeueは待機される。
             {
                 WaitQueue<string> queue = new WaitQueue<string>();

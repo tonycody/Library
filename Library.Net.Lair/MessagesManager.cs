@@ -151,7 +151,7 @@ namespace Library.Net.Lair
         private LockedHashSet<Node> _surroundingNodes;
 
         private VolatileCollection<Key> _pushBlocks;
-        private VolatileCollection<Key> _pushHeaders;
+        private VolatileCollection<byte[]> _pushHeaders;
 
         private VolatileCollection<Key> _pushBlocksLink;
         private VolatileCollection<Key> _pullBlocksLink;
@@ -171,7 +171,7 @@ namespace Library.Net.Lair
             _surroundingNodes = new LockedHashSet<Node>(128);
 
             _pushBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushHeaders = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _pushHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
 
             _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
             _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
@@ -306,7 +306,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public VolatileCollection<Key> PushHeaders
+        public VolatileCollection<byte[]> PushHeaders
         {
             get
             {

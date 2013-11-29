@@ -34,6 +34,7 @@
     <RegisterForComInterop>False</RegisterForComInterop>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <BaseAddress>4194304</BaseAddress>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -85,6 +86,7 @@
     <Compile Include="CountCache.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
+    <Compile Include="EqualityComparer.cs" />
     <Compile Include="Tools\Crc32_Castagnoli.cs" />
     <Compile Include="Tools\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
@@ -113,6 +115,7 @@
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
+    <Compile Include="Tools\Unsafe.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />
