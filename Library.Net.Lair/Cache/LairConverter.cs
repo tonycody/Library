@@ -121,15 +121,15 @@ namespace Library.Net.Lair
                 }
 
                 stream.Seek(0, SeekOrigin.Begin);
-                byte version = (byte)stream.ReadByte();
+                byte type = (byte)stream.ReadByte();
 
                 using (Stream dataStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position - 4, true))
                 {
-                    if (version == (byte)CompressionAlgorithm.None)
+                    if (type == (byte)CompressionAlgorithm.None)
                     {
                         return ItemBase<T>.Import(dataStream, _bufferManager);
                     }
-                    else if (version == (byte)CompressionAlgorithm.Deflate)
+                    else if (type == (byte)CompressionAlgorithm.Deflate)
                     {
                         using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
                         {

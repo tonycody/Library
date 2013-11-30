@@ -168,7 +168,7 @@ namespace Library.Net.Lair
 
             if (this.Id != null && other.Id != null)
             {
-                if (!Collection.Equals(this.Id, other.Id)) return false;
+                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;

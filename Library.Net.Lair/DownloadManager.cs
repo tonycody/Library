@@ -1,35 +1,56 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using Library.Collections;
 using Library.Io;
-using System.Diagnostics;
+using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public delegate void DownloadSectionProfileEventHandler(object sender, Header header, SectionProfileContent content);
+    public delegate void SectionProfileEventHandler(object sender, Header header, SectionProfileContent content);
+    public delegate void SectionMessageEventHandler(object sender, Header header, SectionMessageContent content);
+    public delegate void DocumentPageEventHandler(object sender, Header header, DocumentPageContent content);
+    public delegate void DocumentOpinionEventHandler(object sender, Header header, DocumentOpinionContent content);
+    public delegate void ChatTopicEventHandler(object sender, Header header, ChatTopicContent content);
+    public delegate void ChatMessageEventHandler(object sender, Header header, ChatMessageContent content);
 
-    class DownloadManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
+    class DownloadManager : StateManagerBase, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private Settings _settings;
+        private LockedList<Header> _downloadHeaders = new LockedList<Header>();
+        private LockedList<IExchangeDecrypt> _privateKeys = new LockedList<IExchangeDecrypt>();
 
-        private LockedDictionary<byte[], Key> _hashToKey = new LockedDictionary<byte[], Key>(new ByteArrayEqualityComparer());
-        private LockedQueue<SectionProfileInfo> _sectionProfileInfoQueue = new LockedQueue<SectionProfileInfo>();
+        private LockedHashSet<Header> _completeHeaders = new LockedHashSet<Header>();
+        private LockedDictionary<Header, Key> _keys = new LockedDictionary<Header, Key>();
+
+        private LockedQueue<SectionProfileEventItem> _sectionProfileEventItems = new LockedQueue<SectionProfileEventItem>();
+        private LockedQueue<SectionMessageEventItem> _sectionMessageEventItems = new LockedQueue<SectionMessageEventItem>();
+        private LockedQueue<DocumentPageEventItem> _documentPageEventItems = new LockedQueue<DocumentPageEventItem>();
+        private LockedQueue<DocumentOpinionEventItem> _documentOpinionEventItems = new LockedQueue<DocumentOpinionEventItem>();
+        private LockedQueue<ChatTopicEventItem> _chatTopicEventItems = new LockedQueue<ChatTopicEventItem>();
+        private LockedQueue<ChatMessageEventItem> _chatMessageEventItems = new LockedQueue<ChatMessageEventItem>();
 
         private volatile Thread _downloadManagerThread;
+        private volatile Thread _eventThread;
 
         private ManagerState _state = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
-        private event DownloadSectionProfileEventHandler _downloadSectionProfileEvent;
+        private event SectionProfileEventHandler _sectionProfileEvent;
+        private event SectionMessageEventHandler _sectionMessageEvent;
+        private event DocumentPageEventHandler _documentPageEvent;
+        private event DocumentOpinionEventHandler _documentOpinionEvent;
+        private event ChatTopicEventHandler _chatTopicEvent;
+        private event ChatMessageEventHandler _chatMessageEvent;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -39,24 +60,112 @@ namespace Library.Net.Lair
             _connectionsManager = connectionsManager;
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
-
-            _settings = new Settings(this.ThisLock);
         }
 
-        public event DownloadSectionProfileEventHandler DownloadSectionProfileEvent
+        public event SectionProfileEventHandler SectionProfileEvent
         {
             add
             {
                 lock (this.ThisLock)
                 {
-                    _downloadSectionProfileEvent += value;
+                    _sectionProfileEvent += value;
                 }
             }
             remove
             {
                 lock (this.ThisLock)
                 {
-                    _downloadSectionProfileEvent -= value;
+                    _sectionProfileEvent -= value;
+                }
+            }
+        }
+
+        public event SectionMessageEventHandler SectionMessageEvent
+        {
+            add
+            {
+                lock (this.ThisLock)
+                {
+                    _sectionMessageEvent += value;
+                }
+            }
+            remove
+            {
+                lock (this.ThisLock)
+                {
+                    _sectionMessageEvent -= value;
+                }
+            }
+        }
+
+        public event DocumentPageEventHandler DocumentPageEvent
+        {
+            add
+            {
+                lock (this.ThisLock)
+                {
+                    _documentPageEvent += value;
+                }
+            }
+            remove
+            {
+                lock (this.ThisLock)
+                {
+                    _documentPageEvent -= value;
+                }
+            }
+        }
+
+        public event DocumentOpinionEventHandler DocumentOpinionEvent
+        {
+            add
+            {
+                lock (this.ThisLock)
+                {
+                    _documentOpinionEvent += value;
+                }
+            }
+            remove
+            {
+                lock (this.ThisLock)
+                {
+                    _documentOpinionEvent -= value;
+                }
+            }
+        }
+
+        public event ChatTopicEventHandler ChatTopicEvent
+        {
+            add
+            {
+                lock (this.ThisLock)
+                {
+                    _chatTopicEvent += value;
+                }
+            }
+            remove
+            {
+                lock (this.ThisLock)
+                {
+                    _chatTopicEvent -= value;
+                }
+            }
+        }
+
+        public event ChatMessageEventHandler ChatMessageEvent
+        {
+            add
+            {
+                lock (this.ThisLock)
+                {
+                    _chatMessageEvent += value;
+                }
+            }
+            remove
+            {
+                lock (this.ThisLock)
+                {
+                    _chatMessageEvent -= value;
                 }
             }
         }
@@ -105,96 +214,23 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    return _settings.Headers;
+                    return _downloadHeaders.ToArray();
                 }
             }
         }
 
-        private static string GetUniqueFilePath(string path)
+        public IEnumerable<IExchangeDecrypt> ExchangeInformation
         {
-            if (!File.Exists(path))
+            get
             {
-                return path;
-            }
-
-            for (int index = 1; ; index++)
-            {
-                string text = string.Format(@"{0}\{1} ({2}){3}",
-                    Path.GetDirectoryName(path),
-                    Path.GetFileNameWithoutExtension(path),
-                    index,
-                    Path.GetExtension(path));
-
-                if (!File.Exists(text))
+                lock (this.ThisLock)
                 {
-                    return text;
+                    return _privateKeys.ToArray();
                 }
             }
         }
 
-        private static FileStream GetUniqueFileStream(string path)
-        {
-            if (!File.Exists(path))
-            {
-                try
-                {
-                    FileStream fs = new FileStream(path, FileMode.CreateNew);
-                    return fs;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    throw;
-                }
-                catch (IOException)
-                {
-                    throw;
-                }
-            }
-
-            for (int index = 1; ; index++)
-            {
-                string text = string.Format(@"{0}\{1} ({2}){3}",
-                    Path.GetDirectoryName(path),
-                    Path.GetFileNameWithoutExtension(path),
-                    index,
-                    Path.GetExtension(path));
-
-                if (!File.Exists(text))
-                {
-                    try
-                    {
-                        FileStream fs = new FileStream(text, FileMode.CreateNew);
-                        return fs;
-                    }
-                    catch (DirectoryNotFoundException)
-                    {
-                        throw;
-                    }
-                    catch (IOException)
-                    {
-                        if (index > 100) throw;
-                    }
-                }
-            }
-        }
-
-        private static string GetNormalizedPath(string path)
-        {
-            string filePath = path;
-
-            foreach (char ic in Path.GetInvalidFileNameChars())
-            {
-                filePath = filePath.Replace(ic.ToString(), "-");
-            }
-            foreach (char ic in Path.GetInvalidPathChars())
-            {
-                filePath = filePath.Replace(ic.ToString(), "-");
-            }
-
-            return filePath;
-        }
-
-        private void DownloadManagerThread()
+        private void DownloadThread()
         {
             Stopwatch refreshStopwatch = new Stopwatch();
 
@@ -203,26 +239,272 @@ namespace Library.Net.Lair
                 Thread.Sleep(1000 * 1);
                 if (this.State == ManagerState.Stop) return;
 
-                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 1)
                 {
                     refreshStopwatch.Restart();
 
-                    foreach (var header in _settings.Headers.ToArray())
+                    lock (this.ThisLock)
                     {
+                        foreach (var header in _completeHeaders.ToArray())
+                        {
+                            if (_downloadHeaders.Contains(header)) continue;
+
+                            _completeHeaders.Remove(header);
+                        }
+
+                        foreach (var header in _keys.Keys.ToArray())
+                        {
+                            if (_downloadHeaders.Contains(header)) continue;
+
+                            _keys.Remove(header);
+                        }
+                    }
+
+                    foreach (var header in _downloadHeaders.ToArray())
+                    {
+                        if (_completeHeaders.Contains(header)) continue;
+
                         if (header.FormatType == ContentFormatType.Raw)
                         {
+                            this.Report(header, new ArraySegment<byte>(header.Content));
 
+                            _completeHeaders.Add(header);
+                        }
+                        else if (header.FormatType == ContentFormatType.Key)
+                        {
+                            try
+                            {
+                                Key key;
+
+                                if (!_keys.TryGetValue(header, out key))
+                                {
+                                    using (var memoryStream = new MemoryStream(header.Content))
+                                    {
+                                        key = Key.Import(memoryStream, _bufferManager);
+                                    }
+
+                                    _keys[header] = key;
+                                }
+
+                                if (!_cacheManager.Contains(key))
+                                {
+                                    _connectionsManager.Download(key);
+                                }
+                                else
+                                {
+                                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                                    try
+                                    {
+                                        buffer = _cacheManager[key];
+
+                                        this.Report(header, buffer);
+                                    }
+                                    catch (Exception)
+                                    {
+
+                                    }
+                                    finally
+                                    {
+                                        if (buffer.Array != null)
+                                        {
+                                            _bufferManager.ReturnBuffer(buffer.Array);
+                                        }
+                                    }
+
+                                    _completeHeaders.Add(header);
+                                }
+                            }
+                            catch (Exception)
+                            {
+
+                            }
                         }
                     }
                 }
             }
         }
 
-        protected virtual void OnDownloadSectionProfileEvent(Header header, SectionProfileContent content)
+        private void Report(Header header, ArraySegment<byte> buffer)
         {
-            if (_downloadSectionProfileEvent != null)
+            if (header.Tag.Type == "Section")
             {
-                _downloadSectionProfileEvent(this, header, content);
+                if (header.Type == "Profile")
+                {
+                    try
+                    {
+                        var content = ContentConverter.FromSectionProfileContentBlock(buffer);
+                        _sectionProfileEventItems.Enqueue(new SectionProfileEventItem() { Header = header, Content = content });
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+                else if (header.Type == "Message")
+                {
+                    foreach (var exchange in _privateKeys)
+                    {
+                        try
+                        {
+                            var content = ContentConverter.FromSectionMessageContentBlock(buffer, exchange);
+                            _sectionMessageEventItems.Enqueue(new SectionMessageEventItem() { Header = header, Content = content });
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                    }
+                }
+            }
+            else if (header.Tag.Type == "Document")
+            {
+                if (header.Type == "Page")
+                {
+                    try
+                    {
+                        var content = ContentConverter.FromDocumentPageContentBlock(buffer);
+                        _documentPageEventItems.Enqueue(new DocumentPageEventItem() { Header = header, Content = content });
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+                else if (header.Type == "Opinion")
+                {
+                    try
+                    {
+                        var content = ContentConverter.FromDocumentOpinionContentBlock(buffer);
+                        _documentOpinionEventItems.Enqueue(new DocumentOpinionEventItem() { Header = header, Content = content });
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+            }
+            else if (header.Tag.Type == "Chat")
+            {
+                if (header.Type == "Topic")
+                {
+                    try
+                    {
+                        var content = ContentConverter.FromChatTopicContentBlock(buffer);
+                        _chatTopicEventItems.Enqueue(new ChatTopicEventItem() { Header = header, Content = content });
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+                else if (header.Type == "Message")
+                {
+                    try
+                    {
+                        var content = ContentConverter.FromChatMessageContentBlock(buffer);
+                        _chatMessageEventItems.Enqueue(new ChatMessageEventItem() { Header = header, Content = content });
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+            }
+        }
+
+        private void EventThread()
+        {
+            Stopwatch refreshStopwatch = new Stopwatch();
+
+            for (; ; )
+            {
+                Thread.Sleep(1000 * 1);
+                if (this.State == ManagerState.Stop) return;
+
+                for (int i = _sectionProfileEventItems.Count - 1; i >= 0; i--)
+                {
+                    var item = _sectionProfileEventItems.Dequeue();
+                    this.OnSectionProfileEvent(item.Header, item.Content);
+                }
+
+                for (int i = _sectionMessageEventItems.Count - 1; i >= 0; i--)
+                {
+                    var item = _sectionMessageEventItems.Dequeue();
+                    this.OnSectionMessageEvent(item.Header, item.Content);
+                }
+
+                for (int i = _documentPageEventItems.Count - 1; i >= 0; i--)
+                {
+                    var item = _documentPageEventItems.Dequeue();
+                    this.OnDocumentPageEvent(item.Header, item.Content);
+                }
+
+                for (int i = _documentOpinionEventItems.Count - 1; i >= 0; i--)
+                {
+                    var item = _documentOpinionEventItems.Dequeue();
+                    this.OnDocumentOpinionEvent(item.Header, item.Content);
+                }
+
+                for (int i = _chatTopicEventItems.Count - 1; i >= 0; i--)
+                {
+                    var item = _chatTopicEventItems.Dequeue();
+                    this.OnChatTopicEvent(item.Header, item.Content);
+                }
+
+                for (int i = _chatMessageEventItems.Count - 1; i >= 0; i--)
+                {
+                    var item = _chatMessageEventItems.Dequeue();
+                    this.OnChatMessageEvent(item.Header, item.Content);
+                }
+            }
+        }
+
+        protected virtual void OnSectionProfileEvent(Header header, SectionProfileContent content)
+        {
+            if (_sectionProfileEvent != null)
+            {
+                _sectionProfileEvent(this, header, content);
+            }
+        }
+
+        protected virtual void OnSectionMessageEvent(Header header, SectionMessageContent content)
+        {
+            if (_sectionMessageEvent != null)
+            {
+                _sectionMessageEvent(this, header, content);
+            }
+        }
+
+        protected virtual void OnDocumentPageEvent(Header header, DocumentPageContent content)
+        {
+            if (_documentPageEvent != null)
+            {
+                _documentPageEvent(this, header, content);
+            }
+        }
+
+        protected virtual void OnDocumentOpinionEvent(Header header, DocumentOpinionContent content)
+        {
+            if (_documentOpinionEvent != null)
+            {
+                _documentOpinionEvent(this, header, content);
+            }
+        }
+
+        protected virtual void OnChatTopicEvent(Header header, ChatTopicContent content)
+        {
+            if (_chatTopicEvent != null)
+            {
+                _chatTopicEvent(this, header, content);
+            }
+        }
+
+        protected virtual void OnChatMessageEvent(Header header, ChatMessageContent content)
+        {
+            if (_chatMessageEvent != null)
+            {
+                _chatMessageEvent(this, header, content);
             }
         }
 
@@ -232,7 +514,7 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _settings.Headers.Add(header);
+                _downloadHeaders.Add(header);
             }
         }
 
@@ -242,7 +524,18 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _settings.Headers.Remove(header);
+                _downloadHeaders.Remove(header);
+
+                _completeHeaders.Remove(header);
+                _keys.Remove(header);
+            }
+        }
+
+        public void SetExchange(IEnumerable<IExchangeDecrypt> exchanges)
+        {
+            lock (this.ThisLock)
+            {
+                _privateKeys.AddRange(exchanges);
             }
         }
 
@@ -266,10 +559,15 @@ namespace Library.Net.Lair
                 if (this.State == ManagerState.Start) return;
                 _state = ManagerState.Start;
 
-                _downloadManagerThread = new Thread(this.DownloadManagerThread);
+                _downloadManagerThread = new Thread(this.DownloadThread);
                 _downloadManagerThread.Priority = ThreadPriority.Lowest;
-                _downloadManagerThread.Name = "DownloadManager_DownloadManagerThread";
+                _downloadManagerThread.Name = "DownloadManager_DownloadThread";
                 _downloadManagerThread.Start();
+
+                _eventThread = new Thread(this.EventThread);
+                _eventThread.Priority = ThreadPriority.Lowest;
+                _eventThread.Name = "DownloadManager_EventThread";
+                _eventThread.Start();
             }
         }
 
@@ -283,72 +581,45 @@ namespace Library.Net.Lair
 
             _downloadManagerThread.Join();
             _downloadManagerThread = null;
+
+            _eventThread.Join();
+            _eventThread = null;
         }
 
-        #region ISettings
-
-        public void Load(string directoryPath)
-        {
-            lock (this.ThisLock)
-            {
-                _settings.Load(directoryPath);
-            }
-        }
-
-        public void Save(string directoryPath)
-        {
-            lock (this.ThisLock)
-            {
-                _settings.Save(directoryPath);
-            }
-        }
-
-        #endregion
-
-        private class Settings : Library.Configuration.SettingsBase
-        {
-            private volatile object _thisLock;
-
-            public Settings(object lockObject)
-                : base(new List<Library.Configuration.ISettingContent>() { 
-                    new Library.Configuration.SettingContent<LockedHashSet<Header>>() { Name = "Headers", Value = new LockedHashSet<Header>() },
-                })
-            {
-                _thisLock = lockObject;
-            }
-
-            public override void Load(string directoryPath)
-            {
-                lock (_thisLock)
-                {
-                    base.Load(directoryPath);
-                }
-            }
-
-            public override void Save(string directoryPath)
-            {
-                lock (_thisLock)
-                {
-                    base.Save(directoryPath);
-                }
-            }
-
-            public LockedHashSet<Header> Headers
-            {
-                get
-                {
-                    lock (_thisLock)
-                    {
-                        return (LockedHashSet<Header>)this["Headers"];
-                    }
-                }
-            }
-        }
-
-        private class SectionProfileInfo
+        private class SectionProfileEventItem
         {
             public Header Header { get; set; }
             public SectionProfileContent Content { get; set; }
+        }
+
+        private class SectionMessageEventItem
+        {
+            public Header Header { get; set; }
+            public SectionMessageContent Content { get; set; }
+        }
+
+        private class DocumentPageEventItem
+        {
+            public Header Header { get; set; }
+            public DocumentPageContent Content { get; set; }
+        }
+
+        private class DocumentOpinionEventItem
+        {
+            public Header Header { get; set; }
+            public DocumentOpinionContent Content { get; set; }
+        }
+
+        private class ChatTopicEventItem
+        {
+            public Header Header { get; set; }
+            public ChatTopicContent Content { get; set; }
+        }
+
+        private class ChatMessageEventItem
+        {
+            public Header Header { get; set; }
+            public ChatMessageContent Content { get; set; }
         }
 
         protected override void Dispose(bool disposing)

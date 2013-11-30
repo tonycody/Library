@@ -124,6 +124,7 @@
     <Compile Include="Cache\Key.cs" />
     <Compile Include="Cache\KeyCollection.cs" />
     <Compile Include="Cache\LairConverter.cs" />
+    <Compile Include="ContentConverter.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="EqualityComparer.cs" />
     <Compile Include="SearchItemCollection.cs" />

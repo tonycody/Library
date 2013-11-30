@@ -2293,7 +2293,7 @@ namespace Library.Net.Lair
 
             foreach (var tag in e.Tags.Take(_maxHeaderRequestCount))
             {
-                if (!ConnectionsManager.Check((tag))) continue;
+                if (!ConnectionsManager.Check(tag)) continue;
 
                 messageManager.PullHeadersRequest.Add(tag);
                 _pullHeaderRequestCount++;

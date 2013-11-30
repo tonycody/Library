@@ -108,24 +108,6 @@ namespace Library.Net.Amoeba
             _removeThread.Start();
         }
 
-        public string BaseDirectory
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _settings.BaseDirectory;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _settings.BaseDirectory = value;
-                }
-            }
-        }
-
         public Information Information
         {
             get
@@ -194,6 +176,24 @@ namespace Library.Net.Amoeba
                     }
 
                     return list;
+                }
+            }
+        }
+
+        public string BaseDirectory
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _settings.BaseDirectory;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _settings.BaseDirectory = value;
                 }
             }
         }
