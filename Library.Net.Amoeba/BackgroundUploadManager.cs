@@ -410,13 +410,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void Upload(Link link,
-            CompressionAlgorithm compressionAlgorithm,
-            CryptoAlgorithm cryptoAlgorithm,
-            CorrectionAlgorithm correctionAlgorithm,
-            HashAlgorithm hashAlgorithm,
-            DigitalSignature digitalSignature)
+        public void Upload(Link link, DigitalSignature digitalSignature)
         {
+            if (link == null) throw new ArgumentNullException("link");
+            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
+
             lock (this.ThisLock)
             {
                 {
@@ -435,10 +433,10 @@ namespace Library.Net.Amoeba
                     item.Type = BackgroundItemType.Link;
                     item.State = BackgroundUploadState.Encoding;
                     item.Rank = 1;
-                    item.CompressionAlgorithm = compressionAlgorithm;
-                    item.CryptoAlgorithm = cryptoAlgorithm;
-                    item.CorrectionAlgorithm = correctionAlgorithm;
-                    item.HashAlgorithm = hashAlgorithm;
+                    item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                    item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                    item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
+                    item.HashAlgorithm = HashAlgorithm.Sha512;
                     item.DigitalSignature = digitalSignature;
                     item.Seed = new Seed();
                     item.Seed.Keywords.Add(ConnectionsManager.Keyword_Link);
@@ -450,13 +448,11 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void Upload(Store store,
-            CompressionAlgorithm compressionAlgorithm,
-            CryptoAlgorithm cryptoAlgorithm,
-            CorrectionAlgorithm correctionAlgorithm,
-            HashAlgorithm hashAlgorithm,
-            DigitalSignature digitalSignature)
+        public void Upload(Store store, DigitalSignature digitalSignature)
         {
+            if (store == null) throw new ArgumentNullException("store");
+            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
+
             lock (this.ThisLock)
             {
                 {
@@ -475,10 +471,10 @@ namespace Library.Net.Amoeba
                     item.Type = BackgroundItemType.Store;
                     item.State = BackgroundUploadState.Encoding;
                     item.Rank = 1;
-                    item.CompressionAlgorithm = compressionAlgorithm;
-                    item.CryptoAlgorithm = cryptoAlgorithm;
-                    item.CorrectionAlgorithm = correctionAlgorithm;
-                    item.HashAlgorithm = hashAlgorithm;
+                    item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                    item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                    item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
+                    item.HashAlgorithm = HashAlgorithm.Sha512;
                     item.DigitalSignature = digitalSignature;
                     item.Seed = new Seed();
                     item.Seed.Keywords.Add(ConnectionsManager.Keyword_Store);

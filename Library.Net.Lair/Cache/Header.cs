@@ -12,7 +12,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Header", Namespace = "http://Library/Net/Lair")]
-    public sealed class Header : ReadOnlyCertificateItemBase<Header>, IHeader<Tag>, IThisLock
+    internal sealed class Header : ReadOnlyCertificateItemBase<Header>, IHeader<Tag>
     {
         private enum SerializeId : byte
         {
@@ -334,6 +334,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region IHeader<Tag>
 
         [DataMember(Name = "Tag")]
@@ -527,29 +546,6 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 return Collection.Equals(this.GetHash(hashAlgorithm), hash);
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

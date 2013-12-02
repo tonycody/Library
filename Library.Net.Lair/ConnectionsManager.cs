@@ -140,7 +140,7 @@ namespace Library.Net.Lair
             _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
             _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
-            _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 3, 0));
             _pushHeadersRequestList = new VolatileCollection<Tag>(new TimeSpan(0, 3, 0));
 
             _relayBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
@@ -2479,28 +2479,12 @@ namespace Library.Net.Lair
             }
         }
 
-        public void SendHeaderRequest(Tag tag)
-        {
-            lock (this.ThisLock)
-            {
-                _pushHeadersRequestList.Add(tag);
-            }
-        }
-
-        public IEnumerable<Tag> GetTags()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _headerManager.GetTags();
-            }
-        }
-
         public IEnumerable<Header> GetHeaders(Tag tag)
         {
             lock (_thisLock)
             {
+                _pushHeadersRequestList.Add(tag);
+
                 return _headerManager.GetHeaders(tag);
             }
         }
@@ -2986,7 +2970,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Page")
                     {
-                        if (!(header.Options.Count() > 0)) return;
+                        if (!(header.Options.Count() == 1)) return;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
@@ -3122,7 +3106,7 @@ namespace Library.Net.Lair
                 {
                     if (header.Type == "Page")
                     {
-                        if (!(header.Options.Count() > 0)) return false;
+                        if (!(header.Options.Count() == 1)) return false;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
@@ -3145,7 +3129,7 @@ namespace Library.Net.Lair
                         }
                         else
                         {
-                            var tempHeader = hashset.FirstOrDefault(n => Collection.Equals(n.Options, header.Options));
+                            var tempHeader = hashset.FirstOrDefault(n => n.Options.ElementAt(0) == header.Options.ElementAt(0));
 
                             if (tempHeader == null)
                             {

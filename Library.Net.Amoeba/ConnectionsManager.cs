@@ -2270,16 +2270,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<string> GetSignatures()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _settings.GetSignatures();
-            }
-        }
-
         public Seed GetLinkSeed(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);

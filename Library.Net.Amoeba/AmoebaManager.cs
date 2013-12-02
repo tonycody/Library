@@ -521,7 +521,7 @@ namespace Library.Net.Amoeba
 
         public void Upload(string filePath,
             string name,
-            KeywordCollection keywords,
+            IEnumerable<string> keywords,
             string comment,
             DigitalSignature digitalSignature,
             int priority)
@@ -534,10 +534,6 @@ namespace Library.Net.Amoeba
                     name,
                     keywords,
                     comment,
-                    CompressionAlgorithm.Lzma,
-                    CryptoAlgorithm.Rijndael256,
-                    CorrectionAlgorithm.ReedSolomon8,
-                    HashAlgorithm.Sha512,
                     digitalSignature,
                     priority);
             }
@@ -545,7 +541,7 @@ namespace Library.Net.Amoeba
 
         public void Share(string filePath,
             string name,
-            KeywordCollection keywords,
+            IEnumerable<string> keywords,
             string comment,
             DigitalSignature digitalSignature,
             int priority)
@@ -558,10 +554,6 @@ namespace Library.Net.Amoeba
                     name,
                     keywords,
                     comment,
-                    CompressionAlgorithm.Lzma,
-                    CryptoAlgorithm.Rijndael256,
-                    CorrectionAlgorithm.ReedSolomon8,
-                    HashAlgorithm.Sha512,
                     digitalSignature,
                     priority);
             }
@@ -678,55 +670,23 @@ namespace Library.Net.Amoeba
             _backgroundDownloadManager.SetSearchSignatures(signatures);
         }
 
-        public void Upload(Link link,
-            DigitalSignature digitalSignature)
+        public void Upload(Link link, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _backgroundUploadManager.Upload(link,
-                    CompressionAlgorithm.Lzma,
-                    CryptoAlgorithm.Rijndael256,
-                    CorrectionAlgorithm.ReedSolomon8,
-                    HashAlgorithm.Sha512,
-                    digitalSignature);
+                _backgroundUploadManager.Upload(link, digitalSignature);
             }
         }
 
-        public void Upload(Store store,
-            DigitalSignature digitalSignature)
+        public void Upload(Store store, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _backgroundUploadManager.Upload(store,
-                    CompressionAlgorithm.Lzma,
-                    CryptoAlgorithm.Rijndael256,
-                    CorrectionAlgorithm.ReedSolomon8,
-                    HashAlgorithm.Sha512,
-                    digitalSignature);
-            }
-        }
-
-        public void ResetLink(string signature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _backgroundDownloadManager.ResetLink(signature);
-            }
-        }
-
-        public void ResetStore(string signature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _backgroundDownloadManager.ResetStore(signature);
+                _backgroundUploadManager.Upload(store, digitalSignature);
             }
         }
 

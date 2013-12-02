@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Key", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Key : ItemBase<Key>, IKey, IThisLock
+    public sealed class Key : ItemBase<Key>, IKey
     {
         private enum SerializeId : byte
         {
@@ -159,6 +159,25 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region IKey
 
         [DataMember(Name = "Hash")]
@@ -225,29 +244,6 @@ namespace Library.Net.Amoeba
                         _hashAlgorithm = value;
                     }
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

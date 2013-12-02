@@ -785,12 +785,8 @@ namespace Library.Net.Amoeba
 
         public void Upload(string filePath,
             string name,
-            KeywordCollection keywords,
+            IEnumerable<string> keywords,
             string comment,
-            CompressionAlgorithm compressionAlgorithm,
-            CryptoAlgorithm cryptoAlgorithm,
-            CorrectionAlgorithm correctionAlgorithm,
-            HashAlgorithm hashAlgorithm,
             DigitalSignature digitalSignature,
             int priority)
         {
@@ -802,10 +798,10 @@ namespace Library.Net.Amoeba
                 item.Type = UploadType.Upload;
                 item.Rank = 1;
                 item.FilePath = filePath;
-                item.CompressionAlgorithm = compressionAlgorithm;
-                item.CryptoAlgorithm = cryptoAlgorithm;
-                item.CorrectionAlgorithm = correctionAlgorithm;
-                item.HashAlgorithm = hashAlgorithm;
+                item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
+                item.HashAlgorithm = HashAlgorithm.Sha512;
                 item.DigitalSignature = digitalSignature;
                 item.Seed = new Seed();
                 item.Seed.Name = name;
@@ -824,12 +820,8 @@ namespace Library.Net.Amoeba
 
         public void Share(string filePath,
             string name,
-            KeywordCollection keywords,
+            IEnumerable<string> keywords,
             string comment,
-            CompressionAlgorithm compressionAlgorithm,
-            CryptoAlgorithm cryptoAlgorithm,
-            CorrectionAlgorithm correctionAlgorithm,
-            HashAlgorithm hashAlgorithm,
             DigitalSignature digitalSignature,
             int priority)
         {
@@ -841,10 +833,10 @@ namespace Library.Net.Amoeba
                 item.Type = UploadType.Share;
                 item.Rank = 1;
                 item.FilePath = filePath;
-                item.CompressionAlgorithm = compressionAlgorithm;
-                item.CryptoAlgorithm = cryptoAlgorithm;
-                item.CorrectionAlgorithm = correctionAlgorithm;
-                item.HashAlgorithm = hashAlgorithm;
+                item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
+                item.HashAlgorithm = HashAlgorithm.Sha512;
                 item.DigitalSignature = digitalSignature;
                 item.Seed = new Seed();
                 item.Seed.Name = name;
@@ -906,10 +898,6 @@ namespace Library.Net.Amoeba
                         item.Seed.Name,
                         item.Seed.Keywords,
                         item.Seed.Comment,
-                        item.CompressionAlgorithm,
-                        item.CryptoAlgorithm,
-                        item.CorrectionAlgorithm,
-                        item.HashAlgorithm,
                         item.DigitalSignature,
                         item.Priority);
                 }
@@ -919,10 +907,6 @@ namespace Library.Net.Amoeba
                         item.Seed.Name,
                         item.Seed.Keywords,
                         item.Seed.Comment,
-                        item.CompressionAlgorithm,
-                        item.CryptoAlgorithm,
-                        item.CorrectionAlgorithm,
-                        item.HashAlgorithm,
                         item.DigitalSignature,
                         item.Priority);
                 }

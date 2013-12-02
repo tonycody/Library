@@ -13,7 +13,7 @@ namespace Library.Net.Lair
     /// ノードに関する情報を表します
     /// </summary>
     [DataContract(Name = "Node", Namespace = "http://Library/Net/Lair")]
-    public sealed class Node : ItemBase<Node>, INode, IThisLock
+    public sealed class Node : ItemBase<Node>, INode
     {
         private enum SerializeId : byte
         {
@@ -174,6 +174,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region INode
 
         /// <summary>
@@ -248,28 +267,5 @@ namespace Library.Net.Lair
                 }
             }
         }
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
-            }
-        }
-
-        #endregion
     }
 }

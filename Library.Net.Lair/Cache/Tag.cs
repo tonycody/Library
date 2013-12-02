@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Tag", Namespace = "http://Library/Net/Lair")]
-    public sealed class Tag : ItemBase<Tag>, ITag, IThisLock
+    public sealed class Tag : ItemBase<Tag>, ITag
     {
         private enum SerializeId : byte
         {
@@ -193,6 +193,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region ITag
 
         [DataMember(Name = "Type")]
@@ -281,29 +300,6 @@ namespace Library.Net.Lair
                         _name = value;
                     }
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

@@ -1,31 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "ChatTopicContent", Namespace = "http://Library/Net/Lair")]
-    internal sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent
+    [DataContract(Name = "Link", Namespace = "http://Library/Net/Lair")]
+    internal sealed class Link : ReadOnlyCertificateItemBase<Link>, ILink<Tag>
     {
         private enum SerializeId : byte
         {
-            Comment = 0,
+            Tag = 0,
+            Option = 1,
         }
 
-        private string _comment;
+        private Tag _tag;
+        private OptionCollection _options;
+
+        private int _hashCode;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxCommentLength = 1024 * 32;
+        public static readonly int MaxTypeLength = 256;
+        public static readonly int MaxOptionCount = 32;
 
-        public ChatTopicContent(string comment)
+        public Link(Tag tag, IEnumerable<string> options)
         {
-            this.Comment = comment;
+            this.Tag = tag;
+            if (options != null) this.ProtectedOptions.AddRange(options);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -43,11 +52,15 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Comment)
+                        if (id == (byte)SerializeId.Tag)
+                        {
+                            this.Tag = Tag.Import(rangeStream, bufferManager);
+                        }
+                        else if (id == (byte)SerializeId.Option)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Comment = reader.ReadToEnd();
+                                this.ProtectedOptions.Add(reader.ReadToEnd());
                             }
                         }
                     }
@@ -62,8 +75,19 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Comment
-                if (this.Comment != null)
+                // Tag
+                if (this.Tag != null)
+                {
+                    Stream exportStream = this.Tag.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Tag);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // Options
+                foreach (var o in this.Options)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -72,12 +96,12 @@ namespace Library.Net.Lair
                     using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                     using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        writer.Write(this.Comment);
+                        writer.Write(o);
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Comment);
+                    bufferStream.WriteByte((byte)SerializeId.Option);
 
                     streams.Add(bufferStream);
                 }
@@ -90,47 +114,44 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (_comment == null) return 0;
-                else return _comment.GetHashCode();
+                return _hashCode;
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is ChatTopicContent)) return false;
+            if ((object)obj == null || !(obj is Link)) return false;
 
-            return this.Equals((ChatTopicContent)obj);
+            return this.Equals((Link)obj);
         }
 
-        public override bool Equals(ChatTopicContent other)
+        public override bool Equals(Link other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Comment != other.Comment)
+            if (this.Tag != other.Tag
+                || (this.Options == null) != (other.Options == null))
             {
                 return false;
+            }
+
+            if (this.Options != null && other.Options != null)
+            {
+                if (!Collection.Equals(this.Options, other.Options)) return false;
             }
 
             return true;
         }
 
-        public override string ToString()
-        {
-            lock (this.ThisLock)
-            {
-                return this.Comment;
-            }
-        }
-
-        public override ChatTopicContent DeepClone()
+        public override Link DeepClone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return ChatTopicContent.Import(stream, BufferManager.Instance);
+                    return Link.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -154,30 +175,54 @@ namespace Library.Net.Lair
             }
         }
 
-        #region ITopicContent
+        #region ILink<Tag>
 
-        [DataMember(Name = "Comment")]
-        public string Comment
+        [DataMember(Name = "Tag")]
+        public Tag Tag
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _comment;
+                    return _tag;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > ChatTopicContent.MaxCommentLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _comment = value;
-                    }
+                    _tag = value;
+                }
+            }
+        }
+
+        private volatile ReadOnlyCollection<string> _readOnlyOptions;
+
+        public IEnumerable<string> Options
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_readOnlyOptions == null)
+                        _readOnlyOptions = new ReadOnlyCollection<string>(this.ProtectedOptions);
+
+                    return _readOnlyOptions;
+                }
+            }
+        }
+
+        [DataMember(Name = "Options")]
+        private OptionCollection ProtectedOptions
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_options == null)
+                        _options = new OptionCollection(Link.MaxOptionCount);
+
+                    return _options;
                 }
             }
         }

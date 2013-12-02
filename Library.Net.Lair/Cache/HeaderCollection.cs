@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class HeaderCollection : FilterList<Header>, IEnumerable<Header>
+    internal sealed class HeaderCollection : FilterList<Header>, IEnumerable<Header>
     {
         public HeaderCollection() : base() { }
         public HeaderCollection(int capacity) : base(capacity) { }

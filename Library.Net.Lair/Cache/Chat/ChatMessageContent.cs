@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatMessageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Key>, IThisLock
+    internal sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -161,6 +161,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region IChatMessageContent<Key>
 
         [DataMember(Name = "Comment")]
@@ -217,29 +236,6 @@ namespace Library.Net.Lair
 
                     return _anchors;
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

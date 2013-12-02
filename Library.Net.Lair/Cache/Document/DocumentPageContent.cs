@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentPageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent, IThisLock
+    internal sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent
     {
         private enum SerializeId : byte
         {
@@ -196,6 +196,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region IDocumentPage
 
         [DataMember(Name = "FormatType")]
@@ -273,29 +292,6 @@ namespace Library.Net.Lair
                         _comment = value;
                     }
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

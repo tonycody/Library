@@ -7,7 +7,7 @@ namespace Library.Net.Amoeba
 {
     class ByteArrayEqualityComparer : IEqualityComparer<byte[]>
     {
-        new public bool Equals(byte[] x, byte[] y)
+        public bool Equals(byte[] x, byte[] y)
         {
             if (x == null && y == null) return true;
             if ((x == null) != (y == null)) return false;

@@ -170,44 +170,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public Information Information
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    List<InformationContext> contexts = new List<InformationContext>();
-
-                    //contexts.Add(new InformationContext("DownloadingCount", _settings.DownloadItems
-                    //    .Count(n => !(n.State == DownloadState.Completed || n.State == DownloadState.Error))));
-
-                    return new Information(contexts);
-                }
-            }
-        }
-
-        public IEnumerable<Information> DownloadingInformation
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    List<Information> list = new List<Information>();
-
-                    //foreach (var item in _ids)
-                    //{
-                    //    List<InformationContext> contexts = new List<InformationContext>();
-
-                    //    contexts.Add(new InformationContext("Id", item.Key));
-
-                    //    list.Add(new Information(contexts));
-                    //}
-
-                    return list;
-                }
-            }
-        }
-
         public IEnumerable<Header> Headers
         {
             get
@@ -266,16 +228,23 @@ namespace Library.Net.Lair
 
                         if (header.FormatType == ContentFormatType.Raw)
                         {
-                            this.Report(header, new ArraySegment<byte>(header.Content));
+                            try
+                            {
+                                this.Report(header, new ArraySegment<byte>(header.Content));
+                            }
+                            catch (Exception)
+                            {
+
+                            }
 
                             _completeHeaders.Add(header);
                         }
                         else if (header.FormatType == ContentFormatType.Key)
                         {
+                            Key key;
+
                             try
                             {
-                                Key key;
-
                                 if (!_keys.TryGetValue(header, out key))
                                 {
                                     using (var memoryStream = new MemoryStream(header.Content))
@@ -285,7 +254,16 @@ namespace Library.Net.Lair
 
                                     _keys[header] = key;
                                 }
+                            }
+                            catch (Exception)
+                            {
+                                _completeHeaders.Add(header);
 
+                                continue;
+                            }
+
+                            try
+                            {
                                 if (!_cacheManager.Contains(key))
                                 {
                                     _connectionsManager.Download(key);

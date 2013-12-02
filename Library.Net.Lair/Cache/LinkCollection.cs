@@ -3,24 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class LinkCollection : FilterList<string>, IEnumerable<string>
+    internal sealed class LinkCollection : FilterList<Link>, IEnumerable<Link>
     {
         public LinkCollection() : base() { }
         public LinkCollection(int capacity) : base(capacity) { }
-        public LinkCollection(IEnumerable<string> collections) : base(collections) { }
+        public LinkCollection(IEnumerable<Link> collections) : base(collections) { }
 
-        public static readonly int MaxLinkLength = 1024;
-
-        protected override bool Filter(string item)
+        protected override bool Filter(Link item)
         {
-            if (item == null || item.Length > LinkCollection.MaxLinkLength) return true;
+            if (item == null) return true;
 
             return false;
         }
 
         #region IEnumerable<Link>
 
-        IEnumerator<string> IEnumerable<string>.GetEnumerator()
+        IEnumerator<Link> IEnumerable<Link>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

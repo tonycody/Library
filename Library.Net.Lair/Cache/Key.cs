@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Key", Namespace = "http://Library/Net/Lair")]
-    public sealed class Key : ItemBase<Key>, IKey, IThisLock
+    internal sealed class Key : ItemBase<Key>, IKey
     {
         private enum SerializeId : byte
         {
@@ -159,6 +159,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region IKey
 
         [DataMember(Name = "Hash")]
@@ -225,29 +244,6 @@ namespace Library.Net.Lair
                         _hashAlgorithm = value;
                     }
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

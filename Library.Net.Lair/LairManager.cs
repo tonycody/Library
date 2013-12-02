@@ -335,19 +335,7 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                if (this.State == ManagerState.Start)
-                {
-                    //_downloadManager.Stop();
-                    //_uploadManager.Stop();
-                }
-
                 _cacheManager.Resize(size);
-
-                if (this.State == ManagerState.Start)
-                {
-                    //_downloadManager.Start();
-                    //_uploadManager.Start();
-                }
             }
         }
 

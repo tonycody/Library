@@ -99,6 +99,7 @@
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\Chat\ChatMessageContent.cs" />
     <Compile Include="Cache\Chat\ChatTopicContent.cs" />
+    <Compile Include="Cache\Link.cs" />
     <Compile Include="Cache\LinkCollection.cs" />
     <Compile Include="Cache\HeaderCollection.cs" />
     <Compile Include="Cache\Document\DocumentPageContent.cs" />
@@ -111,6 +112,7 @@
     <Compile Include="Cache\Section\SectionMessageContent.cs" />
     <Compile Include="Cache\_Interface\Content\Document\IDocumentPageContent.cs" />
     <Compile Include="Cache\_Interface\Content\Document\IDocumentOpinionContent.cs" />
+    <Compile Include="Cache\_Interface\Header\ILink.cs" />
     <Compile Include="Cache\_Interface\ICryptoAlgorithm.cs" />
     <Compile Include="Cache\_Interface\Header\IHeader.cs" />
     <Compile Include="Cache\_Interface\Header\ITag.cs" />
@@ -123,7 +125,7 @@
     <Compile Include="Cache\_Interface\IKey.cs" />
     <Compile Include="Cache\Key.cs" />
     <Compile Include="Cache\KeyCollection.cs" />
-    <Compile Include="Cache\LairConverter.cs" />
+    <Compile Include="LairConverter.cs" />
     <Compile Include="ContentConverter.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="EqualityComparer.cs" />
@@ -144,6 +146,7 @@
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
     <Compile Include="Tools\Unsafe.cs" />
+    <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -204,9 +207,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Information\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

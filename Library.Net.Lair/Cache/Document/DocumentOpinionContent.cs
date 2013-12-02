@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentOpinionContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>, IThisLock
+    internal sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -147,6 +147,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region IDocumentOpinionsContent<Key>
 
         private volatile ReadOnlyCollection<Key> _readOnlyGoods;
@@ -208,29 +227,6 @@ namespace Library.Net.Lair
 
                     return _bads;
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

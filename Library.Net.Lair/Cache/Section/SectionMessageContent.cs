@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionMessageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionMessageContent : ItemBase<SectionMessageContent>, ISectionMessageContent<Key>, IThisLock
+    internal sealed class SectionMessageContent : ItemBase<SectionMessageContent>, ISectionMessageContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -147,6 +147,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region ISectionMessageContent
 
         [DataMember(Name = "Comment")]
@@ -200,29 +219,6 @@ namespace Library.Net.Lair
                         _hashCode = _anchor.GetHashCode();
                     }
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 

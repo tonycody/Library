@@ -7,10 +7,11 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    interface ISectionProfileContent : IExchangeEncrypt
+    interface ISectionProfileContent<TLink> : IExchangeEncrypt
+        where TLink : ILink<ITag>
     {
         string Comment { get; }
         IEnumerable<string> TrustSignatures { get; }
-        IEnumerable<string> Links { get; }
+        IEnumerable<TLink> Links { get; }
     }
 }

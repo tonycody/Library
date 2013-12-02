@@ -791,43 +791,49 @@ namespace Library.Net.Amoeba
                             {
                                 _connectionsManager.SendSeedRequest(signature);
 
-                                Seed seed;
-
-                                // Link
-                                if (null != (seed = _connectionsManager.GetLinkSeed(signature))
-                                    && seed.Length < 1024 * 1024 * 32)
                                 {
-                                    var item = _settings.BackgroundDownloadItems
-                                        .Where(n => n.Type == BackgroundItemType.Link)
-                                        .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                                    Seed linkSeed;
 
-                                    if (item == null)
+                                    // Link
+                                    if (null != (linkSeed = _connectionsManager.GetLinkSeed(signature))
+                                        && linkSeed.Length < 1024 * 1024 * 32)
                                     {
-                                        this.Download(seed, BackgroundItemType.Link);
-                                    }
-                                    else if (seed.CreationTime > item.Seed.CreationTime)
-                                    {
-                                        this.Remove(item);
-                                        this.Download(seed, BackgroundItemType.Link);
+                                        var item = _settings.BackgroundDownloadItems
+                                            .Where(n => n.Type == BackgroundItemType.Link)
+                                            .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+
+                                        if (item == null)
+                                        {
+                                            this.Download(linkSeed, BackgroundItemType.Link);
+                                        }
+                                        else if (linkSeed.CreationTime > item.Seed.CreationTime)
+                                        {
+                                            this.Remove(item);
+                                            this.Download(linkSeed, BackgroundItemType.Link);
+                                        }
                                     }
                                 }
 
                                 // Store
-                                if (null != (seed = _connectionsManager.GetStoreSeed(signature))
-                                    && seed.Length < 1024 * 1024 * 32)
                                 {
-                                    var item = _settings.BackgroundDownloadItems
-                                        .Where(n => n.Type == BackgroundItemType.Store)
-                                        .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+                                    Seed storeSeed;
 
-                                    if (item == null)
+                                    if (null != (storeSeed = _connectionsManager.GetStoreSeed(signature))
+                                        && storeSeed.Length < 1024 * 1024 * 32)
                                     {
-                                        this.Download(seed, BackgroundItemType.Store);
-                                    }
-                                    else if (seed.CreationTime > item.Seed.CreationTime)
-                                    {
-                                        this.Remove(item);
-                                        this.Download(seed, BackgroundItemType.Store);
+                                        var item = _settings.BackgroundDownloadItems
+                                            .Where(n => n.Type == BackgroundItemType.Store)
+                                            .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
+
+                                        if (item == null)
+                                        {
+                                            this.Download(storeSeed, BackgroundItemType.Store);
+                                        }
+                                        else if (storeSeed.CreationTime > item.Seed.CreationTime)
+                                        {
+                                            this.Remove(item);
+                                            this.Download(storeSeed, BackgroundItemType.Store);
+                                        }
                                     }
                                 }
                             }
@@ -958,32 +964,6 @@ namespace Library.Net.Amoeba
                 if (store == null) return null;
 
                 return store.DeepClone();
-            }
-        }
-
-        public void ResetLink(string signature)
-        {
-            lock (this.ThisLock)
-            {
-                var item = _settings.BackgroundDownloadItems
-                    .Where(n => n.Type == BackgroundItemType.Link)
-                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
-                if (item == null) return;
-
-                this.Remove(item);
-            }
-        }
-
-        public void ResetStore(string signature)
-        {
-            lock (this.ThisLock)
-            {
-                var item = _settings.BackgroundDownloadItems
-                    .Where(n => n.Type == BackgroundItemType.Store)
-                    .FirstOrDefault(n => n.Seed.Certificate.ToString() == signature);
-                if (item == null) return;
-
-                this.Remove(item);
             }
         }
 

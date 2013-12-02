@@ -11,7 +11,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent, IThisLock
+    internal sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<ILink<Tag>>
     {
         private enum SerializeId : byte
         {
@@ -41,7 +41,7 @@ namespace Library.Net.Lair
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<string> links, IExchangeEncrypt exchangeEncrypt)
+        public SectionProfileContent(string comment, IEnumerable<string> trustSignatures, IEnumerable<Link> links, IExchangeEncrypt exchangeEncrypt)
         {
             this.Comment = comment;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
@@ -82,10 +82,7 @@ namespace Library.Net.Lair
                         }
                         else if (id == (byte)SerializeId.Link)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.ProtectedLinks.Add(reader.ReadToEnd());
-                            }
+                            this.ProtectedLinks.Add(Link.Import(rangeStream, bufferManager));
                         }
 
                         else if (id == (byte)SerializeId.ExchangeAlgorithm)
@@ -266,6 +263,25 @@ namespace Library.Net.Lair
             }
         }
 
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
+
         #region ISectionProfile<Tag>
 
         [DataMember(Name = "Comment")]
@@ -326,16 +342,16 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<string> _readOnlyLinks;
+        private volatile ReadOnlyCollection<Link> _readOnlyLinks;
 
-        public IEnumerable<string> Links
+        public IEnumerable<Link> Links
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_readOnlyLinks == null)
-                        _readOnlyLinks = new ReadOnlyCollection<string>(this.ProtectedLinks);
+                        _readOnlyLinks = new ReadOnlyCollection<Link>(this.ProtectedLinks);
 
                     return _readOnlyLinks;
                 }
@@ -419,29 +435,6 @@ namespace Library.Net.Lair
                         _hashCode = 0;
                     }
                 }
-            }
-        }
-
-        #endregion
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
             }
         }
 
