@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionMessageContent", Namespace = "http://Library/Net/Lair")]
-    internal sealed class SectionMessageContent : ItemBase<SectionMessageContent>, ISectionMessageContent<Key>
+    public sealed class SectionMessageContent : ItemBase<SectionMessageContent>, ISectionMessageContent<Key>
     {
         private enum SerializeId : byte
         {

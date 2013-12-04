@@ -13,8 +13,6 @@ using Library.Correction;
 namespace Library.Net.Lair
 {
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
-    delegate void SetKeyEventHandler(object sender, IEnumerable<Key> keys);
-    delegate void RemoveKeyEventHandler(object sender, IEnumerable<Key> keys);
     delegate bool WatchEventHandler(object sender);
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
@@ -34,9 +32,6 @@ namespace Library.Net.Lair
         private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
 
         private Thread _watchThread;
-
-        private SetKeyEventHandler _setKeyEvent;
-        private RemoveKeyEventHandler _removeKeyEvent;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -93,42 +88,6 @@ namespace Library.Net.Lair
             catch (Exception)
             {
 
-            }
-        }
-
-        public event SetKeyEventHandler SetKeyEvent
-        {
-            add
-            {
-                lock (this.ThisLock)
-                {
-                    _setKeyEvent += value;
-                }
-            }
-            remove
-            {
-                lock (this.ThisLock)
-                {
-                    _setKeyEvent -= value;
-                }
-            }
-        }
-
-        public event RemoveKeyEventHandler RemoveKeyEvent
-        {
-            add
-            {
-                lock (this.ThisLock)
-                {
-                    _removeKeyEvent += value;
-                }
-            }
-            remove
-            {
-                lock (this.ThisLock)
-                {
-                    _removeKeyEvent -= value;
-                }
             }
         }
 
@@ -278,10 +237,16 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                int count = 0;
-                _lockedKeys.TryGetValue(key, out count);
+                int count;
 
-                _lockedKeys[key] = ++count;
+                if (_lockedKeys.TryGetValue(key, out count))
+                {
+                    _lockedKeys[key] = ++count;
+                }
+                else
+                {
+                    _lockedKeys[key] = 1;
+                }
             }
         }
 
@@ -289,12 +254,8 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                int count = 0;
-
-                if (!_lockedKeys.TryGetValue(key, out count))
-                {
-                    throw new KeyNotFoundException();
-                }
+                int count;
+                if (!_lockedKeys.TryGetValue(key, out count)) throw new KeyNotFoundException();
 
                 count--;
 
@@ -306,22 +267,6 @@ namespace Library.Net.Lair
                 {
                     _lockedKeys[key] = count;
                 }
-            }
-        }
-
-        protected virtual void OnSetKeyEvent(IEnumerable<Key> keys)
-        {
-            if (_setKeyEvent != null)
-            {
-                _setKeyEvent(this, keys);
-            }
-        }
-
-        protected virtual void OnRemoveKeyEvent(IEnumerable<Key> keys)
-        {
-            if (_removeKeyEvent != null)
-            {
-                _removeKeyEvent(this, keys);
             }
         }
 
@@ -353,8 +298,6 @@ namespace Library.Net.Lair
 
         public void Remove(Key key)
         {
-            bool flag = false;
-
             lock (this.ThisLock)
             {
                 Clusters clusters = null;
@@ -363,12 +306,8 @@ namespace Library.Net.Lair
                 {
                     _settings.ClustersIndex.Remove(key);
                     _spaceClusters.UnionWith(clusters.Indexes);
-
-                    flag = true;
                 }
             }
-
-            if (flag) this.OnRemoveKeyEvent(new Key[] { key });
         }
 
         public void Resize(long size)
@@ -599,8 +538,6 @@ namespace Library.Net.Lair
                     clusters.UpdateTime = DateTime.UtcNow;
                     _settings.ClustersIndex[key] = clusters;
                 }
-
-                this.OnSetKeyEvent(new Key[] { key });
             }
         }
 

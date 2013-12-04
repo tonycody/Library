@@ -105,7 +105,7 @@ namespace Library.Net.Amoeba
             _removeThread.Name = "BackgroundDownloadManager_RemoveThread";
             _removeThread.Start();
 
-            _connectionsManager.LockSignaturesEvent = (object sender) =>
+            _connectionsManager.GetLockSignaturesEvent = (object sender) =>
             {
                 return this.SearchSignatures;
             };

@@ -21,7 +21,7 @@ namespace Library.Net.Connections.SecureVersion2
             Certificate = 4,
         }
 
-        private DateTime _creationTime = DateTime.MinValue;
+        private DateTime _creationTime;
         private byte[] _key;
         private byte[] _myHash;
         private byte[] _otherHash;

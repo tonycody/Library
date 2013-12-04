@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class SearchItemCollection : FilterList<SearchItem>, IEnumerable<SearchItem>
+    public sealed class CriterionCollection : FilterList<Criterion>, IEnumerable<Criterion>
     {
-        public SearchItemCollection() : base() { }
-        public SearchItemCollection(int capacity) : base(capacity) { }
-        public SearchItemCollection(IEnumerable<SearchItem> collections) : base(collections) { }
+        public CriterionCollection() : base() { }
+        public CriterionCollection(int capacity) : base(capacity) { }
+        public CriterionCollection(IEnumerable<Criterion> collections) : base(collections) { }
 
-        protected override bool Filter(SearchItem item)
+        protected override bool Filter(Criterion item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<SearchItem>
+        #region IEnumerable<Match>
 
-        IEnumerator<SearchItem> IEnumerable<SearchItem>.GetEnumerator()
+        IEnumerator<Criterion> IEnumerable<Criterion>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

@@ -32,7 +32,7 @@ namespace Library.Net.Amoeba
 
         private string _name;
         private long _length;
-        private DateTime _creationTime = DateTime.MinValue;
+        private DateTime _creationTime;
         private string _comment;
         private int _rank;
         private Key _key;

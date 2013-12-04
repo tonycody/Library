@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentPageContent", Namespace = "http://Library/Net/Lair")]
-    internal sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent
+    public sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent
     {
         private enum SerializeId : byte
         {
@@ -175,14 +175,6 @@ namespace Library.Net.Lair
             }
 
             return true;
-        }
-
-        public override string ToString()
-        {
-            lock (this.ThisLock)
-            {
-                return this.Hypertext;
-            }
         }
 
         public override DocumentPageContent DeepClone()

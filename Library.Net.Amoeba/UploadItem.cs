@@ -30,7 +30,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UploadType", Namespace = "http://Library/Net/Amoeba")]
-    public enum UploadType
+    enum UploadType
     {
         [EnumMember(Value = "Upload")]
         Upload = 0,

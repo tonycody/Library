@@ -45,16 +45,16 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadSectionProfile(byte[] id,
-            string name,
+        public void UploadSectionProfile(
+            byte[] tagId,
+            string tagName,
             IEnumerable<string> options,
             SectionProfileContent content,
-
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                Tag tag = new Tag("Section", id, name);
+                Tag tag = new Tag("Section", tagId, tagName);
 
                 ArraySegment<byte> buffer = new ArraySegment<byte>();
 

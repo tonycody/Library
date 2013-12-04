@@ -12,7 +12,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Link", Namespace = "http://Library/Net/Lair")]
-    internal sealed class Link : ReadOnlyCertificateItemBase<Link>, ILink<Tag>
+    public sealed class Link : ReadOnlyCertificateItemBase<Link>, ILink<Tag>
     {
         private enum SerializeId : byte
         {

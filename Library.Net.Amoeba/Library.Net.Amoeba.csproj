@@ -34,7 +34,7 @@
     <RegisterForComInterop>False</RegisterForComInterop>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <BaseAddress>4194304</BaseAddress>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -115,7 +115,6 @@
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
-    <Compile Include="Tools\Unsafe.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />

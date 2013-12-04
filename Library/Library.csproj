@@ -35,6 +35,7 @@
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <BaseAddress>4194304</BaseAddress>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -72,6 +73,7 @@
     <Compile Include="NetworkConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StateManagerBase.cs" />
+    <Compile Include="Unsafe.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Properties\Library.License">

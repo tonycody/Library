@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Library.Net.Amoeba
+namespace Library
 {
-    class Unsafe
+    public class Unsafe
     {
         // Copyright (c) 2008-2013 Hafthor Stefansson
         // Distributed under the MIT/X11 software license

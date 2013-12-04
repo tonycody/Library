@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    internal sealed class TagCollection : FilterList<Tag>, IEnumerable<Tag>
+    public sealed class TagCollection : FilterList<Tag>, IEnumerable<Tag>
     {
         public TagCollection() : base() { }
         public TagCollection(int capacity) : base(capacity) { }

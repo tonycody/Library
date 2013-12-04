@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatTopicContent", Namespace = "http://Library/Net/Lair")]
-    internal sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent
+    public sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent
     {
         private enum SerializeId : byte
         {
@@ -114,14 +114,6 @@ namespace Library.Net.Lair
             }
 
             return true;
-        }
-
-        public override string ToString()
-        {
-            lock (this.ThisLock)
-            {
-                return this.Comment;
-            }
         }
 
         public override ChatTopicContent DeepClone()

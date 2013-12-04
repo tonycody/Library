@@ -10,9 +10,7 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    public delegate IEnumerable<Tag> LockTagsEventHandler(object sender);
-    public delegate IEnumerable<string> LockSignaturesEventHandler(object sender);
-    delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
+    public delegate IEnumerable<Criterion> GetCriteriaEventHandler(object sender);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -85,9 +83,7 @@ namespace Library.Net.Lair
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        private LockTagsEventHandler _lockTagsEvent;
-        private LockSignaturesEventHandler _lockSignaturesEvent;
-        private UploadedEventHandler _uploadedEvent;
+        private GetCriteriaEventHandler _getLockCriteriaEvent;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -148,42 +144,13 @@ namespace Library.Net.Lair
             this.UpdateSessionId();
         }
 
-        public LockTagsEventHandler LockTagsEvent
+        public GetCriteriaEventHandler GetLockCriteriaEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockTagsEvent = value;
-                }
-            }
-        }
-
-        public LockSignaturesEventHandler LockSignaturesEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _lockSignaturesEvent = value;
-                }
-            }
-        }
-
-        public event UploadedEventHandler UploadedEvent
-        {
-            add
-            {
-                lock (this.ThisLock)
-                {
-                    _uploadedEvent += value;
-                }
-            }
-            remove
-            {
-                lock (this.ThisLock)
-                {
-                    _uploadedEvent -= value;
+                    _getLockCriteriaEvent = value;
                 }
             }
         }
@@ -366,26 +333,6 @@ namespace Library.Net.Lair
                     return _sentByteCount + _connectionManagers.Sum(n => n.SentByteCount);
                 }
             }
-        }
-
-        protected virtual IEnumerable<Tag> OnLockTagsEvent()
-        {
-            if (_lockTagsEvent != null)
-            {
-                return _lockTagsEvent(this);
-            }
-
-            return null;
-        }
-
-        protected virtual IEnumerable<string> OnLockSignaturesEvent()
-        {
-            if (_lockSignaturesEvent != null)
-            {
-                return _lockSignaturesEvent(this);
-            }
-
-            return null;
         }
 
         private static bool Check(Node node)
@@ -1060,8 +1007,6 @@ namespace Library.Net.Lair
                 {
                     refreshStopwatch.Restart();
 
-                    var now = DateTime.UtcNow;
-
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         if (_refreshThreadRunning) return;
@@ -1069,14 +1014,17 @@ namespace Library.Net.Lair
 
                         try
                         {
-                            {
-                                var lockTags = this.OnLockTagsEvent();
+                            var lockCriteriaList = this.OnGetLockCriteriaEvent();
 
-                                if (lockTags != null)
+                            if (lockCriteriaList != null)
+                            {
+                                var now = DateTime.UtcNow;
+
+                                // 非トラストなタグを1024残し、他をLRU順に破棄。
                                 {
                                     var removeTags = new HashSet<Tag>();
                                     removeTags.UnionWith(_headerManager.GetTags());
-                                    removeTags.ExceptWith(lockTags);
+                                    removeTags.ExceptWith(lockCriteriaList.SelectMany(n => n.Tags));
 
                                     var sortList = removeTags.ToList();
 
@@ -1102,252 +1050,290 @@ namespace Library.Net.Lair
                                         _lastUsedHeaderTimes.Remove(tag);
                                     }
                                 }
-                            }
 
-                            {
-                                var lockSignatures = this.OnLockSignaturesEvent();
+                                // Tag毎にトラストリストを適応する。
+                                var patternlist = new List<KeyValuePair<HashSet<Tag>, HashSet<string>>>();
 
-                                if (lockSignatures != null)
+                                foreach (var criterion in lockCriteriaList)
                                 {
-                                    var hashset = new HashSet<string>(lockSignatures);
+                                    var tagHashset = new HashSet<Tag>(criterion.Tags);
+                                    var SignatureHashset = new HashSet<string>(criterion.TrustSignatures);
 
-                                    lock (this.ThisLock)
+                                    patternlist.Add(new KeyValuePair<HashSet<Tag>, HashSet<string>>(tagHashset, SignatureHashset));
+                                }
+
+                                {
+                                    var removeHeaders = new List<Header>();
+
+                                    foreach (var tag in _headerManager.GetTags())
                                     {
-                                        var removeHeaders = new List<Header>();
+                                        List<HashSet<string>> trustList;
 
-                                        foreach (var tag in _headerManager.GetTags())
                                         {
-                                            var headers = _headerManager.GetHeaders(tag).ToList();
+                                            var tempList = patternlist.Where(n => n.Key.Contains(tag)).ToList();
+                                            if (tempList.Count == 0) continue;
 
-                                            if (tag.Type == "Section")
-                                            {
-                                                List<Header> trustProfileHeaders = new List<Header>();
-                                                List<Header> untrustProfileHeaders = new List<Header>();
-
-                                                Dictionary<string, List<Header>> trustMessageHeaders = new Dictionary<string, List<Header>>();
-                                                Dictionary<string, List<Header>> untrustMessageHeaders = new Dictionary<string, List<Header>>();
-
-                                                foreach (var header in headers)
-                                                {
-                                                    var signature = header.Certificate.ToString();
-
-                                                    if (header.Type == "Profile")
-                                                    {
-                                                        if (hashset.Contains(signature))
-                                                        {
-                                                            trustProfileHeaders.Add(header);
-                                                        }
-                                                        else
-                                                        {
-                                                            untrustProfileHeaders.Add(header);
-                                                        }
-                                                    }
-                                                    else if (header.Type == "Message")
-                                                    {
-                                                        if (hashset.Contains(signature))
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!trustMessageHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                trustMessageHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                        else
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!untrustMessageHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                untrustMessageHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                    }
-                                                }
-
-                                                removeHeaders.AddRange(trustProfileHeaders.Randomize().Skip(8192));
-                                                removeHeaders.AddRange(untrustProfileHeaders.Randomize().Skip(32));
-
-                                                removeHeaders.AddRange(trustMessageHeaders.Randomize().Skip(8192).SelectMany(n => n.Value));
-                                                removeHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
-
-                                                foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
-                                                {
-                                                    if (list.Count <= 32) continue;
-
-                                                    list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                    removeHeaders.AddRange(list.Take(list.Count - 32));
-                                                }
-                                            }
-                                            else if (tag.Type == "Document")
-                                            {
-                                                Dictionary<string, List<Header>> trustPageHeaders = new Dictionary<string, List<Header>>();
-                                                Dictionary<string, List<Header>> untrustPageHeaders = new Dictionary<string, List<Header>>();
-
-                                                List<Header> trustOpinionHeaders = new List<Header>();
-                                                List<Header> untrustOpinionHeaders = new List<Header>();
-
-                                                foreach (var header in headers)
-                                                {
-                                                    var signature = header.Certificate.ToString();
-
-                                                    if (header.Type == "Page")
-                                                    {
-                                                        if (hashset.Contains(signature))
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!trustPageHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                trustPageHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                        else
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!untrustPageHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                untrustPageHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                    }
-                                                    else if (header.Type == "Opinion")
-                                                    {
-                                                        if (hashset.Contains(signature))
-                                                        {
-                                                            trustOpinionHeaders.Add(header);
-                                                        }
-                                                        else
-                                                        {
-                                                            untrustOpinionHeaders.Add(header);
-                                                        }
-                                                    }
-
-                                                }
-
-                                                removeHeaders.AddRange(trustPageHeaders.Randomize().Skip(8192).SelectMany(n => n.Value));
-                                                removeHeaders.AddRange(untrustPageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
-
-                                                foreach (var list in Collection.Merge(trustPageHeaders.Values, untrustPageHeaders.Values))
-                                                {
-                                                    if (list.Count <= 256) continue;
-
-                                                    list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                    removeHeaders.AddRange(list.Take(list.Count - 256));
-                                                }
-
-                                                removeHeaders.AddRange(trustOpinionHeaders.Randomize().Skip(8192));
-                                                removeHeaders.AddRange(untrustOpinionHeaders.Randomize().Skip(32));
-                                            }
-                                            else if (tag.Type == "Chat")
-                                            {
-                                                Dictionary<string, List<Header>> trustTopicHeaders = new Dictionary<string, List<Header>>();
-                                                Dictionary<string, List<Header>> untrustTopicHeaders = new Dictionary<string, List<Header>>();
-
-                                                Dictionary<string, List<Header>> trustMessageHeaders = new Dictionary<string, List<Header>>();
-                                                Dictionary<string, List<Header>> untrustMessageHeaders = new Dictionary<string, List<Header>>();
-
-                                                foreach (var header in headers)
-                                                {
-                                                    var signature = header.Certificate.ToString();
-
-                                                    if (header.Type == "Topic")
-                                                    {
-                                                        if (hashset.Contains(signature))
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!trustTopicHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                trustTopicHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                        else
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!untrustTopicHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                untrustTopicHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                    }
-                                                    else if (header.Type == "Message")
-                                                    {
-                                                        if (hashset.Contains(signature))
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!trustMessageHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                trustMessageHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                        else
-                                                        {
-                                                            List<Header> list;
-
-                                                            if (!untrustMessageHeaders.TryGetValue(signature, out list))
-                                                            {
-                                                                list = new List<Header>();
-                                                                untrustMessageHeaders[signature] = list;
-                                                            }
-
-                                                            list.Add(header);
-                                                        }
-                                                    }
-                                                }
-
-                                                removeHeaders.AddRange(trustTopicHeaders.Randomize().Skip(8192).SelectMany(n => n.Value));
-                                                removeHeaders.AddRange(untrustTopicHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
-
-                                                foreach (var list in Collection.Merge(trustTopicHeaders.Values, untrustTopicHeaders.Values))
-                                                {
-                                                    if (list.Count <= 256) continue;
-
-                                                    list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                    removeHeaders.AddRange(list.Take(list.Count - 256));
-                                                }
-
-                                                removeHeaders.AddRange(trustMessageHeaders.Randomize().Skip(8192).SelectMany(n => n.Value));
-                                                removeHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
-
-                                                foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
-                                                {
-                                                    if (list.Count <= 8192) continue;
-
-                                                    list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                    removeHeaders.AddRange(list.Take(list.Count - 8192));
-                                                }
-                                            }
+                                            trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
                                         }
 
-                                        foreach (var header in removeHeaders)
+                                        var headers = _headerManager.GetHeaders(tag).ToList();
+
+                                        if (tag.Type == "Section")
                                         {
-                                            _headerManager.RemoveHeader(header);
+                                            List<Header> trustProfileHeaders = new List<Header>();
+                                            List<Header> untrustProfileHeaders = new List<Header>();
+
+                                            Dictionary<string, List<Header>> trustMessageHeaders = new Dictionary<string, List<Header>>();
+                                            Dictionary<string, List<Header>> untrustMessageHeaders = new Dictionary<string, List<Header>>();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (header.Type == "Profile")
+                                                {
+                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    {
+                                                        trustProfileHeaders.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        untrustProfileHeaders.Add(header);
+                                                    }
+                                                }
+                                                else if (header.Type == "Message")
+                                                {
+                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!trustMessageHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            trustMessageHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!untrustMessageHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            untrustMessageHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                }
+                                            }
+
+                                            removeHeaders.AddRange(trustProfileHeaders);
+                                            removeHeaders.AddRange(untrustProfileHeaders.Randomize().Skip(32));
+
+                                            removeHeaders.AddRange(trustMessageHeaders.SelectMany(n => n.Value));
+                                            removeHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
+                                            {
+                                                var tempList = new List<Header>();
+
+                                                foreach (var header in list)
+                                                {
+                                                    if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                                                    {
+                                                        removeHeaders.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        tempList.Add(header);
+                                                    }
+                                                }
+
+                                                if (list.Count <= 32) continue;
+
+                                                tempList.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
+                                                removeHeaders.AddRange(tempList.Take(tempList.Count - 32));
+                                            }
                                         }
+                                        else if (tag.Type == "Document")
+                                        {
+                                            Dictionary<string, List<Header>> trustPageHeaders = new Dictionary<string, List<Header>>();
+                                            Dictionary<string, List<Header>> untrustPageHeaders = new Dictionary<string, List<Header>>();
+
+                                            List<Header> trustOpinionHeaders = new List<Header>();
+                                            List<Header> untrustOpinionHeaders = new List<Header>();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (header.Type == "Page")
+                                                {
+                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!trustPageHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            trustPageHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!untrustPageHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            untrustPageHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                }
+                                                else if (header.Type == "Opinion")
+                                                {
+                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    {
+                                                        trustOpinionHeaders.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        untrustOpinionHeaders.Add(header);
+                                                    }
+                                                }
+
+                                            }
+
+                                            removeHeaders.AddRange(trustPageHeaders.SelectMany(n => n.Value));
+                                            removeHeaders.AddRange(untrustPageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in Collection.Merge(trustPageHeaders.Values, untrustPageHeaders.Values))
+                                            {
+                                                if (list.Count <= 256) continue;
+
+                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
+                                                removeHeaders.AddRange(list.Take(list.Count - 256));
+                                            }
+
+                                            removeHeaders.AddRange(trustOpinionHeaders);
+                                            removeHeaders.AddRange(untrustOpinionHeaders.Randomize().Skip(32));
+                                        }
+                                        else if (tag.Type == "Chat")
+                                        {
+                                            Dictionary<string, List<Header>> trustTopicHeaders = new Dictionary<string, List<Header>>();
+                                            Dictionary<string, List<Header>> untrustTopicHeaders = new Dictionary<string, List<Header>>();
+
+                                            Dictionary<string, List<Header>> trustMessageHeaders = new Dictionary<string, List<Header>>();
+                                            Dictionary<string, List<Header>> untrustMessageHeaders = new Dictionary<string, List<Header>>();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (header.Type == "Topic")
+                                                {
+                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!trustTopicHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            trustTopicHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!untrustTopicHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            untrustTopicHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                }
+                                                else if (header.Type == "Message")
+                                                {
+                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!trustMessageHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            trustMessageHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        List<Header> list;
+
+                                                        if (!untrustMessageHeaders.TryGetValue(signature, out list))
+                                                        {
+                                                            list = new List<Header>();
+                                                            untrustMessageHeaders[signature] = list;
+                                                        }
+
+                                                        list.Add(header);
+                                                    }
+                                                }
+                                            }
+
+                                            removeHeaders.AddRange(trustTopicHeaders.SelectMany(n => n.Value));
+                                            removeHeaders.AddRange(untrustTopicHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in Collection.Merge(trustTopicHeaders.Values, untrustTopicHeaders.Values))
+                                            {
+                                                if (list.Count <= 256) continue;
+
+                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
+                                                removeHeaders.AddRange(list.Take(list.Count - 256));
+                                            }
+
+                                            removeHeaders.AddRange(trustMessageHeaders.SelectMany(n => n.Value));
+                                            removeHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
+                                            {
+                                                var tempList = new List<Header>();
+
+                                                foreach (var header in list)
+                                                {
+                                                    if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                                                    {
+                                                        removeHeaders.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        tempList.Add(header);
+                                                    }
+                                                }
+
+                                                if (list.Count <= 8192) continue;
+
+                                                tempList.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
+                                                removeHeaders.AddRange(tempList.Take(tempList.Count - 1024));
+                                            }
+                                        }
+                                    }
+
+                                    foreach (var header in removeHeaders)
+                                    {
+                                        _headerManager.RemoveHeader(header);
                                     }
                                 }
                             }
@@ -1415,8 +1401,6 @@ namespace Library.Net.Lair
                                 {
                                     _settings.UploadBlocksRequest.Remove(item);
                                     _settings.DiffusionBlocksRequest.Remove(item);
-
-                                    this.OnUploadedEvent(new Key[] { item });
 
                                     continue;
                                 }
@@ -2038,8 +2022,6 @@ namespace Library.Net.Lair
 
                                 _settings.UploadBlocksRequest.Remove(key);
                                 _settings.DiffusionBlocksRequest.Remove(key);
-
-                                this.OnUploadedEvent(new Key[] { key });
                             }
                         }
                     }
@@ -2383,12 +2365,14 @@ namespace Library.Net.Lair
 
         #endregion
 
-        protected virtual void OnUploadedEvent(IEnumerable<Key> keys)
+        protected virtual IEnumerable<Criterion> OnGetLockCriteriaEvent()
         {
-            if (_uploadedEvent != null)
+            if (_getLockCriteriaEvent != null)
             {
-                _uploadedEvent(this, keys);
+                return _getLockCriteriaEvent(this);
             }
+
+            return null;
         }
 
         public void SetBaseNode(Node baseNode)

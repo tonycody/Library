@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DocumentOpinionContent", Namespace = "http://Library/Net/Lair")]
-    internal sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>
+    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>
     {
         private enum SerializeId : byte
         {

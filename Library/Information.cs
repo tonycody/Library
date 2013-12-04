@@ -43,20 +43,19 @@ namespace Library
         }
     }
 
-    //[DataContract(Name = "InformationCollection", Namespace = "http://Library")]
+    [DataContract(Name = "Information", Namespace = "http://Library")]
     public class Information : IEnumerable<InformationContext>
     {
-        private IList<InformationContext> _contextList;
-        private Dictionary<string, InformationContext> _dic;
+        [DataMember(Name = "Contexts")]
+        private List<InformationContext> _contexts;
 
-        public Information(IEnumerable<InformationContext> contextList)
+        public Information(IEnumerable<InformationContext> contexts)
         {
-            _contextList = contextList.ToList();
-            _dic = new Dictionary<string, InformationContext>();
+            _contexts = new List<InformationContext>();
 
-            foreach (var item in contextList)
+            foreach (var item in contexts)
             {
-                _dic.Add(item.Key, item);
+                _contexts.Add(item);
             }
         }
 
@@ -64,21 +63,21 @@ namespace Library
         {
             get
             {
-                if (_dic.ContainsKey(propertyName))
-                    return _dic[propertyName].Value;
-
-                return null;
+                return _contexts.First(n => n.Key == propertyName).Value;
             }
         }
 
         public bool Contains(string propertyName)
         {
-            return _dic.ContainsKey(propertyName);
+            return _contexts.Any(n => n.Key == propertyName);
         }
 
         public IEnumerator<InformationContext> GetEnumerator()
         {
-            return _contextList.GetEnumerator();
+            foreach (var item in _contexts)
+            {
+                yield return item;
+            }
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()

@@ -12,7 +12,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Header", Namespace = "http://Library/Net/Lair")]
-    internal sealed class Header : ReadOnlyCertificateItemBase<Header>, IHeader<Tag>
+    public sealed class Header : ReadOnlyCertificateItemBase<Header>, IHeader<Tag>
     {
         private enum SerializeId : byte
         {
@@ -29,7 +29,7 @@ namespace Library.Net.Lair
         private Tag _tag;
         private string _type;
         private OptionCollection _options;
-        private DateTime _creationTime = DateTime.MinValue;
+        private DateTime _creationTime;
         private ContentFormatType _formatType;
         private byte[] _content;
 

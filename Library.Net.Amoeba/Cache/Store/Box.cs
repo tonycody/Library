@@ -23,7 +23,7 @@ namespace Library.Net.Amoeba
         }
 
         private string _name;
-        private DateTime _creationTime = DateTime.MinValue;
+        private DateTime _creationTime;
         private string _comment;
         private SeedCollection _seeds;
         private BoxCollection _boxes;

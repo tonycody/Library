@@ -570,7 +570,6 @@ namespace Library.Net.Amoeba
                                         foreach (var key in keys)
                                         {
                                             item.UploadKeys.Add(key);
-                                            item.LockedKeys.Add(key);
                                         }
 
                                         item.Groups.Add(group);

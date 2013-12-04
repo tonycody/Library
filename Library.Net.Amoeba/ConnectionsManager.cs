@@ -9,7 +9,7 @@ using Library.Security;
 
 namespace Library.Net.Amoeba
 {
-    public delegate IEnumerable<string> LockSignaturesEventHandler(object sender);
+    public delegate IEnumerable<string> GetSignaturesEventHandler(object sender);
     delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -82,7 +82,7 @@ namespace Library.Net.Amoeba
         private volatile int _acceptConnectionCount;
         private volatile int _createConnectionCount;
 
-        private LockSignaturesEventHandler _lockSignaturesEvent;
+        private GetSignaturesEventHandler _getLockSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
 
         private volatile bool _disposed;
@@ -144,13 +144,13 @@ namespace Library.Net.Amoeba
             this.UpdateSessionId();
         }
 
-        public LockSignaturesEventHandler LockSignaturesEvent
+        public GetSignaturesEventHandler GetLockSignaturesEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockSignaturesEvent = value;
+                    _getLockSignaturesEvent = value;
                 }
             }
         }
@@ -355,9 +355,9 @@ namespace Library.Net.Amoeba
 
         protected virtual IEnumerable<string> OnLockSignaturesEvent()
         {
-            if (_lockSignaturesEvent != null)
+            if (_getLockSignaturesEvent != null)
             {
-                return _lockSignaturesEvent(this);
+                return _getLockSignaturesEvent(this);
             }
 
             return null;

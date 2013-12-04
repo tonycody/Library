@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Library.Security
 {
-    internal class Rsa2048_Sha512
+    class Rsa2048_Sha512
     {
         public static void CreateKeys(out byte[] publicKey, out byte[] privateKey)
         {

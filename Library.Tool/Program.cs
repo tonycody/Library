@@ -12,9 +12,9 @@ using Library.Security;
 
 namespace Library.Tool
 {
-    internal class Program
+    class Program
     {
-        internal static void Main(string[] args)
+        static void Main(string[] args)
         {
             try
             {

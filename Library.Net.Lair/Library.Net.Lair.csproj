@@ -70,7 +70,7 @@
     <CodeContractsRuntimeCheckingLevel>Full</CodeContractsRuntimeCheckingLevel>
     <CodeContractsReferenceAssembly>%28none%29</CodeContractsReferenceAssembly>
     <CodeContractsAnalysisWarningLevel>0</CodeContractsAnalysisWarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -99,6 +99,7 @@
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\Chat\ChatMessageContent.cs" />
     <Compile Include="Cache\Chat\ChatTopicContent.cs" />
+    <Compile Include="Cache\LairConverter.cs" />
     <Compile Include="Cache\Link.cs" />
     <Compile Include="Cache\LinkCollection.cs" />
     <Compile Include="Cache\HeaderCollection.cs" />
@@ -125,18 +126,18 @@
     <Compile Include="Cache\_Interface\IKey.cs" />
     <Compile Include="Cache\Key.cs" />
     <Compile Include="Cache\KeyCollection.cs" />
-    <Compile Include="LairConverter.cs" />
     <Compile Include="ContentConverter.cs" />
+    <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="EqualityComparer.cs" />
-    <Compile Include="SearchItemCollection.cs" />
+    <Compile Include="CriterionCollection.cs" />
     <Compile Include="LairManager.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
-    <Compile Include="SearchItem.cs" />
+    <Compile Include="Criterion.cs" />
     <Compile Include="Tools\Crc32_Castagnoli.cs" />
     <Compile Include="Tools\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
@@ -145,7 +146,6 @@
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
-    <Compile Include="Tools\Unsafe.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />
   </ItemGroup>

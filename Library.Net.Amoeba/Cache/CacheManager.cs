@@ -456,10 +456,16 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                int count = 0;
-                _lockedKeys.TryGetValue(key, out count);
+                int count;
 
-                _lockedKeys[key] = ++count;
+                if (_lockedKeys.TryGetValue(key, out count))
+                {
+                    _lockedKeys[key] = ++count;
+                }
+                else
+                {
+                    _lockedKeys[key] = 1;
+                }
             }
         }
 
@@ -467,12 +473,8 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                int count = 0;
-
-                if (!_lockedKeys.TryGetValue(key, out count))
-                {
-                    throw new KeyNotFoundException();
-                }
+                int count;
+                if (!_lockedKeys.TryGetValue(key, out count)) throw new KeyNotFoundException();
 
                 count--;
 

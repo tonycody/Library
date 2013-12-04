@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatMessageContent", Namespace = "http://Library/Net/Lair")]
-    internal sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Key>
+    public sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -140,14 +140,6 @@ namespace Library.Net.Lair
             }
 
             return true;
-        }
-
-        public override string ToString()
-        {
-            lock (this.ThisLock)
-            {
-                return this.Comment;
-            }
         }
 
         public override ChatMessageContent DeepClone()

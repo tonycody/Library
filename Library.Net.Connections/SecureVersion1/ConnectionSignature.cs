@@ -20,7 +20,7 @@ namespace Library.Net.Connections.SecureVersion1
         }
 
         private byte[] _key;
-        private DateTime _creationTime = DateTime.MinValue;
+        private DateTime _creationTime;
 
         private Certificate _certificate;
 

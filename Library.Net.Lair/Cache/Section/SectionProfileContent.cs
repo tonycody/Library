@@ -11,7 +11,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
-    internal sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<ILink<Tag>>
+    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<ILink<Tag>>
     {
         private enum SerializeId : byte
         {
