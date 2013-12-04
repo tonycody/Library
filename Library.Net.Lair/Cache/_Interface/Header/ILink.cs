@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface ILink<TTag> : IComputeHash
+    interface ILink<TTag>
         where TTag : ITag
     {
         TTag Tag { get; }

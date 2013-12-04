@@ -1043,8 +1043,6 @@ namespace Library.Net.Amoeba
                 {
                     refreshStopwatch.Restart();
 
-                    var now = DateTime.UtcNow;
-
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         if (_refreshThreadRunning) return;

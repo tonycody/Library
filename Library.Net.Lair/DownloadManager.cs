@@ -24,7 +24,6 @@ namespace Library.Net.Lair
         private volatile Thread _downloadManagerThread;
 
         private ManagerState _state = ManagerState.Stop;
-        private ManagerState _decodeState = ManagerState.Stop;
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 

@@ -2,28 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Library.Security;
 using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DownloadState", Namespace = "http://Library/Net/Lair")]
-    public enum DownloadState
+    [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Lair")]
+    sealed class UploadItem
     {
-        [EnumMember(Value = "Downloading")]
-        Downloading = 0,
+        private Tag _tag;
+        private string _type;
+        private OptionCollection _options;
+        private DigitalSignature _digitalSignature;
 
-        [EnumMember(Value = "Completed")]
-        Completed = 1,
-
-        [EnumMember(Value = "Error")]
-        Error = 2,
-    }
-
-    [DataContract(Name = "DownloadItem", Namespace = "http://Library/Net/Lair")]
-    sealed class DownloadItem
-    {
-        private DownloadState _state;
-        private Key _key;
+        private IExchangeEncrypt _publicKey;
 
         private SectionProfileContent _sectionProfileContent;
         private SectionMessageContent _sectionMessageContent;
@@ -54,40 +46,93 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "State")]
-        public DownloadState State
+        [DataMember(Name = "Tag")]
+        public Tag Tag
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _state;
+                    return _tag;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _state = value;
+                    _tag = value;
                 }
             }
         }
 
-        [DataMember(Name = "Key")]
-        public Key Key
+        [DataMember(Name = "Type")]
+        public string Type
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _key;
+                    return _type;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _key = value;
+                    _type = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Options")]
+        public OptionCollection Options
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_options == null)
+                        _options = new OptionCollection();
+
+                    return _options;
+                }
+            }
+        }
+
+        [DataMember(Name = "DigitalSignature")]
+        public DigitalSignature DigitalSignature
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _digitalSignature;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _digitalSignature = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "PublicKey")]
+        public IExchangeEncrypt PublicKey
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _publicKey;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _publicKey = value;
                 }
             }
         }

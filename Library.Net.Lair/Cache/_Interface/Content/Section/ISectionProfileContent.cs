@@ -7,8 +7,9 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    interface ISectionProfileContent<TLink> : IExchangeEncrypt
-        where TLink : ILink<ITag>
+    interface ISectionProfileContent<TLink, TTag> : IExchangeEncrypt
+        where TLink : ILink<Tag>
+        where TTag : ITag
     {
         string Comment { get; }
         IEnumerable<string> TrustSignatures { get; }

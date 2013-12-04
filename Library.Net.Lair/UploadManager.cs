@@ -6,6 +6,7 @@ using System.Threading;
 using Library.Collections;
 using Library.Io;
 using Library.Security;
+using System.Diagnostics;
 
 namespace Library.Net.Lair
 {
@@ -20,6 +21,8 @@ namespace Library.Net.Lair
         private volatile Thread _uploadThread;
 
         private ManagerState _state = ManagerState.Stop;
+
+        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -37,16 +40,146 @@ namespace Library.Net.Lair
 
         private void UploadThread()
         {
+            Stopwatch refreshStopwatch = new Stopwatch();
+
             for (; ; )
             {
                 Thread.Sleep(1000 * 1);
                 if (this.State == ManagerState.Stop) return;
 
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 30)
+                {
+                    refreshStopwatch.Restart();
+
+                    lock (this.ThisLock)
+                    {
+                        var now = DateTime.UtcNow;
+
+                        foreach (var item in _settings.LifeSpans.ToArray())
+                        {
+                            if ((now - item.Value) > new TimeSpan(64, 0, 0, 0))
+                            {
+                                _cacheManager.Unlock(item.Key);
+                                _settings.LifeSpans.Remove(item.Key);
+                            }
+                        }
+                    }
+                }
+
+                {
+                    UploadItem item = null;
+
+                    try
+                    {
+                        lock (this.ThisLock)
+                        {
+                            if (_settings.UploadItems.Count > 0)
+                            {
+                                item = _settings.UploadItems[0];
+                                _settings.UploadItems.RemoveAt(0);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            if (item.Tag.Type == "Section")
+                            {
+                                if (item.Type == "Profile")
+                                {
+                                    buffer = ContentConverter.ToSectionProfileContentBlock(item.SectionProfileContent);
+                                }
+                                else if (item.Type == "Message")
+                                {
+                                    buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.PublicKey);
+                                }
+                            }
+                            else if (item.Tag.Type == "Document")
+                            {
+                                if (item.Type == "Page")
+                                {
+                                    buffer = ContentConverter.ToDocumentPageContentBlock(item.DocumentPageContent);
+                                }
+                                else if (item.Type == "Opinion")
+                                {
+                                    buffer = ContentConverter.ToDocumentOpinionContentBlock(item.DocumentOpinionContent);
+                                }
+                            }
+                            else if (item.Tag.Type == "Chat")
+                            {
+                                if (item.Type == "Topic")
+                                {
+                                    buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
+                                }
+                                else if (item.Type == "Message")
+                                {
+                                    buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
+                                }
+                            }
+
+                            if (buffer.Count < _maxRawContentSize)
+                            {
+                                byte[] binaryContent = new byte[buffer.Count];
+                                Array.Copy(buffer.Array, buffer.Offset, binaryContent, 0, buffer.Count);
+
+                                var header = new Header(item.Tag, item.Type, item.Options, ContentFormatType.Raw, binaryContent, item.DigitalSignature);
+                                _connectionsManager.Upload(header);
+                            }
+                            else
+                            {
+                                byte[] binaryKey;
+
+                                {
+                                    Key key = null;
+
+                                    {
+                                        if (_hashAlgorithm == HashAlgorithm.Sha512)
+                                        {
+                                            key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                                        }
+
+                                        _cacheManager[key] = buffer;
+                                    }
+
+                                    using (var stream = key.Export(_bufferManager))
+                                    {
+                                        binaryKey = new byte[stream.Length];
+                                        stream.Read(binaryKey, 0, binaryKey.Length);
+                                    }
+
+                                    _cacheManager.Lock(key);
+                                    _settings.LifeSpans[key] = DateTime.UtcNow;
+                                }
+
+                                var header = new Header(item.Tag, item.Type, item.Options, ContentFormatType.Raw, binaryKey, item.DigitalSignature);
+                                _connectionsManager.Upload(header);
+                            }
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
             }
         }
 
-        public void UploadSectionProfile(
-            byte[] tagId,
+        public void Upload(byte[] tagId,
             string tagName,
             IEnumerable<string> options,
             SectionProfileContent content,
@@ -54,32 +187,111 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                Tag tag = new Tag("Section", tagId, tagName);
+                var uploadItem = new UploadItem();
+                uploadItem.Tag = new Tag("Section", tagId, tagName);
+                uploadItem.Type = "Profile";
+                uploadItem.Options.AddRange(options);
 
-                ArraySegment<byte> buffer = new ArraySegment<byte>();
+                uploadItem.SectionProfileContent = content;
 
-                try
-                {
-                    buffer = ContentConverter.ToSectionProfileContentBlock(content);
-                }
-                catch (Exception)
-                {
-                    if (buffer.Array != null)
-                    {
-                        _bufferManager.ReturnBuffer(buffer.Array);
-                    }
+                uploadItem.DigitalSignature = digitalSignature;
+            }
+        }
 
-                    throw;
-                }
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            IExchangeEncrypt publicKey,
+            SectionMessageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Tag = new Tag("Section", tagId, tagName);
+                uploadItem.Type = "Message";
+                uploadItem.Options.AddRange(options);
+                uploadItem.PublicKey = publicKey;
 
-                if (buffer.Count < _maxRawContentSize)
-                {
-                    byte[] binaryContent = new byte[buffer.Count];
-                    Array.Copy(buffer.Array, buffer.Offset, binaryContent, 0, buffer.Count);
+                uploadItem.SectionMessageContent = content;
 
-                    var header = new Header(tag, "Profile", options, ContentFormatType.Raw, binaryContent, digitalSignature);
-                    _connectionsManager.Upload(header);
-                }
+                uploadItem.DigitalSignature = digitalSignature;
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            DocumentPageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Tag = new Tag("Document", tagId, tagName);
+                uploadItem.Type = "Page";
+                uploadItem.Options.AddRange(options);
+
+                uploadItem.DocumentPageContent = content;
+
+                uploadItem.DigitalSignature = digitalSignature;
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            DocumentOpinionContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Tag = new Tag("Document", tagId, tagName);
+                uploadItem.Type = "Opinion";
+                uploadItem.Options.AddRange(options);
+
+                uploadItem.DocumentOpinionContent = content;
+
+                uploadItem.DigitalSignature = digitalSignature;
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            ChatTopicContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Tag = new Tag("Chat", tagId, tagName);
+                uploadItem.Type = "Topic";
+                uploadItem.Options.AddRange(options);
+
+                uploadItem.ChatTopicContent = content;
+
+                uploadItem.DigitalSignature = digitalSignature;
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            ChatMessageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Tag = new Tag("Chat", tagId, tagName);
+                uploadItem.Type = "Message";
+                uploadItem.Options.AddRange(options);
+
+                uploadItem.ChatMessageContent = content;
+
+                uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
@@ -127,6 +339,11 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
+
+                foreach (var key in _settings.LifeSpans.Keys)
+                {
+                    _cacheManager.Lock(key);
+                }
             }
         }
 
@@ -146,7 +363,8 @@ namespace Library.Net.Lair
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
-                    new Library.Configuration.SettingContent<LockedDictionary<Key, TimeSpan>>() { Name = "LifeSpans", Value = new LockedDictionary<Key, TimeSpan>() },
+                    new Library.Configuration.SettingContent<LockedList<UploadItem>>() { Name = "UploadItems", Value = new LockedList<UploadItem>() },
+                    new Library.Configuration.SettingContent<LockedDictionary<Key, DateTime>>() { Name = "LifeSpans", Value = new LockedDictionary<Key, DateTime>() },
                 })
             {
                 _thisLock = lockObject;
@@ -168,13 +386,24 @@ namespace Library.Net.Lair
                 }
             }
 
-            public LockedDictionary<Key, TimeSpan> LifeSpans
+            public LockedList<UploadItem> UploadItems
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedDictionary<Key, TimeSpan>)this["LifeSpans"];
+                        return (LockedList<UploadItem>)this["UploadItems"];
+                    }
+                }
+            }
+
+            public LockedDictionary<Key, DateTime> LifeSpans
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (LockedDictionary<Key, DateTime>)this["LifeSpans"];
                     }
                 }
             }

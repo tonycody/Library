@@ -12,7 +12,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "Link", Namespace = "http://Library/Net/Lair")]
-    public sealed class Link : ReadOnlyCertificateItemBase<Link>, ILink<Tag>
+    public sealed class Link : ItemBase<Link>, ILink<Tag>
     {
         private enum SerializeId : byte
         {
@@ -22,8 +22,6 @@ namespace Library.Net.Lair
 
         private Tag _tag;
         private OptionCollection _options;
-
-        private int _hashCode;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
@@ -114,7 +112,8 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                return _hashCode;
+                if (this.Tag == null) return 0;
+                else return this.Tag.GetHashCode();
             }
         }
 

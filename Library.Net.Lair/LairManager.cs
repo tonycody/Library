@@ -13,11 +13,12 @@ namespace Library.Net.Lair
         private ServerManager _serverManager;
         private CacheManager _cacheManager;
         private ConnectionsManager _connectionsManager;
+        private DownloadManager _downloadManager;
+        private UploadManager _uploadManager;
 
         private ManagerState _state = ManagerState.Stop;
 
-        private LockTagsEventHandler _lockTagsEvent;
-        private LockSignaturesEventHandler _lockSignaturesEvent;
+        private GetCriteriaEventHandler _getLockCriteriaEvent;
 
         private CheckUriEventHandler _checkUriEvent;
         private CreateCapEventHandler _createCapEvent;
@@ -35,6 +36,8 @@ namespace Library.Net.Lair
             _serverManager = new ServerManager(_bufferManager);
             _cacheManager = new CacheManager(_cachePath, _bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
+            _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
+            _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
 
             _clientManager.CheckUriEvent = (object sender, string uri) =>
             {
@@ -68,21 +71,11 @@ namespace Library.Net.Lair
                 return null;
             };
 
-            _connectionsManager.LockTagsEvent = (object sender) =>
+            _connectionsManager.GetLockCriteriaEvent = (object sender) =>
             {
-                if (_lockTagsEvent != null)
+                if (_getLockCriteriaEvent != null)
                 {
-                    return _lockTagsEvent(this);
-                }
-
-                return null;
-            };
-
-            _connectionsManager.LockSignaturesEvent = (object sender) =>
-            {
-                if (_lockSignaturesEvent != null)
-                {
-                    return _lockSignaturesEvent(this);
+                    return _getLockCriteriaEvent(this);
                 }
 
                 return null;
@@ -122,24 +115,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public LockTagsEventHandler LockTagsEvent
+        public GetCriteriaEventHandler GetLockCriteriaEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _lockTagsEvent = value;
-                }
-            }
-        }
-
-        public LockSignaturesEventHandler LockSignaturesEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _lockSignaturesEvent = value;
+                    _getLockCriteriaEvent = value;
                 }
             }
         }
@@ -196,32 +178,6 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _connectionsManager.OtherNodes;
-                }
-            }
-        }
-
-        public ConnectionFilterCollection Filters
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _clientManager.Filters;
-                }
-            }
-        }
-
-        public UriCollection ListenUris
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _serverManager.ListenUris;
                 }
             }
         }
@@ -296,6 +252,32 @@ namespace Library.Net.Lair
             }
         }
 
+        public ConnectionFilterCollection Filters
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _clientManager.Filters;
+                }
+            }
+        }
+
+        public UriCollection ListenUris
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _serverManager.ListenUris;
+                }
+            }
+        }
+
         public long Size
         {
             get
@@ -305,6 +287,17 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     return _cacheManager.Size;
+                }
+            }
+        }
+
+        public IEnumerable<IExchangeDecrypt> PrivateKeys
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _downloadManager.PrivateKeys;
                 }
             }
         }
@@ -344,6 +337,103 @@ namespace Library.Net.Lair
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             _cacheManager.CheckBlocks(getProgressEvent);
+        }
+
+        public IEnumerable<Header> GetHeaders(Tag tag)
+        {
+            lock (_thisLock)
+            {
+                return _connectionsManager.GetHeaders(tag);
+            }
+        }
+
+        public Information Download(Header header)
+        {
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public void SetPrivateKeys(IEnumerable<IExchangeDecrypt> privateKeys)
+        {
+            lock (this.ThisLock)
+            {
+                _downloadManager.SetPrivateKeys(privateKeys);
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            SectionProfileContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            IExchangeEncrypt publicKey,
+            SectionMessageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tagId, tagName, options, publicKey, content, digitalSignature);
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            DocumentPageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            DocumentOpinionContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            ChatTopicContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+            }
+        }
+
+        public void Upload(byte[] tagId,
+            string tagName,
+            IEnumerable<string> options,
+            ChatMessageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+            }
         }
 
         public override ManagerState State

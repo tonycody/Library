@@ -40,7 +40,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Amoeba")]
-    sealed class UploadItem : IDeepCloneable<UploadItem>, IThisLock
+    sealed class UploadItem : IDeepCloneable<UploadItem>
     {
         private UploadType _type;
         private UploadState _state;
@@ -70,6 +70,25 @@ namespace Library.Net.Amoeba
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
+
+        private object ThisLock
+        {
+            get
+            {
+                if (_thisLock == null)
+                {
+                    lock (_initializeLock)
+                    {
+                        if (_thisLock == null)
+                        {
+                            _thisLock = new object();
+                        }
+                    }
+                }
+
+                return _thisLock;
+            }
+        }
 
         [DataMember(Name = "Type")]
         public UploadType Type
@@ -468,28 +487,5 @@ namespace Library.Net.Amoeba
                 }
             }
         }
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
-            }
-        }
-
-        #endregion
     }
 }
