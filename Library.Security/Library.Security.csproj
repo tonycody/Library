@@ -54,6 +54,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Exchange\ExchangePrivateKey.cs" />
+    <Compile Include="Exchange\ExchangePublicKey.cs" />
     <Compile Include="Exchange\Exchange.cs" />
     <Compile Include="Exchange\IExchangeDecrypt.cs" />
     <Compile Include="Exchange\IExchangeEncrypt.cs" />

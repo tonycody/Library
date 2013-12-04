@@ -149,8 +149,8 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (_hypertext == null) return 0;
-                else return _hypertext.GetHashCode();
+                if (this.Hypertext == null) return 0;
+                else return this.Hypertext.GetHashCode();
             }
         }
 

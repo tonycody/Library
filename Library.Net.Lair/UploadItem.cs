@@ -15,7 +15,7 @@ namespace Library.Net.Lair
         private OptionCollection _options;
         private DigitalSignature _digitalSignature;
 
-        private IExchangeEncrypt _publicKey;
+        private ExchangePublicKey _exchangePublicKey;
 
         private SectionProfileContent _sectionProfileContent;
         private SectionMessageContent _sectionMessageContent;
@@ -118,21 +118,21 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "PublicKey")]
-        public IExchangeEncrypt PublicKey
+        [DataMember(Name = "ExchangePublicKey")]
+        public ExchangePublicKey ExchangePublicKey
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _publicKey;
+                    return _exchangePublicKey;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _publicKey = value;
+                    _exchangePublicKey = value;
                 }
             }
         }

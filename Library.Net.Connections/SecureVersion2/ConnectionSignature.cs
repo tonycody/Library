@@ -226,6 +226,22 @@ namespace Library.Net.Connections.SecureVersion2
             }
         }
 
+        public override void CreateCertificate(DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                base.CreateCertificate(digitalSignature);
+            }
+        }
+
+        public override bool VerifyCertificate()
+        {
+            lock (this.ThisLock)
+            {
+                return base.VerifyCertificate();
+            }
+        }
+
         protected override Stream GetCertificateStream()
         {
             lock (this.ThisLock)

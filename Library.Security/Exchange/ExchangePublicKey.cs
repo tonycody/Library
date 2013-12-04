@@ -7,19 +7,17 @@ using Library.Io;
 
 namespace Library.Security
 {
-    [DataContract(Name = "Exchange", Namespace = "http://Library/Security")]
-    public sealed class Exchange : ItemBase<Exchange>, IExchangeEncrypt, IExchangeDecrypt
+    [DataContract(Name = "ExchangePublicKey", Namespace = "http://Library/Security")]
+    public sealed class ExchangePublicKey : ItemBase<ExchangePublicKey>, IExchangeEncrypt
     {
         private enum SerializeId : byte
         {
             ExchangeAlgorithm = 0,
             PublicKey = 1,
-            PrivateKey = 2,
         }
 
         private ExchangeAlgorithm _exchangeAlgorithm = 0;
         private byte[] _publicKey;
-        private byte[] _privateKey;
 
         private int _hashCode;
 
@@ -27,21 +25,11 @@ namespace Library.Security
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
-        public static readonly int MaxPrivatekeyLength = 1024 * 8;
 
-        public Exchange(ExchangeAlgorithm exchangeAlgorithm)
+        public ExchangePublicKey(Exchange exchange)
         {
-            this.ExchangeAlgorithm = exchangeAlgorithm;
-
-            if (exchangeAlgorithm == ExchangeAlgorithm.Rsa2048)
-            {
-                byte[] publicKey, privateKey;
-
-                Rsa2048.CreateKeys(out publicKey, out privateKey);
-
-                this.PublicKey = publicKey;
-                this.PrivateKey = privateKey;
-            }
+            this.ExchangeAlgorithm = exchange.ExchangeAlgorithm;
+            this.PublicKey = exchange.PublicKey;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -72,13 +60,6 @@ namespace Library.Security
                             rangeStream.Read(buffer, 0, buffer.Length);
 
                             this.PublicKey = buffer;
-                        }
-                        else if (id == (byte)SerializeId.PrivateKey)
-                        {
-                            byte[] buffer = new byte[(int)rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.PrivateKey = buffer;
                         }
                     }
                 }
@@ -121,16 +102,6 @@ namespace Library.Security
 
                     streams.Add(bufferStream);
                 }
-                // PrivateKey
-                if (this.PrivateKey != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.PrivateKey.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.PrivateKey);
-                    bufferStream.Write(this.PrivateKey, 0, this.PrivateKey.Length);
-
-                    streams.Add(bufferStream);
-                }
 
                 return new JoinStream(streams);
             }
@@ -146,20 +117,19 @@ namespace Library.Security
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Exchange)) return false;
+            if ((object)obj == null || !(obj is ExchangePublicKey)) return false;
 
-            return this.Equals((Exchange)obj);
+            return this.Equals((ExchangePublicKey)obj);
         }
 
-        public override bool Equals(Exchange other)
+        public override bool Equals(ExchangePublicKey other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.ExchangeAlgorithm != other.ExchangeAlgorithm
-                || ((this.PublicKey == null) != (other.PublicKey == null))
-                || ((this.PrivateKey == null) != (other.PrivateKey == null)))
+                || ((this.PublicKey == null) != (other.PublicKey == null)))
             {
                 return false;
             }
@@ -169,59 +139,18 @@ namespace Library.Security
                 if (!Collection.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
-            if (this.PrivateKey != null && other.PrivateKey != null)
-            {
-                if (!Collection.Equals(this.PrivateKey, other.PrivateKey)) return false;
-            }
-
             return true;
         }
 
-        public override Exchange DeepClone()
+        public override ExchangePublicKey DeepClone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Exchange.Import(stream, BufferManager.Instance);
+                    return ExchangePublicKey.Import(stream, BufferManager.Instance);
                 }
             }
-        }
-
-        public ExchangePublicKey GetPublicKey()
-        {
-            lock (this.ThisLock)
-            {
-                return new ExchangePublicKey(this);
-            }
-        }
-
-        public ExchangePrivateKey GetPrivateKey()
-        {
-            lock (this.ThisLock)
-            {
-                return new ExchangePrivateKey(this);
-            }
-        }
-
-        public static byte[] Encrypt(IExchangeEncrypt exchangeEncrypt, byte[] value)
-        {
-            if (exchangeEncrypt.ExchangeAlgorithm == ExchangeAlgorithm.Rsa2048)
-            {
-                return Rsa2048.Encrypt(exchangeEncrypt.PublicKey, value);
-            }
-
-            return null;
-        }
-
-        public static byte[] Decrypt(IExchangeDecrypt exchangeDecrypt, byte[] value)
-        {
-            if (exchangeDecrypt.ExchangeAlgorithm == ExchangeAlgorithm.Rsa2048)
-            {
-                return Rsa2048.Decrypt(exchangeDecrypt.PrivateKey, value);
-            }
-
-            return null;
         }
 
         private object ThisLock
@@ -299,32 +228,6 @@ namespace Library.Security
                     else
                     {
                         _hashCode = 0;
-                    }
-                }
-            }
-        }
-
-        [DataMember(Name = "PrivateKey")]
-        public byte[] PrivateKey
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _privateKey;
-                }
-            }
-            private set
-            {
-                lock (this.ThisLock)
-                {
-                    if (value != null && (value.Length > Exchange.MaxPrivatekeyLength))
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _privateKey = value;
                     }
                 }
             }

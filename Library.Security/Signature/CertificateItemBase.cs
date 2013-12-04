@@ -7,7 +7,7 @@ namespace Library.Security
     public abstract class CertificateItemBase<T> : ItemBase<T>, ICertificate
         where T : CertificateItemBase<T>
     {
-        public void CreateCertificate(DigitalSignature digitalSignature)
+        public virtual void CreateCertificate(DigitalSignature digitalSignature)
         {
             if (digitalSignature == null)
             {
@@ -22,7 +22,7 @@ namespace Library.Security
             }
         }
 
-        public bool VerifyCertificate()
+        public virtual bool VerifyCertificate()
         {
             if (this.Certificate == null)
             {

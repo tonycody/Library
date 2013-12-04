@@ -297,7 +297,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    return _downloadManager.PrivateKeys;
+                    return _downloadManager.ExchangePrivateKeys;
                 }
             }
         }
@@ -355,84 +355,102 @@ namespace Library.Net.Lair
             }
         }
 
-        public void SetPrivateKeys(IEnumerable<IExchangeDecrypt> privateKeys)
+        public void SetExchangePrivateKeys(IEnumerable<IExchangeDecrypt> privateKeys)
         {
             lock (this.ThisLock)
             {
-                _downloadManager.SetPrivateKeys(privateKeys);
+                _downloadManager.SetExchangePrivateKeys(privateKeys);
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadSectionProfile(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             SectionProfileContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.UploadSectionProfile(tagId, tagName, options, content, digitalSignature);
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadSectionMessage(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
-            IExchangeEncrypt publicKey,
+
             SectionMessageContent content,
+
+            ExchangePublicKey excangePublicKey,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tagId, tagName, options, publicKey, content, digitalSignature);
+                _uploadManager.UploadSectionMessage(tagId, tagName, options, content, excangePublicKey, digitalSignature);
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadDocumentPage(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             DocumentPageContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.UploadDocumentPage(tagId, tagName, options, content, digitalSignature);
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadDocumentOpinion(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             DocumentOpinionContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.UploadDocumentOpinion(tagId, tagName, options, content, digitalSignature);
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadChatTopic(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             ChatTopicContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.UploadChatTopic(tagId, tagName, options, content, digitalSignature);
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadChatMessage(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             ChatMessageContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.UploadChatMessage(tagId, tagName, options, content, digitalSignature);
             }
         }
 
@@ -482,6 +500,7 @@ namespace Library.Net.Lair
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
+                _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
             }
         }
 
@@ -491,6 +510,7 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
@@ -506,6 +526,8 @@ namespace Library.Net.Lair
 
             if (disposing)
             {
+                _downloadManager.Dispose();
+                _uploadManager.Dispose();
                 _connectionsManager.Dispose();
                 _serverManager.Dispose();
                 _clientManager.Dispose();

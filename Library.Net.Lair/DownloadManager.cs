@@ -19,7 +19,7 @@ namespace Library.Net.Lair
 
         private VolatileDictionary<Header, DownloadItem> _downloadItems;
 
-        private LockedList<IExchangeDecrypt> _privateKeys = new LockedList<IExchangeDecrypt>();
+        private LockedList<ExchangePrivateKey> _exchangePrivateKeys = new LockedList<ExchangePrivateKey>();
 
         private volatile Thread _downloadManagerThread;
 
@@ -39,13 +39,13 @@ namespace Library.Net.Lair
             _downloadItems = new VolatileDictionary<Header, DownloadItem>(new TimeSpan(0, 0, 10));
         }
 
-        public IEnumerable<IExchangeDecrypt> PrivateKeys
+        public IEnumerable<ExchangePrivateKey> ExchangePrivateKeys
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _privateKeys.ToArray();
+                    return _exchangePrivateKeys.ToArray();
                 }
             }
         }
@@ -140,7 +140,7 @@ namespace Library.Net.Lair
                                 {
                                     SectionMessageContent content = null;
 
-                                    foreach (var exchange in _privateKeys)
+                                    foreach (var exchange in _exchangePrivateKeys)
                                     {
                                         try
                                         {
@@ -300,11 +300,11 @@ namespace Library.Net.Lair
             }
         }
 
-        public void SetPrivateKeys(IEnumerable<IExchangeDecrypt> privateKeys)
+        public void SetExchangePrivateKeys(IEnumerable<ExchangePrivateKey> exchangePrivateKeys)
         {
             lock (this.ThisLock)
             {
-                _privateKeys.AddRange(privateKeys);
+                _exchangePrivateKeys.AddRange(exchangePrivateKeys);
             }
         }
 

@@ -99,7 +99,7 @@ namespace Library.Net.Lair
                                 }
                                 else if (item.Type == "Message")
                                 {
-                                    buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.PublicKey);
+                                    buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
                                 }
                             }
                             else if (item.Tag.Type == "Document")
@@ -140,23 +140,21 @@ namespace Library.Net.Lair
                                 {
                                     Key key = null;
 
+                                    if (_hashAlgorithm == HashAlgorithm.Sha512)
                                     {
-                                        if (_hashAlgorithm == HashAlgorithm.Sha512)
-                                        {
-                                            key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                                        }
-
-                                        _cacheManager[key] = buffer;
+                                        key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
                                     }
+
+                                    _cacheManager.Lock(key);
+                                    _settings.LifeSpans[key] = DateTime.UtcNow;
+
+                                    _cacheManager[key] = buffer;
 
                                     using (var stream = key.Export(_bufferManager))
                                     {
                                         binaryKey = new byte[stream.Length];
                                         stream.Read(binaryKey, 0, binaryKey.Length);
                                     }
-
-                                    _cacheManager.Lock(key);
-                                    _settings.LifeSpans[key] = DateTime.UtcNow;
                                 }
 
                                 var header = new Header(item.Tag, item.Type, item.Options, ContentFormatType.Raw, binaryKey, item.DigitalSignature);
@@ -179,10 +177,10 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(byte[] tagId,
-            string tagName,
+        public void Upload(Tag tag,
             IEnumerable<string> options,
             SectionProfileContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -198,11 +196,14 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadSectionMessage(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
-            IExchangeEncrypt publicKey,
+
             SectionMessageContent content,
+
+            ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -211,7 +212,7 @@ namespace Library.Net.Lair
                 uploadItem.Tag = new Tag("Section", tagId, tagName);
                 uploadItem.Type = "Message";
                 uploadItem.Options.AddRange(options);
-                uploadItem.PublicKey = publicKey;
+                uploadItem.ExchangePublicKey = exchangePublicKey;
 
                 uploadItem.SectionMessageContent = content;
 
@@ -219,10 +220,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadDocumentPage(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             DocumentPageContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -238,10 +242,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadDocumentOpinion(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             DocumentOpinionContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -257,10 +264,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadChatTopic(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             ChatTopicContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -276,10 +286,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(byte[] tagId,
+        public void UploadChatMessage(
+            byte[] tagId,
             string tagName,
             IEnumerable<string> options,
+
             ChatMessageContent content,
+
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)

@@ -90,8 +90,8 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (_comment == null) return 0;
-                else return _comment.GetHashCode();
+                if (this.Comment == null) return 0;
+                else return this.Comment.GetHashCode();
             }
         }
 
