@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using Library.Collections;
 using Library.Net.Connections;
-using Library.Security;
 
 namespace Library.Net.Lair
 {
@@ -33,7 +31,7 @@ namespace Library.Net.Lair
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksLinkDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksRequestDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksDictionary = new LockedDictionary<Node, HashSet<Key>>();
-        private LockedDictionary<Node, HashSet<Tag>> _pushHeadersRequestDictionary = new LockedDictionary<Node, HashSet<Tag>>();
+        private LockedDictionary<Node, HashSet<Link>> _pushHeadersRequestDictionary = new LockedDictionary<Node, HashSet<Link>>();
 
         private LockedList<Node> _creatingNodes;
         private VolatileCollection<Node> _waitingNodes;
@@ -41,10 +39,10 @@ namespace Library.Net.Lair
         private VolatileCollection<Node> _removeNodes;
         private VolatileDictionary<Node, int> _nodesStatus;
 
-        private VolatileCollection<Tag> _pushHeadersRequestList;
+        private VolatileCollection<Link> _pushHeadersRequestList;
         private VolatileCollection<Key> _downloadBlocks;
 
-        private LockedDictionary<Tag, DateTime> _lastUsedHeaderTimes = new LockedDictionary<Tag, DateTime>();
+        private LockedDictionary<Link, DateTime> _lastUsedHeaderTimes = new LockedDictionary<Link, DateTime>();
 
         private volatile Thread _connectionsManagerThread;
         private volatile Thread _createClientConnection1Thread;
@@ -137,7 +135,7 @@ namespace Library.Net.Lair
             _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 3, 0));
-            _pushHeadersRequestList = new VolatileCollection<Tag>(new TimeSpan(0, 3, 0));
+            _pushHeadersRequestList = new VolatileCollection<Link>(new TimeSpan(0, 3, 0));
 
             _relayBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
@@ -345,9 +343,11 @@ namespace Library.Net.Lair
             return !(key == null || key.Hash == null || key.Hash.Length == 0 || key.HashAlgorithm != HashAlgorithm.Sha512);
         }
 
-        private static bool Check(Tag tag)
+        private static bool Check(Link link)
         {
-            return !(tag == null || tag.Id == null || tag.Id.Length == 0 || string.IsNullOrWhiteSpace(tag.Type));
+            return !(link == null
+                || link.Tag == null || link.Tag.Id == null || link.Tag.Id.Length == 0 || string.IsNullOrWhiteSpace(link.Tag.Name)
+                || string.IsNullOrWhiteSpace(link.Type));
         }
 
         private void UpdateSessionId()
@@ -1022,11 +1022,11 @@ namespace Library.Net.Lair
 
                                 // 非トラストなタグを1024残し、他をLRU順に破棄。
                                 {
-                                    var removeTags = new HashSet<Tag>();
-                                    removeTags.UnionWith(_headerManager.GetTags());
-                                    removeTags.ExceptWith(lockCriteriaList.SelectMany(n => n.Tags));
+                                    var removeLinks = new HashSet<Link>();
+                                    removeLinks.UnionWith(_headerManager.GetLinks());
+                                    removeLinks.ExceptWith(lockCriteriaList.SelectMany(n => n.Links));
 
-                                    var sortList = removeTags.ToList();
+                                    var sortList = removeLinks.ToList();
 
                                     sortList.Sort((x, y) =>
                                     {
@@ -1039,46 +1039,46 @@ namespace Library.Net.Lair
                                         return tx.CompareTo(ty);
                                     });
 
-                                    _headerManager.RemoveTags(sortList.Take(sortList.Count - 1024));
+                                    _headerManager.RemoveLinks(sortList.Take(sortList.Count - 1024));
 
-                                    var liveTags = new HashSet<Tag>(_headerManager.GetTags());
+                                    var liveLinks = new HashSet<Link>(_headerManager.GetLinks());
 
-                                    foreach (var tag in _lastUsedHeaderTimes.Keys.ToArray())
+                                    foreach (var link in _lastUsedHeaderTimes.Keys.ToArray())
                                     {
-                                        if (liveTags.Contains(tag)) continue;
+                                        if (liveLinks.Contains(link)) continue;
 
-                                        _lastUsedHeaderTimes.Remove(tag);
+                                        _lastUsedHeaderTimes.Remove(link);
                                     }
                                 }
 
-                                // Tag毎にトラストリストを適応する。
-                                var patternlist = new List<KeyValuePair<HashSet<Tag>, HashSet<string>>>();
+                                // Link毎にトラストリストを適応する。
+                                var patternlist = new List<KeyValuePair<HashSet<Link>, HashSet<string>>>();
 
                                 foreach (var criterion in lockCriteriaList)
                                 {
-                                    var tagHashset = new HashSet<Tag>(criterion.Tags);
+                                    var linkHashset = new HashSet<Link>(criterion.Links);
                                     var SignatureHashset = new HashSet<string>(criterion.TrustSignatures);
 
-                                    patternlist.Add(new KeyValuePair<HashSet<Tag>, HashSet<string>>(tagHashset, SignatureHashset));
+                                    patternlist.Add(new KeyValuePair<HashSet<Link>, HashSet<string>>(linkHashset, SignatureHashset));
                                 }
 
                                 {
                                     var removeHeaders = new List<Header>();
 
-                                    foreach (var tag in _headerManager.GetTags())
+                                    foreach (var link in _headerManager.GetLinks())
                                     {
                                         List<HashSet<string>> trustList;
 
                                         {
-                                            var tempList = patternlist.Where(n => n.Key.Contains(tag)).ToList();
+                                            var tempList = patternlist.Where(n => n.Key.Contains(link)).ToList();
                                             if (tempList.Count == 0) continue;
 
                                             trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
                                         }
 
-                                        var headers = _headerManager.GetHeaders(tag).ToList();
+                                        var headers = _headerManager.GetHeaders(link).ToList();
 
-                                        if (tag.Type == "Section")
+                                        if (link.Type == "Section")
                                         {
                                             List<Header> trustProfileHeaders = new List<Header>();
                                             List<Header> untrustProfileHeaders = new List<Header>();
@@ -1158,13 +1158,13 @@ namespace Library.Net.Lair
                                                 removeHeaders.AddRange(tempList.Take(tempList.Count - 32));
                                             }
                                         }
-                                        else if (tag.Type == "Document")
+                                        else if (link.Type == "Document")
                                         {
                                             Dictionary<string, List<Header>> trustPageHeaders = new Dictionary<string, List<Header>>();
                                             Dictionary<string, List<Header>> untrustPageHeaders = new Dictionary<string, List<Header>>();
 
-                                            List<Header> trustOpinionHeaders = new List<Header>();
-                                            List<Header> untrustOpinionHeaders = new List<Header>();
+                                            List<Header> trustVoteHeaders = new List<Header>();
+                                            List<Header> untrustVoteHeaders = new List<Header>();
 
                                             foreach (var header in headers)
                                             {
@@ -1197,15 +1197,15 @@ namespace Library.Net.Lair
                                                         list.Add(header);
                                                     }
                                                 }
-                                                else if (header.Type == "Opinion")
+                                                else if (header.Type == "Vote")
                                                 {
                                                     if (trustList.Any(n => n.Contains(signature)))
                                                     {
-                                                        trustOpinionHeaders.Add(header);
+                                                        trustVoteHeaders.Add(header);
                                                     }
                                                     else
                                                     {
-                                                        untrustOpinionHeaders.Add(header);
+                                                        untrustVoteHeaders.Add(header);
                                                     }
                                                 }
 
@@ -1222,10 +1222,10 @@ namespace Library.Net.Lair
                                                 removeHeaders.AddRange(list.Take(list.Count - 256));
                                             }
 
-                                            removeHeaders.AddRange(trustOpinionHeaders);
-                                            removeHeaders.AddRange(untrustOpinionHeaders.Randomize().Skip(32));
+                                            removeHeaders.AddRange(trustVoteHeaders);
+                                            removeHeaders.AddRange(untrustVoteHeaders.Randomize().Skip(32));
                                         }
-                                        else if (tag.Type == "Chat")
+                                        else if (link.Type == "Chat")
                                         {
                                             Dictionary<string, List<Header>> trustTopicHeaders = new Dictionary<string, List<Header>>();
                                             Dictionary<string, List<Header>> untrustTopicHeaders = new Dictionary<string, List<Header>>();
@@ -1629,12 +1629,12 @@ namespace Library.Net.Lair
                 {
                     pushHeaderUploadStopwatch.Restart();
 
-                    foreach (var item in _headerManager.GetTags())
+                    foreach (var item in _headerManager.GetLinks())
                     {
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                            requestNodes.AddRange(this.GetSearchNode(item.Tag.Id, 1));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
@@ -1655,7 +1655,7 @@ namespace Library.Net.Lair
                 {
                     pushHeaderDownloadStopwatch.Restart();
 
-                    HashSet<Tag> pushHeadersRequestList = new HashSet<Tag>();
+                    HashSet<Link> pushHeadersRequestList = new HashSet<Link>();
                     List<Node> nodes = new List<Node>();
 
                     lock (this.ThisLock)
@@ -1700,22 +1700,22 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        Dictionary<Node, HashSet<Tag>> pushHeadersRequestDictionary = new Dictionary<Node, HashSet<Tag>>();
+                        Dictionary<Node, HashSet<Link>> pushHeadersRequestDictionary = new Dictionary<Node, HashSet<Link>>();
 
                         foreach (var item in pushHeadersRequestList)
                         {
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                                requestNodes.AddRange(this.GetSearchNode(item.Tag.Id, 1));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    HashSet<Tag> hashset;
+                                    HashSet<Link> hashset;
 
                                     if (!pushHeadersRequestDictionary.TryGetValue(requestNodes[i], out hashset))
                                     {
-                                        hashset = new HashSet<Tag>();
+                                        hashset = new HashSet<Link>();
                                         pushHeadersRequestDictionary[requestNodes[i]] = hashset;
                                     }
 
@@ -1919,16 +1919,16 @@ namespace Library.Net.Lair
                         // PushHeadersRequest
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
-                            TagCollection tempList = null;
+                            LinkCollection tempList = null;
                             int count = (int)(_maxHeaderRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (_pushHeadersRequestDictionary.ThisLock)
                             {
-                                HashSet<Tag> hashset;
+                                HashSet<Link> hashset;
 
                                 if (_pushHeadersRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new TagCollection(hashset.Randomize().Take(count));
+                                    tempList = new LinkCollection(hashset.Randomize().Take(count));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushHeadersRequest.AddRange(tempList);
@@ -2085,15 +2085,15 @@ namespace Library.Net.Lair
                         // PushHeader
                         if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                         {
-                            var tags = new List<Tag>(messageManager.PullHeadersRequest.Randomize());
+                            var links = new List<Link>(messageManager.PullHeadersRequest.Randomize());
 
-                            if (tags.Count > 0)
+                            if (links.Count > 0)
                             {
                                 var headers = new List<Header>();
 
-                                foreach (var tag in tags.Randomize())
+                                foreach (var link in links.Randomize())
                                 {
-                                    foreach (var header in _headerManager.GetHeaders(tag))
+                                    foreach (var header in _headerManager.GetHeaders(link))
                                     {
                                         if (!messageManager.PushHeaders.Contains(header.GetHash(_hashAlgorithm)))
                                         {
@@ -2268,19 +2268,19 @@ namespace Library.Net.Lair
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Tags == null) return;
+            if (e.Links == null) return;
             if (messageManager.PullHeadersRequest.Count > _maxHeaderRequestCount * messageManager.PullHeadersRequest.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})", e.Tags.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})", e.Links.Count()));
 
-            foreach (var tag in e.Tags.Take(_maxHeaderRequestCount))
+            foreach (var link in e.Links.Take(_maxHeaderRequestCount))
             {
-                if (!ConnectionsManager.Check(tag)) continue;
+                if (!ConnectionsManager.Check(link)) continue;
 
-                messageManager.PullHeadersRequest.Add(tag);
+                messageManager.PullHeadersRequest.Add(link);
                 _pullHeaderRequestCount++;
 
-                _lastUsedHeaderTimes[tag] = DateTime.UtcNow;
+                _lastUsedHeaderTimes[link] = DateTime.UtcNow;
             }
         }
 
@@ -2303,7 +2303,7 @@ namespace Library.Net.Lair
                     messageManager.PushHeaders.Add(header.GetHash(_hashAlgorithm));
                     messageManager.LastPullTime = DateTime.UtcNow;
 
-                    _lastUsedHeaderTimes[header.Tag] = DateTime.UtcNow;
+                    _lastUsedHeaderTimes[header.Link] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount++;
@@ -2463,13 +2463,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Header> GetHeaders(Tag tag)
+        public IEnumerable<Header> GetHeaders(Link link)
         {
             lock (_thisLock)
             {
-                _pushHeadersRequestList.Add(tag);
+                _pushHeadersRequestList.Add(link);
 
-                return _headerManager.GetHeaders(tag);
+                return _headerManager.GetHeaders(link);
             }
         }
 
@@ -2769,12 +2769,12 @@ namespace Library.Net.Lair
 
         private class HeaderManager
         {
-            private Dictionary<Tag, Dictionary<string, Header>> _sectionProfileHeaders = new Dictionary<Tag, Dictionary<string, Header>>();
-            private Dictionary<Tag, Dictionary<string, HashSet<Header>>> _sectionMessageHeaders = new Dictionary<Tag, Dictionary<string, HashSet<Header>>>();
-            private Dictionary<Tag, Dictionary<string, HashSet<Header>>> _documentPageHeaders = new Dictionary<Tag, Dictionary<string, HashSet<Header>>>();
-            private Dictionary<Tag, Dictionary<string, Header>> _documentOpinionHeaders = new Dictionary<Tag, Dictionary<string, Header>>();
-            private Dictionary<Tag, Dictionary<string, HashSet<Header>>> _chatTopicHeaders = new Dictionary<Tag, Dictionary<string, HashSet<Header>>>();
-            private Dictionary<Tag, Dictionary<string, HashSet<Header>>> _chatMessageHeaders = new Dictionary<Tag, Dictionary<string, HashSet<Header>>>();
+            private Dictionary<Link, Dictionary<string, Header>> _sectionProfileHeaders = new Dictionary<Link, Dictionary<string, Header>>();
+            private Dictionary<Link, Dictionary<string, HashSet<Header>>> _sectionMessageHeaders = new Dictionary<Link, Dictionary<string, HashSet<Header>>>();
+            private Dictionary<Link, Dictionary<string, Header>> _documentPageHeaders = new Dictionary<Link, Dictionary<string, Header>>();
+            private Dictionary<Link, Dictionary<string, Header>> _documentVoteHeaders = new Dictionary<Link, Dictionary<string, Header>>();
+            private Dictionary<Link, Dictionary<string, Header>> _chatTopicHeaders = new Dictionary<Link, Dictionary<string, Header>>();
+            private Dictionary<Link, Dictionary<string, HashSet<Header>>> _chatMessageHeaders = new Dictionary<Link, Dictionary<string, HashSet<Header>>>();
 
             public HeaderManager(IEnumerable<Header> headers)
             {
@@ -2784,30 +2784,30 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<Tag> GetTags()
+            public IEnumerable<Link> GetLinks()
             {
-                HashSet<Tag> hashset = new HashSet<Tag>();
+                HashSet<Link> hashset = new HashSet<Link>();
 
                 hashset.UnionWith(_sectionProfileHeaders.Keys);
                 hashset.UnionWith(_sectionMessageHeaders.Keys);
                 hashset.UnionWith(_documentPageHeaders.Keys);
-                hashset.UnionWith(_documentOpinionHeaders.Keys);
+                hashset.UnionWith(_documentVoteHeaders.Keys);
                 hashset.UnionWith(_chatTopicHeaders.Keys);
                 hashset.UnionWith(_chatMessageHeaders.Keys);
 
                 return hashset;
             }
 
-            public void RemoveTags(IEnumerable<Tag> tags)
+            public void RemoveLinks(IEnumerable<Link> links)
             {
-                foreach (var tag in tags)
+                foreach (var link in links)
                 {
-                    _sectionProfileHeaders.Remove(tag);
-                    _sectionMessageHeaders.Remove(tag);
-                    _documentPageHeaders.Remove(tag);
-                    _documentOpinionHeaders.Remove(tag);
-                    _chatTopicHeaders.Remove(tag);
-                    _chatMessageHeaders.Remove(tag);
+                    _sectionProfileHeaders.Remove(link);
+                    _sectionMessageHeaders.Remove(link);
+                    _documentPageHeaders.Remove(link);
+                    _documentVoteHeaders.Remove(link);
+                    _chatTopicHeaders.Remove(link);
+                    _chatMessageHeaders.Remove(link);
                 }
             }
 
@@ -2817,29 +2817,29 @@ namespace Library.Net.Lair
 
                 list.AddRange(_sectionProfileHeaders.Values.SelectMany(n => n.Values));
                 list.AddRange(_sectionMessageHeaders.Values.SelectMany(n => n.Values).SelectMany(n => n));
-                list.AddRange(_documentPageHeaders.Values.SelectMany(n => n.Values).SelectMany(n => n));
-                list.AddRange(_documentOpinionHeaders.Values.SelectMany(n => n.Values));
-                list.AddRange(_chatTopicHeaders.Values.SelectMany(n => n.Values).SelectMany(n => n));
+                list.AddRange(_documentPageHeaders.Values.SelectMany(n => n.Values));
+                list.AddRange(_documentVoteHeaders.Values.SelectMany(n => n.Values));
+                list.AddRange(_chatTopicHeaders.Values.SelectMany(n => n.Values));
                 list.AddRange(_chatMessageHeaders.Values.SelectMany(n => n.Values).SelectMany(n => n));
 
                 return list;
             }
 
-            public IEnumerable<Header> GetHeaders(Tag tag)
+            public IEnumerable<Header> GetHeaders(Link link)
             {
                 HashSet<Header> hashset = new HashSet<Header>();
 
-                if (tag == null
-                    || string.IsNullOrWhiteSpace(tag.Type)
-                    || tag.Id == null || tag.Id.Length == 0
-                    || string.IsNullOrWhiteSpace(tag.Name))
+                if (link == null
+                    || link.Tag.Id == null || link.Tag.Id.Length == 0
+                    || string.IsNullOrWhiteSpace(link.Tag.Name)
+                    || string.IsNullOrWhiteSpace(link.Type))
                 {
-                    if (tag.Type == "Section")
+                    if (link.Type == "Section")
                     {
                         {
                             Dictionary<string, Header> dic = null;
 
-                            if (_sectionProfileHeaders.TryGetValue(tag, out dic))
+                            if (_sectionProfileHeaders.TryGetValue(link, out dic))
                             {
                                 hashset.UnionWith(dic.Values);
                             }
@@ -2848,47 +2848,47 @@ namespace Library.Net.Lair
                         {
                             Dictionary<string, HashSet<Header>> dic = null;
 
-                            if (_sectionMessageHeaders.TryGetValue(tag, out dic))
+                            if (_sectionMessageHeaders.TryGetValue(link, out dic))
                             {
                                 hashset.UnionWith(dic.Values.SelectMany(n => n));
                             }
                         }
                     }
-                    else if (tag.Type == "Document")
+                    else if (link.Type == "Document")
                     {
                         {
-                            Dictionary<string, HashSet<Header>> dic = null;
+                            Dictionary<string, Header> dic = null;
 
-                            if (_documentPageHeaders.TryGetValue(tag, out dic))
+                            if (_documentPageHeaders.TryGetValue(link, out dic))
                             {
-                                hashset.UnionWith(dic.Values.SelectMany(n => n));
+                                hashset.UnionWith(dic.Values);
                             }
                         }
 
                         {
                             Dictionary<string, Header> dic = null;
 
-                            if (_documentOpinionHeaders.TryGetValue(tag, out dic))
+                            if (_documentVoteHeaders.TryGetValue(link, out dic))
                             {
                                 hashset.UnionWith(dic.Values);
                             }
                         }
                     }
-                    else if (tag.Type == "Chat")
+                    else if (link.Type == "Chat")
                     {
                         {
-                            Dictionary<string, HashSet<Header>> dic = null;
+                            Dictionary<string, Header> dic = null;
 
-                            if (_chatTopicHeaders.TryGetValue(tag, out dic))
+                            if (_chatTopicHeaders.TryGetValue(link, out dic))
                             {
-                                hashset.UnionWith(dic.Values.SelectMany(n => n));
+                                hashset.UnionWith(dic.Values);
                             }
                         }
 
                         {
                             Dictionary<string, HashSet<Header>> dic = null;
 
-                            if (_chatMessageHeaders.TryGetValue(tag, out dic))
+                            if (_chatMessageHeaders.TryGetValue(link, out dic))
                             {
                                 hashset.UnionWith(dic.Values.SelectMany(n => n));
                             }
@@ -2904,26 +2904,24 @@ namespace Library.Net.Lair
                 var now = DateTime.UtcNow;
 
                 if (header == null
-                    || header.Tag == null
-                        || string.IsNullOrWhiteSpace(header.Tag.Type)
-                        || header.Tag.Id == null || header.Tag.Id.Length == 0
-                        || string.IsNullOrWhiteSpace(header.Tag.Name)
+                    || header.Link == null
+                        || header.Link.Tag == null
+                            || header.Link.Tag.Id == null || header.Link.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Link.Tag.Name)
+                        || string.IsNullOrWhiteSpace(header.Link.Type)
                     || string.IsNullOrWhiteSpace(header.Type)
-                    || header.Options.Any(n => string.IsNullOrWhiteSpace(n))
                     || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || header.Certificate == null || !header.VerifyCertificate()) return;
 
                 var signature = header.Certificate.ToString();
 
-                if (header.Tag.Type == "Section")
+                if (header.Link.Type == "Section")
                 {
                     if (header.Type == "Profile")
                     {
-                        if (!(header.Options.Count() == 0)) return;
-
                         Dictionary<string, Header> dic = null;
 
-                        if (!_sectionProfileHeaders.TryGetValue(header.Tag, out dic)) return;
+                        if (!_sectionProfileHeaders.TryGetValue(header.Link, out dic)) return;
 
                         Header tempHeader = null;
 
@@ -2935,12 +2933,9 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Message")
                     {
-                        if (!(header.Options.Count() == 0)) return;
-                        if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return;
-
                         Dictionary<string, HashSet<Header>> dic = null;
 
-                        if (!_sectionMessageHeaders.TryGetValue(header.Tag, out dic)) return;
+                        if (!_sectionMessageHeaders.TryGetValue(header.Link, out dic)) return;
 
                         HashSet<Header> hashset = null;
 
@@ -2950,30 +2945,27 @@ namespace Library.Net.Lair
                         }
                     }
                 }
-                else if (header.Tag.Type == "Document")
+                else if (header.Link.Type == "Document")
                 {
                     if (header.Type == "Page")
                     {
-                        if (!(header.Options.Count() == 1)) return;
-
-                        Dictionary<string, HashSet<Header>> dic = null;
-
-                        if (!_documentPageHeaders.TryGetValue(header.Tag, out dic)) return;
-
-                        HashSet<Header> hashset = null;
-
-                        if (dic.TryGetValue(signature, out hashset))
-                        {
-                            hashset.Remove(header);
-                        }
-                    }
-                    else if (header.Type == "Opinion")
-                    {
-                        if (!(header.Options.Count() == 0)) return;
-
                         Dictionary<string, Header> dic = null;
 
-                        if (!_documentOpinionHeaders.TryGetValue(header.Tag, out dic)) return;
+                        if (!_documentPageHeaders.TryGetValue(header.Link, out dic)) return;
+
+                        Header tempHeader = null;
+
+                        if (dic.TryGetValue(signature, out tempHeader)
+                            && header == tempHeader)
+                        {
+                            dic.Remove(signature);
+                        }
+                    }
+                    else if (header.Type == "Vote")
+                    {
+                        Dictionary<string, Header> dic = null;
+
+                        if (!_documentVoteHeaders.TryGetValue(header.Link, out dic)) return;
 
                         Header tempHeader = null;
 
@@ -2984,31 +2976,27 @@ namespace Library.Net.Lair
                         }
                     }
                 }
-                else if (header.Tag.Type == "Chat")
+                else if (header.Link.Type == "Chat")
                 {
                     if (header.Type == "Topic")
                     {
-                        if (!(header.Options.Count() == 1)) return;
+                        Dictionary<string, Header> dic = null;
 
-                        Dictionary<string, HashSet<Header>> dic = null;
+                        if (!_chatTopicHeaders.TryGetValue(header.Link, out dic)) return;
 
-                        if (!_chatTopicHeaders.TryGetValue(header.Tag, out dic)) return;
+                        Header tempHeader = null;
 
-                        HashSet<Header> hashset = null;
-
-                        if (!dic.TryGetValue(signature, out hashset))
+                        if (dic.TryGetValue(signature, out tempHeader)
+                            && header == tempHeader)
                         {
-                            hashset.Remove(header);
+                            dic.Remove(signature);
                         }
                     }
                     else if (header.Type == "Message")
                     {
-                        if (!(header.Options.Count() == 1)) return;
-                        if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return;
-
                         Dictionary<string, HashSet<Header>> dic = null;
 
-                        if (!_chatMessageHeaders.TryGetValue(header.Tag, out dic)) return;
+                        if (!_chatMessageHeaders.TryGetValue(header.Link, out dic)) return;
 
                         HashSet<Header> hashset = null;
 
@@ -3025,29 +3013,29 @@ namespace Library.Net.Lair
                 var now = DateTime.UtcNow;
 
                 if (header == null
-                    || header.Tag == null
-                        || string.IsNullOrWhiteSpace(header.Tag.Type)
-                        || header.Tag.Id == null || header.Tag.Id.Length == 0
-                        || string.IsNullOrWhiteSpace(header.Tag.Name)
+                    || header.Link == null
+                        || header.Link.Tag == null
+                            || header.Link.Tag.Id == null || header.Link.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Link.Tag.Name)
+                        || string.IsNullOrWhiteSpace(header.Link.Type)
                     || string.IsNullOrWhiteSpace(header.Type)
-                    || header.Options.Any(n => string.IsNullOrWhiteSpace(n))
                     || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                     || header.Certificate == null || !header.VerifyCertificate()) return false;
 
                 var signature = header.Certificate.ToString();
 
-                if (header.Tag.Type == "Section")
+                if (header.Link.Type == "Section")
                 {
                     if (header.Type == "Profile")
                     {
-                        if (!(header.Options.Count() == 0)) return false;
+                        if (header.Link.Path != null) return false;
 
                         Dictionary<string, Header> dic = null;
 
-                        if (!_sectionProfileHeaders.TryGetValue(header.Tag, out dic))
+                        if (!_sectionProfileHeaders.TryGetValue(header.Link, out dic))
                         {
                             dic = new Dictionary<string, Header>();
-                            _sectionProfileHeaders[header.Tag] = dic;
+                            _sectionProfileHeaders[header.Link] = dic;
                         }
 
                         Header tempHeader = null;
@@ -3064,15 +3052,15 @@ namespace Library.Net.Lair
                     }
                     else if (header.Type == "Message")
                     {
-                        if (!(header.Options.Count() == 0)) return false;
                         if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return false;
+                        if (header.Link.Path != null) return false;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
-                        if (!_sectionMessageHeaders.TryGetValue(header.Tag, out dic))
+                        if (!_sectionMessageHeaders.TryGetValue(header.Link, out dic))
                         {
                             dic = new Dictionary<string, HashSet<Header>>();
-                            _sectionMessageHeaders[header.Tag] = dic;
+                            _sectionMessageHeaders[header.Link] = dic;
                         }
 
                         HashSet<Header> hashset = null;
@@ -3086,62 +3074,38 @@ namespace Library.Net.Lair
                         return hashset.Add(header);
                     }
                 }
-                else if (header.Tag.Type == "Document")
+                else if (header.Link.Type == "Document")
                 {
                     if (header.Type == "Page")
                     {
-                        if (!(header.Options.Count() == 1)) return false;
+                        Dictionary<string, Header> dic = null;
 
-                        Dictionary<string, HashSet<Header>> dic = null;
-
-                        if (!_documentPageHeaders.TryGetValue(header.Tag, out dic))
+                        if (!_documentPageHeaders.TryGetValue(header.Link, out dic))
                         {
-                            dic = new Dictionary<string, HashSet<Header>>();
-                            _documentPageHeaders[header.Tag] = dic;
+                            dic = new Dictionary<string, Header>();
+                            _documentPageHeaders[header.Link] = dic;
                         }
 
-                        HashSet<Header> hashset = null;
+                        Header tempHeader = null;
 
-                        if (!dic.TryGetValue(signature, out hashset))
+                        if (!dic.TryGetValue(signature, out tempHeader)
+                            || header.CreationTime > tempHeader.CreationTime)
                         {
-                            hashset = new HashSet<Header>();
-                            dic[signature] = hashset;
-
-                            hashset.Add(header);
+                            dic[signature] = header;
 
                             return true;
-                        }
-                        else
-                        {
-                            var tempHeader = hashset.FirstOrDefault(n => n.Options.ElementAt(0) == header.Options.ElementAt(0));
-
-                            if (tempHeader == null)
-                            {
-                                hashset.Add(header);
-
-                                return true;
-                            }
-                            else if (tempHeader.CreationTime < header.CreationTime)
-                            {
-                                hashset.Remove(tempHeader);
-                                hashset.Add(header);
-
-                                return true;
-                            }
                         }
 
                         return false;
                     }
-                    else if (header.Type == "Opinion")
+                    else if (header.Type == "Vote")
                     {
-                        if (!(header.Options.Count() == 0)) return false;
-
                         Dictionary<string, Header> dic = null;
 
-                        if (!_documentOpinionHeaders.TryGetValue(header.Tag, out dic))
+                        if (!_documentVoteHeaders.TryGetValue(header.Link, out dic))
                         {
                             dic = new Dictionary<string, Header>();
-                            _documentOpinionHeaders[header.Tag] = dic;
+                            _documentVoteHeaders[header.Link] = dic;
                         }
 
                         Header tempHeader = null;
@@ -3157,63 +3121,40 @@ namespace Library.Net.Lair
                         return false;
                     }
                 }
-                else if (header.Tag.Type == "Chat")
+                else if (header.Link.Type == "Chat")
                 {
                     if (header.Type == "Topic")
                     {
-                        if (!(header.Options.Count() == 1)) return false;
+                        Dictionary<string, Header> dic = null;
 
-                        Dictionary<string, HashSet<Header>> dic = null;
-
-                        if (!_chatTopicHeaders.TryGetValue(header.Tag, out dic))
+                        if (!_chatTopicHeaders.TryGetValue(header.Link, out dic))
                         {
-                            dic = new Dictionary<string, HashSet<Header>>();
-                            _chatTopicHeaders[header.Tag] = dic;
+                            dic = new Dictionary<string, Header>();
+                            _chatTopicHeaders[header.Link] = dic;
                         }
 
-                        HashSet<Header> hashset = null;
+                        Header tempHeader = null;
 
-                        if (!dic.TryGetValue(signature, out hashset))
+                        if (!dic.TryGetValue(signature, out tempHeader)
+                            || header.CreationTime > tempHeader.CreationTime)
                         {
-                            hashset = new HashSet<Header>();
-                            dic[signature] = hashset;
-
-                            hashset.Add(header);
+                            dic[signature] = header;
 
                             return true;
-                        }
-                        else
-                        {
-                            var tempHeader = hashset.FirstOrDefault(n => n.Options.ElementAt(0) == header.Options.ElementAt(0));
-
-                            if (tempHeader == null)
-                            {
-                                hashset.Add(header);
-
-                                return true;
-                            }
-                            else if (tempHeader.CreationTime < header.CreationTime)
-                            {
-                                hashset.Remove(tempHeader);
-                                hashset.Add(header);
-
-                                return true;
-                            }
                         }
 
                         return false;
                     }
                     else if (header.Type == "Message")
                     {
-                        if (!(header.Options.Count() == 1)) return false;
                         if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)) return false;
 
                         Dictionary<string, HashSet<Header>> dic = null;
 
-                        if (!_chatMessageHeaders.TryGetValue(header.Tag, out dic))
+                        if (!_chatMessageHeaders.TryGetValue(header.Link, out dic))
                         {
                             dic = new Dictionary<string, HashSet<Header>>();
-                            _chatMessageHeaders[header.Tag] = dic;
+                            _chatMessageHeaders[header.Link] = dic;
                         }
 
                         HashSet<Header> hashset = null;

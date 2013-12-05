@@ -156,6 +156,19 @@ namespace Library.Net.Lair
             }
         }
 
+        public IEnumerable<Information> DownloadingInformation
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _downloadManager.DownloadingInformation;
+                }
+            }
+        }
+
         public Node BaseNode
         {
             get
@@ -339,118 +352,100 @@ namespace Library.Net.Lair
             _cacheManager.CheckBlocks(getProgressEvent);
         }
 
-        public IEnumerable<Header> GetHeaders(Tag tag)
+        public IEnumerable<Header> GetHeaders(Link link)
         {
             lock (_thisLock)
             {
-                return _connectionsManager.GetHeaders(tag);
+                return _connectionsManager.GetHeaders(link);
             }
         }
 
-        public Information Download(Header header)
+        public void Download(Header header)
         {
             lock (this.ThisLock)
             {
-                return _downloadManager.Download(header);
+                _downloadManager.Download(header);
             }
         }
 
-        public void SetExchangePrivateKeys(IEnumerable<IExchangeDecrypt> privateKeys)
+        public void SetExchangePrivateKeys(IEnumerable<ExchangePrivateKey> exchangePrivateKeys)
         {
             lock (this.ThisLock)
             {
-                _downloadManager.SetExchangePrivateKeys(privateKeys);
+                _downloadManager.SetExchangePrivateKeys(exchangePrivateKeys);
             }
         }
 
-        public void UploadSectionProfile(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             SectionProfileContent content,
 
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.UploadSectionProfile(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.Upload(tag, path, content, digitalSignature);
             }
         }
 
-        public void UploadSectionMessage(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             SectionMessageContent content,
 
-            ExchangePublicKey excangePublicKey,
+            ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.UploadSectionMessage(tagId, tagName, options, content, excangePublicKey, digitalSignature);
+                _uploadManager.Upload(tag, path, content, exchangePublicKey, digitalSignature);
             }
         }
 
-        public void UploadDocumentPage(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             DocumentPageContent content,
 
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.UploadDocumentPage(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.Upload(tag, path, content, digitalSignature);
             }
         }
 
-        public void UploadDocumentOpinion(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
-            DocumentOpinionContent content,
+        public void Upload(Tag tag,
+            string path,
+            DocumentVoteContent content,
 
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.UploadDocumentOpinion(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.Upload(tag, path, content, digitalSignature);
             }
         }
 
-        public void UploadChatTopic(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             ChatTopicContent content,
 
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.UploadChatTopic(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.Upload(tag, path, content, digitalSignature);
             }
         }
 
-        public void UploadChatMessage(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             ChatMessageContent content,
 
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.UploadChatMessage(tagId, tagName, options, content, digitalSignature);
+                _uploadManager.Upload(tag, path, content, digitalSignature);
             }
         }
 

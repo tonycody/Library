@@ -5,13 +5,12 @@ using System.IO;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Library.Io;
-using Library.Security;
 
 namespace Library.Net.Lair
 {
     public static class LairConverter
     {
-        private enum CompressionAlgorithm
+        private enum ConvertCompressionAlgorithm
         {
             None = 0,
             Deflate = 1,
@@ -55,14 +54,14 @@ namespace Library.Net.Lair
                     }
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.Deflate, deflateBufferStream));
+                    list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.None, stream));
+                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {
@@ -125,11 +124,11 @@ namespace Library.Net.Lair
 
                 using (Stream dataStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position - 4, true))
                 {
-                    if (type == (byte)CompressionAlgorithm.None)
+                    if (type == (byte)ConvertCompressionAlgorithm.None)
                     {
                         return ItemBase<T>.Import(dataStream, _bufferManager);
                     }
-                    else if (type == (byte)CompressionAlgorithm.Deflate)
+                    else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
                     {
                         using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
                         {
@@ -244,15 +243,15 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToTagString(Tag item)
+        public static string ToLinkString(Link item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
             try
             {
-                using (Stream stream = LairConverter.ToStream<Tag>(item))
+                using (Stream stream = LairConverter.ToStream<Link>(item))
                 {
-                    return "Tag:" + LairConverter.ToBase64String(stream);
+                    return "Link:" + LairConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -261,16 +260,16 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Tag FromTagString(string item)
+        public static Link FromLinkString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Tag:") && !item.StartsWith("Tag@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Link:") && !item.StartsWith("Link@")) throw new ArgumentException("item");
 
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Tag:".Length)))
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Link:".Length)))
                 {
-                    return LairConverter.FromStream<Tag>(stream);
+                    return LairConverter.FromStream<Link>(stream);
                 }
             }
             catch (Exception)

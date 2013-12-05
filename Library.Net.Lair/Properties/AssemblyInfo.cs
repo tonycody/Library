@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
 
 [assembly: AssemblyTitle("Library.Net.Lair")]
 [assembly: AssemblyDescription("")]
@@ -12,6 +11,6 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("5aa52eb2-1037-4319-97dc-9bbe976d1ce6")]
-[assembly: AssemblyVersion("0.0.0.507")] // IWRE+ZjW9bqmwI/LI9F0Pcn/jimb8muHTJlKxptyxQxSErfylx689FzzUIlUTvfV9StxLJz4BwSYgnJypQY6LQ==
+[assembly: AssemblyVersion("0.0.0.512")] // AW3SSrRAJCfoKvRgbnaALmnaaJoiNfEsjct15Zt/HJGvj4ZLTpip7iPhh0WpaBCGvAzc6IYlp2k5pmEYZNoYgA==
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Library.UnitTest")]

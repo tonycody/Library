@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
-using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "SectionMessageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionMessageContent : ItemBase<SectionMessageContent>, ISectionMessageContent<Key>
+    [DataContract(Name = "ChatMessageContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -18,19 +18,18 @@ namespace Library.Net.Lair
         }
 
         private string _comment;
-        private Key _anchor;
-
-        private int _hashCode;
+        private KeyCollection _anchors;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxAnchorCount = 32;
 
-        public SectionMessageContent(string comment, Key anchor)
+        public ChatMessageContent(string comment, IEnumerable<Key> anchors)
         {
             this.Comment = comment;
-            this.Anchor = anchor;
+            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -57,7 +56,7 @@ namespace Library.Net.Lair
                         }
                         else if (id == (byte)SerializeId.Anchor)
                         {
-                            this.Anchor = Key.Import(rangeStream, bufferManager);
+                            this.ProtectedAnchors.Add(Key.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -90,10 +89,10 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
-                // Anchor
-                if (this.Anchor != null)
+                // Anchors
+                foreach (var a in this.Anchors)
                 {
-                    Stream exportStream = this.Anchor.Export(bufferManager);
+                    Stream exportStream = a.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
@@ -110,39 +109,45 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                return _hashCode;
+                if (this.Comment == null) return 0;
+                else return this.Comment.GetHashCode();
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is SectionMessageContent)) return false;
+            if ((object)obj == null || !(obj is ChatMessageContent)) return false;
 
-            return this.Equals((SectionMessageContent)obj);
+            return this.Equals((ChatMessageContent)obj);
         }
 
-        public override bool Equals(SectionMessageContent other)
+        public override bool Equals(ChatMessageContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Comment != other.Comment
-                || this.Anchor != other.Anchor)
+                || (this.Anchors == null) != (other.Anchors == null))
             {
                 return false;
+            }
+
+            if (this.Anchors != null && other.Anchors != null)
+            {
+                if (!Collection.Equals(this.Anchors, other.Anchors)) return false;
             }
 
             return true;
         }
 
-        public override SectionMessageContent DeepClone()
+        public override ChatMessageContent DeepClone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return SectionMessageContent.Import(stream, BufferManager.Instance);
+                    return ChatMessageContent.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -166,7 +171,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region ISectionMessageContent
+        #region IChatMessageContent<Key>
 
         [DataMember(Name = "Comment")]
         public string Comment
@@ -182,7 +187,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > SectionMessageContent.MaxCommentLength)
+                    if (value != null && value.Length > ChatMessageContent.MaxCommentLength)
                     {
                         throw new ArgumentException();
                     }
@@ -194,30 +199,33 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Anchor")]
-        public Key Anchor
+        private volatile ReadOnlyCollection<Key> _readOnlyAnchors;
+
+        public IEnumerable<Key> Anchors
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _anchor;
+                    if (_readOnlyAnchors == null)
+                        _readOnlyAnchors = new ReadOnlyCollection<Key>(this.ProtectedAnchors);
+
+                    return _readOnlyAnchors;
                 }
             }
-            private set
+        }
+
+        [DataMember(Name = "Anchors")]
+        private KeyCollection ProtectedAnchors
+        {
+            get
             {
                 lock (this.ThisLock)
                 {
-                    _anchor = value;
+                    if (_anchors == null)
+                        _anchors = new KeyCollection(ChatMessageContent.MaxAnchorCount);
 
-                    if (_anchor == null)
-                    {
-                        _hashCode = 0;
-                    }
-                    else
-                    {
-                        _hashCode = _anchor.GetHashCode();
-                    }
+                    return _anchors;
                 }
             }
         }

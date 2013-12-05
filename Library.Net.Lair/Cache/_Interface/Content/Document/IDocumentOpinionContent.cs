@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
+﻿using System.Collections.Generic;
 
 namespace Library.Net.Lair
 {
-    interface IDocumentOpinionContent<TKey>
+    interface IDocumentVoteContent<TKey>
         where TKey : IKey
     {
         IEnumerable<TKey> Goods { get; }

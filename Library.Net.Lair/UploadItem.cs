@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Runtime.Serialization;
 using Library.Security;
-using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
@@ -11,16 +7,18 @@ namespace Library.Net.Lair
     sealed class UploadItem
     {
         private Tag _tag;
-        private string _type;
-        private OptionCollection _options;
-        private DigitalSignature _digitalSignature;
+        private string _path;
 
+        private string _linkType;
+        private string _headerType;
+
+        private DigitalSignature _digitalSignature;
         private ExchangePublicKey _exchangePublicKey;
 
         private SectionProfileContent _sectionProfileContent;
         private SectionMessageContent _sectionMessageContent;
         private DocumentPageContent _documentPageContent;
-        private DocumentOpinionContent _documentOpinionContent;
+        private DocumentVoteContent _documentVoteContent;
         private ChatTopicContent _chatTopicContent;
         private ChatMessageContent _chatMessageContent;
 
@@ -65,36 +63,59 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Type")]
-        public string Type
+        [DataMember(Name = "Path")]
+        public string Path
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _type;
+                    return _path;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _type = value;
+                    _path = value;
                 }
             }
         }
 
-        [DataMember(Name = "Options")]
-        public OptionCollection Options
+        [DataMember(Name = "LinkType")]
+        public string LinkType
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_options == null)
-                        _options = new OptionCollection();
+                    return _linkType;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _linkType = value;
+                }
+            }
+        }
 
-                    return _options;
+        [DataMember(Name = "HeaderType")]
+        public string HeaderType
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _headerType;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _headerType = value;
                 }
             }
         }
@@ -194,21 +215,21 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "DocumentOpinionContent")]
-        public DocumentOpinionContent DocumentOpinionContent
+        [DataMember(Name = "DocumentVoteContent")]
+        public DocumentVoteContent DocumentVoteContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _documentOpinionContent;
+                    return _documentVoteContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _documentOpinionContent = value;
+                    _documentVoteContent = value;
                 }
             }
         }

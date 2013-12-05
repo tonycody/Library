@@ -3,29 +3,25 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Runtime.Serialization;
 using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
+using Library.Compression;
 using Library.Io;
 using Library.Security;
-using Library.Compression;
 
 namespace Library.Net.Lair
 {
     static class ContentConverter
     {
-        private enum CompressionAlgorithm
+        private enum ConvertCompressionAlgorithm
         {
             None = 0,
             Deflate = 1,
             Lzma = 2,
         }
 
-        private enum CryptoAlgorithm
+        private enum ConvertCryptoAlgorithm
         {
-            Rijndael256 = 0,
+            Rijndael256_Sha512 = 0,
         }
 
         private static BufferManager _bufferManager = BufferManager.Instance;
@@ -69,7 +65,7 @@ namespace Library.Net.Lair
                     }
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.Deflate, deflateBufferStream));
+                    list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
@@ -89,14 +85,14 @@ namespace Library.Net.Lair
                     }
 
                     lzmaBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.Lzma, lzmaBufferStream));
+                    list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Lzma, lzmaBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.None, stream));
+                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {
@@ -110,7 +106,7 @@ namespace Library.Net.Lair
                         NetworkConverter.ToSizeString(stream.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length),
-                        (CompressionAlgorithm)list[0].Key);
+                        (ConvertCompressionAlgorithm)list[0].Key);
                 }
 #endif
 
@@ -142,11 +138,11 @@ namespace Library.Net.Lair
 
                 using (Stream dataStream = new WrapperStream(stream, true))
                 {
-                    if (type == (byte)CompressionAlgorithm.None)
+                    if (type == (byte)ConvertCompressionAlgorithm.None)
                     {
                         return ItemBase<T>.Import(dataStream, _bufferManager);
                     }
-                    else if (type == (byte)CompressionAlgorithm.Lzma)
+                    else if (type == (byte)ConvertCompressionAlgorithm.Lzma)
                     {
                         using (BufferStream lzmaBufferStream = new BufferStream(_bufferManager))
                         {
@@ -161,7 +157,7 @@ namespace Library.Net.Lair
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(lzmaBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - lzmaBufferStream.Length),
-                                CompressionAlgorithm.Lzma);
+                                ConvertCompressionAlgorithm.Lzma);
 #endif
 
                             lzmaBufferStream.Seek(0, SeekOrigin.Begin);
@@ -169,7 +165,7 @@ namespace Library.Net.Lair
                             return ItemBase<T>.Import(lzmaBufferStream, _bufferManager);
                         }
                     }
-                    else if (type == (byte)CompressionAlgorithm.Deflate)
+                    else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
                     {
                         using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
                         {
@@ -199,7 +195,7 @@ namespace Library.Net.Lair
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length),
-                                CompressionAlgorithm.Deflate);
+                                ConvertCompressionAlgorithm.Deflate);
 #endif
 
                             deflateBufferStream.Seek(0, SeekOrigin.Begin);
@@ -301,18 +297,14 @@ namespace Library.Net.Lair
                 {
                     outStream = new BufferStream(_bufferManager);
 
-                    // Version
-                    outStream.WriteByte((byte)0);
+                    // Type
+                    outStream.WriteByte((byte)ConvertCryptoAlgorithm.Rijndael256_Sha512);
 
                     byte[] cryptoKey = new byte[32];
                     _random.GetBytes(cryptoKey);
 
                     {
-                        byte[] headerBuffer = new byte[1 + cryptoKey.Length];
-                        headerBuffer[0] = (byte)CryptoAlgorithm.Rijndael256;
-                        Array.Copy(cryptoKey, 0, headerBuffer, 1, cryptoKey.Length);
-
-                        var encryptedBuffer = Exchange.Encrypt(exchangeEncrypt, headerBuffer);
+                        var encryptedBuffer = Exchange.Encrypt(exchangeEncrypt, cryptoKey);
                         outStream.Write(NetworkConverter.GetBytes((int)encryptedBuffer.Length), 0, 4);
                         outStream.Write(encryptedBuffer, 0, encryptedBuffer.Length);
                     }
@@ -321,7 +313,7 @@ namespace Library.Net.Lair
                     _random.GetBytes(iv);
                     outStream.Write(iv, 0, iv.Length);
 
-                    using (Stream inStream = new WrapperStream(stream, true))
+                    using (Stream inStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position))
                     using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
                     using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateEncryptor(cryptoKey, iv), CryptoStreamMode.Read))
                     {
@@ -340,6 +332,11 @@ namespace Library.Net.Lair
                         {
                             _bufferManager.ReturnBuffer(buffer);
                         }
+
+                        inStream.Seek(0, SeekOrigin.Begin);
+                        var hash = Sha512.ComputeHash(inStream);
+
+                        outStream.Write(hash, 0, hash.Length);
                     }
 
                     outStream.Seek(0, SeekOrigin.Begin);
@@ -367,11 +364,10 @@ namespace Library.Net.Lair
 
             try
             {
-                byte version = (byte)stream.ReadByte();
+                byte type = (byte)stream.ReadByte();
 
-                if (version == 0)
+                if (type == (byte)ConvertCryptoAlgorithm.Rijndael256_Sha512)
                 {
-                    byte type;
                     byte[] cryptoKey;
 
                     {
@@ -382,48 +378,50 @@ namespace Library.Net.Lair
                         byte[] encryptedBuffer = new byte[length];
                         if (stream.Read(encryptedBuffer, 0, encryptedBuffer.Length) != encryptedBuffer.Length) throw new ArgumentException();
 
-                        byte[] headerBuffer = Exchange.Decrypt(exchangeDecrypt, encryptedBuffer);
-                        type = headerBuffer[0];
-                        cryptoKey = new byte[headerBuffer.Length - 1];
-                        Array.Copy(headerBuffer, 1, cryptoKey, 0, cryptoKey.Length);
+                        cryptoKey = Exchange.Decrypt(exchangeDecrypt, encryptedBuffer);
                     }
 
                     BufferStream outStream = null;
 
                     try
                     {
-                        using (Stream inStream = new WrapperStream(stream, true))
+                        using (Stream dataStream = new WrapperStream(stream, true))
                         {
-                            if (type == (byte)CryptoAlgorithm.Rijndael256)
+                            byte[] hash = new byte[64];
+                            stream.Seek(-64, SeekOrigin.End);
+                            if (stream.Read(hash, 0, hash.Length) != hash.Length) throw new ArgumentException();
+
+                            outStream = new BufferStream(_bufferManager);
+
+                            var iv = new byte[32];
+                            dataStream.Read(iv, 0, iv.Length);
+
+                            using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                            using (var inStream = new RangeStream(dataStream, 0, dataStream.Length - 64))
+                            using (CryptoStream cs = new CryptoStream(dataStream, rijndael.CreateDecryptor(cryptoKey, iv), CryptoStreamMode.Read))
                             {
-                                outStream = new BufferStream(_bufferManager);
+                                byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
-                                var iv = new byte[32];
-                                inStream.Read(iv, 0, iv.Length);
-
-                                using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey, iv), CryptoStreamMode.Read))
+                                try
                                 {
-                                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
+                                    int length = 0;
 
-                                    try
+                                    while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
                                     {
-                                        int length = 0;
-
-                                        while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
-                                        {
-                                            outStream.Write(buffer, 0, length);
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        _bufferManager.ReturnBuffer(buffer);
+                                        outStream.Write(buffer, 0, length);
                                     }
                                 }
-
-                                outStream.Seek(0, SeekOrigin.Begin);
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(buffer);
+                                }
                             }
+
+                            outStream.Seek(0, SeekOrigin.Begin);
+                            if (!Unsafe.Equals(hash, Sha512.ComputeHash(outStream))) throw new ArgumentException();
                         }
+
+                        outStream.Seek(0, SeekOrigin.Begin);
                     }
                     catch (Exception)
                     {
@@ -546,13 +544,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToDocumentOpinionContentBlock(DocumentOpinionContent content)
+        public static ArraySegment<byte> ToDocumentVoteContentBlock(DocumentVoteContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<DocumentOpinionContent>(content))
+            using (Stream stream = ContentConverter.ToStream<DocumentVoteContent>(content))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
                 stream.Read(value.Array, value.Offset, value.Count);
@@ -561,7 +559,7 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static DocumentOpinionContent FromDocumentOpinionContentBlock(ArraySegment<byte> content)
+        public static DocumentVoteContent FromDocumentVoteContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -569,7 +567,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
                 {
-                    return ContentConverter.FromStream<DocumentOpinionContent>(stream);
+                    return ContentConverter.FromStream<DocumentVoteContent>(stream);
                 }
             }
             catch (Exception)

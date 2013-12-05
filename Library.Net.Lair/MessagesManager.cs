@@ -159,8 +159,8 @@ namespace Library.Net.Lair
         private VolatileCollection<Key> _pushBlocksRequest;
         private VolatileCollection<Key> _pullBlocksRequest;
 
-        private VolatileCollection<Tag> _pushHeadersRequest;
-        private VolatileCollection<Tag> _pullHeadersRequest;
+        private VolatileCollection<Link> _pushHeadersRequest;
+        private VolatileCollection<Link> _pullHeadersRequest;
 
         private readonly object _thisLock = new object();
 
@@ -179,8 +179,8 @@ namespace Library.Net.Lair
             _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
             _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
 
-            _pushHeadersRequest = new VolatileCollection<Tag>(new TimeSpan(0, 60, 0));
-            _pullHeadersRequest = new VolatileCollection<Tag>(new TimeSpan(0, 60, 0));
+            _pushHeadersRequest = new VolatileCollection<Link>(new TimeSpan(0, 60, 0));
+            _pullHeadersRequest = new VolatileCollection<Link>(new TimeSpan(0, 60, 0));
         }
 
         public int Id
@@ -361,7 +361,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public VolatileCollection<Tag> PushHeadersRequest
+        public VolatileCollection<Link> PushHeadersRequest
         {
             get
             {
@@ -372,7 +372,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public VolatileCollection<Tag> PullHeadersRequest
+        public VolatileCollection<Link> PullHeadersRequest
         {
             get
             {

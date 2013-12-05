@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Diagnostics;
 using System.Threading;
 using Library.Collections;
-using Library.Io;
 using Library.Security;
-using System.Diagnostics;
 
 namespace Library.Net.Lair
 {
@@ -91,35 +88,35 @@ namespace Library.Net.Lair
 
                         try
                         {
-                            if (item.Tag.Type == "Section")
+                            if (item.LinkType == "Section")
                             {
-                                if (item.Type == "Profile")
+                                if (item.HeaderType == "Profile")
                                 {
                                     buffer = ContentConverter.ToSectionProfileContentBlock(item.SectionProfileContent);
                                 }
-                                else if (item.Type == "Message")
+                                else if (item.HeaderType == "Message")
                                 {
                                     buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
                                 }
                             }
-                            else if (item.Tag.Type == "Document")
+                            else if (item.LinkType == "Document")
                             {
-                                if (item.Type == "Page")
+                                if (item.HeaderType == "Page")
                                 {
                                     buffer = ContentConverter.ToDocumentPageContentBlock(item.DocumentPageContent);
                                 }
-                                else if (item.Type == "Opinion")
+                                else if (item.HeaderType == "Vote")
                                 {
-                                    buffer = ContentConverter.ToDocumentOpinionContentBlock(item.DocumentOpinionContent);
+                                    buffer = ContentConverter.ToDocumentVoteContentBlock(item.DocumentVoteContent);
                                 }
                             }
-                            else if (item.Tag.Type == "Chat")
+                            else if (item.LinkType == "Chat")
                             {
-                                if (item.Type == "Topic")
+                                if (item.HeaderType == "Topic")
                                 {
                                     buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
                                 }
-                                else if (item.Type == "Message")
+                                else if (item.HeaderType == "Message")
                                 {
                                     buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
                                 }
@@ -127,10 +124,13 @@ namespace Library.Net.Lair
 
                             if (buffer.Count < _maxRawContentSize)
                             {
-                                byte[] binaryContent = new byte[buffer.Count];
-                                Array.Copy(buffer.Array, buffer.Offset, binaryContent, 0, buffer.Count);
+                                byte[] binaryContent = new byte[1 + buffer.Count];
+                                binaryContent[0] = 0; // Content type
+                                Array.Copy(buffer.Array, buffer.Offset, binaryContent, 1, buffer.Count - 1);
 
-                                var header = new Header(item.Tag, item.Type, item.Options, ContentFormatType.Raw, binaryContent, item.DigitalSignature);
+                                var link = new Link(item.Tag, item.LinkType, item.Path);
+
+                                var header = new Header(link, item.HeaderType, binaryContent, item.DigitalSignature);
                                 _connectionsManager.Upload(header);
                             }
                             else
@@ -149,15 +149,19 @@ namespace Library.Net.Lair
                                     _settings.LifeSpans[key] = DateTime.UtcNow;
 
                                     _cacheManager[key] = buffer;
+                                    _connectionsManager.Upload(key);
 
                                     using (var stream = key.Export(_bufferManager))
                                     {
-                                        binaryKey = new byte[stream.Length];
-                                        stream.Read(binaryKey, 0, binaryKey.Length);
+                                        binaryKey = new byte[1 + stream.Length];
+                                        binaryKey[0] = 1; // Content type
+                                        stream.Read(binaryKey, 1, binaryKey.Length - 1);
                                     }
                                 }
 
-                                var header = new Header(item.Tag, item.Type, item.Options, ContentFormatType.Raw, binaryKey, item.DigitalSignature);
+                                var link = new Link(item.Tag, item.LinkType, item.Path);
+
+                                var header = new Header(link, item.HeaderType, binaryKey, item.DigitalSignature);
                                 _connectionsManager.Upload(header);
                             }
                         }
@@ -178,7 +182,7 @@ namespace Library.Net.Lair
         }
 
         public void Upload(Tag tag,
-            IEnumerable<string> options,
+            string path,
             SectionProfileContent content,
 
             DigitalSignature digitalSignature)
@@ -186,9 +190,11 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = new Tag("Section", tagId, tagName);
-                uploadItem.Type = "Profile";
-                uploadItem.Options.AddRange(options);
+                uploadItem.Tag = tag;
+                uploadItem.Path = path;
+
+                uploadItem.LinkType = "Section";
+                uploadItem.HeaderType = "Profile";
 
                 uploadItem.SectionProfileContent = content;
 
@@ -196,11 +202,8 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadSectionMessage(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             SectionMessageContent content,
 
             ExchangePublicKey exchangePublicKey,
@@ -209,22 +212,21 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = new Tag("Section", tagId, tagName);
-                uploadItem.Type = "Message";
-                uploadItem.Options.AddRange(options);
-                uploadItem.ExchangePublicKey = exchangePublicKey;
+                uploadItem.Tag = tag;
+                uploadItem.Path = path;
+
+                uploadItem.LinkType = "Section";
+                uploadItem.HeaderType = "Message";
 
                 uploadItem.SectionMessageContent = content;
 
+                uploadItem.ExchangePublicKey = exchangePublicKey;
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
-        public void UploadDocumentPage(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             DocumentPageContent content,
 
             DigitalSignature digitalSignature)
@@ -232,9 +234,11 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = new Tag("Document", tagId, tagName);
-                uploadItem.Type = "Page";
-                uploadItem.Options.AddRange(options);
+                uploadItem.Tag = tag;
+                uploadItem.Path = path;
+
+                uploadItem.LinkType = "Document";
+                uploadItem.HeaderType = "Page";
 
                 uploadItem.DocumentPageContent = content;
 
@@ -242,33 +246,29 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadDocumentOpinion(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
-            DocumentOpinionContent content,
+        public void Upload(Tag tag,
+            string path,
+            DocumentVoteContent content,
 
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = new Tag("Document", tagId, tagName);
-                uploadItem.Type = "Opinion";
-                uploadItem.Options.AddRange(options);
+                uploadItem.Tag = tag;
+                uploadItem.Path = path;
 
-                uploadItem.DocumentOpinionContent = content;
+                uploadItem.LinkType = "Document";
+                uploadItem.HeaderType = "Vote";
+
+                uploadItem.DocumentVoteContent = content;
 
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
-        public void UploadChatTopic(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             ChatTopicContent content,
 
             DigitalSignature digitalSignature)
@@ -276,9 +276,11 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = new Tag("Chat", tagId, tagName);
-                uploadItem.Type = "Topic";
-                uploadItem.Options.AddRange(options);
+                uploadItem.Tag = tag;
+                uploadItem.Path = path;
+
+                uploadItem.LinkType = "Chat";
+                uploadItem.HeaderType = "Topic";
 
                 uploadItem.ChatTopicContent = content;
 
@@ -286,11 +288,8 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadChatMessage(
-            byte[] tagId,
-            string tagName,
-            IEnumerable<string> options,
-
+        public void Upload(Tag tag,
+            string path,
             ChatMessageContent content,
 
             DigitalSignature digitalSignature)
@@ -298,9 +297,11 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = new Tag("Chat", tagId, tagName);
-                uploadItem.Type = "Message";
-                uploadItem.Options.AddRange(options);
+                uploadItem.Tag = tag;
+                uploadItem.Path = path;
+
+                uploadItem.LinkType = "Chat";
+                uploadItem.HeaderType = "Message";
 
                 uploadItem.ChatMessageContent = content;
 

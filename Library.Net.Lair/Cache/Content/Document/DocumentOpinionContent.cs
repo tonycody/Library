@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
-using Library.Security;
-using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentOpinionContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentOpinionContent : ItemBase<DocumentOpinionContent>, IDocumentOpinionContent<Key>
+    [DataContract(Name = "DocumentVoteContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class DocumentVoteContent : ItemBase<DocumentVoteContent>, IDocumentVoteContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -27,7 +25,7 @@ namespace Library.Net.Lair
         public static readonly int MaxGoodsCount = 1024;
         public static readonly int MaxBadsCount = 1024;
 
-        public DocumentOpinionContent(IEnumerable<Key> goods, IEnumerable<Key> bads)
+        public DocumentVoteContent(IEnumerable<Key> goods, IEnumerable<Key> bads)
         {
             if (goods != null) this.ProtectedGoods.AddRange(goods);
             if (bads != null) this.ProtectedBads.AddRange(bads);
@@ -106,12 +104,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is DocumentOpinionContent)) return false;
+            if ((object)obj == null || !(obj is DocumentVoteContent)) return false;
 
-            return this.Equals((DocumentOpinionContent)obj);
+            return this.Equals((DocumentVoteContent)obj);
         }
 
-        public override bool Equals(DocumentOpinionContent other)
+        public override bool Equals(DocumentVoteContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -136,13 +134,13 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override DocumentOpinionContent DeepClone()
+        public override DocumentVoteContent DeepClone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return DocumentOpinionContent.Import(stream, BufferManager.Instance);
+                    return DocumentVoteContent.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -166,7 +164,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IDocumentOpinionsContent<Key>
+        #region IDocumentVotesContent<Key>
 
         private volatile ReadOnlyCollection<Key> _readOnlyGoods;
 
@@ -192,7 +190,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_goods == null)
-                        _goods = new KeyCollection(DocumentOpinionContent.MaxGoodsCount);
+                        _goods = new KeyCollection(DocumentVoteContent.MaxGoodsCount);
 
                     return _goods;
                 }
@@ -223,7 +221,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_bads == null)
-                        _bads = new KeyCollection(DocumentOpinionContent.MaxBadsCount);
+                        _bads = new KeyCollection(DocumentVoteContent.MaxBadsCount);
 
                     return _bads;
                 }

@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Xml;
-using Library.Collections;
-using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Lair
@@ -15,15 +9,15 @@ namespace Library.Net.Lair
     public class Criterion
     {
         private SignatureCollection _trustSignatures;
-        private TagCollection _tags;
+        private LinkCollection _links;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public Criterion(IEnumerable<string> trustSignatures, IEnumerable<Tag> tags)
+        public Criterion(IEnumerable<string> trustSignatures, IEnumerable<Link> links)
         {
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            if (tags != null) this.ProtectedTags.AddRange(tags);
+            if (links != null) this.ProtectedLinks.AddRange(links);
         }
 
         private object ThisLock
@@ -76,33 +70,33 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<Tag> _readOnlyTags;
+        private volatile ReadOnlyCollection<Link> _readOnlyLinks;
 
-        public IEnumerable<Tag> Tags
+        public IEnumerable<Link> Links
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_readOnlyTags == null)
-                        _readOnlyTags = new ReadOnlyCollection<Tag>(this.ProtectedTags);
+                    if (_readOnlyLinks == null)
+                        _readOnlyLinks = new ReadOnlyCollection<Link>(this.ProtectedLinks);
 
-                    return _readOnlyTags;
+                    return _readOnlyLinks;
                 }
             }
         }
 
-        [DataMember(Name = "Tags")]
-        private TagCollection ProtectedTags
+        [DataMember(Name = "Links")]
+        private LinkCollection ProtectedLinks
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_tags == null)
-                        _tags = new TagCollection();
+                    if (_links == null)
+                        _links = new LinkCollection();
 
-                    return _tags;
+                    return _links;
                 }
             }
         }

@@ -8,7 +8,6 @@ using System.Threading;
 using System.Xml;
 using Library.Io;
 using Library.Net.Connections;
-using Library.Security;
 
 namespace Library.Net.Lair
 {
@@ -35,7 +34,7 @@ namespace Library.Net.Lair
 
     class PullHeadersRequestEventArgs : EventArgs
     {
-        public IEnumerable<Tag> Tags { get; set; }
+        public IEnumerable<Link> Links { get; set; }
     }
 
     class PullHeadersEventArgs : EventArgs
@@ -569,7 +568,7 @@ namespace Library.Net.Lair
                                 else if (type == (byte)SerializeId.HeadersRequest)
                                 {
                                     var message = HeadersRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullHeadersRequest(new PullHeadersRequestEventArgs() { Tags = message.Tags });
+                                    this.OnPullHeadersRequest(new PullHeadersRequestEventArgs() { Links = message.Links });
                                 }
                                 else if (type == (byte)SerializeId.Headers)
                                 {
@@ -825,7 +824,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushHeadersRequest(TagCollection tags)
+        public void PushHeadersRequest(LinkCollection tags)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1287,14 +1286,14 @@ namespace Library.Net.Lair
         {
             private enum SerializeId : byte
             {
-                Tag = 0,
+                Link = 0,
             }
 
-            private TagCollection _tags;
+            private LinkCollection _tags;
 
-            public HeadersRequestMessage(IEnumerable<Tag> tags)
+            public HeadersRequestMessage(IEnumerable<Link> tags)
             {
-                if (tags != null) this.ProtectedTags.AddRange(tags);
+                if (tags != null) this.ProtectedLinks.AddRange(tags);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -1310,9 +1309,9 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Tag)
+                        if (id == (byte)SerializeId.Link)
                         {
-                            this.ProtectedTags.Add(Tag.Import(rangeStream, bufferManager));
+                            this.ProtectedLinks.Add(Link.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1323,14 +1322,14 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Tags
-                foreach (var t in this.Tags)
+                // Links
+                foreach (var t in this.Links)
                 {
                     Stream exportStream = t.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Tag);
+                    bufferStream.WriteByte((byte)SerializeId.Link);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -1346,21 +1345,21 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<Tag> Tags
+            public IEnumerable<Link> Links
             {
                 get
                 {
-                    return this.ProtectedTags;
+                    return this.ProtectedLinks;
                 }
             }
 
-            [DataMember(Name = "Tags")]
-            private TagCollection ProtectedTags
+            [DataMember(Name = "Links")]
+            private LinkCollection ProtectedLinks
             {
                 get
                 {
                     if (_tags == null)
-                        _tags = new TagCollection(_maxHeaderRequestCount);
+                        _tags = new LinkCollection(_maxHeaderRequestCount);
 
                     return _tags;
                 }

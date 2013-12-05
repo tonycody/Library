@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Library.Collections;
-using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Lair
@@ -17,7 +14,7 @@ namespace Library.Net.Lair
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private VolatileDictionary<Header, DownloadItem> _downloadItems;
+        private LockedDictionary<Header, DownloadItem> _downloadItems = new LockedDictionary<Header, DownloadItem>();
 
         private LockedList<ExchangePrivateKey> _exchangePrivateKeys = new LockedList<ExchangePrivateKey>();
 
@@ -35,8 +32,66 @@ namespace Library.Net.Lair
             _connectionsManager = connectionsManager;
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
+        }
 
-            _downloadItems = new VolatileDictionary<Header, DownloadItem>(new TimeSpan(0, 0, 10));
+        public IEnumerable<Information> DownloadingInformation
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    List<Information> list = new List<Information>();
+
+                    foreach (var pair in _downloadItems.ToArray())
+                    {
+                        List<InformationContext> contexts = new List<InformationContext>();
+
+                        var header = pair.Key;
+                        var item = pair.Value;
+
+                        contexts.Add(new InformationContext("Header", header));
+                        contexts.Add(new InformationContext("State", item.State));
+
+                        if (header.Link.Type == "Section")
+                        {
+                            if (header.Type == "Profile")
+                            {
+                                contexts.Add(new InformationContext("Content", item.SectionProfileContent));
+                            }
+                            else if (header.Type == "Message")
+                            {
+                                contexts.Add(new InformationContext("Content", item.SectionMessageContent));
+                            }
+                        }
+                        else if (header.Link.Type == "Document")
+                        {
+                            if (header.Type == "Page")
+                            {
+                                contexts.Add(new InformationContext("Content", item.DocumentPageContent));
+                            }
+                            else if (header.Type == "Vote")
+                            {
+                                contexts.Add(new InformationContext("Content", item.DocumentVoteContent));
+                            }
+                        }
+                        else if (header.Link.Type == "Chat")
+                        {
+                            if (header.Type == "Topic")
+                            {
+                                contexts.Add(new InformationContext("Content", item.ChatTopicContent));
+                            }
+                            else if (header.Type == "Message")
+                            {
+                                contexts.Add(new InformationContext("Content", item.ChatMessageContent));
+                            }
+                        }
+
+                        list.Add(new Information(contexts));
+                    }
+
+                    return list;
+                }
+            }
         }
 
         public IEnumerable<ExchangePrivateKey> ExchangePrivateKeys
@@ -68,22 +123,25 @@ namespace Library.Net.Lair
                         var header = pair.Key;
                         var item = pair.Value;
 
-                        if (item.State != DownloadState.Downloading) continue;
-
-                        ArraySegment<byte> binaryContent = new ArraySegment<byte>();
-
                         try
                         {
-                            if (header.FormatType == ContentFormatType.Raw)
-                            {
-                                binaryContent = new ArraySegment<byte>(header.Content);
-                            }
-                            else if (header.FormatType == ContentFormatType.Key)
-                            {
-                                Key key;
+                            if (item.State != DownloadState.Downloading) continue;
 
-                                try
+                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
+
+                            try
+                            {
+                                var type = header.Content[0];
+
+                                if (type == 0)
                                 {
+                                    binaryContent = new ArraySegment<byte>(_bufferManager.TakeBuffer(header.Content.Length - 1), 0, header.Content.Length - 1);
+                                    Array.Copy(header.Content, 0, binaryContent.Array, binaryContent.Offset, binaryContent.Count);
+                                }
+                                else if (type == 1)
+                                {
+                                    Key key;
+
                                     if (item.Key == null)
                                     {
                                         using (var memoryStream = new MemoryStream(header.Content))
@@ -93,156 +151,110 @@ namespace Library.Net.Lair
                                     }
 
                                     key = item.Key;
-                                }
-                                catch (Exception)
-                                {
-                                    item.State = DownloadState.Error;
 
-                                    continue;
-                                }
+                                    if (!_cacheManager.Contains(key))
+                                    {
+                                        _connectionsManager.Download(key);
 
-                                if (!_cacheManager.Contains(key))
-                                {
-                                    _connectionsManager.Download(key);
-
-                                    continue;
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        try
+                                        {
+                                            binaryContent = _cacheManager[key];
+                                        }
+                                        catch (BlockNotFoundException)
+                                        {
+                                            continue;
+                                        }
+                                    }
                                 }
                                 else
                                 {
-                                    try
-                                    {
-                                        binaryContent = _cacheManager[key];
-                                    }
-                                    catch (BlockNotFoundException)
-                                    {
-                                        continue;
-                                    }
+                                    throw new FormatException();
                                 }
-                            }
 
-                            if (header.Tag.Type == "Section")
-                            {
-                                if (header.Type == "Profile")
+                                if (header.Link.Type == "Section")
                                 {
-                                    try
+                                    if (header.Type == "Profile")
                                     {
                                         item.SectionProfileContent = ContentConverter.FromSectionProfileContentBlock(binaryContent);
                                         item.State = DownloadState.Completed;
                                     }
-                                    catch (Exception)
+                                    else if (header.Type == "Message")
                                     {
-                                        item.State = DownloadState.Error;
+                                        SectionMessageContent content = null;
 
-                                        continue;
+                                        foreach (var exchange in _exchangePrivateKeys)
+                                        {
+                                            try
+                                            {
+                                                content = ContentConverter.FromSectionMessageContentBlock(binaryContent, exchange);
+                                                break;
+                                            }
+                                            catch (Exception)
+                                            {
+
+                                            }
+                                        }
+
+                                        if (content == null)
+                                        {
+                                            throw new FormatException();
+                                        }
+
+                                        item.SectionMessageContent = content;
+                                        item.State = DownloadState.Completed;
                                     }
                                 }
-                                else if (header.Type == "Message")
+                                else if (header.Link.Type == "Document")
                                 {
-                                    SectionMessageContent content = null;
-
-                                    foreach (var exchange in _exchangePrivateKeys)
-                                    {
-                                        try
-                                        {
-                                            content = ContentConverter.FromSectionMessageContentBlock(binaryContent, exchange);
-                                            break;
-                                        }
-                                        catch (Exception)
-                                        {
-
-                                        }
-                                    }
-
-                                    if (content == null)
-                                    {
-                                        item.State = DownloadState.Error;
-
-                                        continue;
-                                    }
-
-                                    item.SectionMessageContent = content;
-                                    item.State = DownloadState.Completed;
-                                }
-                            }
-                            else if (header.Tag.Type == "Document")
-                            {
-                                if (header.Type == "Page")
-                                {
-                                    try
+                                    if (header.Type == "Page")
                                     {
                                         item.DocumentPageContent = ContentConverter.FromDocumentPageContentBlock(binaryContent);
                                         item.State = DownloadState.Completed;
                                     }
-                                    catch (Exception)
+                                    else if (header.Type == "Vote")
                                     {
-                                        item.State = DownloadState.Error;
-
-                                        continue;
-                                    }
-                                }
-                                else if (header.Type == "Opinion")
-                                {
-                                    try
-                                    {
-                                        item.DocumentOpinionContent = ContentConverter.FromDocumentOpinionContentBlock(binaryContent);
+                                        item.DocumentVoteContent = ContentConverter.FromDocumentVoteContentBlock(binaryContent);
                                         item.State = DownloadState.Completed;
                                     }
-                                    catch (Exception)
-                                    {
-                                        item.State = DownloadState.Error;
-
-                                        continue;
-                                    }
                                 }
-                            }
-                            else if (header.Tag.Type == "Chat")
-                            {
-                                if (header.Type == "Topic")
+                                else if (header.Link.Type == "Chat")
                                 {
-                                    try
+                                    if (header.Type == "Topic")
                                     {
                                         item.ChatTopicContent = ContentConverter.FromChatTopicContentBlock(binaryContent);
                                         item.State = DownloadState.Completed;
                                     }
-                                    catch (Exception)
-                                    {
-                                        item.State = DownloadState.Error;
-
-                                        continue;
-                                    }
-                                }
-                                else if (header.Type == "Message")
-                                {
-                                    try
+                                    else if (header.Type == "Message")
                                     {
                                         item.ChatMessageContent = ContentConverter.FromChatMessageContentBlock(binaryContent);
                                         item.State = DownloadState.Completed;
                                     }
-                                    catch (Exception)
-                                    {
-                                        item.State = DownloadState.Error;
-
-                                        continue;
-                                    }
                                 }
                             }
-                        }
-                        finally
-                        {
-                            if (binaryContent.Array != null)
+                            finally
                             {
-                                if (header.FormatType == ContentFormatType.Key)
+                                if (binaryContent.Array != null)
                                 {
                                     _bufferManager.ReturnBuffer(binaryContent.Array);
                                 }
                             }
+                        }
+                        catch (Exception)
+                        {
+                            item.State = DownloadState.Error;
+
+                            continue;
                         }
                     }
                 }
             }
         }
 
-        public Information Download(Header header)
+        public void Download(Header header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -255,48 +267,6 @@ namespace Library.Net.Lair
                     item = new DownloadItem();
                     _downloadItems.Add(header, item);
                 }
-
-                var contexts = new List<InformationContext>();
-                contexts.Add(new InformationContext("State", item.State));
-
-                if (item.State == DownloadState.Completed)
-                {
-                    if (header.Tag.Type == "Section")
-                    {
-                        if (header.Type == "Profile")
-                        {
-                            contexts.Add(new InformationContext("Content", item.SectionProfileContent));
-                        }
-                        else if (header.Type == "Message")
-                        {
-                            contexts.Add(new InformationContext("Content", item.SectionMessageContent));
-                        }
-                    }
-                    else if (header.Tag.Type == "Document")
-                    {
-                        if (header.Type == "Page")
-                        {
-                            contexts.Add(new InformationContext("Content", item.DocumentPageContent));
-                        }
-                        else if (header.Type == "Opinion")
-                        {
-                            contexts.Add(new InformationContext("Content", item.DocumentOpinionContent));
-                        }
-                    }
-                    else if (header.Tag.Type == "Chat")
-                    {
-                        if (header.Type == "Topic")
-                        {
-                            contexts.Add(new InformationContext("Content", item.ChatTopicContent));
-                        }
-                        else if (header.Type == "Message")
-                        {
-                            contexts.Add(new InformationContext("Content", item.ChatMessageContent));
-                        }
-                    }
-                }
-
-                return new Information(contexts);
             }
         }
 

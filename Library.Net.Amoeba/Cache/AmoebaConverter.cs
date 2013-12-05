@@ -10,7 +10,7 @@ namespace Library.Net.Amoeba
 {
     public static class AmoebaConverter
     {
-        private enum CompressionAlgorithm
+        private enum ConvertCompressionAlgorithm
         {
             None = 0,
             Deflate = 1,
@@ -54,14 +54,14 @@ namespace Library.Net.Amoeba
                     }
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.Deflate, deflateBufferStream));
+                    list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>((int)CompressionAlgorithm.None, stream));
+                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {
@@ -124,11 +124,11 @@ namespace Library.Net.Amoeba
 
                 using (Stream dataStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position - 4, true))
                 {
-                    if (type == (byte)CompressionAlgorithm.None)
+                    if (type == (byte)ConvertCompressionAlgorithm.None)
                     {
                         return ItemBase<T>.Import(dataStream, _bufferManager);
                     }
-                    else if (type == (byte)CompressionAlgorithm.Deflate)
+                    else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
                     {
                         using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
                         {

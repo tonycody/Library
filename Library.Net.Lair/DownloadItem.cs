@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
@@ -28,7 +24,7 @@ namespace Library.Net.Lair
         private SectionProfileContent _sectionProfileContent;
         private SectionMessageContent _sectionMessageContent;
         private DocumentPageContent _documentPageContent;
-        private DocumentOpinionContent _documentOpinionContent;
+        private DocumentVoteContent _documentVoteContent;
         private ChatTopicContent _chatTopicContent;
         private ChatMessageContent _chatMessageContent;
 
@@ -149,21 +145,21 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "DocumentOpinionContent")]
-        public DocumentOpinionContent DocumentOpinionContent
+        [DataMember(Name = "DocumentVoteContent")]
+        public DocumentVoteContent DocumentVoteContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _documentOpinionContent;
+                    return _documentVoteContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _documentOpinionContent = value;
+                    _documentVoteContent = value;
                 }
             }
         }

@@ -4,33 +4,34 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
-using Library.Security;
-using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "ChatMessageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Key>
+    [DataContract(Name = "Link", Namespace = "http://Library/Net/Lair")]
+    public sealed class Link : ItemBase<Link>, ILink<Tag>
     {
         private enum SerializeId : byte
         {
-            Comment = 0,
-            Anchor = 1,
+            Tag = 0,
+            Type = 1,
+            Path = 2,
         }
 
-        private string _comment;
-        private KeyCollection _anchors;
+        private Tag _tag;
+        private string _type;
+        private string _path;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxCommentLength = 1024 * 4;
-        public static readonly int MaxAnchorCount = 32;
+        public static readonly int MaxTypeLength = 256;
+        public static readonly int MaxPathLength = 1024;
 
-        public ChatMessageContent(string comment, IEnumerable<Key> anchors)
+        public Link(Tag tag, string type, string path)
         {
-            this.Comment = comment;
-            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
+            this.Tag = tag;
+            this.Type = type;
+            this.Path = path;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -48,16 +49,23 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Comment)
+                        if (id == (byte)SerializeId.Tag)
+                        {
+                            this.Tag = Tag.Import(rangeStream, bufferManager);
+                        }
+                        else if (id == (byte)SerializeId.Type)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Comment = reader.ReadToEnd();
+                                this.Type = reader.ReadToEnd();
                             }
                         }
-                        else if (id == (byte)SerializeId.Anchor)
+                        else if (id == (byte)SerializeId.Path)
                         {
-                            this.ProtectedAnchors.Add(Key.Import(rangeStream, bufferManager));
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Path = reader.ReadToEnd();
+                            }
                         }
                     }
                 }
@@ -71,8 +79,19 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Comment
-                if (this.Comment != null)
+                // Tag
+                if (this.Tag != null)
+                {
+                    Stream exportStream = this.Tag.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Tag);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // Type
+                if (this.Type != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -81,25 +100,33 @@ namespace Library.Net.Lair
                     using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                     using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        writer.Write(this.Comment);
+                        writer.Write(this.Type);
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Comment);
+                    bufferStream.WriteByte((byte)SerializeId.Type);
 
                     streams.Add(bufferStream);
                 }
-                // Anchors
-                foreach (var a in this.Anchors)
+                // Path
+                if (this.Path != null)
                 {
-                    Stream exportStream = a.Export(bufferManager);
-
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Anchor);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.Path);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Path);
+
+                    streams.Add(bufferStream);
                 }
 
                 return new JoinStream(streams);
@@ -110,45 +137,41 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (this.Comment == null) return 0;
-                else return this.Comment.GetHashCode();
+                if (this.Tag == null) return 0;
+                else return this.Tag.GetHashCode();
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is ChatMessageContent)) return false;
+            if ((object)obj == null || !(obj is Link)) return false;
 
-            return this.Equals((ChatMessageContent)obj);
+            return this.Equals((Link)obj);
         }
 
-        public override bool Equals(ChatMessageContent other)
+        public override bool Equals(Link other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Comment != other.Comment
-                || (this.Anchors == null) != (other.Anchors == null))
+            if (this.Tag != other.Tag
+                || this.Type != other.Type
+                || this.Path != other.Path)
             {
                 return false;
-            }
-
-            if (this.Anchors != null && other.Anchors != null)
-            {
-                if (!Collection.Equals(this.Anchors, other.Anchors)) return false;
             }
 
             return true;
         }
 
-        public override ChatMessageContent DeepClone()
+        public override Link DeepClone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return ChatMessageContent.Import(stream, BufferManager.Instance);
+                    return Link.Import(stream, BufferManager.Instance);
                 }
             }
         }
@@ -172,61 +195,75 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IChatMessageContent<Key>
+        #region ILink<Tag>
 
-        [DataMember(Name = "Comment")]
-        public string Comment
+        [DataMember(Name = "Tag")]
+        public Tag Tag
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _comment;
+                    return _tag;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > ChatMessageContent.MaxCommentLength)
+                    _tag = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Type")]
+        public string Type
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _type;
+                }
+            }
+            private set
+            {
+                lock (this.ThisLock)
+                {
+                    if (value != null && value.Length > Link.MaxTypeLength)
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _comment = value;
+                        _type = value;
                     }
                 }
             }
         }
 
-        private volatile ReadOnlyCollection<Key> _readOnlyAnchors;
-
-        public IEnumerable<Key> Anchors
+        [DataMember(Name = "Path")]
+        public string Path
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_readOnlyAnchors == null)
-                        _readOnlyAnchors = new ReadOnlyCollection<Key>(this.ProtectedAnchors);
-
-                    return _readOnlyAnchors;
+                    return _path;
                 }
             }
-        }
-
-        [DataMember(Name = "Anchors")]
-        private KeyCollection ProtectedAnchors
-        {
-            get
+            private set
             {
                 lock (this.ThisLock)
                 {
-                    if (_anchors == null)
-                        _anchors = new KeyCollection(ChatMessageContent.MaxAnchorCount);
-
-                    return _anchors;
+                    if (value != null && value.Length > Link.MaxPathLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _path = value;
+                    }
                 }
             }
         }

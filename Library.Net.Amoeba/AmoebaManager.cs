@@ -148,6 +148,19 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public IEnumerable<Information> ShareInformation
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _cacheManager.ShareInformation;
+                }
+            }
+        }
+
         public IEnumerable<Information> DownloadingInformation
         {
             get
@@ -174,19 +187,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<Information> ShareInformation
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _cacheManager.ShareInformation;
-                }
-            }
-        }
-
         public Node BaseNode
         {
             get
@@ -209,119 +209,6 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     return _connectionsManager.OtherNodes;
-                }
-            }
-        }
-
-        public IEnumerable<string> SearchSignatures
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _backgroundDownloadManager.SearchSignatures;
-                }
-            }
-        }
-
-        public IEnumerable<Seed> CacheSeeds
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _cacheManager.CacheSeeds;
-                }
-            }
-        }
-
-        public IEnumerable<Seed> ShareSeeds
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _cacheManager.ShareSeeds;
-                }
-            }
-        }
-
-        public SeedCollection DownloadedSeeds
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _downloadManager.DownloadedSeeds;
-                }
-            }
-        }
-
-        public SeedCollection UploadedSeeds
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _uploadManager.UploadedSeeds;
-                }
-            }
-        }
-
-        public ConnectionFilterCollection Filters
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _clientManager.Filters;
-                }
-            }
-        }
-
-        public UriCollection ListenUris
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _serverManager.ListenUris;
-                }
-            }
-        }
-
-        public string DownloadDirectory
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _downloadManager.BaseDirectory;
-                }
-            }
-            set
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    _downloadManager.BaseDirectory = value;
                 }
             }
         }
@@ -396,6 +283,58 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public ConnectionFilterCollection Filters
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _clientManager.Filters;
+                }
+            }
+        }
+
+        public UriCollection ListenUris
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _serverManager.ListenUris;
+                }
+            }
+        }
+
+        public IEnumerable<Seed> CacheSeeds
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _cacheManager.CacheSeeds;
+                }
+            }
+        }
+
+        public IEnumerable<Seed> ShareSeeds
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _cacheManager.ShareSeeds;
+                }
+            }
+        }
+
         public long Size
         {
             get
@@ -405,6 +344,67 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     return _cacheManager.Size;
+                }
+            }
+        }
+
+        public SeedCollection DownloadedSeeds
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _downloadManager.DownloadedSeeds;
+                }
+            }
+        }
+
+        public string DownloadDirectory
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _downloadManager.BaseDirectory;
+                }
+            }
+            set
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    _downloadManager.BaseDirectory = value;
+                }
+            }
+        }
+
+        public SeedCollection UploadedSeeds
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _uploadManager.UploadedSeeds;
+                }
+            }
+        }
+
+        public IEnumerable<string> SearchSignatures
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    return _backgroundDownloadManager.SearchSignatures;
                 }
             }
         }
@@ -862,10 +862,10 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
-                _backgroundDownloadManager.Dispose();
                 _backgroundUploadManager.Dispose();
-                _downloadManager.Dispose();
+                _backgroundDownloadManager.Dispose();
                 _uploadManager.Dispose();
+                _downloadManager.Dispose();
                 _connectionsManager.Dispose();
                 _cacheManager.Dispose();
                 _serverManager.Dispose();
