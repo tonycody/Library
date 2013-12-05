@@ -157,6 +157,7 @@ namespace Library.Net.Lair
             {
                 if (this.State == ManagerState.Stop) return;
 
+                // 差分を更新。
                 if (!Collection.Equals(_urisHistory, this.ListenUris))
                 {
                     foreach (var item in _tcpListeners.ToArray())
@@ -169,7 +170,7 @@ namespace Library.Net.Lair
 
                     foreach (var uri in this.ListenUris)
                     {
-                        if (this.ListenUris.Contains(uri)) continue;
+                        if (_tcpListeners.ContainsKey(uri)) continue;
 
                         var match = _regex.Match(uri);
                         if (!match.Success) continue;
