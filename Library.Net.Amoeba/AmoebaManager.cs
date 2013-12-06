@@ -27,7 +27,6 @@ namespace Library.Net.Amoeba
         private ManagerState _encodeState = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 
-        private CheckUriEventHandler _checkUriEvent;
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
 
@@ -50,16 +49,6 @@ namespace Library.Net.Amoeba
             _backgroundDownloadManager = new BackgroundDownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _backgroundUploadManager = new BackgroundUploadManager(_connectionsManager, _cacheManager, _bufferManager);
 
-            _clientManager.CheckUriEvent = (object sender, string uri) =>
-            {
-                if (_checkUriEvent != null)
-                {
-                    return _checkUriEvent(this, uri);
-                }
-
-                return false;
-            };
-
             _clientManager.CreateCapEvent = (object sender, string uri) =>
             {
                 if (_createCapEvent != null)
@@ -81,17 +70,6 @@ namespace Library.Net.Amoeba
 
                 return null;
             };
-        }
-
-        public CheckUriEventHandler CheckUriEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _checkUriEvent = value;
-                }
-            }
         }
 
         public CreateCapEventHandler CreateCapEvent
@@ -415,7 +393,17 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
+                if (this.State == ManagerState.Start)
+                {
+                    _connectionsManager.Stop();
+                }
+
                 _connectionsManager.SetBaseNode(baseNode);
+
+                if (this.State == ManagerState.Start)
+                {
+                    _connectionsManager.Start();
+                }
             }
         }
 

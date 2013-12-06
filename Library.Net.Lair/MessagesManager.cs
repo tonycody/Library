@@ -125,6 +125,15 @@ namespace Library.Net.Lair
             }
         }
 
+        public void Clear()
+        {
+            lock (this.ThisLock)
+            {
+                _messageManagerDictionary.Clear();
+                _updateTimeDictionary.Clear();
+            }
+        }
+
         #region IThisLock
 
         public object ThisLock

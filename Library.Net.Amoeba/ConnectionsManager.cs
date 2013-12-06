@@ -132,7 +132,7 @@ namespace Library.Net.Amoeba
 
             _creatingNodes = new LockedList<Node>();
             _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 30));
-            _cuttingNodes = new VolatileCollection<Node>(new TimeSpan(0, 30, 0));
+            _cuttingNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
             _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
             _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
@@ -789,7 +789,6 @@ namespace Library.Net.Amoeba
                     HashSet<string> uris = new HashSet<string>();
                     uris.UnionWith(node.Uris
                         .Take(12)
-                        .Where(n => _clientManager.CheckUri(n))
                         .Randomize());
 
                     if (uris.Count == 0)
@@ -898,11 +897,7 @@ namespace Library.Net.Amoeba
 
                         lock (this.ThisLock)
                         {
-                            if (connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
-                            {
-                                _routeTable.Add(connectionManager.Node);
-                            }
-
+                            _routeTable.Add(connectionManager.Node);
                             _cuttingNodes.Remove(connectionManager.Node);
                         }
 
@@ -1937,7 +1932,7 @@ namespace Library.Net.Amoeba
 
             foreach (var node in e.Nodes.Take(_maxNodeCount))
             {
-                if (!ConnectionsManager.Check(node) || !node.Uris.Any(n => _clientManager.CheckUri(n)) || _removeNodes.Contains(node)) continue;
+                if (!ConnectionsManager.Check(node) || _removeNodes.Contains(node)) continue;
 
                 _routeTable.Add(node);
                 _pullNodeCount++;
@@ -2147,8 +2142,7 @@ namespace Library.Net.Amoeba
                 {
                     this.RemoveNode(connectionManager.Node);
 
-                    if (!_removeNodes.Contains(connectionManager.Node)
-                        && connectionManager.Node.Uris.Any(n => _clientManager.CheckUri(n)))
+                    if (!_removeNodes.Contains(connectionManager.Node))
                     {
                         _cuttingNodes.Add(connectionManager.Node);
                     }
@@ -2199,7 +2193,7 @@ namespace Library.Net.Amoeba
             {
                 foreach (var node in nodes)
                 {
-                    if (!ConnectionsManager.Check(node) || !node.Uris.Any(n => _clientManager.CheckUri(n)) || _removeNodes.Contains(node)) continue;
+                    if (!ConnectionsManager.Check(node) || _removeNodes.Contains(node)) continue;
 
                     _routeTable.Live(node);
                 }
@@ -2390,6 +2384,12 @@ namespace Library.Net.Amoeba
                 {
                     this.RemoveConnectionManager(item);
                 }
+
+                _cuttingNodes.Clear();
+                _removeNodes.Clear();
+                _nodesStatus.Clear();
+
+                _messagesManager.Clear();
             }
         }
 
@@ -2407,7 +2407,7 @@ namespace Library.Net.Amoeba
 
                 foreach (var node in _settings.OtherNodes.ToArray())
                 {
-                    if (node == null || node.Id == null || !node.Uris.Any(n => _clientManager.CheckUri(n))) continue;
+                    if (node == null || node.Id == null) continue;
 
                     _routeTable.Add(node);
                 }

@@ -20,7 +20,6 @@ namespace Library.Net.Lair
 
         private GetCriteriaEventHandler _getLockCriteriaEvent;
 
-        private CheckUriEventHandler _checkUriEvent;
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
 
@@ -38,16 +37,6 @@ namespace Library.Net.Lair
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
             _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
-
-            _clientManager.CheckUriEvent = (object sender, string uri) =>
-            {
-                if (_checkUriEvent != null)
-                {
-                    return _checkUriEvent(this, uri);
-                }
-
-                return false;
-            };
 
             _clientManager.CreateCapEvent = (object sender, string uri) =>
             {
@@ -80,17 +69,6 @@ namespace Library.Net.Lair
 
                 return null;
             };
-        }
-
-        public CheckUriEventHandler CheckUriEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _checkUriEvent = value;
-                }
-            }
         }
 
         public CreateCapEventHandler CreateCapEvent
@@ -321,7 +299,17 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                if (this.State == ManagerState.Start)
+                {
+                    _connectionsManager.Stop();
+                }
+
                 _connectionsManager.SetBaseNode(baseNode);
+
+                if (this.State == ManagerState.Start)
+                {
+                    _connectionsManager.Start();
+                }
             }
         }
 

@@ -126,6 +126,15 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public void Clear()
+        {
+            lock (this.ThisLock)
+            {
+                _messageManagerDictionary.Clear();
+                _updateTimeDictionary.Clear();
+            }
+        }
+
         #region IThisLock
 
         public object ThisLock

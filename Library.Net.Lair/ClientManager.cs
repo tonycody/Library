@@ -10,7 +10,6 @@ using Library.Net.Proxy;
 
 namespace Library.Net.Lair
 {
-    public delegate bool CheckUriEventHandler(object sender, string uri);
     public delegate CapBase CreateCapEventHandler(object sender, string uri);
 
     class ClientManager : ManagerBase, Library.Configuration.ISettings, IThisLock
@@ -19,7 +18,6 @@ namespace Library.Net.Lair
 
         private Settings _settings;
 
-        private CheckUriEventHandler _checkUriEvent;
         private CreateCapEventHandler _createConnectionEvent;
 
         private volatile bool _disposed;
@@ -32,17 +30,6 @@ namespace Library.Net.Lair
             _bufferManager = bufferManager;
 
             _settings = new Settings(this.ThisLock);
-        }
-
-        public CheckUriEventHandler CheckUriEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _checkUriEvent = value;
-                }
-            }
         }
 
         public CreateCapEventHandler CreateCapEvent
@@ -65,16 +52,6 @@ namespace Library.Net.Lair
                     return _settings.ConnectionFilters;
                 }
             }
-        }
-
-        protected virtual bool OnCheckUriEvent(string uri)
-        {
-            if (_checkUriEvent != null)
-            {
-                return _checkUriEvent(this, uri);
-            }
-
-            return false;
         }
 
         protected virtual CapBase OnCreateCapEvent(string uri)
@@ -241,38 +218,6 @@ namespace Library.Net.Lair
             throw new ClientManagerException();
         }
 
-        public bool CheckUri(string uri)
-        {
-            if (uri == null) return false;
-
-            if (this.OnCheckUriEvent(uri))
-            {
-                return true;
-            }
-            else
-            {
-                bool flag = false;
-
-                lock (this.ThisLock)
-                {
-                    foreach (var filter in this.Filters)
-                    {
-                        if (filter.UriCondition.IsMatch(uri))
-                        {
-                            if (filter.ConnectionType != ConnectionType.None)
-                            {
-                                flag = true;
-                            }
-
-                            break;
-                        }
-                    }
-                }
-
-                return flag;
-            }
-        }
-
         public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
             List<IDisposable> garbages = new List<IDisposable>();
@@ -281,17 +226,21 @@ namespace Library.Net.Lair
             {
                 ConnectionBase connection = null;
 
-                if (this.OnCheckUriEvent(uri))
+                // Overlay network
+                if (connection == null)
                 {
                     var cap = this.OnCreateCapEvent(uri);
-                    if (cap == null) return null;
+                    if (cap == null) goto End;
 
                     garbages.Add(cap);
 
                     connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                     garbages.Add(connection);
+
+                End: ;
                 }
-                else
+
+                if (connection == null)
                 {
                     ConnectionFilter connectionFilter = null;
 
