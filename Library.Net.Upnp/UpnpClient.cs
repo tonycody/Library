@@ -32,8 +32,30 @@ namespace Library.Net.Upnp
             {
                 try
                 {
-                    _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), timeout);
-                    if (_services != null) return;
+#if !MONO
+                    foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                        .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up))
+                    {
+                        var machineIp = nic.GetIPProperties().UnicastAddresses
+                            .Select(n => n.Address)
+                            .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
+                            .FirstOrDefault();
+                        if (machineIp == null) continue;
+
+                        _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), machineIp, timeout);
+                        if (_services != null) return;
+                    }
+#else
+                    string hostname = Dns.GetHostName();
+
+                    foreach (var machineIp in Dns.GetHostEntry(hostname).AddressList)
+                    {
+                        if (machineIp.AddressFamily != AddressFamily.InterNetwork) continue;
+
+                        _services = GetServicesFromDevice(out _location, IPAddress.Parse("239.255.255.250"), machineIp, timeout);
+                        if (_services != null) return;
+                    }
+#endif
                 }
                 catch (Exception)
                 {
@@ -58,18 +80,18 @@ namespace Library.Net.Upnp
             }
         }
 
-        private static string GetServicesFromDevice(out Uri location, IPAddress ip, TimeSpan timeout)
+        private static string GetServicesFromDevice(out Uri location, IPAddress targetIp, IPAddress localIp, TimeSpan timeout)
         {
             location = null;
 
             List<string> querys = new List<string>();
 
-            querys.Add("M-SEARCH * HTTP/1.1\r\n" +
-                    "Host: 239.255.255.250:1900\r\n" +
-                    "Man: \"ssdp:discover\"\r\n" +
-                    "ST: upnp:rootdevice\r\n" +
-                    "MX: 3\r\n" +
-                    "\r\n");
+            //querys.Add("M-SEARCH * HTTP/1.1\r\n" +
+            //        "Host: 239.255.255.250:1900\r\n" +
+            //        "Man: \"ssdp:discover\"\r\n" +
+            //        "ST: upnp:rootdevice\r\n" +
+            //        "MX: 3\r\n" +
+            //        "\r\n");
 
             querys.Add("M-SEARCH * HTTP/1.1\r\n" +
                     "Host: 239.255.255.250:1900\r\n" +
@@ -85,32 +107,46 @@ namespace Library.Net.Upnp
                     "MX: 3\r\n" +
                     "\r\n");
 
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-
-            TimeoutCheck(stopwatch.Elapsed, timeout);
-
+            Random random = new Random();
             List<string> queryResponses = new List<string>();
 
-            using (Socket client = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
+            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
             {
-                client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
-                client.SendTimeout = (int)timeout.TotalMilliseconds;
-
-                for (int i = 0; i < querys.Count; i++)
+                for (; ; )
                 {
-                    byte[] q = Encoding.ASCII.GetBytes(querys[i++]);
+                    try
+                    {
+                        socket.Bind(new IPEndPoint(localIp, random.Next(1024, 60000)));
+                        break;
+                    }
+                    catch (Exception)
+                    {
 
-                    IPEndPoint endPoint = new IPEndPoint(ip, 1900);
-                    client.SendTo(q, q.Length, SocketFlags.None, endPoint);
+                    }
+                }
+
+                socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, localIp.GetAddressBytes());
+
+                socket.ReceiveTimeout = (int)timeout.TotalMilliseconds;
+                socket.SendTimeout = (int)timeout.TotalMilliseconds;
+
+                for (int j = 0; j < 2; j++)
+                {
+                    for (int i = 0; i < querys.Count; i++)
+                    {
+                        byte[] q = Encoding.ASCII.GetBytes(querys[i]);
+
+                        IPEndPoint endPoint = new IPEndPoint(targetIp, 1900);
+                        socket.SendTo(q, q.Length, SocketFlags.None, endPoint);
+                    }
                 }
 
                 try
                 {
                     for (int i = 0; i < 1024; i++)
                     {
-                        byte[] data = new byte[1024 * 8];
-                        int dataLength = client.Receive(data);
+                        byte[] data = new byte[1024 * 64];
+                        int dataLength = socket.Receive(data);
 
                         var temp = Encoding.ASCII.GetString(data, 0, dataLength);
                         if (!string.IsNullOrWhiteSpace(temp)) queryResponses.Add(temp);
@@ -131,7 +167,7 @@ namespace Library.Net.Upnp
 
                     Uri tempLocation = new Uri(regexLocation);
 
-                    Debug.WriteLine("UPnP Router: " + ip.ToString());
+                    Debug.WriteLine("UPnP Router: " + targetIp.ToString());
                     Debug.WriteLine("UPnP Location: " + tempLocation.ToString());
 
                     string downloadString = null;
