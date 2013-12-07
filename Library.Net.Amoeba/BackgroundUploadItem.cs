@@ -363,7 +363,8 @@ namespace Library.Net.Amoeba
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
+                    using (WrapperStream wrapperStream = new WrapperStream(stream, true))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
