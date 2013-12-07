@@ -988,7 +988,7 @@ namespace Library.Net.Amoeba
                 return new JoinStream(streams);
             }
 
-            public override NodesMessage DeepClone()
+            public NodesMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1072,7 +1072,7 @@ namespace Library.Net.Amoeba
                 return new JoinStream(streams);
             }
 
-            public override BlocksLinkMessage DeepClone()
+            public BlocksLinkMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1156,7 +1156,7 @@ namespace Library.Net.Amoeba
                 return new JoinStream(streams);
             }
 
-            public override BlocksRequestMessage DeepClone()
+            public BlocksRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1259,7 +1259,7 @@ namespace Library.Net.Amoeba
                 return new JoinStream(streams);
             }
 
-            public override BlockMessage DeepClone()
+            public BlockMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1350,7 +1350,7 @@ namespace Library.Net.Amoeba
                 return new JoinStream(streams);
             }
 
-            public override SeedsRequestMessage DeepClone()
+            public SeedsRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1434,7 +1434,7 @@ namespace Library.Net.Amoeba
                 return new JoinStream(streams);
             }
 
-            public override SeedsMessage DeepClone()
+            public SeedsMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {

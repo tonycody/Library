@@ -162,17 +162,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public override Node DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Node.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         private object ThisLock
         {
             get

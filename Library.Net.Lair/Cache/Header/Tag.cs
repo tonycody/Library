@@ -151,17 +151,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public override Tag DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Tag.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         private object ThisLock
         {
             get

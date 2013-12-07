@@ -148,17 +148,6 @@ namespace Library.Net.Amoeba
             return true;
         }
 
-        public override Key DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Key.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         private object ThisLock
         {
             get

@@ -65,7 +65,7 @@
     <Compile Include="Collection.cs" />
     <Compile Include="DeadlockMonitor.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="IDeepCloneable.cs" />
+    <Compile Include="ICloneable.cs" />
     <Compile Include="Information.cs" />
     <Compile Include="ItemBase.cs" />
     <Compile Include="IThisLock.cs" />

@@ -142,7 +142,7 @@ namespace Library.Net.Amoeba
                         _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
                     }
 
-                    _keyList.Add(key.DeepClone());
+                    _keyList.Add(key);
 
                     _blockBufferPosition = 0;
                 }
@@ -179,7 +179,7 @@ namespace Library.Net.Amoeba
                     _cacheManager[key] = new ArraySegment<byte>(_blockBuffer, 0, _blockBufferPosition);
                 }
 
-                _keyList.Add(key.DeepClone());
+                _keyList.Add(key);
 
                 _blockBufferPosition = 0;
             }

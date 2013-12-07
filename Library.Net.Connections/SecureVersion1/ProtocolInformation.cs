@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Connections.SecureVersion1
 {
     [DataContract(Name = "ProtocolInformation", Namespace = "http://Library/Net/Connection/SecureVersion1")]
-    class ProtocolInformation : ItemBase<ProtocolInformation>, IThisLock
+    sealed class ProtocolInformation : ItemBase<ProtocolInformation>, ICloneable<ProtocolInformation>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -164,17 +164,6 @@ namespace Library.Net.Connections.SecureVersion1
             return true;
         }
 
-        public override ProtocolInformation DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return ProtocolInformation.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         public static ProtocolInformation operator &(ProtocolInformation x, ProtocolInformation y)
         {
             if ((((object)x) == null) || (((object)y) == null))
@@ -270,6 +259,21 @@ namespace Library.Net.Connections.SecureVersion1
                 }
             }
         }
+
+        #region ICloneable<ProtocolInformation>
+
+        public ProtocolInformation Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return ProtocolInformation.Import(stream, BufferManager.Instance);
+                }
+            }
+        }
+
+        #endregion
 
         #region IThisLock
 

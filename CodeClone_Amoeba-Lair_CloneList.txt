@@ -22,6 +22,9 @@ Library.Net.Lair\UriCollection.cs
 Library.Net.Amoeba\EqualityComparer.cs
 Library.Net.Lair\EqualityComparer.cs
 
+Library.Net.Amoeba\Cache\Seed\Key.cs
+Library.Net.Lair\Cache\Header\Key.cs
+
 ..\Amoeba\Amoeba\WindowPosition.cs
 ..\Lair\Lair\WindowPosition.cs
 

@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Box", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Box : CertificateItemBase<Box>, IBox, IThisLock
+    public sealed class Box : CertificateItemBase<Box>, IBox, ICloneable<Box>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -254,17 +254,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public override Box DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Box.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         public override void CreateCertificate(DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -418,6 +407,21 @@ namespace Library.Net.Amoeba
                         _boxes = new BoxCollection();
 
                     return _boxes;
+                }
+            }
+        }
+
+        #endregion
+
+        #region ICloneable<Box>
+
+        public Box Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return Box.Import(stream, BufferManager.Instance);
                 }
             }
         }

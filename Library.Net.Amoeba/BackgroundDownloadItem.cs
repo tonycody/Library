@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
     [DataContract(Name = "BackgroundDownloadItem", Namespace = "http://Library/Net/Amoeba")]
     [KnownType(typeof(Link))]
     [KnownType(typeof(Store))]
-    sealed class BackgroundDownloadItem : IDeepCloneable<BackgroundDownloadItem>, IThisLock
+    sealed class BackgroundDownloadItem : ICloneable<BackgroundDownloadItem>, IThisLock
     {
         private BackgroundItemType _type;
         private BackgroundDownloadState _state;
@@ -169,7 +169,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public BackgroundDownloadItem DeepClone()
+        public BackgroundDownloadItem Clone()
         {
             lock (this.ThisLock)
             {
@@ -177,14 +177,14 @@ namespace Library.Net.Amoeba
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (BackgroundDownloadItem)ds.ReadObject(textDictionaryReader);
                     }

@@ -40,7 +40,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Amoeba")]
-    sealed class UploadItem : IDeepCloneable<UploadItem>
+    sealed class UploadItem : ICloneable<UploadItem>
     {
         private UploadType _type;
         private UploadState _state;
@@ -465,7 +465,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public UploadItem DeepClone()
+        public UploadItem Clone()
         {
             lock (this.ThisLock)
             {
@@ -473,14 +473,14 @@ namespace Library.Net.Amoeba
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (UploadItem)ds.ReadObject(textDictionaryReader);
                     }

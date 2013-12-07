@@ -986,7 +986,7 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override NodesMessage DeepClone()
+            public NodesMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1070,7 +1070,7 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override BlocksLinkMessage DeepClone()
+            public BlocksLinkMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1154,7 +1154,7 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override BlocksRequestMessage DeepClone()
+            public BlocksRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1257,7 +1257,7 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override BlockMessage DeepClone()
+            public BlockMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1337,7 +1337,7 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override HeadersRequestMessage DeepClone()
+            public HeadersRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
@@ -1421,7 +1421,7 @@ namespace Library.Net.Lair
                 return new JoinStream(streams);
             }
 
-            public override HeadersMessage DeepClone()
+            public HeadersMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {

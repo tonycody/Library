@@ -252,7 +252,7 @@ namespace Library.Net.Lair
                             {
                                 if (filter.ConnectionType != ConnectionType.None)
                                 {
-                                    connectionFilter = filter.DeepClone();
+                                    connectionFilter = filter.Clone();
                                 }
 
                                 break;

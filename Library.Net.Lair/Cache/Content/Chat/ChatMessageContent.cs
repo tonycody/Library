@@ -141,17 +141,6 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override ChatMessageContent DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return ChatMessageContent.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         private object ThisLock
         {
             get

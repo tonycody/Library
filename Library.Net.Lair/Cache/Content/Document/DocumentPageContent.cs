@@ -176,17 +176,6 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override DocumentPageContent DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return DocumentPageContent.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         private object ThisLock
         {
             get

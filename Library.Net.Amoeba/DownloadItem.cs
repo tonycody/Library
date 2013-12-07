@@ -25,7 +25,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "DownloadItem", Namespace = "http://Library/Net/Amoeba")]
-    sealed class DownloadItem : IDeepCloneable<DownloadItem>
+    sealed class DownloadItem : ICloneable<DownloadItem>
     {
         private DownloadState _state;
         private int _priority = 3;
@@ -230,7 +230,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public DownloadItem DeepClone()
+        public DownloadItem Clone()
         {
             lock (this.ThisLock)
             {
@@ -238,14 +238,14 @@ namespace Library.Net.Amoeba
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (DownloadItem)ds.ReadObject(textDictionaryReader);
                     }

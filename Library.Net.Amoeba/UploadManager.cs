@@ -90,7 +90,7 @@ namespace Library.Net.Amoeba
                                         {
                                             item.State = UploadState.Completed;
 
-                                            _settings.UploadedSeeds.Add(item.Seed.DeepClone());
+                                            _settings.UploadedSeeds.Add(item.Seed.Clone());
                                         }
                                     }
                                 }
@@ -232,7 +232,7 @@ namespace Library.Net.Amoeba
                     {
                         item.State = UploadState.Completed;
 
-                        _settings.UploadedSeeds.Add(item.Seed.DeepClone());
+                        _settings.UploadedSeeds.Add(item.Seed.Clone());
                     }
                 }
             }
@@ -361,7 +361,7 @@ namespace Library.Net.Amoeba
 
                                     this.SetKeyCount(item);
 
-                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexes);
+                                    _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
                                     item.Indexes.Clear();
 
                                     foreach (var key in item.LockedKeys)
@@ -608,7 +608,7 @@ namespace Library.Net.Amoeba
 
                                     this.SetKeyCount(item);
 
-                                    _cacheManager.SetSeed(item.Seed.DeepClone(), item.FilePath, item.Indexes);
+                                    _cacheManager.SetSeed(item.Seed.Clone(), item.FilePath, item.Indexes);
                                     item.Indexes.Clear();
 
                                     foreach (var key in item.LockedKeys)

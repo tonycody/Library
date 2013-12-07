@@ -218,17 +218,6 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override Header DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Header.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         protected override void CreateCertificate(DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)

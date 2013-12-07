@@ -224,7 +224,7 @@ namespace Library.Security
             return true;
         }
 
-        public override DigitalSignature DeepClone()
+        public DigitalSignature Clone()
         {
             lock (this.ThisLock)
             {

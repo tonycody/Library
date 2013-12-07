@@ -218,7 +218,7 @@ namespace Library.Security
             return true;
         }
 
-        public override Certificate DeepClone()
+        public Certificate Clone()
         {
             lock (this.ThisLock)
             {

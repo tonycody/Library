@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Group", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Group : ItemBase<Group>, IGroup<Key>, IThisLock
+    public sealed class Group : ItemBase<Group>, IGroup<Key>, ICloneable<Group>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -207,17 +207,6 @@ namespace Library.Net.Amoeba
             return true;
         }
 
-        public override Group DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Group.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         #region IGroup<Key>
 
         IList<Key> IGroup<Key>.Keys
@@ -329,6 +318,21 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     _length = value;
+                }
+            }
+        }
+
+        #endregion
+
+        #region ICloneable<Group>
+
+        public Group Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return Group.Import(stream, BufferManager.Instance);
                 }
             }
         }

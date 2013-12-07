@@ -6,7 +6,7 @@ using Library.Io;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Store", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Store : ItemBase<Store>, IStore, IThisLock
+    public sealed class Store : ItemBase<Store>, IStore, ICloneable<Store>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -103,17 +103,6 @@ namespace Library.Net.Amoeba
             return true;
         }
 
-        public override Store DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Store.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         #region IStore
 
         [DataMember(Name = "Boxes")]
@@ -127,6 +116,21 @@ namespace Library.Net.Amoeba
                         _boxes = new BoxCollection();
 
                     return _boxes;
+                }
+            }
+        }
+
+        #endregion
+
+        #region ICloneable<Store>
+
+        public Store Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return Store.Import(stream, BufferManager.Instance);
                 }
             }
         }

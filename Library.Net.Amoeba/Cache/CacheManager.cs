@@ -989,7 +989,7 @@ namespace Library.Net.Amoeba
                 group.InformationLength = keys.Count;
                 group.BlockLength = blockLength;
                 group.Length = keys.Sum(n => (long)this.GetLength(n));
-                group.Keys.AddRange(keys.Select(n => n.DeepClone()));
+                group.Keys.AddRange(keys);
 
                 return group;
             }
@@ -1111,7 +1111,7 @@ namespace Library.Net.Amoeba
                     group.InformationLength = bufferList.Count;
                     group.BlockLength = blockLength;
                     group.Length = sumLength;
-                    group.Keys.AddRange(keys.Select(n => n.DeepClone()));
+                    group.Keys.AddRange(keys);
                     group.Keys.AddRange(parityHeaders);
 
                     return group;
@@ -1141,7 +1141,7 @@ namespace Library.Net.Amoeba
 
             if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
             {
-                return new KeyCollection(group.Keys.Select(n => n.DeepClone()));
+                return new KeyCollection(group.Keys);
             }
             else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
@@ -1247,7 +1247,7 @@ namespace Library.Net.Amoeba
                     keys.Add(group.Keys[i]);
                 }
 
-                return new KeyCollection(keys.Select(n => n.DeepClone()));
+                return new KeyCollection(keys);
             }
             else
             {

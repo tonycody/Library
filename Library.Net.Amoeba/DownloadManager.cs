@@ -652,8 +652,8 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexes);
-                                        _settings.DownloadedSeeds.Add(item.Seed.DeepClone());
+                                        _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
+                                        _settings.DownloadedSeeds.Add(item.Seed.Clone());
 
                                         if (item.Seed != null)
                                         {
@@ -866,8 +866,8 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
-                                        _cacheManager.SetSeed(item.Seed.DeepClone(), item.Indexes);
-                                        _settings.DownloadedSeeds.Add(item.Seed.DeepClone());
+                                        _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
+                                        _settings.DownloadedSeeds.Add(item.Seed.Clone());
 
                                         if (item.Seed != null)
                                         {

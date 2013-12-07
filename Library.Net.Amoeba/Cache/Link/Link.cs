@@ -8,7 +8,7 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Link", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Link : ItemBase<Link>, ILink, IThisLock
+    public sealed class Link : ItemBase<Link>, ILink, ICloneable<Link>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -120,17 +120,6 @@ namespace Library.Net.Amoeba
             return true;
         }
 
-        public override Link DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Link.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         #region ILink
 
         [DataMember(Name = "TrustSignatures")]
@@ -144,6 +133,21 @@ namespace Library.Net.Amoeba
                         _trustSignatures = new SignatureCollection(Link.MaxTrustSignatureCount);
 
                     return _trustSignatures;
+                }
+            }
+        }
+
+        #endregion
+
+        #region ICloneable<Link>
+
+        public Link Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return Link.Import(stream, BufferManager.Instance);
                 }
             }
         }

@@ -134,17 +134,6 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override DocumentVoteContent DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return DocumentVoteContent.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         private object ThisLock
         {
             get

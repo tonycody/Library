@@ -135,17 +135,6 @@ namespace Library.Net.Lair
             return true;
         }
 
-        public override SectionMessageContent DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return SectionMessageContent.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         private object ThisLock
         {
             get

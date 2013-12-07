@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 namespace Library
 {
     [DataContract(Name = "ItemBase", Namespace = "http://Library")]
-    public abstract class ItemBase<T> : IEquatable<T>, IDeepCloneable<T>
+    public abstract class ItemBase<T> : IEquatable<T>
         where T : ItemBase<T>
     {
         public static T Import(Stream stream, BufferManager bufferManager)
@@ -53,12 +53,6 @@ namespace Library
         {
             return this.Equals((object)other);
         }
-
-        #endregion
-
-        #region IDeepCloneable<T>
-
-        public abstract T DeepClone();
 
         #endregion
     }

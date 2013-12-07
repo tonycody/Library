@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Connections.SecureVersion2
 {
     [DataContract(Name = "ConnectionSignature", Namespace = "http://Library/Net/Connection/SecureVersion2")]
-    sealed class ConnectionSignature : CertificateItemBase<ConnectionSignature>, IThisLock
+    sealed class ConnectionSignature : CertificateItemBase<ConnectionSignature>, ICloneable<ConnectionSignature>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -215,17 +215,6 @@ namespace Library.Net.Connections.SecureVersion2
             return true;
         }
 
-        public override ConnectionSignature DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return ConnectionSignature.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         public override void CreateCertificate(DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -375,6 +364,21 @@ namespace Library.Net.Connections.SecureVersion2
                 }
             }
         }
+
+        #region ICloneable<ConnectionSignature>
+
+        public ConnectionSignature Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return ConnectionSignature.Import(stream, BufferManager.Instance);
+                }
+            }
+        }
+
+        #endregion
 
         #region IThisLock
 

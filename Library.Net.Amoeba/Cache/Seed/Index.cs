@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Index", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Index : ItemBase<Index>, IIndex<Group, Key>, IThisLock
+    public sealed class Index : ItemBase<Index>, IIndex<Group, Key>, ICloneable<Index>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -203,17 +203,6 @@ namespace Library.Net.Amoeba
             return true;
         }
 
-        public override Index DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Index.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         #region IIndex<Group, Header>
 
         IList<Group> IIndex<Group, Key>.Groups
@@ -324,6 +313,21 @@ namespace Library.Net.Amoeba
                     {
                         _cryptoKey = value;
                     }
+                }
+            }
+        }
+
+        #endregion
+
+        #region ICloneable<Index>
+
+        public Index Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return Index.Import(stream, BufferManager.Instance);
                 }
             }
         }

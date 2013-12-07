@@ -26,7 +26,7 @@ namespace Library.Net.Amoeba
     [DataContract(Name = "BackgroundUploadItem", Namespace = "http://Library/Net/Amoeba")]
     [KnownType(typeof(Link))]
     [KnownType(typeof(Store))]
-    sealed class BackgroundUploadItem : IDeepCloneable<BackgroundUploadItem>, IThisLock
+    sealed class BackgroundUploadItem : ICloneable<BackgroundUploadItem>, IThisLock
     {
         private BackgroundItemType _type;
         private BackgroundUploadState _state;
@@ -355,7 +355,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public BackgroundUploadItem DeepClone()
+        public BackgroundUploadItem Clone()
         {
             lock (this.ThisLock)
             {
@@ -363,14 +363,14 @@ namespace Library.Net.Amoeba
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (BackgroundUploadItem)ds.ReadObject(textDictionaryReader);
                     }

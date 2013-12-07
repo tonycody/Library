@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Connections.SecureVersion2
 {
     [DataContract(Name = "ProtocolInformation", Namespace = "http://Library/Net/Connection/SecureVersion2")]
-    class ProtocolInformation : ItemBase<ProtocolInformation>, IThisLock
+    class ProtocolInformation : ItemBase<ProtocolInformation>, ICloneable<ProtocolInformation>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -223,17 +223,6 @@ namespace Library.Net.Connections.SecureVersion2
             return true;
         }
 
-        public override ProtocolInformation DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return ProtocolInformation.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         [DataMember(Name = "KeyExchangeAlgorithm")]
         public KeyExchangeAlgorithm KeyExchangeAlgorithm
         {
@@ -340,6 +329,21 @@ namespace Library.Net.Connections.SecureVersion2
                 }
             }
         }
+
+        #region ICloneable<ProtocolInformation>
+
+        public ProtocolInformation Clone()
+        {
+            lock (this.ThisLock)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return ProtocolInformation.Import(stream, BufferManager.Instance);
+                }
+            }
+        }
+
+        #endregion
 
         #region IThisLock
 

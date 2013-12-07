@@ -947,7 +947,7 @@ namespace Library.Net.Amoeba
                 var link = item.Value as Link;
                 if (link == null) return null;
 
-                return link.DeepClone();
+                return link.Clone();
             }
         }
 
@@ -963,7 +963,7 @@ namespace Library.Net.Amoeba
                 var store = item.Value as Store;
                 if (store == null) return null;
 
-                return store.DeepClone();
+                return store.Clone();
             }
         }
 

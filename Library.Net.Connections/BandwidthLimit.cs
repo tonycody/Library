@@ -14,7 +14,7 @@ namespace Library.Net.Connections
     }
 
     [DataContract(Name = "BandwidthLimit", Namespace = "http://Library/Net/Connection")]
-    public sealed class BandwidthLimit : ManagerBase, IDeepCloneable<BandwidthLimit>, IEquatable<BandwidthLimit>, IThisLock
+    public sealed class BandwidthLimit : ManagerBase, IEquatable<BandwidthLimit>, ICloneable<BandwidthLimit>, IThisLock
     {
         private System.Timers.Timer _refreshTimer = new System.Timers.Timer();
 
@@ -239,9 +239,9 @@ namespace Library.Net.Connections
             }
         }
 
-        #region IDeepClone<BandwidthLimit>
+        #region ICloneable<BandwidthLimit>
 
-        public BandwidthLimit DeepClone()
+        public BandwidthLimit Clone()
         {
             lock (this.ThisLock)
             {
@@ -249,14 +249,14 @@ namespace Library.Net.Connections
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (BandwidthLimit)ds.ReadObject(textDictionaryReader);
                     }

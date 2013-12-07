@@ -30,7 +30,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "ConnectionFilter", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class ConnectionFilter : IDeepCloneable<ConnectionFilter>, IEquatable<ConnectionFilter>, IThisLock
+    public sealed class ConnectionFilter : IEquatable<ConnectionFilter>, ICloneable<ConnectionFilter>, IThisLock
     {
         private UriCondition _uriCondition;
         private ConnectionType _connectionType;
@@ -167,9 +167,9 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IDeepClone<ConnectionFilter>
+        #region ICloneable<ConnectionFilter>
 
-        public ConnectionFilter DeepClone()
+        public ConnectionFilter Clone()
         {
             lock (this.ThisLock)
             {
@@ -177,14 +177,14 @@ namespace Library.Net.Amoeba
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (ConnectionFilter)ds.ReadObject(textDictionaryReader);
                     }
@@ -219,7 +219,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UriCondition", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class UriCondition : IDeepCloneable<UriCondition>, IEquatable<UriCondition>, IThisLock
+    public sealed class UriCondition : IEquatable<UriCondition>, ICloneable<UriCondition>, IThisLock
     {
         private string _value;
         private Regex _regex;
@@ -305,9 +305,9 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IDeepClone<UriCondition>
+        #region ICloneable<UriCondition>
 
-        public UriCondition DeepClone()
+        public UriCondition Clone()
         {
             lock (this.ThisLock)
             {
@@ -315,14 +315,14 @@ namespace Library.Net.Amoeba
 
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(stream, new UTF8Encoding(false), false))
+                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(stream))
                     {
                         ds.WriteObject(textDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
                         return (UriCondition)ds.ReadObject(textDictionaryReader);
                     }

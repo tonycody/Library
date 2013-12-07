@@ -177,17 +177,6 @@ namespace Library.Security
             return true;
         }
 
-        public override Exchange DeepClone()
-        {
-            lock (this.ThisLock)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    return Exchange.Import(stream, BufferManager.Instance);
-                }
-            }
-        }
-
         public ExchangePublicKey GetPublicKey()
         {
             lock (this.ThisLock)
