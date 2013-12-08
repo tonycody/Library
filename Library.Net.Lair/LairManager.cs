@@ -333,18 +333,19 @@ namespace Library.Net.Lair
             }
         }
 
-        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            _cacheManager.CheckBlocks(getProgressEvent);
-        }
-
-        public IEnumerable<Header> GetHeaders(Link link)
+        public IEnumerable<Header> GetHeaders(Link link, string type)
         {
             lock (_thisLock)
             {
-                return _connectionsManager.GetHeaders(link);
+                return _connectionsManager.GetHeaders(link, type);
+            }
+        }
+
+        public IEnumerable<Header> GetHeaders(Link link, string type)
+        {
+            lock (_thisLock)
+            {
+                return _connectionsManager.GetHeaders(link, type);
             }
         }
 

@@ -243,6 +243,41 @@ namespace Library.Net.Lair
             }
         }
 
+        public static string ToTagString(Tag item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.ToStream<Tag>(item))
+                {
+                    return "Tag:" + LairConverter.ToBase64String(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Tag FromTagString(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (!item.StartsWith("Tag:") && !item.StartsWith("Tag@")) throw new ArgumentException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Tag:".Length)))
+                {
+                    return LairConverter.FromStream<Tag>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         public static string ToLinkString(Link item)
         {
             if (item == null) throw new ArgumentNullException("item");

@@ -2457,13 +2457,13 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Header> GetHeaders(Link link)
+        public IEnumerable<Header> GetHeaders(Link link, string type)
         {
             lock (_thisLock)
             {
                 _pushHeadersRequestList.Add(link);
 
-                return _headerManager.GetHeaders(link);
+                return _headerManager.GetHeaders(link, type);
             }
         }
 
@@ -2885,6 +2885,83 @@ namespace Library.Net.Lair
                             }
                         }
 
+                        {
+                            Dictionary<string, HashSet<Header>> dic = null;
+
+                            if (_chatMessageHeaders.TryGetValue(link, out dic))
+                            {
+                                hashset.UnionWith(dic.Values.SelectMany(n => n));
+                            }
+                        }
+                    }
+                }
+
+                return hashset;
+            }
+
+            public IEnumerable<Header> GetHeaders(Link link, string type)
+            {
+                HashSet<Header> hashset = new HashSet<Header>();
+
+                if (link == null
+                    || link.Tag.Id == null || link.Tag.Id.Length == 0
+                    || string.IsNullOrWhiteSpace(link.Tag.Name)
+                    || string.IsNullOrWhiteSpace(link.Type))
+                {
+                    if (link.Type == "Section")
+                    {
+                        if (type == "Profile")
+                        {
+                            Dictionary<string, Header> dic = null;
+
+                            if (_sectionProfileHeaders.TryGetValue(link, out dic))
+                            {
+                                hashset.UnionWith(dic.Values);
+                            }
+                        }
+                        else if (type == "Message")
+                        {
+                            Dictionary<string, HashSet<Header>> dic = null;
+
+                            if (_sectionMessageHeaders.TryGetValue(link, out dic))
+                            {
+                                hashset.UnionWith(dic.Values.SelectMany(n => n));
+                            }
+                        }
+                    }
+                    else if (link.Type == "Document")
+                    {
+                        if (type == "Page")
+                        {
+                            Dictionary<string, Header> dic = null;
+
+                            if (_documentPageHeaders.TryGetValue(link, out dic))
+                            {
+                                hashset.UnionWith(dic.Values);
+                            }
+                        }
+                        else if (type == "Vote")
+                        {
+                            Dictionary<string, Header> dic = null;
+
+                            if (_documentVoteHeaders.TryGetValue(link, out dic))
+                            {
+                                hashset.UnionWith(dic.Values);
+                            }
+                        }
+                    }
+                    else if (link.Type == "Chat")
+                    {
+                        if (type == "Topic")
+                        {
+                            Dictionary<string, Header> dic = null;
+
+                            if (_chatTopicHeaders.TryGetValue(link, out dic))
+                            {
+                                hashset.UnionWith(dic.Values);
+                            }
+                        }
+                        else if (type == "Message")
                         {
                             Dictionary<string, HashSet<Header>> dic = null;
 
