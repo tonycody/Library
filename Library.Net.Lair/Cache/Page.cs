@@ -7,31 +7,31 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentPageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentPageContent : ItemBase<DocumentPageContent>, IDocumentPageContent
+    [DataContract(Name = "Page", Namespace = "http://Library/Net/Lair")]
+    public sealed class Page : ItemBase<Page>, IPage
     {
         private enum SerializeId : byte
         {
-            FormatType = 0,
-            Hypertext = 1,
-            Comment = 2,
+            Name = 0,
+            FormatType = 1,
+            Hypertext = 2,
         }
 
+        private string _name;
         private HypertextFormatType _formatType;
         private string _hypertext;
-        private string _comment;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
+        public static readonly int MaxNameLength = 1024;
         public static readonly int MaxHypertextLength = 1024 * 32;
-        public static readonly int MaxCommentLength = 1024 * 4;
 
-        public DocumentPageContent(HypertextFormatType formatType, string hypertext, string comment)
+        public Page(string name, HypertextFormatType formatType, string hypertext)
         {
+            this.Name = name;
             this.FormatType = formatType;
             this.Hypertext = hypertext;
-            this.Comment = comment;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -49,7 +49,14 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.FormatType)
+                        if (id == (byte)SerializeId.Name)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Name = reader.ReadToEnd();
+                            }
+                        }
+                        else if (id == (byte)SerializeId.FormatType)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
@@ -61,13 +68,6 @@ namespace Library.Net.Lair
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
                                 this.Hypertext = reader.ReadToEnd();
-                            }
-                        }
-                        else if (id == (byte)SerializeId.Comment)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Comment = reader.ReadToEnd();
                             }
                         }
                     }
@@ -82,6 +82,25 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
+                // Name
+                if (this.Name != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.Name);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Name);
+
+                    streams.Add(bufferStream);
+                }
                 // FormatType
                 if (this.FormatType != 0)
                 {
@@ -120,25 +139,6 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
-                // Comment
-                if (this.Comment != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.Comment);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Comment);
-
-                    streams.Add(bufferStream);
-                }
 
                 return new JoinStream(streams);
             }
@@ -155,20 +155,20 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is DocumentPageContent)) return false;
+            if ((object)obj == null || !(obj is Page)) return false;
 
-            return this.Equals((DocumentPageContent)obj);
+            return this.Equals((Page)obj);
         }
 
-        public override bool Equals(DocumentPageContent other)
+        public override bool Equals(Page other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.FormatType != other.FormatType
-                || this.Hypertext != other.Hypertext
-                || this.Comment != other.Comment)
+            if (this.Name != other.Name
+                || this.FormatType != other.FormatType
+                || this.Hypertext != other.Hypertext)
             {
                 return false;
             }
@@ -196,6 +196,32 @@ namespace Library.Net.Lair
         }
 
         #region IDocumentPage
+
+        [DataMember(Name = "Name")]
+        public string Name
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _name;
+                }
+            }
+            private set
+            {
+                lock (this.ThisLock)
+                {
+                    if (value != null && value.Length > Page.MaxNameLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _name = value;
+                    }
+                }
+            }
+        }
 
         [DataMember(Name = "FormatType")]
         public HypertextFormatType FormatType
@@ -237,39 +263,13 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > DocumentPageContent.MaxHypertextLength)
+                    if (value != null && value.Length > Page.MaxHypertextLength)
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
                         _hypertext = value;
-                    }
-                }
-            }
-        }
-
-        [DataMember(Name = "Comment")]
-        public string Comment
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _comment;
-                }
-            }
-            private set
-            {
-                lock (this.ThisLock)
-                {
-                    if (value != null && value.Length > DocumentPageContent.MaxCommentLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _comment = value;
                     }
                 }
             }

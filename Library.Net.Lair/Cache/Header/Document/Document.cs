@@ -7,8 +7,8 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Tag", Namespace = "http://Library/Net/Lair")]
-    public sealed class Tag : ItemBase<Tag>, ITag
+    [DataContract(Name = "Document", Namespace = "http://Library/Net/Lair")]
+    public sealed class Document : ItemBase<Document>, IDocument
     {
         private enum SerializeId : byte
         {
@@ -27,7 +27,7 @@ namespace Library.Net.Lair
         public static readonly int MaxIdLength = 64;
         public static readonly int MaxNameLength = 256;
 
-        public Tag(byte[] id, string name)
+        public Document(byte[] id, string name)
         {
             this.Id = id;
             this.Name = name;
@@ -118,12 +118,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Tag)) return false;
+            if ((object)obj == null || !(obj is Document)) return false;
 
-            return this.Equals((Tag)obj);
+            return this.Equals((Document)obj);
         }
 
-        public override bool Equals(Tag other)
+        public override bool Equals(Document other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -141,14 +141,6 @@ namespace Library.Net.Lair
             }
 
             return true;
-        }
-
-        public override string ToString()
-        {
-            lock (this.ThisLock)
-            {
-                return this.Name;
-            }
         }
 
         private object ThisLock
@@ -170,7 +162,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region ITag
+        #region IDocument
 
         [DataMember(Name = "Id")]
         public byte[] Id
@@ -186,7 +178,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && (value.Length > Tag.MaxIdLength))
+                    if (value != null && (value.Length > Document.MaxIdLength))
                     {
                         throw new ArgumentException();
                     }
@@ -223,7 +215,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Tag.MaxNameLength)
+                    if (value != null && value.Length > Document.MaxNameLength)
                     {
                         throw new ArgumentException();
                     }

@@ -308,7 +308,19 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
+                if (_watchTimer != null)
+                {
+                    try
+                    {
+                        _watchTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
 
+                    }
+
+                    _watchTimer = null;
+                }
             }
         }
 

@@ -103,7 +103,7 @@ namespace Library.Net.Lair
                             {
                                 if (item.HeaderType == "Page")
                                 {
-                                    buffer = ContentConverter.ToDocumentPageContentBlock(item.DocumentPageContent);
+                                    buffer = ContentConverter.ToDocumentArchiveContentBlock(item.DocumentArchiveContent);
                                 }
                                 else if (item.HeaderType == "Vote")
                                 {
@@ -227,7 +227,7 @@ namespace Library.Net.Lair
 
         public void Upload(Tag tag,
             string path,
-            DocumentPageContent content,
+            DocumentArchiveContent content,
 
             DigitalSignature digitalSignature)
         {
@@ -240,7 +240,7 @@ namespace Library.Net.Lair
                 uploadItem.LinkType = "Document";
                 uploadItem.HeaderType = "Page";
 
-                uploadItem.DocumentPageContent = content;
+                uploadItem.DocumentArchiveContent = content;
 
                 uploadItem.DigitalSignature = digitalSignature;
             }

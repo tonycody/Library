@@ -8,40 +8,32 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Header", Namespace = "http://Library/Net/Lair")]
-    public sealed class Header : ReadOnlyCertificateItemBase<Header>, IHeader<Link, Tag>
+    [DataContract(Name = "ChatMessageHeader", Namespace = "http://Library/Net/Lair")]
+    public sealed class ChatMessageHeader : ReadOnlyCertificateItemBase<ChatMessageHeader>, IChatMessageHeader<Chat>
     {
         private enum SerializeId : byte
         {
-            Link = 0,
-            Type = 1,
-            CreationTime = 2,
-            Content = 3,
+            Tag = 0,
+            CreationTime = 1,
+            Key = 2,
 
-            Certificate = 4,
+            Certificate = 3,
         }
 
-        private Link _link;
-        private string _type;
+        private Chat _tag;
         private DateTime _creationTime;
-        private byte[] _content;
+        private Key _key;
 
         private Certificate _certificate;
-
-        private int _hashCode;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxTypeLength = 256;
-        public static readonly int MaxContentLength = 256;
-
-        public Header(Link link, string type, byte[] content, DigitalSignature digitalSignature)
+        public ChatMessageHeader(Chat tag, Key key, DigitalSignature digitalSignature)
         {
-            this.Link = link;
-            this.Type = type;
+            this.Tag = tag;
             this.CreationTime = DateTime.UtcNow;
-            this.Content = content;
+            this.Key = key;
 
             this.CreateCertificate(digitalSignature);
         }
@@ -61,16 +53,9 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Link)
+                        if (id == (byte)SerializeId.Tag)
                         {
-                            this.Link = Link.Import(rangeStream, bufferManager);
-                        }
-                        else if (id == (byte)SerializeId.Type)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Type = reader.ReadToEnd();
-                            }
+                            this.Tag = Chat.Import(rangeStream, bufferManager);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
@@ -79,12 +64,9 @@ namespace Library.Net.Lair
                                 this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                             }
                         }
-                        else if (id == (byte)SerializeId.Content)
+                        else if (id == (byte)SerializeId.Key)
                         {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.Content = buffer;
+                            this.Key = Key.Import(rangeStream, bufferManager);
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -103,35 +85,16 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Link
-                if (this.Link != null)
+                // Tag
+                if (this.Tag != null)
                 {
-                    Stream exportStream = this.Link.Export(bufferManager);
+                    Stream exportStream = this.Tag.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Link);
+                    bufferStream.WriteByte((byte)SerializeId.Tag);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
-                }
-                // Type
-                if (this.Type != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.Type);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Type);
-
-                    streams.Add(bufferStream);
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
@@ -152,15 +115,16 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
-                // Content
-                if (this.Content != null)
+                // Key
+                if (this.Key != null)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Content.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Content);
-                    bufferStream.Write(this.Content, 0, this.Content.Length);
+                    Stream exportStream = this.Key.Export(bufferManager);
 
-                    streams.Add(bufferStream);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Key);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
                 // Certificate
@@ -183,36 +147,30 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                return _hashCode;
+                return _key.GetHashCode();
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Header)) return false;
+            if ((object)obj == null || !(obj is ChatMessageHeader)) return false;
 
-            return this.Equals((Header)obj);
+            return this.Equals((ChatMessageHeader)obj);
         }
 
-        public override bool Equals(Header other)
+        public override bool Equals(ChatMessageHeader other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Link != other.Link
-                || this.Type != other.Type
+            if (this.Tag != other.Tag
                 || this.CreationTime != other.CreationTime
-                || (this.Content == null) != (other.Content == null)
+                || this.Key != other.Key
 
                 || this.Certificate != other.Certificate)
             {
                 return false;
-            }
-
-            if (this.Content != null && other.Content != null)
-            {
-                if (!Unsafe.Equals(this.Content, other.Content)) return false;
             }
 
             return true;
@@ -289,49 +247,23 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IHeader<Link, Tag>
+        #region IChatMessageHeader<Chat>
 
-        [DataMember(Name = "Link")]
-        public Link Link
+        [DataMember(Name = "Tag")]
+        public Chat Tag
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _link;
+                    return _tag;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    _link = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "Type")]
-        public string Type
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _type;
-                }
-            }
-            private set
-            {
-                lock (this.ThisLock)
-                {
-                    if (value != null && value.Length > Header.MaxTypeLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _type = value;
-                    }
+                    _tag = value;
                 }
             }
         }
@@ -356,39 +288,21 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Content")]
-        public byte[] Content
+        [DataMember(Name = "Key")]
+        public Key Key
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _content;
+                    return _key;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Header.MaxContentLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _content = value;
-                    }
-
-                    if (value != null && value.Length != 0)
-                    {
-                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                        else _hashCode = value[0];
-                    }
-                    else
-                    {
-                        _hashCode = 0;
-                    }
+                    _key = value;
                 }
             }
         }

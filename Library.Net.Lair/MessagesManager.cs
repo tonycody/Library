@@ -37,7 +37,12 @@ namespace Library.Net.Lair
                         var messageManager = _messageManagerDictionary[node];
 
                         messageManager.PushBlocks.Refresh();
-                        messageManager.PushHeaders.Refresh();
+                        messageManager.PushSectionProfileHeaders.Refresh();
+                        messageManager.PushSectionMessageHeaders.Refresh();
+                        messageManager.PushDocumentArchiveHeaders.Refresh();
+                        messageManager.PushDocumentVoteHeaders.Refresh();
+                        messageManager.PushChatTopicHeaders.Refresh();
+                        messageManager.PushChatMessageHeaders.Refresh();
 
                         messageManager.PushBlocksLink.Refresh();
                         messageManager.PullBlocksLink.Refresh();
@@ -45,8 +50,14 @@ namespace Library.Net.Lair
                         messageManager.PushBlocksRequest.Refresh();
                         messageManager.PullBlocksRequest.Refresh();
 
-                        messageManager.PushHeadersRequest.Refresh();
-                        messageManager.PullHeadersRequest.Refresh();
+                        messageManager.PushSectionsRequest.Refresh();
+                        messageManager.PullSectionsRequest.Refresh();
+
+                        messageManager.PushDocumentsRequest.Refresh();
+                        messageManager.PullDocumentsRequest.Refresh();
+
+                        messageManager.PushChatsRequest.Refresh();
+                        messageManager.PullChatsRequest.Refresh();
                     }
 
                     _lastCircularTime = now;
@@ -160,7 +171,12 @@ namespace Library.Net.Lair
         private LockedHashSet<Node> _surroundingNodes;
 
         private VolatileCollection<Key> _pushBlocks;
-        private VolatileCollection<byte[]> _pushHeaders;
+        private VolatileCollection<byte[]> _pushSectionProfileHeaders;
+        private VolatileCollection<byte[]> _pushSectionMessageHeaders;
+        private VolatileCollection<byte[]> _pushDocumentArchiveHeaders;
+        private VolatileCollection<byte[]> _pushDocumentVoteHeaders;
+        private VolatileCollection<byte[]> _pushChatTopicHeaders;
+        private VolatileCollection<byte[]> _pushChatMessageHeaders;
 
         private VolatileCollection<Key> _pushBlocksLink;
         private VolatileCollection<Key> _pullBlocksLink;
@@ -168,8 +184,14 @@ namespace Library.Net.Lair
         private VolatileCollection<Key> _pushBlocksRequest;
         private VolatileCollection<Key> _pullBlocksRequest;
 
-        private VolatileCollection<Link> _pushHeadersRequest;
-        private VolatileCollection<Link> _pullHeadersRequest;
+        private VolatileCollection<Section> _pushSectionsRequest;
+        private VolatileCollection<Section> _pullSectionsRequest;
+
+        private VolatileCollection<Document> _pushDocumentsRequest;
+        private VolatileCollection<Document> _pullDocumentsRequest;
+
+        private VolatileCollection<Chat> _pushChatsRequest;
+        private VolatileCollection<Chat> _pullChatsRequest;
 
         private readonly object _thisLock = new object();
 
@@ -180,16 +202,27 @@ namespace Library.Net.Lair
             _surroundingNodes = new LockedHashSet<Node>(128);
 
             _pushBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushSectionProfileHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushSectionMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushDocumentArchiveHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushDocumentVoteHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushChatTopicHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushChatMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
 
-            _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushHeadersRequest = new VolatileCollection<Link>(new TimeSpan(0, 60, 0));
-            _pullHeadersRequest = new VolatileCollection<Link>(new TimeSpan(0, 60, 0));
+            _pushSectionsRequest = new VolatileCollection<Section>(new TimeSpan(0, 30, 0));
+            _pullSectionsRequest = new VolatileCollection<Section>(new TimeSpan(0, 30, 0));
+
+            _pushDocumentsRequest = new VolatileCollection<Document>(new TimeSpan(0, 30, 0));
+            _pullDocumentsRequest = new VolatileCollection<Document>(new TimeSpan(0, 30, 0));
+
+            _pushChatsRequest = new VolatileCollection<Chat>(new TimeSpan(0, 30, 0));
+            _pullChatsRequest = new VolatileCollection<Chat>(new TimeSpan(0, 30, 0));
         }
 
         public int Id
@@ -315,13 +348,68 @@ namespace Library.Net.Lair
             }
         }
 
-        public VolatileCollection<byte[]> PushHeaders
+        public VolatileCollection<byte[]> PushSectionProfileHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushHeaders;
+                    return _pushSectionProfileHeaders;
+                }
+            }
+        }
+
+        public VolatileCollection<byte[]> PushSectionMessageHeaders
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushSectionMessageHeaders;
+                }
+            }
+        }
+
+        public VolatileCollection<byte[]> PushDocumentArchiveHeaders
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushDocumentArchiveHeaders;
+                }
+            }
+        }
+
+        public VolatileCollection<byte[]> PushDocumentVoteHeaders
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushDocumentVoteHeaders;
+                }
+            }
+        }
+
+        public VolatileCollection<byte[]> PushChatTopicHeaders
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushChatTopicHeaders;
+                }
+            }
+        }
+
+        public VolatileCollection<byte[]> PushChatMessageHeaders
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushChatMessageHeaders;
                 }
             }
         }
@@ -370,24 +458,68 @@ namespace Library.Net.Lair
             }
         }
 
-        public VolatileCollection<Link> PushHeadersRequest
+        public VolatileCollection<Section> PushSectionsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushHeadersRequest;
+                    return _pushSectionsRequest;
                 }
             }
         }
 
-        public VolatileCollection<Link> PullHeadersRequest
+        public VolatileCollection<Section> PullSectionsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullHeadersRequest;
+                    return _pullSectionsRequest;
+                }
+            }
+        }
+
+        public VolatileCollection<Document> PushDocumentsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushDocumentsRequest;
+                }
+            }
+        }
+
+        public VolatileCollection<Document> PullDocumentsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pullDocumentsRequest;
+                }
+            }
+        }
+
+        public VolatileCollection<Chat> PushChatsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushChatsRequest;
+                }
+            }
+        }
+
+        public VolatileCollection<Chat> PullChatsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pullChatsRequest;
                 }
             }
         }

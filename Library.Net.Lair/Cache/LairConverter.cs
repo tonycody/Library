@@ -165,11 +165,9 @@ namespace Library.Net.Lair
                             return ItemBase<T>.Import(deflateBufferStream, _bufferManager);
                         }
                     }
-                    else
-                    {
-                        throw new ArgumentException("ArgumentException");
-                    }
                 }
+
+                throw new ArgumentException("ArgumentException");
             }
             catch (Exception e)
             {
@@ -235,41 +233,6 @@ namespace Library.Net.Lair
                 using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 5)))
                 {
                     return LairConverter.FromStream<Node>(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToTagString(Tag item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Tag>(item))
-                {
-                    return "Tag:" + LairConverter.ToBase64String(stream);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static Tag FromTagString(string item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Tag:") && !item.StartsWith("Tag@")) throw new ArgumentException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Tag:".Length)))
-                {
-                    return LairConverter.FromStream<Tag>(stream);
                 }
             }
             catch (Exception)

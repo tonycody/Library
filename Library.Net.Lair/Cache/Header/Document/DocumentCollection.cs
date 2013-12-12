@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class TagCollection : FilterList<Tag>, IEnumerable<Tag>
+    public sealed class DocumentCollection : FilterList<Document>, IEnumerable<Document>
     {
-        public TagCollection() : base() { }
-        public TagCollection(int capacity) : base(capacity) { }
-        public TagCollection(IEnumerable<Tag> collections) : base(collections) { }
+        public DocumentCollection() : base() { }
+        public DocumentCollection(int capacity) : base(capacity) { }
+        public DocumentCollection(IEnumerable<Document> collections) : base(collections) { }
 
-        protected override bool Filter(Tag item)
+        protected override bool Filter(Document item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Tag>
+        #region IEnumerable<Document>
 
-        IEnumerator<Tag> IEnumerable<Tag>.GetEnumerator()
+        IEnumerator<Document> IEnumerable<Document>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

@@ -10,36 +10,41 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Link, Tag>
+    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Document, Chat>
     {
         private enum SerializeId : byte
         {
             Comment = 0,
             ExchangePublicKey = 1,
             TrustSignature = 2,
-            Link = 3,
+            Document = 3,
+            Chat = 4,
         }
 
         private string _comment;
         private ExchangePublicKey _exchangePublicKey;
         private SignatureCollection _trustSignatures;
-        private LinkCollection _links;
+        private DocumentCollection _documents;
+        private ChatCollection _chats;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxTrustSignaturesCount = 1024;
-        public static readonly int MaxLinksCount = 1024;
+        public static readonly int MaxDocumentsCount = 256;
+        public static readonly int MaxChatsCount = 256;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfileContent(string comment, ExchangePublicKey publicKey, IEnumerable<string> trustSignatures, IEnumerable<Link> links)
+        public SectionProfileContent(string comment, ExchangePublicKey publicKey, IEnumerable<string> trustSignatures,
+            IEnumerable<Document> documents, IEnumerable<Chat> chats)
         {
             this.Comment = comment;
             this.ExchangePublicKey = publicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            if (links != null) this.ProtectedLinks.AddRange(links);
+            if (documents != null) this.ProtectedDocuments.AddRange(documents);
+            if (chats != null) this.ProtectedChats.AddRange(chats);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -75,9 +80,13 @@ namespace Library.Net.Lair
                                 this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
                             }
                         }
-                        else if (id == (byte)SerializeId.Link)
+                        else if (id == (byte)SerializeId.Document)
                         {
-                            this.ProtectedLinks.Add(Link.Import(rangeStream, bufferManager));
+                            this.ProtectedDocuments.Add(Document.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Chat)
+                        {
+                            this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -140,24 +149,27 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
-                // Links
-                foreach (var l in this.ProtectedLinks)
+                // Documents
+                foreach (var d in this.Documents)
                 {
+                    Stream exportStream = d.Export(bufferManager);
+
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Document);
 
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(l);
-                    }
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // Chats
+                foreach (var c in this.Chats)
+                {
+                    Stream exportStream = c.Export(bufferManager);
 
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.TrustSignature);
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Chat);
 
-                    streams.Add(bufferStream);
+                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
                 return new JoinStream(streams);
@@ -187,9 +199,10 @@ namespace Library.Net.Lair
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Comment != other.Comment
+                || this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
-                || (this.Links == null) != (other.Links == null)
-                || this.ExchangePublicKey != other.ExchangePublicKey)
+                || (this.Documents == null) != (other.Documents == null)
+                || (this.Chats == null) != (other.Chats == null))
             {
                 return false;
             }
@@ -199,9 +212,14 @@ namespace Library.Net.Lair
                 if (!Collection.Equals(this.TrustSignatures, other.TrustSignatures)) return false;
             }
 
-            if (this.Links != null && other.Links != null)
+            if (this.Documents != null && other.Documents != null)
             {
-                if (!Collection.Equals(this.Links, other.Links)) return false;
+                if (!Collection.Equals(this.Documents, other.Documents)) return false;
+            }
+
+            if (this.Chats != null && other.Chats != null)
+            {
+                if (!Collection.Equals(this.Chats, other.Chats)) return false;
             }
 
             return true;
@@ -305,33 +323,64 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<Link> _readOnlyLinks;
+        private volatile ReadOnlyCollection<Document> _readOnlyDocuments;
 
-        public IEnumerable<Link> Links
+        public IEnumerable<Document> Documents
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_readOnlyLinks == null)
-                        _readOnlyLinks = new ReadOnlyCollection<Link>(this.ProtectedLinks);
+                    if (_readOnlyDocuments == null)
+                        _readOnlyDocuments = new ReadOnlyCollection<Document>(this.ProtectedDocuments);
 
-                    return _readOnlyLinks;
+                    return _readOnlyDocuments;
                 }
             }
         }
 
-        [DataMember(Name = "Links")]
-        private LinkCollection ProtectedLinks
+        [DataMember(Name = "Documents")]
+        private DocumentCollection ProtectedDocuments
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_links == null)
-                        _links = new LinkCollection(SectionProfileContent.MaxLinksCount);
+                    if (_documents == null)
+                        _documents = new DocumentCollection(SectionProfileContent.MaxDocumentsCount);
 
-                    return _links;
+                    return _documents;
+                }
+            }
+        }
+
+        private volatile ReadOnlyCollection<Chat> _readOnlyChats;
+
+        public IEnumerable<Chat> Chats
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_readOnlyChats == null)
+                        _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats);
+
+                    return _readOnlyChats;
+                }
+            }
+        }
+
+        [DataMember(Name = "Chats")]
+        private ChatCollection ProtectedChats
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_chats == null)
+                        _chats = new ChatCollection(SectionProfileContent.MaxChatsCount);
+
+                    return _chats;
                 }
             }
         }

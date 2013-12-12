@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class LinkCollection : FilterList<Link>, IEnumerable<Link>
+    public sealed class ChatCollection : FilterList<Chat>, IEnumerable<Chat>
     {
-        public LinkCollection() : base() { }
-        public LinkCollection(int capacity) : base(capacity) { }
-        public LinkCollection(IEnumerable<Link> collections) : base(collections) { }
+        public ChatCollection() : base() { }
+        public ChatCollection(int capacity) : base(capacity) { }
+        public ChatCollection(IEnumerable<Chat> collections) : base(collections) { }
 
-        protected override bool Filter(Link item)
+        protected override bool Filter(Chat item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Link>
+        #region IEnumerable<Chat>
 
-        IEnumerator<Link> IEnumerable<Link>.GetEnumerator()
+        IEnumerator<Chat> IEnumerable<Chat>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

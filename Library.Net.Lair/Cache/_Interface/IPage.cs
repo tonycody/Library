@@ -1,4 +1,8 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
@@ -9,8 +13,9 @@ namespace Library.Net.Lair
         MiniWiki = 0,
     }
 
-    interface IDocumentPageContent
+    public interface IPage
     {
+        string Name { get; }
         HypertextFormatType FormatType { get; }
         string Hypertext { get; }
         string Comment { get; }

@@ -308,7 +308,19 @@ namespace Library.Net.Lair
 
             if (disposing)
             {
+                if (_watchTimer != null)
+                {
+                    try
+                    {
+                        _watchTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
 
+                    }
+
+                    _watchTimer = null;
+                }
             }
         }
 

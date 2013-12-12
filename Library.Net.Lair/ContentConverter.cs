@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text;
 using Library.Compression;
 using Library.Io;
 using Library.Security;
@@ -21,131 +22,131 @@ namespace Library.Net.Lair
 
         private enum ConvertCryptoAlgorithm
         {
-            Rijndael256_Sha512 = 0,
+            Rijndael256 = 0,
+        }
+
+        private enum ConvertHashAlgorithm
+        {
+            Sha512 = 0,
         }
 
         private static BufferManager _bufferManager = BufferManager.Instance;
-        private static Lzma _lzma = new Lzma(1 << 20, 1 << 20);
         private static RNGCryptoServiceProvider _random = new RNGCryptoServiceProvider();
+        private static Lzma _lzma = new Lzma(1 << 20, 1 << 20);
 
-        private static Stream ToStream<T>(ItemBase<T> item)
-                where T : ItemBase<T>
+        private static Stream Compress(Stream stream)
         {
-            Stream stream = null;
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
+
+            List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
 
             try
             {
-                stream = item.Export(_bufferManager);
-                List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
+                stream.Seek(0, SeekOrigin.Begin);
+
+                BufferStream deflateBufferStream = new BufferStream(_bufferManager);
+                byte[] compressBuffer = null;
 
                 try
                 {
-                    stream.Seek(0, SeekOrigin.Begin);
+                    compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                    BufferStream deflateBufferStream = new BufferStream(_bufferManager);
-                    byte[] compressBuffer = null;
-
-                    try
+                    using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                        int i = -1;
 
-                        using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
+                        while ((i = stream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
                         {
-                            int i = -1;
-
-                            while ((i = stream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
-                            {
-                                deflateStream.Write(compressBuffer, 0, i);
-                            }
+                            deflateStream.Write(compressBuffer, 0, i);
                         }
                     }
-                    finally
-                    {
-                        _bufferManager.ReturnBuffer(compressBuffer);
-                    }
-
-                    deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
-                catch (Exception)
+                finally
                 {
-
+                    _bufferManager.ReturnBuffer(compressBuffer);
                 }
 
-                try
+                deflateBufferStream.Seek(0, SeekOrigin.Begin);
+                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
+            }
+            catch (Exception)
+            {
+
+            }
+
+            try
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+
+                BufferStream lzmaBufferStream = new BufferStream(_bufferManager);
+
+                using (var inStream = new WrapperStream(stream, true))
+                using (var outStream = new WrapperStream(lzmaBufferStream, true))
                 {
-                    stream.Seek(0, SeekOrigin.Begin);
-
-                    BufferStream lzmaBufferStream = new BufferStream(_bufferManager);
-
-                    using (var inStream = new WrapperStream(stream, true))
-                    using (var outStream = new WrapperStream(lzmaBufferStream, true))
-                    {
-                        _lzma.Compress(inStream, outStream, _bufferManager);
-                    }
-
-                    lzmaBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Lzma, lzmaBufferStream));
+                    _lzma.Compress(inStream, outStream, _bufferManager);
                 }
-                catch (Exception)
-                {
 
-                }
+                lzmaBufferStream.Seek(0, SeekOrigin.Begin);
+                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Lzma, lzmaBufferStream));
+            }
+            catch (Exception)
+            {
 
-                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.None, stream));
+            }
 
-                list.Sort((x, y) =>
-                {
-                    return x.Value.Length.CompareTo(y.Value.Length);
-                });
+            list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.None, new WrapperStream(stream, true)));
+
+            list.Sort((x, y) =>
+            {
+                return x.Value.Length.CompareTo(y.Value.Length);
+            });
 
 #if DEBUG
-                if (list[0].Value.Length != stream.Length)
-                {
-                    Debug.WriteLine("ContentConverter ToStream {3} : {0}→{1} {2}",
-                        NetworkConverter.ToSizeString(stream.Length),
-                        NetworkConverter.ToSizeString(list[0].Value.Length),
-                        NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length),
-                        (ConvertCompressionAlgorithm)list[0].Key);
-                }
+            if (list[0].Value.Length != stream.Length)
+            {
+                Debug.WriteLine("ContentConverter ToStream {3} : {0}→{1} {2}",
+                    NetworkConverter.ToSizeString(stream.Length),
+                    NetworkConverter.ToSizeString(list[0].Value.Length),
+                    NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length),
+                    (ConvertCompressionAlgorithm)list[0].Key);
+            }
 #endif
 
-                for (int i = 1; i < list.Count; i++)
-                {
-                    list[i].Value.Dispose();
-                }
-
-                BufferStream headerStream = new BufferStream(_bufferManager);
-                headerStream.WriteByte((byte)list[0].Key);
-
-                return new JoinStream(headerStream, list[0].Value);
-            }
-            catch (Exception ex)
+            for (int i = 1; i < list.Count; i++)
             {
-                if (stream != null)
-                    stream.Dispose();
-
-                throw new ArgumentException(ex.Message, ex);
+                list[i].Value.Dispose();
             }
+
+            BufferStream headerStream = new BufferStream(_bufferManager);
+            headerStream.WriteByte((byte)list[0].Key);
+
+            return new JoinStream(headerStream, list[0].Value);
         }
 
-        private static T FromStream<T>(Stream stream)
-            where T : ItemBase<T>
+        private static Stream Decompress(Stream stream)
         {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
+
             try
             {
                 byte type = (byte)stream.ReadByte();
 
-                using (Stream dataStream = new WrapperStream(stream, true))
+                if (type == (byte)ConvertCompressionAlgorithm.None)
                 {
-                    if (type == (byte)ConvertCompressionAlgorithm.None)
+                    return new RangeStream(stream, 1, stream.Length - 1, true);
+                }
+                else if (type == (byte)ConvertCompressionAlgorithm.Lzma)
+                {
+                    using (Stream dataStream = new WrapperStream(stream, true))
                     {
-                        return ItemBase<T>.Import(dataStream, _bufferManager);
-                    }
-                    else if (type == (byte)ConvertCompressionAlgorithm.Lzma)
-                    {
-                        using (BufferStream lzmaBufferStream = new BufferStream(_bufferManager))
+                        BufferStream lzmaBufferStream = null;
+
+                        try
                         {
+                            lzmaBufferStream = new BufferStream(_bufferManager);
+
                             using (var inStream = new WrapperStream(dataStream, true))
                             using (var outStream = new WrapperStream(lzmaBufferStream, true))
                             {
@@ -162,13 +163,25 @@ namespace Library.Net.Lair
 
                             lzmaBufferStream.Seek(0, SeekOrigin.Begin);
 
-                            return ItemBase<T>.Import(lzmaBufferStream, _bufferManager);
+                            return lzmaBufferStream;
+                        }
+                        catch (Exception)
+                        {
+                            if (lzmaBufferStream != null)
+                                lzmaBufferStream.Dispose();
                         }
                     }
-                    else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
+                }
+                else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
+                {
+                    using (Stream dataStream = new WrapperStream(stream, true))
                     {
-                        using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
+                        BufferStream deflateBufferStream = null;
+
+                        try
                         {
+                            deflateBufferStream = new BufferStream(_bufferManager);
+
                             byte[] decompressBuffer = null;
 
                             try
@@ -200,14 +213,17 @@ namespace Library.Net.Lair
 
                             deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
-                            return ItemBase<T>.Import(deflateBufferStream, _bufferManager);
+                            return deflateBufferStream;
+                        }
+                        catch (Exception)
+                        {
+                            if (deflateBufferStream != null)
+                                deflateBufferStream.Dispose();
                         }
                     }
-                    else
-                    {
-                        throw new ArgumentException("ArgumentException");
-                    }
                 }
+
+                throw new ArgumentException("ArgumentException");
             }
             catch (Exception e)
             {
@@ -215,9 +231,156 @@ namespace Library.Net.Lair
             }
         }
 
-        private static Stream ToPaddingStream(Stream stream, int size)
+        private static Stream Encrypt(Stream stream, IExchangeEncrypt publicKey)
         {
             if (stream == null) throw new ArgumentNullException("stream");
+            if (publicKey == null) throw new ArgumentNullException("publicKey");
+
+            try
+            {
+                BufferStream outStream = null;
+
+                try
+                {
+                    outStream = new BufferStream(_bufferManager);
+                    outStream.WriteByte((byte)ConvertCryptoAlgorithm.Rijndael256);
+
+                    byte[] cryptoKey = new byte[32];
+                    _random.GetBytes(cryptoKey);
+
+                    {
+                        var encryptedBuffer = Exchange.Encrypt(publicKey, cryptoKey);
+                        outStream.Write(NetworkConverter.GetBytes((int)encryptedBuffer.Length), 0, 4);
+                        outStream.Write(encryptedBuffer, 0, encryptedBuffer.Length);
+                    }
+
+                    byte[] iv = new byte[32];
+                    _random.GetBytes(iv);
+                    outStream.Write(iv, 0, iv.Length);
+
+                    using (Stream inStream = new WrapperStream(stream, true))
+                    {
+                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                        using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateEncryptor(cryptoKey, iv), CryptoStreamMode.Read))
+                        {
+                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                            try
+                            {
+                                int length = 0;
+
+                                while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
+                                {
+                                    outStream.Write(buffer, 0, length);
+                                }
+                            }
+                            finally
+                            {
+                                _bufferManager.ReturnBuffer(buffer);
+                            }
+                        }
+                    }
+
+                    outStream.Seek(0, SeekOrigin.Begin);
+                }
+                catch (Exception)
+                {
+                    if (outStream != null)
+                        outStream.Dispose();
+
+                    throw;
+                }
+
+                return outStream;
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message, e);
+            }
+        }
+
+        private static Stream Decrypt(Stream stream, IExchangeDecrypt privateKey)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (privateKey == null) throw new ArgumentNullException("privateKey");
+
+            try
+            {
+                byte type = (byte)stream.ReadByte();
+
+                if (type == (byte)ConvertCryptoAlgorithm.Rijndael256)
+                {
+                    byte[] cryptoKey;
+
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) throw new ArgumentException();
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+
+                        byte[] encryptedBuffer = new byte[length];
+                        if (stream.Read(encryptedBuffer, 0, encryptedBuffer.Length) != encryptedBuffer.Length) throw new ArgumentException();
+
+                        cryptoKey = Exchange.Decrypt(privateKey, encryptedBuffer);
+                    }
+
+                    BufferStream outStream = null;
+
+                    try
+                    {
+                        outStream = new BufferStream(_bufferManager);
+
+                        using (Stream dataStream = new WrapperStream(stream, true))
+                        {
+                            var iv = new byte[32];
+                            dataStream.Read(iv, 0, iv.Length);
+
+                            using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                            using (var inStream = new RangeStream(dataStream, 0, dataStream.Length - 64))
+                            using (CryptoStream cs = new CryptoStream(dataStream, rijndael.CreateDecryptor(cryptoKey, iv), CryptoStreamMode.Read))
+                            {
+                                byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                                try
+                                {
+                                    int length = 0;
+
+                                    while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
+                                    {
+                                        outStream.Write(buffer, 0, length);
+                                    }
+                                }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(buffer);
+                                }
+                            }
+                        }
+
+                        outStream.Seek(0, SeekOrigin.Begin);
+                    }
+                    catch (Exception)
+                    {
+                        if (outStream != null)
+                            outStream.Dispose();
+
+                        throw;
+                    }
+
+                    return outStream;
+                }
+
+                throw new NotSupportedException();
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(e.Message, e);
+            }
+        }
+
+        private static Stream AddPadding(Stream stream, int size)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
             if (stream.Length + 4 > size) throw new ArgumentOutOfRangeException("size");
 
             try
@@ -265,7 +428,7 @@ namespace Library.Net.Lair
             }
         }
 
-        private static Stream FromPaddingStream(Stream stream)
+        private static Stream RemovePadding(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException("stream");
             if (stream.Length <= 4) throw new ArgumentOutOfRangeException("stream");
@@ -284,72 +447,75 @@ namespace Library.Net.Lair
             }
         }
 
-        private static Stream Encrypt(Stream stream, IExchangeEncrypt exchangeEncrypt)
+        private static Stream AddType(Stream stream, string type)
         {
             if (stream == null) throw new ArgumentNullException("stream");
-            if (exchangeEncrypt == null) throw new ArgumentNullException("exchangeEncrypt");
+            if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
+
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            // Type
+            if (type != null)
+            {
+                BufferStream bufferStream = new BufferStream(_bufferManager);
+                bufferStream.SetLength(4);
+                bufferStream.Seek(4, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(type);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 4), 0, 4);
+
+                streams.Add(bufferStream);
+            }
+
+            streams.Add(stream);
+
+            return new JoinStream(streams);
+        }
+
+        private static Stream RemoveType(Stream stream, string type)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream.Length >= 4) throw new ArgumentOutOfRangeException("stream");
+
+            Encoding encoding = new UTF8Encoding(false);
+
+            byte[] lengthBuffer = new byte[4];
+            if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) throw new FormatException();
+            int length = NetworkConverter.ToInt32(lengthBuffer);
+
+            using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+            {
+                using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                {
+                    if (type != reader.ReadToEnd()) throw new FormatException();
+                }
+            }
+
+            return new RangeStream(stream, stream.Position, stream.Length - stream.Position);
+        }
+
+        private static Stream AddHash(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException("stream");
+            if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
 
             try
             {
-                BufferStream outStream = null;
+                BufferStream headerStream = new BufferStream(_bufferManager);
+                headerStream.WriteByte((byte)ConvertHashAlgorithm.Sha512);
 
-                try
-                {
-                    outStream = new BufferStream(_bufferManager);
+                BufferStream hashStream = new BufferStream(_bufferManager);
+                var hash = Sha512.ComputeHash(stream);
+                headerStream.Write(hash, 0, hash.Length);
 
-                    // Type
-                    outStream.WriteByte((byte)ConvertCryptoAlgorithm.Rijndael256_Sha512);
-
-                    byte[] cryptoKey = new byte[32];
-                    _random.GetBytes(cryptoKey);
-
-                    {
-                        var encryptedBuffer = Exchange.Encrypt(exchangeEncrypt, cryptoKey);
-                        outStream.Write(NetworkConverter.GetBytes((int)encryptedBuffer.Length), 0, 4);
-                        outStream.Write(encryptedBuffer, 0, encryptedBuffer.Length);
-                    }
-
-                    byte[] iv = new byte[32];
-                    _random.GetBytes(iv);
-                    outStream.Write(iv, 0, iv.Length);
-
-                    using (Stream inStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position))
-                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateEncryptor(cryptoKey, iv), CryptoStreamMode.Read))
-                    {
-                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
-                            {
-                                outStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            _bufferManager.ReturnBuffer(buffer);
-                        }
-
-                        inStream.Seek(0, SeekOrigin.Begin);
-                        var hash = Sha512.ComputeHash(inStream);
-
-                        outStream.Write(hash, 0, hash.Length);
-                    }
-
-                    outStream.Seek(0, SeekOrigin.Begin);
-                }
-                catch (Exception)
-                {
-                    if (outStream != null)
-                        outStream.Dispose();
-
-                    throw;
-                }
-
-                return outStream;
+                return new JoinStream(headerStream, new WrapperStream(stream, true), hashStream);
             }
             catch (Exception e)
             {
@@ -357,89 +523,29 @@ namespace Library.Net.Lair
             }
         }
 
-        private static Stream Decrypt(Stream stream, IExchangeDecrypt exchangeDecrypt)
+        private static Stream RemoveHash(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException("stream");
-            if (exchangeDecrypt == null) throw new ArgumentNullException("exchangeDecrypt");
+            if (stream.Length <= 64) throw new ArgumentOutOfRangeException("stream");
 
-            try
+            byte type = (byte)stream.ReadByte();
+
+            if (type == (byte)ConvertHashAlgorithm.Sha512)
             {
-                byte type = (byte)stream.ReadByte();
+                var dataStream = new RangeStream(stream, 0, stream.Length - 64);
 
-                if (type == (byte)ConvertCryptoAlgorithm.Rijndael256_Sha512)
+                using (RangeStream hashStream = new RangeStream(stream, stream.Length - 64, stream.Length))
                 {
-                    byte[] cryptoKey;
+                    byte[] hash = new byte[64];
+                    hashStream.Read(hash, 0, hash.Length);
 
-                    {
-                        byte[] lengthBuffer = new byte[4];
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) throw new ArgumentException();
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-
-                        byte[] encryptedBuffer = new byte[length];
-                        if (stream.Read(encryptedBuffer, 0, encryptedBuffer.Length) != encryptedBuffer.Length) throw new ArgumentException();
-
-                        cryptoKey = Exchange.Decrypt(exchangeDecrypt, encryptedBuffer);
-                    }
-
-                    BufferStream outStream = null;
-
-                    try
-                    {
-                        using (Stream dataStream = new WrapperStream(stream, true))
-                        {
-                            byte[] hash = new byte[64];
-                            stream.Seek(-64, SeekOrigin.End);
-                            if (stream.Read(hash, 0, hash.Length) != hash.Length) throw new ArgumentException();
-
-                            outStream = new BufferStream(_bufferManager);
-
-                            var iv = new byte[32];
-                            dataStream.Read(iv, 0, iv.Length);
-
-                            using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                            using (var inStream = new RangeStream(dataStream, 0, dataStream.Length - 64))
-                            using (CryptoStream cs = new CryptoStream(dataStream, rijndael.CreateDecryptor(cryptoKey, iv), CryptoStreamMode.Read))
-                            {
-                                byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
-
-                                try
-                                {
-                                    int length = 0;
-
-                                    while (0 != (length = cs.Read(buffer, 0, buffer.Length)))
-                                    {
-                                        outStream.Write(buffer, 0, length);
-                                    }
-                                }
-                                finally
-                                {
-                                    _bufferManager.ReturnBuffer(buffer);
-                                }
-                            }
-
-                            outStream.Seek(0, SeekOrigin.Begin);
-                            if (!Unsafe.Equals(hash, Sha512.ComputeHash(outStream))) throw new ArgumentException();
-                        }
-
-                        outStream.Seek(0, SeekOrigin.Begin);
-                    }
-                    catch (Exception)
-                    {
-                        if (outStream != null)
-                            outStream.Dispose();
-
-                        throw;
-                    }
-
-                    return outStream;
+                    if (!Unsafe.Equals(hash, Sha512.ComputeHash(dataStream))) throw new FormatException();
                 }
 
-                throw new NotSupportedException();
+                dataStream.Seek(0, SeekOrigin.Begin);
             }
-            catch (Exception e)
-            {
-                throw new ArgumentException(e.Message, e);
-            }
+
+            throw new NotSupportedException();
         }
 
         public static ArraySegment<byte> ToSectionProfileContentBlock(SectionProfileContent content)
@@ -448,10 +554,12 @@ namespace Library.Net.Lair
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<SectionProfileContent>(content))
+            using (Stream contentStream = content.Export(_bufferManager))
+            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "SectionProfile"))
             {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
-                stream.Read(value.Array, value.Offset, value.Count);
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
+                typeStream.Read(value.Array, value.Offset, value.Count);
             }
 
             return value;
@@ -463,9 +571,11 @@ namespace Library.Net.Lair
 
             try
             {
-                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "SectionProfile"))
+                using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ContentConverter.FromStream<SectionProfileContent>(stream);
+                    return SectionProfileContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -474,36 +584,42 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToSectionMessageContentBlock(SectionMessageContent content, IExchangeEncrypt exchangeEncrypt)
+        public static ArraySegment<byte> ToSectionMessageContentBlock(SectionMessageContent content, IExchangeEncrypt publicKey)
         {
             if (content == null) throw new ArgumentNullException("content");
-            if (exchangeEncrypt == null) throw new ArgumentNullException("exchangeEncrypt");
+            if (publicKey == null) throw new ArgumentNullException("publicKey");
 
             ArraySegment<byte> value;
 
-            using (Stream contentStream = ContentConverter.ToStream<SectionMessageContent>(content))
-            using (Stream paddingStream = ContentConverter.ToPaddingStream(contentStream, 1024 * 32))
-            using (Stream cryptostream = ContentConverter.Encrypt(paddingStream, exchangeEncrypt))
+            using (Stream contentStream = content.Export(_bufferManager))
+            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream paddingStream = ContentConverter.AddPadding(compressStream, 1024 * 32))
+            using (Stream hashStream = ContentConverter.AddHash(paddingStream))
+            using (Stream cryptostream = ContentConverter.Encrypt(paddingStream, publicKey))
+            using (Stream typeStream = ContentConverter.AddType(cryptostream, "SectionMessage"))
             {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)cryptostream.Length), 0, (int)cryptostream.Length);
-                cryptostream.Read(value.Array, value.Offset, value.Count);
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
+                typeStream.Read(value.Array, value.Offset, value.Count);
             }
 
             return value;
         }
 
-        public static SectionMessageContent FromSectionMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt exchangeDecrypt)
+        public static SectionMessageContent FromSectionMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt privateKey)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
-            if (exchangeDecrypt == null) throw new ArgumentNullException("exchangeDecrypt");
+            if (privateKey == null) throw new ArgumentNullException("privateKey");
 
             try
             {
-                using (Stream cryptoStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream paddingStream = ContentConverter.Decrypt(cryptoStream, exchangeDecrypt))
-                using (Stream contentStream = ContentConverter.FromPaddingStream(paddingStream))
+                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream cryptoStream = ContentConverter.RemoveType(typeStream, "SectionMessage"))
+                using (Stream hashStream = ContentConverter.Decrypt(cryptoStream, privateKey))
+                using (Stream paddingStream = ContentConverter.RemoveHash(hashStream))
+                using (Stream compressStream = ContentConverter.RemovePadding(paddingStream))
+                using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ContentConverter.FromStream<SectionMessageContent>(contentStream);
+                    return SectionMessageContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -512,30 +628,34 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToDocumentPageContentBlock(DocumentPageContent content)
+        public static ArraySegment<byte> ToDocumentArchiveContentBlock(DocumentArchiveContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<DocumentPageContent>(content))
+            using (Stream contentStream = content.Export(_bufferManager))
+            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "DocumentArchive"))
             {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
-                stream.Read(value.Array, value.Offset, value.Count);
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
+                typeStream.Read(value.Array, value.Offset, value.Count);
             }
 
             return value;
         }
 
-        public static DocumentPageContent FromDocumentPageContentBlock(ArraySegment<byte> content)
+        public static DocumentArchiveContent FromDocumentArchiveContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
             try
             {
-                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "DocumentArchive"))
+                using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ContentConverter.FromStream<DocumentPageContent>(stream);
+                    return DocumentArchiveContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -550,10 +670,12 @@ namespace Library.Net.Lair
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<DocumentVoteContent>(content))
+            using (Stream contentStream = content.Export(_bufferManager))
+            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "DocumentVote"))
             {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
-                stream.Read(value.Array, value.Offset, value.Count);
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
+                typeStream.Read(value.Array, value.Offset, value.Count);
             }
 
             return value;
@@ -565,9 +687,11 @@ namespace Library.Net.Lair
 
             try
             {
-                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "DocumentVote"))
+                using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ContentConverter.FromStream<DocumentVoteContent>(stream);
+                    return DocumentVoteContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -582,10 +706,12 @@ namespace Library.Net.Lair
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<ChatTopicContent>(content))
+            using (Stream contentStream = content.Export(_bufferManager))
+            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "ChatTopic"))
             {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
-                stream.Read(value.Array, value.Offset, value.Count);
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
+                typeStream.Read(value.Array, value.Offset, value.Count);
             }
 
             return value;
@@ -597,9 +723,11 @@ namespace Library.Net.Lair
 
             try
             {
-                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "ChatTopic"))
+                using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ContentConverter.FromStream<ChatTopicContent>(stream);
+                    return ChatTopicContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -614,10 +742,12 @@ namespace Library.Net.Lair
 
             ArraySegment<byte> value;
 
-            using (Stream stream = ContentConverter.ToStream<ChatMessageContent>(content))
+            using (Stream contentStream = content.Export(_bufferManager))
+            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "ChatMessage"))
             {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)stream.Length), 0, (int)stream.Length);
-                stream.Read(value.Array, value.Offset, value.Count);
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
+                typeStream.Read(value.Array, value.Offset, value.Count);
             }
 
             return value;
@@ -629,9 +759,11 @@ namespace Library.Net.Lair
 
             try
             {
-                using (Stream stream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "ChatMessage"))
+                using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ContentConverter.FromStream<ChatMessageContent>(stream);
+                    return ChatMessageContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)

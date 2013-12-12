@@ -134,19 +134,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Information> DownloadingInformation
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    return _downloadManager.DownloadingInformation;
-                }
-            }
-        }
-
         public Node BaseNode
         {
             get
@@ -282,17 +269,6 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<IExchangeDecrypt> PrivateKeys
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _downloadManager.ExchangePrivateKeys;
-                }
-            }
-        }
-
         public void SetBaseNode(Node baseNode)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -333,35 +309,24 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<Header> GetHeaders(Link link, string type)
+        public SectionManager GetSectionManager(Tag tag, string leaderSignature)
+        {
+            return new SectionManager(tag, leaderSignature, this, _bufferManager);
+        }
+
+        internal IEnumerable<Header> GetHeaders(Link link)
         {
             lock (_thisLock)
             {
-                return _connectionsManager.GetHeaders(link, type);
+                return _connectionsManager.GetHeaders(link);
             }
         }
 
-        public IEnumerable<Header> GetHeaders(Link link, string type)
-        {
-            lock (_thisLock)
-            {
-                return _connectionsManager.GetHeaders(link, type);
-            }
-        }
-
-        public void Download(Header header)
+        internal ArraySegment<byte>? Download(Header header)
         {
             lock (this.ThisLock)
             {
-                _downloadManager.Download(header);
-            }
-        }
-
-        public void SetExchangePrivateKeys(IEnumerable<ExchangePrivateKey> exchangePrivateKeys)
-        {
-            lock (this.ThisLock)
-            {
-                _downloadManager.SetExchangePrivateKeys(exchangePrivateKeys);
+                return _downloadManager.Download(header);
             }
         }
 

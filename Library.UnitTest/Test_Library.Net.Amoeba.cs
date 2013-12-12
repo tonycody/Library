@@ -100,18 +100,14 @@ namespace Library.UnitTest
                 node = new Node(id, uris);
             }
 
-            var node2 = node.DeepClone();
-
-            Assert.AreEqual(node, node2, "Node #1");
-
-            Node node3;
+            Node node2;
 
             using (var nodeStream = node.Export(_bufferManager))
             {
-                node3 = Node.Import(nodeStream, _bufferManager);
+                node2 = Node.Import(nodeStream, _bufferManager);
             }
 
-            Assert.AreEqual(node, node3, "Node #2");
+            Assert.AreEqual(node, node2, "Node #1");
         }
 
         [Test]
@@ -126,18 +122,14 @@ namespace Library.UnitTest
                 key = new Key(id, HashAlgorithm.Sha512);
             }
 
-            var key2 = key.DeepClone();
-
-            Assert.AreEqual(key, key2, "Key #1");
-
-            Key key3;
+            Key key2;
 
             using (var keyStream = key.Export(_bufferManager))
             {
-                key3 = Key.Import(keyStream, _bufferManager);
+                key2 = Key.Import(keyStream, _bufferManager);
             }
 
-            Assert.AreEqual(key, key3, "Key #2");
+            Assert.AreEqual(key, key2, "Key #1");
         }
 
         [Test]
@@ -165,7 +157,7 @@ namespace Library.UnitTest
                 DigitalSignature digitalSignature = new DigitalSignature("123", a);
                 seed.CreateCertificate(digitalSignature);
 
-                var seed2 = seed.DeepClone();
+                var seed2 = seed.Clone();
 
                 Assert.AreEqual(seed, seed2, "Seed #1");
 
@@ -198,7 +190,7 @@ namespace Library.UnitTest
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             box.CreateCertificate(digitalSignature);
 
-            var box2 = box.DeepClone();
+            var box2 = box.Clone();
 
             Assert.AreEqual(box, box2, "Box #1");
 
@@ -223,7 +215,7 @@ namespace Library.UnitTest
             var store = new Store();
             store.Boxes.Add(new Box() { Name = "Box" });
 
-            var store2 = store.DeepClone();
+            var store2 = store.Clone();
 
             Assert.AreEqual(store, store2, "Store #1");
 

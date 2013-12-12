@@ -9,6 +9,7 @@ using System.Xml;
 using Library.Io;
 using Library.Net.Connections;
 using Library.Security;
+using System.Collections.ObjectModel;
 
 namespace Library.Net.Amoeba
 {
@@ -996,11 +997,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Node> _readOnlyNodes;
+
             public IEnumerable<Node> Nodes
             {
                 get
                 {
-                    return this.ProtectedNodes;
+                    if (_readOnlyNodes == null)
+                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes);
+
+                    return _readOnlyNodes;
                 }
             }
 
@@ -1080,11 +1086,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
+
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    return this.ProtectedKeys;
+                    if (_readOnlyKeys == null)
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+
+                    return _readOnlyKeys;
                 }
             }
 
@@ -1164,11 +1175,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
+
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    return this.ProtectedKeys;
+                    if (_readOnlyKeys == null)
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+
+                    return _readOnlyKeys;
                 }
             }
 
@@ -1358,11 +1374,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<string> _readOnlySignatures;
+
             public IEnumerable<string> Signatures
             {
                 get
                 {
-                    return this.ProtectedSignatures;
+                    if (_readOnlySignatures == null)
+                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
+
+                    return _readOnlySignatures;
                 }
             }
 
@@ -1442,11 +1463,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Seed> _readOnlySeeds;
+
             public IEnumerable<Seed> Seeds
             {
                 get
                 {
-                    return this.ProtectedSeeds;
+                    if (_readOnlySeeds == null)
+                        _readOnlySeeds = new ReadOnlyCollection<Seed>(this.ProtectedSeeds);
+
+                    return _readOnlySeeds;
                 }
             }
 

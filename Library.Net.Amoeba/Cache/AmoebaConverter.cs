@@ -305,7 +305,5 @@ namespace Library.Net.Amoeba
                 return null;
             }
         }
-
-        public static byte type { get; set; }
     }
 }

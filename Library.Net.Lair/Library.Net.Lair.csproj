@@ -97,35 +97,104 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\CacheManager.cs" />
-    <Compile Include="Cache\Content\Chat\ChatMessageContent.cs" />
-    <Compile Include="Cache\Content\Chat\ChatTopicContent.cs" />
-    <Compile Include="Cache\Content\Document\DocumentOpinionContent.cs" />
-    <Compile Include="Cache\Content\Document\DocumentPageContent.cs" />
+    <Compile Include="Cache\Content\ChatMessageContent.cs" />
+    <Compile Include="Cache\Content\ChatTopicContent.cs" />
+    <Compile Include="Cache\Content\DocumentVoteContent.cs" />
+    <Compile Include="Cache\Content\DocumentArchiveContent.cs" />
+    <Compile Include="Cache\PageCollection.cs" />
+    <Compile Include="Cache\Page.cs" />
+    <Compile Include="Cache\Header\Chat\ChatMessageHeader.cs" />
+    <Compile Include="Cache\Header\Chat\ChatMessageHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Section\SectionProfileHeader.cs" />
+    <Compile Include="Cache\Header\Section\SectionProfileHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Document\DocumentArchiveHeader.cs" />
+    <Compile Include="Cache\Header\Document\DocumentArchiveHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Chat\Chat.cs" />
+    <Compile Include="Cache\Header\Chat\ChatCollection.cs" />
+    <Compile Include="Cache\Header\Chat\ChatTopicHeader.cs" />
+    <Compile Include="Cache\Header\Chat\ChatTopicHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Document\Document.cs" />
+    <Compile Include="Cache\Header\Document\DocumentCollection.cs" />
+    <Compile Include="Cache\Header\Document\DocumentVoteHeader.cs" />
+    <Compile Include="Cache\Header\Document\DocumentVoteHeaderCollection.cs" />
+    <Compile Include="Cache\OptionCollection.cs" />
+    <Compile Include="Cache\Header\Section\SectionMessageHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
     <Compile Include="Cache\LairConverter.cs" />
-    <Compile Include="Cache\Header\Link.cs" />
-    <Compile Include="Cache\Header\LinkCollection.cs" />
-    <Compile Include="Cache\Header\HeaderCollection.cs" />
-    <Compile Include="Cache\Header\Header.cs" />
-    <Compile Include="Cache\Header\TagCollection.cs" />
-    <Compile Include="Cache\Header\Tag.cs" />
-    <Compile Include="Cache\Content\Section\SectionMessageContent.cs" />
-    <Compile Include="Cache\Content\Section\SectionProfileContent.cs" />
-    <Compile Include="Cache\_Interface\Content\Chat\IChatMessageContent.cs" />
-    <Compile Include="Cache\_Interface\Content\Chat\IChatTopicContent.cs" />
-    <Compile Include="Cache\_Interface\Content\Document\IDocumentOpinionContent.cs" />
-    <Compile Include="Cache\_Interface\Content\Document\IDocumentPageContent.cs" />
-    <Compile Include="Cache\_Interface\Content\Section\ISectionMessageContent.cs" />
-    <Compile Include="Cache\_Interface\Content\Section\ISectionProfileContent.cs" />
-    <Compile Include="Cache\_Interface\Header\ILink.cs" />
-    <Compile Include="Cache\_Interface\ICryptoAlgorithm.cs" />
-    <Compile Include="Cache\_Interface\Header\IHeader.cs" />
-    <Compile Include="Cache\_Interface\Header\ITag.cs" />
-    <Compile Include="Cache\_Interface\IComputeHash.cs" />
-    <Compile Include="Cache\_Interface\IHashAlgorithm.cs" />
-    <Compile Include="Cache\_Interface\Header\IKey.cs" />
-    <Compile Include="Cache\Header\Key.cs" />
-    <Compile Include="Cache\Header\KeyCollection.cs" />
+    <Compile Include="Cache\Header\Section\SectionCollection.cs" />
+    <Compile Include="Cache\Header\Section\Section.cs" />
+    <Compile Include="Cache\Content\SectionMessageContent.cs" />
+    <Compile Include="Cache\Content\SectionProfileContent.cs" />
+    <Compile Include="Cache\Key.cs" />
+    <Compile Include="Cache\KeyCollection.cs" />
+    <Compile Include="Cache\_Interface\Content\IChatMessageContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Content\IChatTopicContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Content\IDocumentArchiveContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Content\IDocumentVoteContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Content\ISectionMessageContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Content\ISectionProfileContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Chat\IChatMessageHeader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Chat\IChatTopicHeader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Document\IDocumentArchiveHeader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Document\IDocumentVoteHeader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Section\ISectionMessageHeader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Section\ISectionProfileHeader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\IComputeHash.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\ICryptoAlgorithm.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\IHashAlgorithm.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\IHeader.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\IKey.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\IPage.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\ITag.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Chat\IChat.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Document\IDocument.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Cache\_Interface\Header\Section\ISection.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="ContentConverter.cs" />
+    <Compile Include="SectionManager.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />

@@ -23,7 +23,7 @@ Library.Net.Amoeba\EqualityComparer.cs
 Library.Net.Lair\EqualityComparer.cs
 
 Library.Net.Amoeba\Cache\Seed\Key.cs
-Library.Net.Lair\Cache\Header\Key.cs
+Library.Net.Lair\Cache\Key.cs
 
 ..\Amoeba\Amoeba\WindowPosition.cs
 ..\Lair\Lair\WindowPosition.cs
@@ -45,3 +45,15 @@ Library.Net.Lair\Cache\Header\Key.cs
 
 ..\Amoeba\Amoeba\OverlayNetworkManager.cs
 ..\Lair\Lair\OverlayNetworkManager.cs
+
+..\Amoeba\Amoeba\Windows\VersionInformationWindow.xaml
+..\Lair\Lair\Windows\VersionInformationWindow.xaml
+
+..\Amoeba\Amoeba\Windows\VersionInformationWindow.xaml.cs
+..\Lair\Lair\Windows\VersionInformationWindow.xaml.cs
+
+..\Amoeba\Amoeba\Windows\NameWindow.xaml
+..\Lair\Lair\Windows\NameWindow.xaml
+
+..\Amoeba\Amoeba\Windows\NameWindow.xaml.cs
+..\Lair\Lair\Windows\NameWindow.xaml.cs

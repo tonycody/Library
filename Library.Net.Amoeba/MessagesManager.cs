@@ -185,14 +185,14 @@ namespace Library.Net.Amoeba
             _pushLinkSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
             _pushStoreSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
 
-            _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
-            _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 60, 0));
+            _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
-            _pushSeedsRequest = new VolatileCollection<string>(new TimeSpan(0, 60, 0));
-            _pullSeedsRequest = new VolatileCollection<string>(new TimeSpan(0, 60, 0));
+            _pushSeedsRequest = new VolatileCollection<string>(new TimeSpan(0, 30, 0));
+            _pullSeedsRequest = new VolatileCollection<string>(new TimeSpan(0, 30, 0));
         }
 
         public int Id

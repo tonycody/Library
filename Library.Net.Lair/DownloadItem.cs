@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using System;
 
 namespace Library.Net.Lair
 {
@@ -19,14 +20,9 @@ namespace Library.Net.Lair
     sealed class DownloadItem
     {
         private DownloadState _state;
-        private Key _key;
 
-        private SectionProfileContent _sectionProfileContent;
-        private SectionMessageContent _sectionMessageContent;
-        private DocumentPageContent _documentPageContent;
-        private DocumentVoteContent _documentVoteContent;
-        private ChatTopicContent _chatTopicContent;
-        private ChatMessageContent _chatMessageContent;
+        private Key _key;
+        private ArraySegment<byte> _content;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
@@ -88,116 +84,21 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "SectionProfileContent")]
-        public SectionProfileContent SectionProfileContent
+        [DataMember(Name = "Content")]
+        public ArraySegment<byte> Content
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _sectionProfileContent;
+                    return _content;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _sectionProfileContent = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "SectionMessageContent")]
-        public SectionMessageContent SectionMessageContent
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _sectionMessageContent;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _sectionMessageContent = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "DocumentPageContent")]
-        public DocumentPageContent DocumentPageContent
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _documentPageContent;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _documentPageContent = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "DocumentVoteContent")]
-        public DocumentVoteContent DocumentVoteContent
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _documentVoteContent;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _documentVoteContent = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "ChatTopicContent")]
-        public ChatTopicContent ChatTopicContent
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _chatTopicContent;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _chatTopicContent = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "ChatMessageContent")]
-        public ChatMessageContent ChatMessageContent
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _chatMessageContent;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _chatMessageContent = value;
+                    _content = value;
                 }
             }
         }

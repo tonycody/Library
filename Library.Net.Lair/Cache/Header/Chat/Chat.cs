@@ -7,31 +7,30 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Link", Namespace = "http://Library/Net/Lair")]
-    public sealed class Link : ItemBase<Link>, ILink<Tag>
+    [DataContract(Name = "Chat", Namespace = "http://Library/Net/Lair")]
+    public sealed class Chat : ItemBase<Chat>, IChat
     {
         private enum SerializeId : byte
         {
-            Tag = 0,
-            Type = 1,
-            Path = 2,
+            Id = 0,
+            Name = 1,
         }
 
-        private Tag _tag;
-        private string _type;
-        private string _path;
+        private byte[] _id;
+        private string _name;
+
+        private int _hashCode;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxTypeLength = 256;
-        public static readonly int MaxPathLength = 1024;
+        public static readonly int MaxIdLength = 64;
+        public static readonly int MaxNameLength = 256;
 
-        public Link(Tag tag, string type, string path)
+        public Chat(byte[] id, string name)
         {
-            this.Tag = tag;
-            this.Type = type;
-            this.Path = path;
+            this.Id = id;
+            this.Name = name;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -49,22 +48,18 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Tag)
+                        if (id == (byte)SerializeId.Id)
                         {
-                            this.Tag = Tag.Import(rangeStream, bufferManager);
+                            byte[] buffer = new byte[rangeStream.Length];
+                            rangeStream.Read(buffer, 0, buffer.Length);
+
+                            this.Id = buffer;
                         }
-                        else if (id == (byte)SerializeId.Type)
+                        else if (id == (byte)SerializeId.Name)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Type = reader.ReadToEnd();
-                            }
-                        }
-                        else if (id == (byte)SerializeId.Path)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Path = reader.ReadToEnd();
+                                this.Name = reader.ReadToEnd();
                             }
                         }
                     }
@@ -79,38 +74,18 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Tag
-                if (this.Tag != null)
-                {
-                    Stream exportStream = this.Tag.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Tag);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
-                }
-                // Type
-                if (this.Type != null)
+                // Id
+                if (this.Id != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.Type);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Type);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Id);
+                    bufferStream.Write(this.Id, 0, this.Id.Length);
 
                     streams.Add(bufferStream);
                 }
-                // Path
-                if (this.Path != null)
+                // Name
+                if (this.Name != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -119,12 +94,12 @@ namespace Library.Net.Lair
                     using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                     using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        writer.Write(this.Path);
+                        writer.Write(this.Name);
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Path);
+                    bufferStream.WriteByte((byte)SerializeId.Name);
 
                     streams.Add(bufferStream);
                 }
@@ -137,29 +112,32 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (this.Tag == null) return 0;
-                else return this.Tag.GetHashCode();
+                return _hashCode;
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Link)) return false;
+            if ((object)obj == null || !(obj is Chat)) return false;
 
-            return this.Equals((Link)obj);
+            return this.Equals((Chat)obj);
         }
 
-        public override bool Equals(Link other)
+        public override bool Equals(Chat other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Tag != other.Tag
-                || this.Type != other.Type
-                || this.Path != other.Path)
+            if ((this.Id == null) != (other.Id == null)
+                || this.Name != other.Name)
             {
                 return false;
+            }
+
+            if (this.Id != null && other.Id != null)
+            {
+                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;
@@ -184,74 +162,66 @@ namespace Library.Net.Lair
             }
         }
 
-        #region ILink<Tag>
+        #region IChat
 
-        [DataMember(Name = "Tag")]
-        public Tag Tag
+        [DataMember(Name = "Id")]
+        public byte[] Id
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _tag;
+                    return _id;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    _tag = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "Type")]
-        public string Type
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _type;
-                }
-            }
-            private set
-            {
-                lock (this.ThisLock)
-                {
-                    if (value != null && value.Length > Link.MaxTypeLength)
+                    if (value != null && (value.Length > Chat.MaxIdLength))
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _type = value;
+                        _id = value;
+                    }
+
+                    if (value != null && value.Length != 0)
+                    {
+                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                        else _hashCode = value[0];
+                    }
+                    else
+                    {
+                        _hashCode = 0;
                     }
                 }
             }
         }
 
-        [DataMember(Name = "Path")]
-        public string Path
+        [DataMember(Name = "Name")]
+        public string Name
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _path;
+                    return _name;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Link.MaxPathLength)
+                    if (value != null && value.Length > Chat.MaxNameLength)
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _path = value;
+                        _name = value;
                     }
                 }
             }

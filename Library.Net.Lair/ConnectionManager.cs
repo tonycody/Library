@@ -8,6 +8,7 @@ using System.Threading;
 using System.Xml;
 using Library.Io;
 using Library.Net.Connections;
+using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
@@ -34,12 +35,19 @@ namespace Library.Net.Lair
 
     class PullHeadersRequestEventArgs : EventArgs
     {
-        public IEnumerable<Link> Links { get; set; }
+        public IEnumerable<Section> Sections { get; set; }
+        public IEnumerable<Document> Documents { get; set; }
+        public IEnumerable<Chat> Chats { get; set; }
     }
 
     class PullHeadersEventArgs : EventArgs
     {
-        public IEnumerable<Header> Headers { get; set; }
+        public IEnumerable<SectionProfileHeader> SectionProfileHeaders { get; set; }
+        public IEnumerable<SectionMessageHeader> SectionMessageHeaders { get; set; }
+        public IEnumerable<DocumentArchiveHeader> DocumentArchiveHeaders { get; set; }
+        public IEnumerable<DocumentVoteHeader> DocumentVoteHeaders { get; set; }
+        public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
+        public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -568,12 +576,25 @@ namespace Library.Net.Lair
                                 else if (type == (byte)SerializeId.HeadersRequest)
                                 {
                                     var message = HeadersRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullHeadersRequest(new PullHeadersRequestEventArgs() { Links = message.Links });
+                                    this.OnPullHeadersRequest(new PullHeadersRequestEventArgs()
+                                    {
+                                        Sections = message.Sections,
+                                        Documents = message.Documents,
+                                        Chats = message.Chats,
+                                    });
                                 }
                                 else if (type == (byte)SerializeId.Headers)
                                 {
                                     var message = HeadersMessage.Import(stream2, _bufferManager);
-                                    this.OnPullHeaders(new PullHeadersEventArgs() { Headers = message.Headers });
+                                    this.OnPullHeaders(new PullHeadersEventArgs()
+                                    {
+                                        SectionProfileHeaders = message.SectionProfileHeaders,
+                                        SectionMessageHeaders = message.SectionMessageHeaders,
+                                        DocumentArchiveHeaders = message.DocumentArchiveHeaders,
+                                        DocumentVoteHeaders = message.DocumentVoteHeaders,
+                                        ChatTopicHeaders = message.ChatTopicHeaders,
+                                        ChatMessageHeaders = message.ChatMessageHeaders,
+                                    });
                                 }
                             }
                         }
@@ -824,7 +845,9 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushHeadersRequest(LinkCollection tags)
+        public void PushHeadersRequest(IEnumerable<Section> sections,
+                IEnumerable<Document> documents,
+                IEnumerable<Chat> chats)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -837,7 +860,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.HeadersRequest);
                     stream.Flush();
 
-                    var message = new HeadersRequestMessage(tags);
+                    var message = new HeadersRequestMessage(sections, documents, chats);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -861,7 +884,12 @@ namespace Library.Net.Lair
             }
         }
 
-        public void PushHeaders(IEnumerable<Header> headers)
+        public void PushHeaders(IEnumerable<SectionProfileHeader> sectionProfileHeaders,
+                IEnumerable<SectionMessageHeader> sectionMessageHeaders,
+                IEnumerable<DocumentArchiveHeader> documentArchiveHeaders,
+                IEnumerable<DocumentVoteHeader> documentVoteHeaders,
+                IEnumerable<ChatTopicHeader> chatTopicHeaders,
+                IEnumerable<ChatMessageHeader> chatMessageHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -874,7 +902,12 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.Headers);
                     stream.Flush();
 
-                    var message = new HeadersMessage(headers);
+                    var message = new HeadersMessage(sectionProfileHeaders,
+                        sectionMessageHeaders,
+                        documentArchiveHeaders,
+                        documentVoteHeaders,
+                        chatTopicHeaders,
+                        chatMessageHeaders);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -994,11 +1027,16 @@ namespace Library.Net.Lair
                 }
             }
 
+            private volatile ReadOnlyCollection<Node> _readOnlyNodes;
+
             public IEnumerable<Node> Nodes
             {
                 get
                 {
-                    return this.ProtectedNodes;
+                    if (_readOnlyNodes == null)
+                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes);
+
+                    return _readOnlyNodes;
                 }
             }
 
@@ -1078,11 +1116,16 @@ namespace Library.Net.Lair
                 }
             }
 
+            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
+
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    return this.ProtectedKeys;
+                    if (_readOnlyKeys == null)
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+
+                    return _readOnlyKeys;
                 }
             }
 
@@ -1162,11 +1205,16 @@ namespace Library.Net.Lair
                 }
             }
 
+            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
+
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    return this.ProtectedKeys;
+                    if (_readOnlyKeys == null)
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+
+                    return _readOnlyKeys;
                 }
             }
 
@@ -1286,14 +1334,22 @@ namespace Library.Net.Lair
         {
             private enum SerializeId : byte
             {
-                Link = 0,
+                Section = 0,
+                Document = 1,
+                Chat = 2,
             }
 
-            private LinkCollection _tags;
+            private SectionCollection _sections;
+            private DocumentCollection _documents;
+            private ChatCollection _chats;
 
-            public HeadersRequestMessage(IEnumerable<Link> tags)
+            public HeadersRequestMessage(IEnumerable<Section> sections,
+                IEnumerable<Document> documents,
+                IEnumerable<Chat> chats)
             {
-                if (tags != null) this.ProtectedLinks.AddRange(tags);
+                if (sections != null) this.ProtectedSections.AddRange(sections);
+                if (documents != null) this.ProtectedDocuments.AddRange(documents);
+                if (chats != null) this.ProtectedChats.AddRange(chats);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -1309,9 +1365,17 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Link)
+                        if (id == (byte)SerializeId.Section)
                         {
-                            this.ProtectedLinks.Add(Link.Import(rangeStream, bufferManager));
+                            this.ProtectedSections.Add(Section.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Document)
+                        {
+                            this.ProtectedDocuments.Add(Document.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Chat)
+                        {
+                            this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1322,14 +1386,36 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Links
-                foreach (var t in this.Links)
+                // Sections
+                foreach (var s in this.Sections)
                 {
-                    Stream exportStream = t.Export(bufferManager);
+                    Stream exportStream = s.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Link);
+                    bufferStream.WriteByte((byte)SerializeId.Section);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // Documents
+                foreach (var d in this.Documents)
+                {
+                    Stream exportStream = d.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Document);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // Chats
+                foreach (var c in this.Chats)
+                {
+                    Stream exportStream = c.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Chat);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -1345,23 +1431,78 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<Link> Links
+            private volatile ReadOnlyCollection<Section> _readOnlySections;
+
+            public IEnumerable<Section> Sections
             {
                 get
                 {
-                    return this.ProtectedLinks;
+                    if (_readOnlySections == null)
+                        _readOnlySections = new ReadOnlyCollection<Section>(this.ProtectedSections);
+
+                    return _readOnlySections;
                 }
             }
 
-            [DataMember(Name = "Links")]
-            private LinkCollection ProtectedLinks
+            [DataMember(Name = "Sections")]
+            private SectionCollection ProtectedSections
             {
                 get
                 {
-                    if (_tags == null)
-                        _tags = new LinkCollection(_maxHeaderRequestCount);
+                    if (_sections == null)
+                        _sections = new SectionCollection(_maxHeaderCount);
 
-                    return _tags;
+                    return _sections;
+                }
+            }
+
+            private volatile ReadOnlyCollection<Document> _readOnlyDocuments;
+
+            public IEnumerable<Document> Documents
+            {
+                get
+                {
+                    if (_readOnlyDocuments == null)
+                        _readOnlyDocuments = new ReadOnlyCollection<Document>(this.ProtectedDocuments);
+
+                    return _readOnlyDocuments;
+                }
+            }
+
+            [DataMember(Name = "Documents")]
+            private DocumentCollection ProtectedDocuments
+            {
+                get
+                {
+                    if (_documents == null)
+                        _documents = new DocumentCollection(_maxHeaderCount);
+
+                    return _documents;
+                }
+            }
+
+            private volatile ReadOnlyCollection<Chat> _readOnlyChats;
+
+            public IEnumerable<Chat> Chats
+            {
+                get
+                {
+                    if (_readOnlyChats == null)
+                        _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats);
+
+                    return _readOnlyChats;
+                }
+            }
+
+            [DataMember(Name = "Chats")]
+            private ChatCollection ProtectedChats
+            {
+                get
+                {
+                    if (_chats == null)
+                        _chats = new ChatCollection(_maxHeaderCount);
+
+                    return _chats;
                 }
             }
         }
@@ -1370,14 +1511,34 @@ namespace Library.Net.Lair
         {
             private enum SerializeId : byte
             {
-                Header = 0,
+                SectionProfileHeader = 0,
+                SectionMessageHeader = 1,
+                DocumentArchiveHeader = 2,
+                DocumentVoteHeader = 3,
+                ChatTopicHeader = 4,
+                ChatMessageHeader = 5,
             }
 
-            private HeaderCollection _headers;
+            private SectionProfileHeaderCollection _sectionProfileHeaders;
+            private SectionMessageHeaderCollection _sectionMessageHeaders;
+            private DocumentArchiveHeaderCollection _documentArchiveHeaders;
+            private DocumentVoteHeaderCollection _documentVoteHeaders;
+            private ChatTopicHeaderCollection _chatTopicHeaders;
+            private ChatMessageHeaderCollection _chatMessageHeaders;
 
-            public HeadersMessage(IEnumerable<Header> headers)
+            public HeadersMessage(IEnumerable<SectionProfileHeader> sectionProfileHeaders,
+                IEnumerable<SectionMessageHeader> sectionMessageHeaders,
+                IEnumerable<DocumentArchiveHeader> documentArchiveHeaders,
+                IEnumerable<DocumentVoteHeader> documentVoteHeaders,
+                IEnumerable<ChatTopicHeader> chatTopicHeaders,
+                IEnumerable<ChatMessageHeader> chatMessageHeaders)
             {
-                if (headers != null) this.ProtectedHeaders.AddRange(headers);
+                if (sectionProfileHeaders != null) this.ProtectedSectionProfileHeaders.AddRange(sectionProfileHeaders);
+                if (sectionMessageHeaders != null) this.ProtectedSectionMessageHeaders.AddRange(sectionMessageHeaders);
+                if (documentArchiveHeaders != null) this.ProtectedDocumentArchiveHeaders.AddRange(documentArchiveHeaders);
+                if (documentVoteHeaders != null) this.ProtectedDocumentVoteHeaders.AddRange(documentVoteHeaders);
+                if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
+                if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -1393,9 +1554,29 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Header)
+                        if (id == (byte)SerializeId.SectionProfileHeader)
                         {
-                            this.ProtectedHeaders.Add(Header.Import(rangeStream, bufferManager));
+                            this.ProtectedSectionProfileHeaders.Add(SectionProfileHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.SectionMessageHeader)
+                        {
+                            this.ProtectedSectionMessageHeaders.Add(SectionMessageHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.DocumentArchiveHeader)
+                        {
+                            this.ProtectedDocumentArchiveHeaders.Add(DocumentArchiveHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.DocumentVoteHeader)
+                        {
+                            this.ProtectedDocumentVoteHeaders.Add(DocumentVoteHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.ChatTopicHeader)
+                        {
+                            this.ProtectedChatTopicHeaders.Add(ChatTopicHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.ChatMessageHeader)
+                        {
+                            this.ProtectedChatMessageHeaders.Add(ChatMessageHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1406,14 +1587,69 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Headers
-                foreach (var h in this.Headers)
+                // SectionProfileHeaders
+                foreach (var h in this.SectionProfileHeaders)
                 {
                     Stream exportStream = h.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Header);
+                    bufferStream.WriteByte((byte)SerializeId.SectionProfileHeader);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // SectionMessageHeaders
+                foreach (var h in this.SectionMessageHeaders)
+                {
+                    Stream exportStream = h.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.SectionMessageHeader);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // DocumentArchiveHeaders
+                foreach (var h in this.DocumentArchiveHeaders)
+                {
+                    Stream exportStream = h.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.DocumentArchiveHeader);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // DocumentVoteHeaders
+                foreach (var h in this.DocumentVoteHeaders)
+                {
+                    Stream exportStream = h.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.DocumentVoteHeader);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // ChatTopicHeaders
+                foreach (var h in this.ChatTopicHeaders)
+                {
+                    Stream exportStream = h.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.ChatTopicHeader);
+
+                    streams.Add(new JoinStream(bufferStream, exportStream));
+                }
+                // ChatMessageHeaders
+                foreach (var h in this.ChatMessageHeaders)
+                {
+                    Stream exportStream = h.Export(bufferManager);
+
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.ChatMessageHeader);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -1429,23 +1665,153 @@ namespace Library.Net.Lair
                 }
             }
 
-            public IEnumerable<Header> Headers
+            private volatile ReadOnlyCollection<SectionProfileHeader> _readOnlySectionProfileHeaders;
+
+            public IEnumerable<SectionProfileHeader> SectionProfileHeaders
             {
                 get
                 {
-                    return this.ProtectedHeaders;
+                    if (_readOnlySectionProfileHeaders == null)
+                        _readOnlySectionProfileHeaders = new ReadOnlyCollection<SectionProfileHeader>(this.ProtectedSectionProfileHeaders);
+
+                    return _readOnlySectionProfileHeaders;
                 }
             }
 
-            [DataMember(Name = "Headers")]
-            private HeaderCollection ProtectedHeaders
+            [DataMember(Name = "SectionProfileHeaders")]
+            private SectionProfileHeaderCollection ProtectedSectionProfileHeaders
             {
                 get
                 {
-                    if (_headers == null)
-                        _headers = new HeaderCollection(_maxHeaderCount);
+                    if (_sectionProfileHeaders == null)
+                        _sectionProfileHeaders = new SectionProfileHeaderCollection(_maxHeaderCount);
 
-                    return _headers;
+                    return _sectionProfileHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<SectionMessageHeader> _readOnlySectionMessageHeaders;
+
+            public IEnumerable<SectionMessageHeader> SectionMessageHeaders
+            {
+                get
+                {
+                    if (_readOnlySectionMessageHeaders == null)
+                        _readOnlySectionMessageHeaders = new ReadOnlyCollection<SectionMessageHeader>(this.ProtectedSectionMessageHeaders);
+
+                    return _readOnlySectionMessageHeaders;
+                }
+            }
+
+            [DataMember(Name = "SectionMessageHeaders")]
+            private SectionMessageHeaderCollection ProtectedSectionMessageHeaders
+            {
+                get
+                {
+                    if (_sectionMessageHeaders == null)
+                        _sectionMessageHeaders = new SectionMessageHeaderCollection(_maxHeaderCount);
+
+                    return _sectionMessageHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<DocumentArchiveHeader> _readOnlyDocumentArchiveHeaders;
+
+            public IEnumerable<DocumentArchiveHeader> DocumentArchiveHeaders
+            {
+                get
+                {
+                    if (_readOnlyDocumentArchiveHeaders == null)
+                        _readOnlyDocumentArchiveHeaders = new ReadOnlyCollection<DocumentArchiveHeader>(this.ProtectedDocumentArchiveHeaders);
+
+                    return _readOnlyDocumentArchiveHeaders;
+                }
+            }
+
+            [DataMember(Name = "DocumentArchiveHeaders")]
+            private DocumentArchiveHeaderCollection ProtectedDocumentArchiveHeaders
+            {
+                get
+                {
+                    if (_documentArchiveHeaders == null)
+                        _documentArchiveHeaders = new DocumentArchiveHeaderCollection(_maxHeaderCount);
+
+                    return _documentArchiveHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<DocumentVoteHeader> _readOnlyDocumentVoteHeaders;
+
+            public IEnumerable<DocumentVoteHeader> DocumentVoteHeaders
+            {
+                get
+                {
+                    if (_readOnlyDocumentVoteHeaders == null)
+                        _readOnlyDocumentVoteHeaders = new ReadOnlyCollection<DocumentVoteHeader>(this.ProtectedDocumentVoteHeaders);
+
+                    return _readOnlyDocumentVoteHeaders;
+                }
+            }
+
+            [DataMember(Name = "DocumentVoteHeaders")]
+            private DocumentVoteHeaderCollection ProtectedDocumentVoteHeaders
+            {
+                get
+                {
+                    if (_documentVoteHeaders == null)
+                        _documentVoteHeaders = new DocumentVoteHeaderCollection(_maxHeaderCount);
+
+                    return _documentVoteHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<ChatTopicHeader> _readOnlyChatTopicHeaders;
+
+            public IEnumerable<ChatTopicHeader> ChatTopicHeaders
+            {
+                get
+                {
+                    if (_readOnlyChatTopicHeaders == null)
+                        _readOnlyChatTopicHeaders = new ReadOnlyCollection<ChatTopicHeader>(this.ProtectedChatTopicHeaders);
+
+                    return _readOnlyChatTopicHeaders;
+                }
+            }
+
+            [DataMember(Name = "ChatTopicHeaders")]
+            private ChatTopicHeaderCollection ProtectedChatTopicHeaders
+            {
+                get
+                {
+                    if (_chatTopicHeaders == null)
+                        _chatTopicHeaders = new ChatTopicHeaderCollection(_maxHeaderCount);
+
+                    return _chatTopicHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<ChatMessageHeader> _readOnlyChatMessageHeaders;
+
+            public IEnumerable<ChatMessageHeader> ChatMessageHeaders
+            {
+                get
+                {
+                    if (_readOnlyChatMessageHeaders == null)
+                        _readOnlyChatMessageHeaders = new ReadOnlyCollection<ChatMessageHeader>(this.ProtectedChatMessageHeaders);
+
+                    return _readOnlyChatMessageHeaders;
+                }
+            }
+
+            [DataMember(Name = "ChatMessageHeaders")]
+            private ChatMessageHeaderCollection ProtectedChatMessageHeaders
+            {
+                get
+                {
+                    if (_chatMessageHeaders == null)
+                        _chatMessageHeaders = new ChatMessageHeaderCollection(_maxHeaderCount);
+
+                    return _chatMessageHeaders;
                 }
             }
         }
