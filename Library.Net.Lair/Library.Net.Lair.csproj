@@ -107,16 +107,16 @@
     <Compile Include="Cache\Header\Chat\ChatMessageHeaderCollection.cs" />
     <Compile Include="Cache\Header\Section\SectionProfileHeader.cs" />
     <Compile Include="Cache\Header\Section\SectionProfileHeaderCollection.cs" />
-    <Compile Include="Cache\Header\Document\DocumentArchiveHeader.cs" />
-    <Compile Include="Cache\Header\Document\DocumentArchiveHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Archive\ArchiveDocumentHeader.cs" />
+    <Compile Include="Cache\Header\Archive\ArchiveDocumentHeaderCollection.cs" />
     <Compile Include="Cache\Header\Chat\Chat.cs" />
     <Compile Include="Cache\Header\Chat\ChatCollection.cs" />
     <Compile Include="Cache\Header\Chat\ChatTopicHeader.cs" />
     <Compile Include="Cache\Header\Chat\ChatTopicHeaderCollection.cs" />
-    <Compile Include="Cache\Header\Document\Document.cs" />
-    <Compile Include="Cache\Header\Document\DocumentCollection.cs" />
-    <Compile Include="Cache\Header\Document\DocumentVoteHeader.cs" />
-    <Compile Include="Cache\Header\Document\DocumentVoteHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Archive\Archive.cs" />
+    <Compile Include="Cache\Header\Archive\ArchiveCollection.cs" />
+    <Compile Include="Cache\Header\Archive\ArchiveVoteHeader.cs" />
+    <Compile Include="Cache\Header\Archive\ArchiveVoteHeaderCollection.cs" />
     <Compile Include="Cache\OptionCollection.cs" />
     <Compile Include="Cache\Header\Section\SectionMessageHeaderCollection.cs" />
     <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
@@ -133,10 +133,10 @@
     <Compile Include="Cache\_Interface\Content\IChatTopicContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Content\IDocumentArchiveContent.cs">
+    <Compile Include="Cache\_Interface\Content\IArchiveDocumentContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Content\IDocumentVoteContent.cs">
+    <Compile Include="Cache\_Interface\Content\IArchiveVoteContent.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Content\ISectionMessageContent.cs">
@@ -151,10 +151,10 @@
     <Compile Include="Cache\_Interface\Header\Chat\IChatTopicHeader.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Header\Document\IDocumentArchiveHeader.cs">
+    <Compile Include="Cache\_Interface\Header\Archive\IArchiveDocumentHeader.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Header\Document\IDocumentVoteHeader.cs">
+    <Compile Include="Cache\_Interface\Header\Archive\IArchiveVoteHeader.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Header\Section\ISectionMessageHeader.cs">
@@ -187,14 +187,13 @@
     <Compile Include="Cache\_Interface\Header\Chat\IChat.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Header\Document\IDocument.cs">
+    <Compile Include="Cache\_Interface\Header\Archive\IArchive.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Header\Section\ISection.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ContentConverter.cs" />
-    <Compile Include="SectionManager.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />

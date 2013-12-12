@@ -14,9 +14,12 @@ namespace Library.Net.Lair
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private VolatileDictionary<Header, DownloadItem> _downloadItems;
-
-        private LockedList<ExchangePrivateKey> _exchangePrivateKeys = new LockedList<ExchangePrivateKey>();
+        private VolatileDictionary<SectionProfileHeader, DownloadItem> _sectionProfileDownloadItems;
+        private VolatileDictionary<SectionMessageHeader, DownloadItem> _sectionMessageDownloadItems;
+        private VolatileDictionary<ArchiveDocumentHeader, DownloadItem> _archiveDocumentDownloadItems;
+        private VolatileDictionary<ArchiveVoteHeader, DownloadItem> _archiveVoteDownloadItems;
+        private VolatileDictionary<ChatTopicHeader, DownloadItem> _chatTopicDownloadItems;
+        private VolatileDictionary<ChatMessageHeader, DownloadItem> _chatMessageDownloadItems;
 
         private volatile Thread _downloadManagerThread;
 
@@ -33,18 +36,12 @@ namespace Library.Net.Lair
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
 
-            _downloadItems = new VolatileDictionary<Header, DownloadItem>(new TimeSpan(0, 3, 0));
-        }
-
-        public IEnumerable<ExchangePrivateKey> ExchangePrivateKeys
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _exchangePrivateKeys.ToArray();
-                }
-            }
+            _sectionProfileDownloadItems = new VolatileDictionary<SectionProfileHeader, DownloadItem>(new TimeSpan(0, 3, 0));
+            _sectionMessageDownloadItems = new VolatileDictionary<SectionMessageHeader, DownloadItem>(new TimeSpan(0, 3, 0));
+            _archiveDocumentDownloadItems = new VolatileDictionary<ArchiveDocumentHeader, DownloadItem>(new TimeSpan(0, 3, 0));
+            _archiveVoteDownloadItems = new VolatileDictionary<ArchiveVoteHeader, DownloadItem>(new TimeSpan(0, 3, 0));
+            _chatTopicDownloadItems = new VolatileDictionary<ChatTopicHeader, DownloadItem>(new TimeSpan(0, 3, 0));
+            _chatMessageDownloadItems = new VolatileDictionary<ChatMessageHeader, DownloadItem>(new TimeSpan(0, 3, 0));
         }
 
         private void DownloadThread()
@@ -60,8 +57,10 @@ namespace Library.Net.Lair
                 {
                     refreshStopwatch.Restart();
 
-                    foreach (var pair in _downloadItems.ToArray())
+                    foreach (var pair in _sectionProfileDownloadItems.ToArray())
                     {
+                        if (this.State == ManagerState.Stop) return;
+
                         var header = pair.Key;
                         var item = pair.Value;
 
@@ -73,89 +72,292 @@ namespace Library.Net.Lair
 
                             try
                             {
-                                var type = header.Content[0];
-
-                                if (type == 0)
+                                if (!_cacheManager.Contains(header.Key))
                                 {
-                                    binaryContent = new ArraySegment<byte>(_bufferManager.TakeBuffer(header.Content.Length - 1), 0, header.Content.Length - 1);
-                                    Array.Copy(header.Content, 0, binaryContent.Array, binaryContent.Offset, binaryContent.Count);
-                                }
-                                else if (type == 1)
-                                {
-                                    Key key;
+                                    _connectionsManager.Download(header.Key);
 
-                                    if (item.Key == null)
-                                    {
-                                        using (var memoryStream = new MemoryStream(header.Content))
-                                        {
-                                            item.Key = Key.Import(memoryStream, _bufferManager);
-                                        }
-                                    }
-
-                                    key = item.Key;
-
-                                    if (!_cacheManager.Contains(key))
-                                    {
-                                        _connectionsManager.Download(key);
-
-                                        continue;
-                                    }
-                                    else
-                                    {
-                                        try
-                                        {
-                                            binaryContent = _cacheManager[key];
-                                        }
-                                        catch (BlockNotFoundException)
-                                        {
-                                            continue;
-                                        }
-                                    }
+                                    continue;
                                 }
                                 else
                                 {
-                                    throw new FormatException();
+                                    try
+                                    {
+                                        binaryContent = _cacheManager[header.Key];
+                                    }
+                                    catch (BlockNotFoundException)
+                                    {
+                                        continue;
+                                    }
                                 }
 
-                                if ((header.Link.Type == "Section" && header.Type == "Profile")
-                                    || header.Link.Type == "Document" && (header.Type == "Page" || header.Type == "Vote")
-                                    || header.Link.Type == "Chat" && (header.Type == "Topic" || header.Type == "Message")
-                                    || header.Link.Type == "Mail" && header.Type == "Message")
+                                item.SectionProfileContent = ContentConverter.FromSectionProfileContentBlock(binaryContent);
+
+                                item.State = DownloadState.Completed;
+                            }
+                            finally
+                            {
+                                if (binaryContent.Array != null)
                                 {
-                                    if (header.Type == "Profile")
+                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            item.State = DownloadState.Error;
+
+                            continue;
+                        }
+                    }
+
+                    foreach (var pair in _sectionMessageDownloadItems.ToArray())
+                    {
+                        if (this.State == ManagerState.Stop) return;
+
+                        var header = pair.Key;
+                        var item = pair.Value;
+
+                        try
+                        {
+                            if (item.State != DownloadState.Downloading) continue;
+
+                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
+
+                            try
+                            {
+                                if (!_cacheManager.Contains(header.Key))
+                                {
+                                    _connectionsManager.Download(header.Key);
+
+                                    continue;
+                                }
+                                else
+                                {
+                                    try
                                     {
-                                        item.Content = binaryContent;
+                                        binaryContent = _cacheManager[header.Key];
+                                    }
+                                    catch (BlockNotFoundException)
+                                    {
+                                        continue;
                                     }
                                 }
-                                else if (header.Link.Type == "Document")
+
+                                item.SectionMessageContent = ContentConverter.FromSectionMessageContentBlock(binaryContent, item.ExchangePrivateKey);
+
+                                item.State = DownloadState.Completed;
+                            }
+                            finally
+                            {
+                                if (binaryContent.Array != null)
                                 {
-                                    if (header.Type == "Page")
+                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            item.State = DownloadState.Error;
+
+                            continue;
+                        }
+                    }
+
+                    foreach (var pair in _archiveDocumentDownloadItems.ToArray())
+                    {
+                        if (this.State == ManagerState.Stop) return;
+
+                        var header = pair.Key;
+                        var item = pair.Value;
+
+                        try
+                        {
+                            if (item.State != DownloadState.Downloading) continue;
+
+                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
+
+                            try
+                            {
+                                if (!_cacheManager.Contains(header.Key))
+                                {
+                                    _connectionsManager.Download(header.Key);
+
+                                    continue;
+                                }
+                                else
+                                {
+                                    try
                                     {
-                                        item.Content = binaryContent;
+                                        binaryContent = _cacheManager[header.Key];
                                     }
-                                    else if (header.Type == "Vote")
+                                    catch (BlockNotFoundException)
                                     {
-                                        item.Content = binaryContent;
+                                        continue;
                                     }
                                 }
-                                else if (header.Link.Type == "Chat")
+
+                                item.ArchiveDocumentContent = ContentConverter.FromArchiveDocumentContentBlock(binaryContent);
+
+                                item.State = DownloadState.Completed;
+                            }
+                            finally
+                            {
+                                if (binaryContent.Array != null)
                                 {
-                                    if (header.Type == "Topic")
+                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            item.State = DownloadState.Error;
+
+                            continue;
+                        }
+                    }
+
+                    foreach (var pair in _archiveVoteDownloadItems.ToArray())
+                    {
+                        if (this.State == ManagerState.Stop) return;
+
+                        var header = pair.Key;
+                        var item = pair.Value;
+
+                        try
+                        {
+                            if (item.State != DownloadState.Downloading) continue;
+
+                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
+
+                            try
+                            {
+                                if (!_cacheManager.Contains(header.Key))
+                                {
+                                    _connectionsManager.Download(header.Key);
+
+                                    continue;
+                                }
+                                else
+                                {
+                                    try
                                     {
-                                        item.Content = binaryContent;
+                                        binaryContent = _cacheManager[header.Key];
                                     }
-                                    else if (header.Type == "Message")
+                                    catch (BlockNotFoundException)
                                     {
-                                        item.Content = binaryContent;
+                                        continue;
                                     }
                                 }
-                                else if (header.Link.Type == "Mail")
+
+                                item.ArchiveVoteContent = ContentConverter.FromArchiveVoteContentBlock(binaryContent);
+
+                                item.State = DownloadState.Completed;
+                            }
+                            finally
+                            {
+                                if (binaryContent.Array != null)
                                 {
-                                    if (header.Type == "Message")
+                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            item.State = DownloadState.Error;
+
+                            continue;
+                        }
+                    }
+
+                    foreach (var pair in _chatTopicDownloadItems.ToArray())
+                    {
+                        if (this.State == ManagerState.Stop) return;
+
+                        var header = pair.Key;
+                        var item = pair.Value;
+
+                        try
+                        {
+                            if (item.State != DownloadState.Downloading) continue;
+
+                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
+
+                            try
+                            {
+                                if (!_cacheManager.Contains(header.Key))
+                                {
+                                    _connectionsManager.Download(header.Key);
+
+                                    continue;
+                                }
+                                else
+                                {
+                                    try
                                     {
-                                        item.Content = binaryContent;
+                                        binaryContent = _cacheManager[header.Key];
+                                    }
+                                    catch (BlockNotFoundException)
+                                    {
+                                        continue;
                                     }
                                 }
+
+                                item.ChatTopicContent = ContentConverter.FromChatTopicContentBlock(binaryContent);
+
+                                item.State = DownloadState.Completed;
+                            }
+                            finally
+                            {
+                                if (binaryContent.Array != null)
+                                {
+                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            item.State = DownloadState.Error;
+
+                            continue;
+                        }
+                    }
+
+                    foreach (var pair in _chatMessageDownloadItems.ToArray())
+                    {
+                        if (this.State == ManagerState.Stop) return;
+
+                        var header = pair.Key;
+                        var item = pair.Value;
+
+                        try
+                        {
+                            if (item.State != DownloadState.Downloading) continue;
+
+                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
+
+                            try
+                            {
+                                if (!_cacheManager.Contains(header.Key))
+                                {
+                                    _connectionsManager.Download(header.Key);
+
+                                    continue;
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        binaryContent = _cacheManager[header.Key];
+                                    }
+                                    catch (BlockNotFoundException)
+                                    {
+                                        continue;
+                                    }
+                                }
+
+                                item.ChatMessageContent = ContentConverter.FromChatMessageContentBlock(binaryContent);
+
+                                item.State = DownloadState.Completed;
                             }
                             finally
                             {
@@ -176,7 +378,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public ArraySegment<byte>? Download(Header header)
+        public SectionProfileContent Download(SectionProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -184,40 +386,159 @@ namespace Library.Net.Lair
             {
                 DownloadItem item;
 
-                if (!_downloadItems.TryGetValue(header, out item))
+                if (!_sectionProfileDownloadItems.TryGetValue(header, out item))
                 {
                     item = new DownloadItem();
-                    _downloadItems.Add(header, item);
+                    _sectionProfileDownloadItems.Add(header, item);
                 }
 
                 if (item.State == DownloadState.Completed)
                 {
-                    return item.Content;
+                    return item.SectionProfileContent;
+                }
+                else if (item.State == DownloadState.Error)
+                {
+                    throw new DecodeException();
                 }
 
                 return null;
             }
         }
 
-        public void SetExchangePrivateKeys(IEnumerable<ExchangePrivateKey> exchangePrivateKeys)
+        public SectionMessageContent Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
+            if (header == null) throw new ArgumentNullException("header");
+            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
+
             lock (this.ThisLock)
             {
-                _exchangePrivateKeys.AddRange(exchangePrivateKeys);
+                DownloadItem item;
 
-                foreach (var pair in _downloadItems)
+                if (!_sectionMessageDownloadItems.TryGetValue(header, out item))
                 {
-                    var header = pair.Key;
-                    var item = pair.Value;
-
-                    if (header.Link.Type == "Mail")
-                    {
-                        if (header.Type == "Message")
-                        {
-                            item.State = DownloadState.Downloading;
-                        }
-                    }
+                    item = new DownloadItem();
+                    item.ExchangePrivateKey = exchangePrivateKey;
+                    _sectionMessageDownloadItems.Add(header, item);
                 }
+
+                if (item.State == DownloadState.Completed)
+                {
+                    return item.SectionMessageContent;
+                }
+                else if (item.State == DownloadState.Error)
+                {
+                    throw new DecodeException();
+                }
+
+                return null;
+            }
+        }
+
+        public ArchiveDocumentContent Download(ArchiveDocumentHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                DownloadItem item;
+
+                if (!_archiveDocumentDownloadItems.TryGetValue(header, out item))
+                {
+                    item = new DownloadItem();
+                    _archiveDocumentDownloadItems.Add(header, item);
+                }
+
+                if (item.State == DownloadState.Completed)
+                {
+                    return item.ArchiveDocumentContent;
+                }
+                else if (item.State == DownloadState.Error)
+                {
+                    throw new DecodeException();
+                }
+
+                return null;
+            }
+        }
+
+        public ArchiveVoteContent Download(ArchiveVoteHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                DownloadItem item;
+
+                if (!_archiveVoteDownloadItems.TryGetValue(header, out item))
+                {
+                    item = new DownloadItem();
+                    _archiveVoteDownloadItems.Add(header, item);
+                }
+
+                if (item.State == DownloadState.Completed)
+                {
+                    return item.ArchiveVoteContent;
+                }
+                else if (item.State == DownloadState.Error)
+                {
+                    throw new DecodeException();
+                }
+
+                return null;
+            }
+        }
+
+        public ChatTopicContent Download(ChatTopicHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                DownloadItem item;
+
+                if (!_chatTopicDownloadItems.TryGetValue(header, out item))
+                {
+                    item = new DownloadItem();
+                    _chatTopicDownloadItems.Add(header, item);
+                }
+
+                if (item.State == DownloadState.Completed)
+                {
+                    return item.ChatTopicContent;
+                }
+                else if (item.State == DownloadState.Error)
+                {
+                    throw new DecodeException();
+                }
+
+                return null;
+            }
+        }
+
+        public ChatMessageContent Download(ChatMessageHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                DownloadItem item;
+
+                if (!_chatMessageDownloadItems.TryGetValue(header, out item))
+                {
+                    item = new DownloadItem();
+                    _chatMessageDownloadItems.Add(header, item);
+                }
+
+                if (item.State == DownloadState.Completed)
+                {
+                    return item.ChatMessageContent;
+                }
+                else if (item.State == DownloadState.Error)
+                {
+                    throw new DecodeException();
+                }
+
+                return null;
             }
         }
 
@@ -282,5 +603,21 @@ namespace Library.Net.Lair
         }
 
         #endregion
+    }
+
+    [Serializable]
+    class DownloadManagerException : ManagerException
+    {
+        public DownloadManagerException() : base() { }
+        public DownloadManagerException(string message) : base(message) { }
+        public DownloadManagerException(string message, Exception innerException) : base(message, innerException) { }
+    }
+
+    [Serializable]
+    class DecodeException : DownloadManagerException
+    {
+        public DecodeException() : base() { }
+        public DecodeException(string message) : base(message) { }
+        public DecodeException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

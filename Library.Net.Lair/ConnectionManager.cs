@@ -36,7 +36,7 @@ namespace Library.Net.Lair
     class PullHeadersRequestEventArgs : EventArgs
     {
         public IEnumerable<Section> Sections { get; set; }
-        public IEnumerable<Document> Documents { get; set; }
+        public IEnumerable<Archive> Archives { get; set; }
         public IEnumerable<Chat> Chats { get; set; }
     }
 
@@ -44,8 +44,8 @@ namespace Library.Net.Lair
     {
         public IEnumerable<SectionProfileHeader> SectionProfileHeaders { get; set; }
         public IEnumerable<SectionMessageHeader> SectionMessageHeaders { get; set; }
-        public IEnumerable<DocumentArchiveHeader> DocumentArchiveHeaders { get; set; }
-        public IEnumerable<DocumentVoteHeader> DocumentVoteHeaders { get; set; }
+        public IEnumerable<ArchiveDocumentHeader> ArchiveDocumentHeaders { get; set; }
+        public IEnumerable<ArchiveVoteHeader> ArchiveVoteHeaders { get; set; }
         public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
         public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
     }
@@ -579,7 +579,7 @@ namespace Library.Net.Lair
                                     this.OnPullHeadersRequest(new PullHeadersRequestEventArgs()
                                     {
                                         Sections = message.Sections,
-                                        Documents = message.Documents,
+                                        Archives = message.Archives,
                                         Chats = message.Chats,
                                     });
                                 }
@@ -590,8 +590,8 @@ namespace Library.Net.Lair
                                     {
                                         SectionProfileHeaders = message.SectionProfileHeaders,
                                         SectionMessageHeaders = message.SectionMessageHeaders,
-                                        DocumentArchiveHeaders = message.DocumentArchiveHeaders,
-                                        DocumentVoteHeaders = message.DocumentVoteHeaders,
+                                        ArchiveDocumentHeaders = message.ArchiveDocumentHeaders,
+                                        ArchiveVoteHeaders = message.ArchiveVoteHeaders,
                                         ChatTopicHeaders = message.ChatTopicHeaders,
                                         ChatMessageHeaders = message.ChatMessageHeaders,
                                     });
@@ -846,7 +846,7 @@ namespace Library.Net.Lair
         }
 
         public void PushHeadersRequest(IEnumerable<Section> sections,
-                IEnumerable<Document> documents,
+                IEnumerable<Archive> archives,
                 IEnumerable<Chat> chats)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -860,7 +860,7 @@ namespace Library.Net.Lair
                     stream.WriteByte((byte)SerializeId.HeadersRequest);
                     stream.Flush();
 
-                    var message = new HeadersRequestMessage(sections, documents, chats);
+                    var message = new HeadersRequestMessage(sections, archives, chats);
 
                     stream = new JoinStream(stream, message.Export(_bufferManager));
 
@@ -886,8 +886,8 @@ namespace Library.Net.Lair
 
         public void PushHeaders(IEnumerable<SectionProfileHeader> sectionProfileHeaders,
                 IEnumerable<SectionMessageHeader> sectionMessageHeaders,
-                IEnumerable<DocumentArchiveHeader> documentArchiveHeaders,
-                IEnumerable<DocumentVoteHeader> documentVoteHeaders,
+                IEnumerable<ArchiveDocumentHeader> archiveDocumentHeaders,
+                IEnumerable<ArchiveVoteHeader> archiveVoteHeaders,
                 IEnumerable<ChatTopicHeader> chatTopicHeaders,
                 IEnumerable<ChatMessageHeader> chatMessageHeaders)
         {
@@ -904,8 +904,8 @@ namespace Library.Net.Lair
 
                     var message = new HeadersMessage(sectionProfileHeaders,
                         sectionMessageHeaders,
-                        documentArchiveHeaders,
-                        documentVoteHeaders,
+                        archiveDocumentHeaders,
+                        archiveVoteHeaders,
                         chatTopicHeaders,
                         chatMessageHeaders);
 
@@ -1335,20 +1335,20 @@ namespace Library.Net.Lair
             private enum SerializeId : byte
             {
                 Section = 0,
-                Document = 1,
+                Archive = 1,
                 Chat = 2,
             }
 
             private SectionCollection _sections;
-            private DocumentCollection _documents;
+            private ArchiveCollection _archives;
             private ChatCollection _chats;
 
             public HeadersRequestMessage(IEnumerable<Section> sections,
-                IEnumerable<Document> documents,
+                IEnumerable<Archive> archives,
                 IEnumerable<Chat> chats)
             {
                 if (sections != null) this.ProtectedSections.AddRange(sections);
-                if (documents != null) this.ProtectedDocuments.AddRange(documents);
+                if (archives != null) this.ProtectedArchives.AddRange(archives);
                 if (chats != null) this.ProtectedChats.AddRange(chats);
             }
 
@@ -1369,9 +1369,9 @@ namespace Library.Net.Lair
                         {
                             this.ProtectedSections.Add(Section.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.Document)
+                        else if (id == (byte)SerializeId.Archive)
                         {
-                            this.ProtectedDocuments.Add(Document.Import(rangeStream, bufferManager));
+                            this.ProtectedArchives.Add(Archive.Import(rangeStream, bufferManager));
                         }
                         else if (id == (byte)SerializeId.Chat)
                         {
@@ -1397,14 +1397,14 @@ namespace Library.Net.Lair
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
-                // Documents
-                foreach (var d in this.Documents)
+                // Archives
+                foreach (var d in this.Archives)
                 {
                     Stream exportStream = d.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Document);
+                    bufferStream.WriteByte((byte)SerializeId.Archive);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -1456,28 +1456,28 @@ namespace Library.Net.Lair
                 }
             }
 
-            private volatile ReadOnlyCollection<Document> _readOnlyDocuments;
+            private volatile ReadOnlyCollection<Archive> _readOnlyArchives;
 
-            public IEnumerable<Document> Documents
+            public IEnumerable<Archive> Archives
             {
                 get
                 {
-                    if (_readOnlyDocuments == null)
-                        _readOnlyDocuments = new ReadOnlyCollection<Document>(this.ProtectedDocuments);
+                    if (_readOnlyArchives == null)
+                        _readOnlyArchives = new ReadOnlyCollection<Archive>(this.ProtectedArchives);
 
-                    return _readOnlyDocuments;
+                    return _readOnlyArchives;
                 }
             }
 
-            [DataMember(Name = "Documents")]
-            private DocumentCollection ProtectedDocuments
+            [DataMember(Name = "Archives")]
+            private ArchiveCollection ProtectedArchives
             {
                 get
                 {
-                    if (_documents == null)
-                        _documents = new DocumentCollection(_maxHeaderCount);
+                    if (_archives == null)
+                        _archives = new ArchiveCollection(_maxHeaderCount);
 
-                    return _documents;
+                    return _archives;
                 }
             }
 
@@ -1513,30 +1513,30 @@ namespace Library.Net.Lair
             {
                 SectionProfileHeader = 0,
                 SectionMessageHeader = 1,
-                DocumentArchiveHeader = 2,
-                DocumentVoteHeader = 3,
+                ArchiveDocumentHeader = 2,
+                ArchiveVoteHeader = 3,
                 ChatTopicHeader = 4,
                 ChatMessageHeader = 5,
             }
 
             private SectionProfileHeaderCollection _sectionProfileHeaders;
             private SectionMessageHeaderCollection _sectionMessageHeaders;
-            private DocumentArchiveHeaderCollection _documentArchiveHeaders;
-            private DocumentVoteHeaderCollection _documentVoteHeaders;
+            private ArchiveDocumentHeaderCollection _archiveDocumentHeaders;
+            private ArchiveVoteHeaderCollection _archiveVoteHeaders;
             private ChatTopicHeaderCollection _chatTopicHeaders;
             private ChatMessageHeaderCollection _chatMessageHeaders;
 
             public HeadersMessage(IEnumerable<SectionProfileHeader> sectionProfileHeaders,
                 IEnumerable<SectionMessageHeader> sectionMessageHeaders,
-                IEnumerable<DocumentArchiveHeader> documentArchiveHeaders,
-                IEnumerable<DocumentVoteHeader> documentVoteHeaders,
+                IEnumerable<ArchiveDocumentHeader> archiveDocumentHeaders,
+                IEnumerable<ArchiveVoteHeader> archiveVoteHeaders,
                 IEnumerable<ChatTopicHeader> chatTopicHeaders,
                 IEnumerable<ChatMessageHeader> chatMessageHeaders)
             {
                 if (sectionProfileHeaders != null) this.ProtectedSectionProfileHeaders.AddRange(sectionProfileHeaders);
                 if (sectionMessageHeaders != null) this.ProtectedSectionMessageHeaders.AddRange(sectionMessageHeaders);
-                if (documentArchiveHeaders != null) this.ProtectedDocumentArchiveHeaders.AddRange(documentArchiveHeaders);
-                if (documentVoteHeaders != null) this.ProtectedDocumentVoteHeaders.AddRange(documentVoteHeaders);
+                if (archiveDocumentHeaders != null) this.ProtectedArchiveDocumentHeaders.AddRange(archiveDocumentHeaders);
+                if (archiveVoteHeaders != null) this.ProtectedArchiveVoteHeaders.AddRange(archiveVoteHeaders);
                 if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
                 if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
             }
@@ -1562,13 +1562,13 @@ namespace Library.Net.Lair
                         {
                             this.ProtectedSectionMessageHeaders.Add(SectionMessageHeader.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.DocumentArchiveHeader)
+                        else if (id == (byte)SerializeId.ArchiveDocumentHeader)
                         {
-                            this.ProtectedDocumentArchiveHeaders.Add(DocumentArchiveHeader.Import(rangeStream, bufferManager));
+                            this.ProtectedArchiveDocumentHeaders.Add(ArchiveDocumentHeader.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.DocumentVoteHeader)
+                        else if (id == (byte)SerializeId.ArchiveVoteHeader)
                         {
-                            this.ProtectedDocumentVoteHeaders.Add(DocumentVoteHeader.Import(rangeStream, bufferManager));
+                            this.ProtectedArchiveVoteHeaders.Add(ArchiveVoteHeader.Import(rangeStream, bufferManager));
                         }
                         else if (id == (byte)SerializeId.ChatTopicHeader)
                         {
@@ -1609,25 +1609,25 @@ namespace Library.Net.Lair
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
-                // DocumentArchiveHeaders
-                foreach (var h in this.DocumentArchiveHeaders)
+                // ArchiveDocumentHeaders
+                foreach (var h in this.ArchiveDocumentHeaders)
                 {
                     Stream exportStream = h.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.DocumentArchiveHeader);
+                    bufferStream.WriteByte((byte)SerializeId.ArchiveDocumentHeader);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
-                // DocumentVoteHeaders
-                foreach (var h in this.DocumentVoteHeaders)
+                // ArchiveVoteHeaders
+                foreach (var h in this.ArchiveVoteHeaders)
                 {
                     Stream exportStream = h.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.DocumentVoteHeader);
+                    bufferStream.WriteByte((byte)SerializeId.ArchiveVoteHeader);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -1715,53 +1715,53 @@ namespace Library.Net.Lair
                 }
             }
 
-            private volatile ReadOnlyCollection<DocumentArchiveHeader> _readOnlyDocumentArchiveHeaders;
+            private volatile ReadOnlyCollection<ArchiveDocumentHeader> _readOnlyArchiveDocumentHeaders;
 
-            public IEnumerable<DocumentArchiveHeader> DocumentArchiveHeaders
+            public IEnumerable<ArchiveDocumentHeader> ArchiveDocumentHeaders
             {
                 get
                 {
-                    if (_readOnlyDocumentArchiveHeaders == null)
-                        _readOnlyDocumentArchiveHeaders = new ReadOnlyCollection<DocumentArchiveHeader>(this.ProtectedDocumentArchiveHeaders);
+                    if (_readOnlyArchiveDocumentHeaders == null)
+                        _readOnlyArchiveDocumentHeaders = new ReadOnlyCollection<ArchiveDocumentHeader>(this.ProtectedArchiveDocumentHeaders);
 
-                    return _readOnlyDocumentArchiveHeaders;
+                    return _readOnlyArchiveDocumentHeaders;
                 }
             }
 
-            [DataMember(Name = "DocumentArchiveHeaders")]
-            private DocumentArchiveHeaderCollection ProtectedDocumentArchiveHeaders
+            [DataMember(Name = "ArchiveDocumentHeaders")]
+            private ArchiveDocumentHeaderCollection ProtectedArchiveDocumentHeaders
             {
                 get
                 {
-                    if (_documentArchiveHeaders == null)
-                        _documentArchiveHeaders = new DocumentArchiveHeaderCollection(_maxHeaderCount);
+                    if (_archiveDocumentHeaders == null)
+                        _archiveDocumentHeaders = new ArchiveDocumentHeaderCollection(_maxHeaderCount);
 
-                    return _documentArchiveHeaders;
+                    return _archiveDocumentHeaders;
                 }
             }
 
-            private volatile ReadOnlyCollection<DocumentVoteHeader> _readOnlyDocumentVoteHeaders;
+            private volatile ReadOnlyCollection<ArchiveVoteHeader> _readOnlyArchiveVoteHeaders;
 
-            public IEnumerable<DocumentVoteHeader> DocumentVoteHeaders
+            public IEnumerable<ArchiveVoteHeader> ArchiveVoteHeaders
             {
                 get
                 {
-                    if (_readOnlyDocumentVoteHeaders == null)
-                        _readOnlyDocumentVoteHeaders = new ReadOnlyCollection<DocumentVoteHeader>(this.ProtectedDocumentVoteHeaders);
+                    if (_readOnlyArchiveVoteHeaders == null)
+                        _readOnlyArchiveVoteHeaders = new ReadOnlyCollection<ArchiveVoteHeader>(this.ProtectedArchiveVoteHeaders);
 
-                    return _readOnlyDocumentVoteHeaders;
+                    return _readOnlyArchiveVoteHeaders;
                 }
             }
 
-            [DataMember(Name = "DocumentVoteHeaders")]
-            private DocumentVoteHeaderCollection ProtectedDocumentVoteHeaders
+            [DataMember(Name = "ArchiveVoteHeaders")]
+            private ArchiveVoteHeaderCollection ProtectedArchiveVoteHeaders
             {
                 get
                 {
-                    if (_documentVoteHeaders == null)
-                        _documentVoteHeaders = new DocumentVoteHeaderCollection(_maxHeaderCount);
+                    if (_archiveVoteHeaders == null)
+                        _archiveVoteHeaders = new ArchiveVoteHeaderCollection(_maxHeaderCount);
 
-                    return _documentVoteHeaders;
+                    return _archiveVoteHeaders;
                 }
             }
 

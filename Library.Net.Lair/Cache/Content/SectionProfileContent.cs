@@ -10,21 +10,21 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Document, Chat>
+    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Archive, Chat>
     {
         private enum SerializeId : byte
         {
             Comment = 0,
             ExchangePublicKey = 1,
             TrustSignature = 2,
-            Document = 3,
+            Archive = 3,
             Chat = 4,
         }
 
         private string _comment;
         private ExchangePublicKey _exchangePublicKey;
         private SignatureCollection _trustSignatures;
-        private DocumentCollection _documents;
+        private ArchiveCollection _archives;
         private ChatCollection _chats;
 
         private volatile object _thisLock;
@@ -32,18 +32,18 @@ namespace Library.Net.Lair
 
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxTrustSignaturesCount = 1024;
-        public static readonly int MaxDocumentsCount = 256;
+        public static readonly int MaxArchivesCount = 256;
         public static readonly int MaxChatsCount = 256;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
         public SectionProfileContent(string comment, ExchangePublicKey publicKey, IEnumerable<string> trustSignatures,
-            IEnumerable<Document> documents, IEnumerable<Chat> chats)
+            IEnumerable<Archive> archives, IEnumerable<Chat> chats)
         {
             this.Comment = comment;
             this.ExchangePublicKey = publicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            if (documents != null) this.ProtectedDocuments.AddRange(documents);
+            if (archives != null) this.ProtectedArchives.AddRange(archives);
             if (chats != null) this.ProtectedChats.AddRange(chats);
         }
 
@@ -80,9 +80,9 @@ namespace Library.Net.Lair
                                 this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
                             }
                         }
-                        else if (id == (byte)SerializeId.Document)
+                        else if (id == (byte)SerializeId.Archive)
                         {
-                            this.ProtectedDocuments.Add(Document.Import(rangeStream, bufferManager));
+                            this.ProtectedArchives.Add(Archive.Import(rangeStream, bufferManager));
                         }
                         else if (id == (byte)SerializeId.Chat)
                         {
@@ -149,14 +149,14 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
-                // Documents
-                foreach (var d in this.Documents)
+                // Archives
+                foreach (var d in this.Archives)
                 {
                     Stream exportStream = d.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Document);
+                    bufferStream.WriteByte((byte)SerializeId.Archive);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -201,7 +201,7 @@ namespace Library.Net.Lair
             if (this.Comment != other.Comment
                 || this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
-                || (this.Documents == null) != (other.Documents == null)
+                || (this.Archives == null) != (other.Archives == null)
                 || (this.Chats == null) != (other.Chats == null))
             {
                 return false;
@@ -212,9 +212,9 @@ namespace Library.Net.Lair
                 if (!Collection.Equals(this.TrustSignatures, other.TrustSignatures)) return false;
             }
 
-            if (this.Documents != null && other.Documents != null)
+            if (this.Archives != null && other.Archives != null)
             {
-                if (!Collection.Equals(this.Documents, other.Documents)) return false;
+                if (!Collection.Equals(this.Archives, other.Archives)) return false;
             }
 
             if (this.Chats != null && other.Chats != null)
@@ -323,33 +323,33 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<Document> _readOnlyDocuments;
+        private volatile ReadOnlyCollection<Archive> _readOnlyArchives;
 
-        public IEnumerable<Document> Documents
+        public IEnumerable<Archive> Archives
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_readOnlyDocuments == null)
-                        _readOnlyDocuments = new ReadOnlyCollection<Document>(this.ProtectedDocuments);
+                    if (_readOnlyArchives == null)
+                        _readOnlyArchives = new ReadOnlyCollection<Archive>(this.ProtectedArchives);
 
-                    return _readOnlyDocuments;
+                    return _readOnlyArchives;
                 }
             }
         }
 
-        [DataMember(Name = "Documents")]
-        private DocumentCollection ProtectedDocuments
+        [DataMember(Name = "Archives")]
+        private ArchiveCollection ProtectedArchives
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_documents == null)
-                        _documents = new DocumentCollection(SectionProfileContent.MaxDocumentsCount);
+                    if (_archives == null)
+                        _archives = new ArchiveCollection(SectionProfileContent.MaxArchivesCount);
 
-                    return _documents;
+                    return _archives;
                 }
             }
         }

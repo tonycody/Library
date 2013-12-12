@@ -1576,7 +1576,8 @@ namespace Library.Net.Amoeba
                         // PushBlocksLink
                         if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                         {
-                            KeyCollection tempList = null;
+                            KeyCollection tempList = new KeyCollection();
+
                             int count = (int)(_maxBlockLinkCount * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (_pushBlocksLinkDictionary.ThisLock)
@@ -1585,14 +1586,14 @@ namespace Library.Net.Amoeba
 
                                 if (_pushBlocksLinkDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new KeyCollection(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(count));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksLink.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count > 0)
+                            if (tempList.Count > 0)
                             {
                                 try
                                 {
@@ -1616,7 +1617,8 @@ namespace Library.Net.Amoeba
                         // PushBlocksRequest
                         if (connectionCount >= _downloadingConnectionCountLowerLimit)
                         {
-                            KeyCollection tempList = null;
+                            KeyCollection tempList = new KeyCollection();
+
                             int count = (int)(_maxBlockRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (_pushBlocksRequestDictionary.ThisLock)
@@ -1625,14 +1627,14 @@ namespace Library.Net.Amoeba
 
                                 if (_pushBlocksRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new KeyCollection(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(count));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksRequest.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count > 0)
+                            if (tempList.Count > 0)
                             {
                                 try
                                 {
@@ -1661,7 +1663,8 @@ namespace Library.Net.Amoeba
                         // PushSeedsRequest
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
-                            SignatureCollection tempList = null;
+                            SignatureCollection tempList = new SignatureCollection();
+
                             int count = (int)(_maxSeedRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (_pushSeedsRequestDictionary.ThisLock)
@@ -1670,14 +1673,14 @@ namespace Library.Net.Amoeba
 
                                 if (_pushSeedsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new SignatureCollection(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(count));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushSeedsRequest.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count > 0)
+                            if (tempList.Count > 0)
                             {
                                 try
                                 {
@@ -1833,69 +1836,67 @@ namespace Library.Net.Amoeba
                                 .ToArray()
                                 .Randomize());
 
-                            if (signatures.Count > 0)
+                            var linkSeeds = new List<Seed>();
+
+                            // Link
+                            foreach (var signature in signatures.Randomize())
                             {
-                                var linkSeeds = new List<Seed>();
+                                Seed tempSeed = this.GetLinkSeed(signature);
+                                if (tempSeed == null) continue;
 
-                                // Link
-                                foreach (var signature in signatures.Randomize())
+                                DateTime creationTime;
+
+                                if (!messageManager.PushLinkSeeds.TryGetValue(signature, out creationTime)
+                                    || tempSeed.CreationTime > creationTime)
                                 {
-                                    Seed tempSeed = this.GetLinkSeed(signature);
-                                    if (tempSeed == null) continue;
+                                    linkSeeds.Add(tempSeed);
 
-                                    DateTime creationTime;
+                                    if (linkSeeds.Count >= _maxSeedCount) break;
+                                }
+                            }
 
-                                    if (!messageManager.PushLinkSeeds.TryGetValue(signature, out creationTime)
-                                        || tempSeed.CreationTime > creationTime)
-                                    {
-                                        linkSeeds.Add(tempSeed);
+                            var storeSeeds = new List<Seed>();
 
-                                        if (linkSeeds.Count >= _maxSeedCount) break;
-                                    }
+                            // Store
+                            foreach (var signature in signatures.Randomize())
+                            {
+                                Seed tempSeed = this.GetStoreSeed(signature);
+                                if (tempSeed == null) continue;
+
+                                DateTime creationTime;
+
+                                if (!messageManager.PushStoreSeeds.TryGetValue(signature, out creationTime)
+                                    || tempSeed.CreationTime > creationTime)
+                                {
+                                    storeSeeds.Add(tempSeed);
+
+                                    if (storeSeeds.Count >= _maxSeedCount) break;
+                                }
+                            }
+
+                            if (linkSeeds.Count > 0 || storeSeeds.Count > 0)
+                            {
+                                var seeds = new List<Seed>();
+                                seeds.AddRange(linkSeeds);
+                                seeds.AddRange(storeSeeds);
+
+                                connectionManager.PushSeeds(seeds.Randomize());
+
+                                Debug.WriteLine(string.Format("ConnectionManager: Push Seeds ({0})", seeds.Count));
+                                _pushSeedCount += seeds.Count;
+
+                                foreach (var seed in linkSeeds)
+                                {
+                                    var signature = seed.Certificate.ToString();
+
+                                    messageManager.PushLinkSeeds[signature] = seed.CreationTime;
                                 }
 
-                                var storeSeeds = new List<Seed>();
-
-                                // Store
-                                foreach (var signature in signatures.Randomize())
+                                foreach (var seed in storeSeeds)
                                 {
-                                    Seed tempSeed = this.GetStoreSeed(signature);
-                                    if (tempSeed == null) continue;
+                                    var signature = seed.Certificate.ToString();
 
-                                    DateTime creationTime;
-
-                                    if (!messageManager.PushStoreSeeds.TryGetValue(signature, out creationTime)
-                                        || tempSeed.CreationTime > creationTime)
-                                    {
-                                        storeSeeds.Add(tempSeed);
-
-                                        if (storeSeeds.Count >= _maxSeedCount) break;
-                                    }
-                                }
-
-                                {
-                                    var seeds = new List<Seed>();
-                                    seeds.AddRange(linkSeeds);
-                                    seeds.AddRange(storeSeeds);
-
-                                    connectionManager.PushSeeds(seeds.Randomize());
-
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push Seeds ({0})", seeds.Count));
-                                    _pushSeedCount += seeds.Count;
-
-                                    foreach (var seed in linkSeeds)
-                                    {
-                                        var signature = seed.Certificate.ToString();
-
-                                        messageManager.PushLinkSeeds[signature] = seed.CreationTime;
-                                    }
-
-                                    foreach (var seed in storeSeeds)
-                                    {
-                                        var signature = seed.Certificate.ToString();
-
-                                        messageManager.PushStoreSeeds[signature] = seed.CreationTime;
-                                    }
+                                    messageManager.PushStoreSeeds[signature] = seed.CreationTime;
                                 }
                             }
                         }
@@ -1925,8 +1926,6 @@ namespace Library.Net.Amoeba
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
-
-            if (e.Nodes == null) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull Nodes ({0})", e.Nodes.Count()));
 
@@ -1966,7 +1965,6 @@ namespace Library.Net.Amoeba
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Keys == null) return;
             if (messageManager.PullBlocksLink.Count > _maxBlockLinkCount * messageManager.PullBlocksLink.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksLink ({0})", e.Keys.Count()));
@@ -1987,7 +1985,6 @@ namespace Library.Net.Amoeba
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Keys == null) return;
             if (messageManager.PullBlocksRequest.Count > _maxBlockRequestCount * messageManager.PullBlocksRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull BlocksRequest ({0})", e.Keys.Count()));
@@ -2050,7 +2047,6 @@ namespace Library.Net.Amoeba
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Signatures == null) return;
             if (messageManager.PullSeedsRequest.Count > _maxSeedRequestCount * messageManager.PullSeedsRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull SeedsRequest ({0})", e.Signatures.Count()));
@@ -2073,7 +2069,6 @@ namespace Library.Net.Amoeba
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Seeds == null) return;
             if (messageManager.PushLinkSeeds.Count > _maxSeedCount * messageManager.PushLinkSeeds.SurvivalTime.TotalMinutes) return;
             if (messageManager.PushStoreSeeds.Count > _maxSeedCount * messageManager.PushStoreSeeds.SurvivalTime.TotalMinutes) return;
 

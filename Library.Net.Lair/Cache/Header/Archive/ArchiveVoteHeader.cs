@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentArchiveHeader", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentArchiveHeader : ReadOnlyCertificateItemBase<DocumentArchiveHeader>, IDocumentArchiveHeader<Document>
+    [DataContract(Name = "ArchiveVoteHeader", Namespace = "http://Library/Net/Lair")]
+    public sealed class ArchiveVoteHeader : ReadOnlyCertificateItemBase<ArchiveVoteHeader>, IArchiveVoteHeader<Archive>
     {
         private enum SerializeId : byte
         {
@@ -20,7 +20,7 @@ namespace Library.Net.Lair
             Certificate = 3,
         }
 
-        private Document _tag;
+        private Archive _tag;
         private DateTime _creationTime;
         private Key _key;
 
@@ -29,7 +29,7 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public DocumentArchiveHeader(Document tag, Key key, DigitalSignature digitalSignature)
+        public ArchiveVoteHeader(Archive tag, Key key, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
             this.CreationTime = DateTime.UtcNow;
@@ -55,7 +55,7 @@ namespace Library.Net.Lair
                     {
                         if (id == (byte)SerializeId.Tag)
                         {
-                            this.Tag = Document.Import(rangeStream, bufferManager);
+                            this.Tag = Archive.Import(rangeStream, bufferManager);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
@@ -153,12 +153,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is DocumentArchiveHeader)) return false;
+            if ((object)obj == null || !(obj is ArchiveVoteHeader)) return false;
 
-            return this.Equals((DocumentArchiveHeader)obj);
+            return this.Equals((ArchiveVoteHeader)obj);
         }
 
-        public override bool Equals(DocumentArchiveHeader other)
+        public override bool Equals(ArchiveVoteHeader other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -247,10 +247,10 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IDocumentArchiveHeader<Document>
+        #region IArchiveVoteHeader<Archive>
 
         [DataMember(Name = "Tag")]
-        public Document Tag
+        public Archive Tag
         {
             get
             {

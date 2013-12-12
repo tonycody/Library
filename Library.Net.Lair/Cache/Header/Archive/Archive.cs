@@ -7,8 +7,8 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Document", Namespace = "http://Library/Net/Lair")]
-    public sealed class Document : ItemBase<Document>, IDocument
+    [DataContract(Name = "Archive", Namespace = "http://Library/Net/Lair")]
+    public sealed class Archive : ItemBase<Archive>, IArchive
     {
         private enum SerializeId : byte
         {
@@ -27,7 +27,7 @@ namespace Library.Net.Lair
         public static readonly int MaxIdLength = 64;
         public static readonly int MaxNameLength = 256;
 
-        public Document(byte[] id, string name)
+        public Archive(byte[] id, string name)
         {
             this.Id = id;
             this.Name = name;
@@ -118,12 +118,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Document)) return false;
+            if ((object)obj == null || !(obj is Archive)) return false;
 
-            return this.Equals((Document)obj);
+            return this.Equals((Archive)obj);
         }
 
-        public override bool Equals(Document other)
+        public override bool Equals(Archive other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -162,7 +162,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IDocument
+        #region IArchive
 
         [DataMember(Name = "Id")]
         public byte[] Id
@@ -178,7 +178,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && (value.Length > Document.MaxIdLength))
+                    if (value != null && (value.Length > Archive.MaxIdLength))
                     {
                         throw new ArgumentException();
                     }
@@ -215,7 +215,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Document.MaxNameLength)
+                    if (value != null && value.Length > Archive.MaxNameLength)
                     {
                         throw new ArgumentException();
                     }

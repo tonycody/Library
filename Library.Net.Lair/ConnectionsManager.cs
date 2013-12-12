@@ -31,9 +31,9 @@ namespace Library.Net.Lair
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksLinkDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksRequestDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksDictionary = new LockedDictionary<Node, HashSet<Key>>();
-        private LockedDictionary<Node, HashSet<Section>> _pushSectionHeadersRequestDictionary = new LockedDictionary<Node, HashSet<Section>>();
-        private LockedDictionary<Node, HashSet<Document>> _pushDocumentHeadersRequestDictionary = new LockedDictionary<Node, HashSet<Document>>();
-        private LockedDictionary<Node, HashSet<Chat>> _pushChatHeadersRequestDictionary = new LockedDictionary<Node, HashSet<Chat>>();
+        private LockedDictionary<Node, HashSet<Section>> _pushSectionsRequestDictionary = new LockedDictionary<Node, HashSet<Section>>();
+        private LockedDictionary<Node, HashSet<Archive>> _pushArchivesRequestDictionary = new LockedDictionary<Node, HashSet<Archive>>();
+        private LockedDictionary<Node, HashSet<Chat>> _pushChatsRequestDictionary = new LockedDictionary<Node, HashSet<Chat>>();
 
         private LockedList<Node> _creatingNodes;
         private VolatileCollection<Node> _waitingNodes;
@@ -41,14 +41,14 @@ namespace Library.Net.Lair
         private VolatileCollection<Node> _removeNodes;
         private VolatileDictionary<Node, int> _nodesStatus;
 
-        private VolatileCollection<Section> _pushSectionHeadersRequestList;
-        private VolatileCollection<Document> _pushDocumentHeadersRequestList;
-        private VolatileCollection<Chat> _pushChatHeadersRequestList;
+        private VolatileCollection<Section> _pushSectionsRequestList;
+        private VolatileCollection<Archive> _pushArchivesRequestList;
+        private VolatileCollection<Chat> _pushChatsRequestList;
         private VolatileCollection<Key> _downloadBlocks;
 
-        private LockedDictionary<Section, DateTime> _lastUsedSectionHeaderTimes = new LockedDictionary<Section, DateTime>();
-        private LockedDictionary<Document, DateTime> _lastUsedDocumentHeaderTimes = new LockedDictionary<Document, DateTime>();
-        private LockedDictionary<Chat, DateTime> _lastUsedChatHeaderTimes = new LockedDictionary<Chat, DateTime>();
+        private LockedDictionary<Section, DateTime> _lastUsedSectionTimes = new LockedDictionary<Section, DateTime>();
+        private LockedDictionary<Archive, DateTime> _lastUsedArchiveTimes = new LockedDictionary<Archive, DateTime>();
+        private LockedDictionary<Chat, DateTime> _lastUsedChatTimes = new LockedDictionary<Chat, DateTime>();
 
         private volatile Thread _connectionsManagerThread;
         private volatile Thread _createClientConnection1Thread;
@@ -141,9 +141,9 @@ namespace Library.Net.Lair
             _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 3, 0));
-            _pushSectionHeadersRequestList = new VolatileCollection<Section>(new TimeSpan(0, 3, 0));
-            _pushDocumentHeadersRequestList = new VolatileCollection<Document>(new TimeSpan(0, 3, 0));
-            _pushChatHeadersRequestList = new VolatileCollection<Chat>(new TimeSpan(0, 3, 0));
+            _pushSectionsRequestList = new VolatileCollection<Section>(new TimeSpan(0, 3, 0));
+            _pushArchivesRequestList = new VolatileCollection<Archive>(new TimeSpan(0, 3, 0));
+            _pushChatsRequestList = new VolatileCollection<Chat>(new TimeSpan(0, 3, 0));
 
             _relayBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
 
@@ -1021,310 +1021,189 @@ namespace Library.Net.Lair
                             {
                                 var now = DateTime.UtcNow;
 
-                                // 非トラストなタグを1024残し、他をLRU順に破棄。
+                                // トラストなタグは常に保護、非トラストなタグはLRU順に破棄し1024残す。
                                 {
-                                    var removeLinks = new HashSet<Link>();
-                                    removeLinks.UnionWith(_headerManager.GetLinks());
-                                    removeLinks.ExceptWith(lockCriteriaList.SelectMany(n => n.Links));
-
-                                    var sortList = removeLinks.ToList();
-
-                                    sortList.Sort((x, y) =>
                                     {
-                                        DateTime tx;
-                                        DateTime ty;
+                                        var removeSections = new HashSet<Section>();
+                                        removeSections.UnionWith(_headerManager.GetSections());
+                                        removeSections.ExceptWith(lockCriteriaList.SelectMany(n => n.Sections));
 
-                                        _lastUsedHeaderTimes.TryGetValue(x, out tx);
-                                        _lastUsedHeaderTimes.TryGetValue(y, out ty);
+                                        var sortList = removeSections.ToList();
 
-                                        return tx.CompareTo(ty);
-                                    });
+                                        sortList.Sort((x, y) =>
+                                        {
+                                            DateTime tx;
+                                            DateTime ty;
 
-                                    _headerManager.RemoveLinks(sortList.Take(sortList.Count - 1024));
+                                            _lastUsedSectionTimes.TryGetValue(x, out tx);
+                                            _lastUsedSectionTimes.TryGetValue(y, out ty);
 
-                                    var liveLinks = new HashSet<Link>(_headerManager.GetLinks());
+                                            return tx.CompareTo(ty);
+                                        });
 
-                                    foreach (var link in _lastUsedHeaderTimes.Keys.ToArray())
+                                        _headerManager.RemoveTags(sortList.Take(sortList.Count - 1024));
+
+                                        var liveSections = new HashSet<Section>(_headerManager.GetSections());
+
+                                        foreach (var section in _lastUsedSectionTimes.Keys.ToArray())
+                                        {
+                                            if (liveSections.Contains(section)) continue;
+
+                                            _lastUsedSectionTimes.Remove(section);
+                                        }
+                                    }
+
                                     {
-                                        if (liveLinks.Contains(link)) continue;
+                                        var removeArchives = new HashSet<Archive>();
+                                        removeArchives.UnionWith(_headerManager.GetArchives());
+                                        removeArchives.ExceptWith(lockCriteriaList.SelectMany(n => n.Archives));
 
-                                        _lastUsedHeaderTimes.Remove(link);
+                                        var sortList = removeArchives.ToList();
+
+                                        sortList.Sort((x, y) =>
+                                        {
+                                            DateTime tx;
+                                            DateTime ty;
+
+                                            _lastUsedArchiveTimes.TryGetValue(x, out tx);
+                                            _lastUsedArchiveTimes.TryGetValue(y, out ty);
+
+                                            return tx.CompareTo(ty);
+                                        });
+
+                                        _headerManager.RemoveTags(sortList.Take(sortList.Count - 1024));
+
+                                        var liveArchives = new HashSet<Archive>(_headerManager.GetArchives());
+
+                                        foreach (var section in _lastUsedArchiveTimes.Keys.ToArray())
+                                        {
+                                            if (liveArchives.Contains(section)) continue;
+
+                                            _lastUsedArchiveTimes.Remove(section);
+                                        }
+                                    }
+
+                                    {
+                                        var removeChats = new HashSet<Chat>();
+                                        removeChats.UnionWith(_headerManager.GetChats());
+                                        removeChats.ExceptWith(lockCriteriaList.SelectMany(n => n.Chats));
+
+                                        var sortList = removeChats.ToList();
+
+                                        sortList.Sort((x, y) =>
+                                        {
+                                            DateTime tx;
+                                            DateTime ty;
+
+                                            _lastUsedChatTimes.TryGetValue(x, out tx);
+                                            _lastUsedChatTimes.TryGetValue(y, out ty);
+
+                                            return tx.CompareTo(ty);
+                                        });
+
+                                        _headerManager.RemoveTags(sortList.Take(sortList.Count - 1024));
+
+                                        var liveChats = new HashSet<Chat>(_headerManager.GetChats());
+
+                                        foreach (var section in _lastUsedChatTimes.Keys.ToArray())
+                                        {
+                                            if (liveChats.Contains(section)) continue;
+
+                                            _lastUsedChatTimes.Remove(section);
+                                        }
                                     }
                                 }
 
-                                // Link毎にトラストリストを適応する。
-                                var patternlist = new List<KeyValuePair<HashSet<Link>, HashSet<string>>>();
-
-                                foreach (var criterion in lockCriteriaList)
                                 {
-                                    var linkHashset = new HashSet<Link>(criterion.Links);
-                                    var SignatureHashset = new HashSet<string>(criterion.TrustSignatures);
+                                    var patternList = new List<KeyValuePair<HashSet<Section>, HashSet<string>>>();
 
-                                    patternlist.Add(new KeyValuePair<HashSet<Link>, HashSet<string>>(linkHashset, SignatureHashset));
-                                }
+                                    foreach (var criterion in lockCriteriaList)
+                                    {
+                                        var tagHashset = new HashSet<Section>(criterion.Sections);
+                                        var signatureHashset = new HashSet<string>(criterion.TrustSignatures);
 
-                                {
-                                    var removeHeaders = new List<Header>();
+                                        patternList.Add(new KeyValuePair<HashSet<Section>, HashSet<string>>(tagHashset, signatureHashset));
+                                    }
 
-                                    foreach (var link in _headerManager.GetLinks())
+                                    var removeSectionProfileHeaders = new List<SectionProfileHeader>();
+                                    var removeSectionMessageHeaders = new List<SectionMessageHeader>();
+
+                                    foreach (var section in _headerManager.GetSections())
                                     {
                                         List<HashSet<string>> trustList;
 
                                         {
-                                            var tempList = patternlist.Where(n => n.Key.Contains(link)).ToList();
+                                            var tempList = patternList.Where(n => n.Key.Contains(section)).ToList();
                                             if (tempList.Count == 0) continue;
 
                                             trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
                                         }
 
-                                        var headers = _headerManager.GetHeaders(link).ToList();
-
-                                        if (link.Type == "Section")
                                         {
-                                            List<Header> trustProfileHeaders = new List<Header>();
-                                            List<Header> untrustProfileHeaders = new List<Header>();
+                                            var untrustHeaders = new List<SectionProfileHeader>();
+
+                                            var headers = _headerManager.GetSectionProfileHeaders(section).ToList();
 
                                             foreach (var header in headers)
                                             {
                                                 var signature = header.Certificate.ToString();
 
-                                                if (header.Type == "Profile")
+                                                if (!trustList.Any(n => n.Contains(signature)))
                                                 {
-                                                    if (trustList.Any(n => n.Contains(signature)))
-                                                    {
-                                                        trustProfileHeaders.Add(header);
-                                                    }
-                                                    else
-                                                    {
-                                                        untrustProfileHeaders.Add(header);
-                                                    }
+                                                    untrustHeaders.Add(header);
                                                 }
                                             }
 
-                                            removeHeaders.AddRange(trustProfileHeaders);
-                                            removeHeaders.AddRange(untrustProfileHeaders.Randomize().Skip(32));
+                                            removeSectionProfileHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
                                         }
-                                        else if (link.Type == "Document")
-                                        {
-                                            Dictionary<string, List<Header>> trustPageHeaders = new Dictionary<string, List<Header>>();
-                                            Dictionary<string, List<Header>> untrustPageHeaders = new Dictionary<string, List<Header>>();
 
-                                            List<Header> trustVoteHeaders = new List<Header>();
-                                            List<Header> untrustVoteHeaders = new List<Header>();
+                                        {
+                                            var trustMessageHeaders = new Dictionary<string, List<SectionMessageHeader>>();
+                                            var untrustMessageHeaders = new Dictionary<string, List<SectionMessageHeader>>();
+
+                                            var headers = _headerManager.GetSectionMessageHeaders(section).ToList();
 
                                             foreach (var header in headers)
                                             {
                                                 var signature = header.Certificate.ToString();
 
-                                                if (header.Type == "Page")
+                                                if (trustList.Any(n => n.Contains(signature)))
                                                 {
-                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    List<SectionMessageHeader> list;
+
+                                                    if (!trustMessageHeaders.TryGetValue(signature, out list))
                                                     {
-                                                        List<Header> list;
-
-                                                        if (!trustPageHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            trustPageHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
+                                                        list = new List<SectionMessageHeader>();
+                                                        trustMessageHeaders[signature] = list;
                                                     }
-                                                    else
-                                                    {
-                                                        List<Header> list;
 
-                                                        if (!untrustPageHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            untrustPageHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
-                                                    }
+                                                    list.Add(header);
                                                 }
-                                                else if (header.Type == "Vote")
+                                                else
                                                 {
-                                                    if (trustList.Any(n => n.Contains(signature)))
+                                                    List<SectionMessageHeader> list;
+
+                                                    if (!untrustMessageHeaders.TryGetValue(signature, out list))
                                                     {
-                                                        trustVoteHeaders.Add(header);
+                                                        list = new List<SectionMessageHeader>();
+                                                        trustMessageHeaders[signature] = list;
                                                     }
-                                                    else
-                                                    {
-                                                        untrustVoteHeaders.Add(header);
-                                                    }
-                                                }
 
-                                            }
-
-                                            removeHeaders.AddRange(trustPageHeaders.SelectMany(n => n.Value));
-                                            removeHeaders.AddRange(untrustPageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
-
-                                            foreach (var list in Collection.Merge(trustPageHeaders.Values, untrustPageHeaders.Values))
-                                            {
-                                                if (list.Count <= 256) continue;
-
-                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeHeaders.AddRange(list.Take(list.Count - 256));
-                                            }
-
-                                            removeHeaders.AddRange(trustVoteHeaders);
-                                            removeHeaders.AddRange(untrustVoteHeaders.Randomize().Skip(32));
-                                        }
-                                        else if (link.Type == "Chat")
-                                        {
-                                            Dictionary<string, List<Header>> trustTopicHeaders = new Dictionary<string, List<Header>>();
-                                            Dictionary<string, List<Header>> untrustTopicHeaders = new Dictionary<string, List<Header>>();
-
-                                            Dictionary<string, List<Header>> trustMessageHeaders = new Dictionary<string, List<Header>>();
-                                            Dictionary<string, List<Header>> untrustMessageHeaders = new Dictionary<string, List<Header>>();
-
-                                            foreach (var header in headers)
-                                            {
-                                                var signature = header.Certificate.ToString();
-
-                                                if (header.Type == "Topic")
-                                                {
-                                                    if (trustList.Any(n => n.Contains(signature)))
-                                                    {
-                                                        List<Header> list;
-
-                                                        if (!trustTopicHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            trustTopicHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
-                                                    }
-                                                    else
-                                                    {
-                                                        List<Header> list;
-
-                                                        if (!untrustTopicHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            untrustTopicHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
-                                                    }
-                                                }
-                                                else if (header.Type == "Message")
-                                                {
-                                                    if (trustList.Any(n => n.Contains(signature)))
-                                                    {
-                                                        List<Header> list;
-
-                                                        if (!trustMessageHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            trustMessageHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
-                                                    }
-                                                    else
-                                                    {
-                                                        List<Header> list;
-
-                                                        if (!untrustMessageHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            untrustMessageHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
-                                                    }
+                                                    list.Add(header);
                                                 }
                                             }
 
-                                            removeHeaders.AddRange(trustTopicHeaders.SelectMany(n => n.Value));
-                                            removeHeaders.AddRange(untrustTopicHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
-
-                                            foreach (var list in Collection.Merge(trustTopicHeaders.Values, untrustTopicHeaders.Values))
-                                            {
-                                                if (list.Count <= 256) continue;
-
-                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeHeaders.AddRange(list.Take(list.Count - 256));
-                                            }
-
-                                            removeHeaders.AddRange(trustMessageHeaders.SelectMany(n => n.Value));
-                                            removeHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+                                            removeSectionMessageHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
 
                                             foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
                                             {
-                                                var tempList = new List<Header>();
+                                                var tempList = new List<SectionMessageHeader>();
 
                                                 foreach (var header in list)
                                                 {
                                                     if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0))
                                                     {
-                                                        removeHeaders.Add(header);
-                                                    }
-                                                    else
-                                                    {
-                                                        tempList.Add(header);
-                                                    }
-                                                }
-
-                                                if (list.Count <= 8192) continue;
-
-                                                tempList.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeHeaders.AddRange(tempList.Take(tempList.Count - 1024));
-                                            }
-                                        }
-                                        else if (link.Type == "Message")
-                                        {
-                                            Dictionary<string, List<Header>> trustMessageHeaders = new Dictionary<string, List<Header>>();
-                                            Dictionary<string, List<Header>> untrustMessageHeaders = new Dictionary<string, List<Header>>();
-
-                                            foreach (var header in headers)
-                                            {
-                                                var signature = header.Certificate.ToString();
-
-                                                if (header.Type == "Message")
-                                                {
-                                                    if (trustList.Any(n => n.Contains(signature)))
-                                                    {
-                                                        List<Header> list;
-
-                                                        if (!trustMessageHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            trustMessageHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
-                                                    }
-                                                    else
-                                                    {
-                                                        List<Header> list;
-
-                                                        if (!untrustMessageHeaders.TryGetValue(signature, out list))
-                                                        {
-                                                            list = new List<Header>();
-                                                            untrustMessageHeaders[signature] = list;
-                                                        }
-
-                                                        list.Add(header);
-                                                    }
-                                                }
-                                            }
-
-                                            removeHeaders.AddRange(trustMessageHeaders.SelectMany(n => n.Value));
-                                            removeHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
-
-                                            foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
-                                            {
-                                                var tempList = new List<Header>();
-
-                                                foreach (var header in list)
-                                                {
-                                                    if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0))
-                                                    {
-                                                        removeHeaders.Add(header);
+                                                        removeSectionMessageHeaders.Add(header);
                                                     }
                                                     else
                                                     {
@@ -1335,14 +1214,208 @@ namespace Library.Net.Lair
                                                 if (list.Count <= 32) continue;
 
                                                 tempList.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeHeaders.AddRange(tempList.Take(tempList.Count - 32));
+                                                removeSectionMessageHeaders.AddRange(tempList.Take(tempList.Count - 32));
                                             }
                                         }
+
+                                        foreach (var header in removeSectionProfileHeaders)
+                                        {
+                                            _headerManager.RemoveHeader(header);
+                                        }
+
+                                        foreach (var header in removeSectionMessageHeaders)
+                                        {
+                                            _headerManager.RemoveHeader(header);
+                                        }
+                                    }
+                                }
+
+                                {
+                                    var patternList = new List<KeyValuePair<HashSet<Archive>, HashSet<string>>>();
+
+                                    foreach (var criterion in lockCriteriaList)
+                                    {
+                                        var tagHashset = new HashSet<Archive>(criterion.Archives);
+                                        var signatureHashset = new HashSet<string>(criterion.TrustSignatures);
+
+                                        patternList.Add(new KeyValuePair<HashSet<Archive>, HashSet<string>>(tagHashset, signatureHashset));
                                     }
 
-                                    foreach (var header in removeHeaders)
+                                    var removeArchiveProfileHeaders = new List<ArchiveDocumentHeader>();
+                                    var removeArchiveVoteHeaders = new List<ArchiveVoteHeader>();
+
+                                    foreach (var section in _headerManager.GetArchives())
                                     {
-                                        _headerManager.RemoveHeader(header);
+                                        List<HashSet<string>> trustList;
+
+                                        {
+                                            var tempList = patternList.Where(n => n.Key.Contains(section)).ToList();
+                                            if (tempList.Count == 0) continue;
+
+                                            trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
+                                        }
+
+                                        {
+                                            var untrustHeaders = new List<ArchiveDocumentHeader>();
+
+                                            var headers = _headerManager.GetArchiveDocumentHeaders(section).ToList();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (!trustList.Any(n => n.Contains(signature)))
+                                                {
+                                                    untrustHeaders.Add(header);
+                                                }
+                                            }
+
+                                            removeArchiveProfileHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
+                                        }
+
+                                        {
+                                            var untrustHeaders = new List<ArchiveVoteHeader>();
+
+                                            var headers = _headerManager.GetArchiveVoteHeaders(section).ToList();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (!trustList.Any(n => n.Contains(signature)))
+                                                {
+                                                    untrustHeaders.Add(header);
+                                                }
+                                            }
+
+                                            removeArchiveVoteHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
+                                        }
+
+                                        foreach (var header in removeArchiveProfileHeaders)
+                                        {
+                                            _headerManager.RemoveHeader(header);
+                                        }
+
+                                        foreach (var header in removeArchiveVoteHeaders)
+                                        {
+                                            _headerManager.RemoveHeader(header);
+                                        }
+                                    }
+                                }
+
+                                {
+                                    var patternList = new List<KeyValuePair<HashSet<Chat>, HashSet<string>>>();
+
+                                    foreach (var criterion in lockCriteriaList)
+                                    {
+                                        var tagHashset = new HashSet<Chat>(criterion.Chats);
+                                        var signatureHashset = new HashSet<string>(criterion.TrustSignatures);
+
+                                        patternList.Add(new KeyValuePair<HashSet<Chat>, HashSet<string>>(tagHashset, signatureHashset));
+                                    }
+
+                                    var removeChatTopicHeaders = new List<ChatTopicHeader>();
+                                    var removeChatMessageHeaders = new List<ChatMessageHeader>();
+
+                                    foreach (var section in _headerManager.GetChats())
+                                    {
+                                        List<HashSet<string>> trustList;
+
+                                        {
+                                            var tempList = patternList.Where(n => n.Key.Contains(section)).ToList();
+                                            if (tempList.Count == 0) continue;
+
+                                            trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
+                                        }
+
+                                        {
+                                            var untrustHeaders = new List<ChatTopicHeader>();
+
+                                            var headers = _headerManager.GetChatTopicHeaders(section).ToList();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (!trustList.Any(n => n.Contains(signature)))
+                                                {
+                                                    untrustHeaders.Add(header);
+                                                }
+                                            }
+
+                                            removeChatTopicHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
+                                        }
+
+                                        {
+                                            var trustMessageHeaders = new Dictionary<string, List<ChatMessageHeader>>();
+                                            var untrustMessageHeaders = new Dictionary<string, List<ChatMessageHeader>>();
+
+                                            var headers = _headerManager.GetChatMessageHeaders(section).ToList();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (trustList.Any(n => n.Contains(signature)))
+                                                {
+                                                    List<ChatMessageHeader> list;
+
+                                                    if (!trustMessageHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<ChatMessageHeader>();
+                                                        trustMessageHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                                else
+                                                {
+                                                    List<ChatMessageHeader> list;
+
+                                                    if (!untrustMessageHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<ChatMessageHeader>();
+                                                        trustMessageHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                            }
+
+                                            removeChatMessageHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
+                                            {
+                                                var tempList = new List<ChatMessageHeader>();
+
+                                                foreach (var header in list)
+                                                {
+                                                    if ((now - header.CreationTime) > new TimeSpan(64, 0, 0, 0))
+                                                    {
+                                                        removeChatMessageHeaders.Add(header);
+                                                    }
+                                                    else
+                                                    {
+                                                        tempList.Add(header);
+                                                    }
+                                                }
+
+                                                if (list.Count <= 32) continue;
+
+                                                tempList.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
+                                                removeChatMessageHeaders.AddRange(tempList.Take(tempList.Count - 32));
+                                            }
+                                        }
+
+                                        foreach (var header in removeChatTopicHeaders)
+                                        {
+                                            _headerManager.RemoveHeader(header);
+                                        }
+
+                                        foreach (var header in removeChatMessageHeaders)
+                                        {
+                                            _headerManager.RemoveHeader(header);
+                                        }
                                     }
                                 }
                             }
@@ -1638,18 +1711,58 @@ namespace Library.Net.Lair
                 {
                     pushHeaderUploadStopwatch.Restart();
 
-                    foreach (var item in _headerManager.GetLinks())
+                    foreach (var item in _headerManager.GetSections())
                     {
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(item.Tag.Id, 1));
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
                                 var messageManager = _messagesManager[requestNodes[i]];
 
-                                messageManager.PullHeadersRequest.Add(item);
+                                messageManager.PullSectionsRequest.Add(item);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    }
+
+                    foreach (var item in _headerManager.GetArchives())
+                    {
+                        try
+                        {
+                            List<Node> requestNodes = new List<Node>();
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                var messageManager = _messagesManager[requestNodes[i]];
+
+                                messageManager.PullArchivesRequest.Add(item);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    }
+
+                    foreach (var item in _headerManager.GetChats())
+                    {
+                        try
+                        {
+                            List<Node> requestNodes = new List<Node>();
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                var messageManager = _messagesManager[requestNodes[i]];
+
+                                messageManager.PullChatsRequest.Add(item);
                             }
                         }
                         catch (Exception e)
@@ -1664,7 +1777,9 @@ namespace Library.Net.Lair
                 {
                     pushHeaderDownloadStopwatch.Restart();
 
-                    HashSet<Link> pushHeadersRequestList = new HashSet<Link>();
+                    HashSet<Section> pushSectionsRequestList = new HashSet<Section>();
+                    HashSet<Archive> pushArchivesRequestList = new HashSet<Archive>();
+                    HashSet<Chat> pushChatsRequestList = new HashSet<Chat>();
                     List<Node> nodes = new List<Node>();
 
                     lock (this.ThisLock)
@@ -1674,16 +1789,16 @@ namespace Library.Net.Lair
 
                     {
                         {
-                            var list = _pushHeadersRequestList
+                            var list = _pushSectionsRequestList
                                 .ToArray()
                                 .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushHeadersRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushSectionsRequest.Contains(list[i])))
                                 {
-                                    pushHeadersRequestList.Add(list[i]);
+                                    pushSectionsRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1692,16 +1807,84 @@ namespace Library.Net.Lair
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
-                            var list = messageManager.PullHeadersRequest
+                            var list = messageManager.PullSectionsRequest
                                 .ToArray()
                                 .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushHeadersRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushSectionsRequest.Contains(list[i])))
                                 {
-                                    pushHeadersRequestList.Add(list[i]);
+                                    pushSectionsRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        {
+                            var list = _pushArchivesRequestList
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushArchivesRequest.Contains(list[i])))
+                                {
+                                    pushArchivesRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        foreach (var node in nodes)
+                        {
+                            var messageManager = _messagesManager[node];
+                            var list = messageManager.PullArchivesRequest
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushArchivesRequest.Contains(list[i])))
+                                {
+                                    pushArchivesRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        {
+                            var list = _pushChatsRequestList
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushChatsRequest.Contains(list[i])))
+                                {
+                                    pushChatsRequestList.Add(list[i]);
+                                    j++;
+                                }
+                            }
+                        }
+
+                        foreach (var node in nodes)
+                        {
+                            var messageManager = _messagesManager[node];
+                            var list = messageManager.PullChatsRequest
+                                .ToArray()
+                                .Randomize()
+                                .ToList();
+
+                            for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
+                            {
+                                if (!nodes.Any(n => _messagesManager[n].PushChatsRequest.Contains(list[i])))
+                                {
+                                    pushChatsRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1709,23 +1892,23 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        Dictionary<Node, HashSet<Link>> pushHeadersRequestDictionary = new Dictionary<Node, HashSet<Link>>();
+                        Dictionary<Node, HashSet<Section>> pushSectionsRequestDictionary = new Dictionary<Node, HashSet<Section>>();
 
-                        foreach (var item in pushHeadersRequestList)
+                        foreach (var item in pushSectionsRequestList)
                         {
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Tag.Id, 1));
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    HashSet<Link> hashset;
+                                    HashSet<Section> hashset;
 
-                                    if (!pushHeadersRequestDictionary.TryGetValue(requestNodes[i], out hashset))
+                                    if (!pushSectionsRequestDictionary.TryGetValue(requestNodes[i], out hashset))
                                     {
-                                        hashset = new HashSet<Link>();
-                                        pushHeadersRequestDictionary[requestNodes[i]] = hashset;
+                                        hashset = new HashSet<Section>();
+                                        pushSectionsRequestDictionary[requestNodes[i]] = hashset;
                                     }
 
                                     hashset.Add(item);
@@ -1737,13 +1920,93 @@ namespace Library.Net.Lair
                             }
                         }
 
-                        lock (_pushHeadersRequestDictionary.ThisLock)
+                        lock (_pushSectionsRequestDictionary.ThisLock)
                         {
-                            _pushHeadersRequestDictionary.Clear();
+                            _pushSectionsRequestDictionary.Clear();
 
-                            foreach (var item in pushHeadersRequestDictionary)
+                            foreach (var item in pushSectionsRequestDictionary)
                             {
-                                _pushHeadersRequestDictionary.Add(item.Key, item.Value);
+                                _pushSectionsRequestDictionary.Add(item.Key, item.Value);
+                            }
+                        }
+                    }
+
+                    {
+                        Dictionary<Node, HashSet<Archive>> pushArchivesRequestDictionary = new Dictionary<Node, HashSet<Archive>>();
+
+                        foreach (var item in pushArchivesRequestList)
+                        {
+                            try
+                            {
+                                List<Node> requestNodes = new List<Node>();
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+
+                                for (int i = 0; i < requestNodes.Count; i++)
+                                {
+                                    HashSet<Archive> hashset;
+
+                                    if (!pushArchivesRequestDictionary.TryGetValue(requestNodes[i], out hashset))
+                                    {
+                                        hashset = new HashSet<Archive>();
+                                        pushArchivesRequestDictionary[requestNodes[i]] = hashset;
+                                    }
+
+                                    hashset.Add(item);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e);
+                            }
+                        }
+
+                        lock (_pushArchivesRequestDictionary.ThisLock)
+                        {
+                            _pushArchivesRequestDictionary.Clear();
+
+                            foreach (var item in pushArchivesRequestDictionary)
+                            {
+                                _pushArchivesRequestDictionary.Add(item.Key, item.Value);
+                            }
+                        }
+                    }
+
+                    {
+                        Dictionary<Node, HashSet<Chat>> pushChatsRequestDictionary = new Dictionary<Node, HashSet<Chat>>();
+
+                        foreach (var item in pushChatsRequestList)
+                        {
+                            try
+                            {
+                                List<Node> requestNodes = new List<Node>();
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+
+                                for (int i = 0; i < requestNodes.Count; i++)
+                                {
+                                    HashSet<Chat> hashset;
+
+                                    if (!pushChatsRequestDictionary.TryGetValue(requestNodes[i], out hashset))
+                                    {
+                                        hashset = new HashSet<Chat>();
+                                        pushChatsRequestDictionary[requestNodes[i]] = hashset;
+                                    }
+
+                                    hashset.Add(item);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e);
+                            }
+                        }
+
+                        lock (_pushChatsRequestDictionary.ThisLock)
+                        {
+                            _pushChatsRequestDictionary.Clear();
+
+                            foreach (var item in pushChatsRequestDictionary)
+                            {
+                                _pushChatsRequestDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -1843,7 +2106,8 @@ namespace Library.Net.Lair
                         // PushBlocksLink
                         if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                         {
-                            KeyCollection tempList = null;
+                            KeyCollection tempList = new KeyCollection();
+
                             int count = (int)(_maxBlockLinkCount * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (_pushBlocksLinkDictionary.ThisLock)
@@ -1852,14 +2116,14 @@ namespace Library.Net.Lair
 
                                 if (_pushBlocksLinkDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new KeyCollection(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(count));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksLink.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count > 0)
+                            if (tempList.Count > 0)
                             {
                                 try
                                 {
@@ -1883,7 +2147,8 @@ namespace Library.Net.Lair
                         // PushBlocksRequest
                         if (connectionCount >= _downloadingConnectionCountLowerLimit)
                         {
-                            KeyCollection tempList = null;
+                            KeyCollection tempList = new KeyCollection();
+
                             int count = (int)(_maxBlockRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
                             lock (_pushBlocksRequestDictionary.ThisLock)
@@ -1892,14 +2157,14 @@ namespace Library.Net.Lair
 
                                 if (_pushBlocksRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new KeyCollection(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(count));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksRequest.AddRange(tempList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count > 0)
+                            if (tempList.Count > 0)
                             {
                                 try
                                 {
@@ -1928,41 +2193,92 @@ namespace Library.Net.Lair
                         // PushHeadersRequest
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
-                            LinkCollection tempList = null;
+                            SectionCollection sectionList = new SectionCollection();
+                            ArchiveCollection archiveList = new ArchiveCollection();
+                            ChatCollection chatList = new ChatCollection();
+
                             int count = (int)(_maxHeaderRequestCount * this.ResponseTimePriority(connectionManager.Node));
 
-                            lock (_pushHeadersRequestDictionary.ThisLock)
+                            lock (_pushSectionsRequestDictionary.ThisLock)
                             {
-                                HashSet<Link> hashset;
+                                HashSet<Section> hashset;
 
-                                if (_pushHeadersRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                if (_pushSectionsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList = new LinkCollection(hashset.Randomize().Take(count));
+                                    sectionList.AddRange(hashset.Randomize().Take(count));
 
-                                    hashset.ExceptWith(tempList);
-                                    messageManager.PushHeadersRequest.AddRange(tempList);
+                                    hashset.ExceptWith(sectionList);
+                                    messageManager.PushSectionsRequest.AddRange(sectionList);
                                 }
                             }
 
-                            if (tempList != null && tempList.Count > 0)
+                            lock (_pushArchivesRequestDictionary.ThisLock)
+                            {
+                                HashSet<Archive> hashset;
+
+                                if (_pushArchivesRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                {
+                                    archiveList.AddRange(hashset.Randomize().Take(count));
+
+                                    hashset.ExceptWith(archiveList);
+                                    messageManager.PushArchivesRequest.AddRange(archiveList);
+                                }
+                            }
+
+                            lock (_pushChatsRequestDictionary.ThisLock)
+                            {
+                                HashSet<Chat> hashset;
+
+                                if (_pushChatsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                {
+                                    chatList.AddRange(hashset.Randomize().Take(count));
+
+                                    hashset.ExceptWith(chatList);
+                                    messageManager.PushChatsRequest.AddRange(chatList);
+                                }
+                            }
+
+                            if (sectionList.Count > 0 || archiveList.Count > 0 || chatList.Count > 0)
                             {
                                 try
                                 {
-                                    connectionManager.PushHeadersRequest(tempList);
+                                    connectionManager.PushHeadersRequest(sectionList, archiveList, chatList);
 
-                                    foreach (var item in tempList)
+                                    foreach (var item in sectionList)
                                     {
-                                        _pushHeadersRequestList.Remove(item);
+                                        _pushSectionsRequestList.Remove(item);
                                     }
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
-                                    _pushHeaderRequestCount += tempList.Count;
+                                    foreach (var item in archiveList)
+                                    {
+                                        _pushArchivesRequestList.Remove(item);
+                                    }
+
+                                    foreach (var item in chatList)
+                                    {
+                                        _pushChatsRequestList.Remove(item);
+                                    }
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest ({0})",
+                                        sectionList.Count + archiveList.Count + chatList.Count));
+
+                                    _pushHeaderRequestCount += sectionList.Count;
                                 }
                                 catch (Exception e)
                                 {
-                                    foreach (var item in tempList)
+                                    foreach (var item in sectionList)
                                     {
-                                        messageManager.PushHeadersRequest.Remove(item);
+                                        messageManager.PushSectionsRequest.Remove(item);
+                                    }
+
+                                    foreach (var item in archiveList)
+                                    {
+                                        messageManager.PushArchivesRequest.Remove(item);
+                                    }
+
+                                    foreach (var item in chatList)
+                                    {
+                                        messageManager.PushChatsRequest.Remove(item);
                                     }
 
                                     throw e;
@@ -2094,36 +2410,149 @@ namespace Library.Net.Lair
                         // PushHeader
                         if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                         {
-                            var links = new List<Link>(messageManager.PullHeadersRequest.Randomize());
+                            var sections = messageManager.PullSectionsRequest.ToList();
+                            var archives = messageManager.PullArchivesRequest.ToList();
+                            var chats = messageManager.PullChatsRequest.ToList();
 
-                            if (links.Count > 0)
+                            var sectionProfileHeaders = new List<SectionProfileHeader>();
+                            var sectionMessageHeaders = new List<SectionMessageHeader>();
+                            var archiveDocumentHeaders = new List<ArchiveDocumentHeader>();
+                            var archiveVoteHeaders = new List<ArchiveVoteHeader>();
+                            var chatTopicHeaders = new List<ChatTopicHeader>();
+                            var chatMessageHeaders = new List<ChatMessageHeader>();
+
+                            foreach (var tag in sections.Randomize())
                             {
-                                var headers = new List<Header>();
-
-                                foreach (var link in links.Randomize())
+                                foreach (var header in _headerManager.GetSectionProfileHeaders(tag))
                                 {
-                                    foreach (var header in _headerManager.GetHeaders(link))
+                                    if (!messageManager.PushSectionProfileHeaders.Contains(header.GetHash(_hashAlgorithm)))
                                     {
-                                        if (!messageManager.PushHeaders.Contains(header.GetHash(_hashAlgorithm)))
-                                        {
-                                            headers.Add(header);
+                                        sectionProfileHeaders.Add(header);
 
-                                            if (headers.Count >= _maxHeaderCount) goto End;
-                                        }
+                                        if (sectionProfileHeaders.Count >= _maxHeaderCount) break;
                                     }
                                 }
 
-                            End: ;
-
-                                connectionManager.PushHeaders(headers);
-
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Headers ({0})", headers.Count));
-                                _pushHeaderCount += headers.Count;
-
-                                foreach (var header in headers)
+                                foreach (var header in _headerManager.GetSectionMessageHeaders(tag))
                                 {
-                                    messageManager.PushHeaders.Add(header.GetHash(_hashAlgorithm));
+                                    if (!messageManager.PushSectionMessageHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    {
+                                        sectionMessageHeaders.Add(header);
+
+                                        if (sectionMessageHeaders.Count >= _maxHeaderCount) break;
+                                    }
                                 }
+
+                                if (sectionProfileHeaders.Count >= _maxHeaderCount) break;
+                                if (sectionMessageHeaders.Count >= _maxHeaderCount) break;
+                            }
+
+                            foreach (var tag in archives.Randomize())
+                            {
+                                foreach (var header in _headerManager.GetArchiveDocumentHeaders(tag))
+                                {
+                                    if (!messageManager.PushArchiveDocumentHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    {
+                                        archiveDocumentHeaders.Add(header);
+
+                                        if (archiveDocumentHeaders.Count >= _maxHeaderCount) break;
+                                    }
+                                }
+
+                                foreach (var header in _headerManager.GetArchiveVoteHeaders(tag))
+                                {
+                                    if (!messageManager.PushArchiveVoteHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    {
+                                        archiveVoteHeaders.Add(header);
+
+                                        if (archiveVoteHeaders.Count >= _maxHeaderCount) break;
+                                    }
+                                }
+
+                                if (archiveDocumentHeaders.Count >= _maxHeaderCount) break;
+                                if (archiveVoteHeaders.Count >= _maxHeaderCount) break;
+                            }
+
+                            foreach (var tag in chats.Randomize())
+                            {
+                                foreach (var header in _headerManager.GetChatTopicHeaders(tag))
+                                {
+                                    if (!messageManager.PushChatTopicHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    {
+                                        chatTopicHeaders.Add(header);
+
+                                        if (chatTopicHeaders.Count >= _maxHeaderCount) break;
+                                    }
+                                }
+
+                                foreach (var header in _headerManager.GetChatMessageHeaders(tag))
+                                {
+                                    if (!messageManager.PushChatMessageHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    {
+                                        chatMessageHeaders.Add(header);
+
+                                        if (chatMessageHeaders.Count >= _maxHeaderCount) break;
+                                    }
+                                }
+
+                                if (chatTopicHeaders.Count >= _maxHeaderCount) break;
+                                if (chatMessageHeaders.Count >= _maxHeaderCount) break;
+                            }
+
+                            if (sectionProfileHeaders.Count > 0
+                                || sectionMessageHeaders.Count > 0
+                                || archiveDocumentHeaders.Count > 0
+                                || archiveVoteHeaders.Count > 0
+                                || chatTopicHeaders.Count > 0
+                                || chatMessageHeaders.Count > 0)
+                            {
+                                connectionManager.PushHeaders(sectionProfileHeaders,
+                                    sectionMessageHeaders,
+                                    archiveDocumentHeaders,
+                                    archiveVoteHeaders,
+                                    chatTopicHeaders,
+                                    chatMessageHeaders);
+
+                                var headerCount = sectionProfileHeaders.Count
+                                    + sectionMessageHeaders.Count
+                                    + archiveDocumentHeaders.Count
+                                    + archiveVoteHeaders.Count
+                                    + chatTopicHeaders.Count
+                                    + chatMessageHeaders.Count;
+
+                                Debug.WriteLine(string.Format("ConnectionManager: Push Headers ({0})", headerCount));
+                                _pushHeaderCount += headerCount;
+
+                                foreach (var header in sectionProfileHeaders)
+                                {
+                                    messageManager.PushSectionProfileHeaders.Add(header.GetHash(_hashAlgorithm));
+                                }
+
+                                foreach (var header in sectionMessageHeaders)
+                                {
+                                    messageManager.PushSectionMessageHeaders.Add(header.GetHash(_hashAlgorithm));
+                                }
+
+                                foreach (var header in archiveDocumentHeaders)
+                                {
+                                    messageManager.PushArchiveDocumentHeaders.Add(header.GetHash(_hashAlgorithm));
+                                }
+
+                                foreach (var header in archiveVoteHeaders)
+                                {
+                                    messageManager.PushArchiveVoteHeaders.Add(header.GetHash(_hashAlgorithm));
+                                }
+
+                                foreach (var header in chatTopicHeaders)
+                                {
+                                    messageManager.PushChatTopicHeaders.Add(header.GetHash(_hashAlgorithm));
+                                }
+
+                                foreach (var header in chatMessageHeaders)
+                                {
+                                    messageManager.PushChatMessageHeaders.Add(header.GetHash(_hashAlgorithm));
+                                }
+
                             }
                         }
                     }
@@ -2277,19 +2706,41 @@ namespace Library.Net.Lair
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Links == null) return;
-            if (messageManager.PullHeadersRequest.Count > _maxHeaderRequestCount * messageManager.PullHeadersRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullSectionsRequest.Count > _maxHeaderRequestCount * messageManager.PullSectionsRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullArchivesRequest.Count > _maxHeaderRequestCount * messageManager.PullArchivesRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullChatsRequest.Count > _maxHeaderRequestCount * messageManager.PullChatsRequest.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})", e.Links.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})",
+                e.Sections.Count() + e.Archives.Count() + e.Chats.Count()));
 
-            foreach (var link in e.Links.Take(_maxHeaderRequestCount))
+            foreach (var tag in e.Sections.Take(_maxHeaderRequestCount))
             {
-                if (!ConnectionsManager.Check(link)) continue;
+                if (!ConnectionsManager.Check(tag)) continue;
 
-                messageManager.PullHeadersRequest.Add(link);
+                messageManager.PullSectionsRequest.Add(tag);
                 _pullHeaderRequestCount++;
 
-                _lastUsedHeaderTimes[link] = DateTime.UtcNow;
+                _lastUsedSectionTimes[tag] = DateTime.UtcNow;
+            }
+
+            foreach (var tag in e.Archives.Take(_maxHeaderRequestCount))
+            {
+                if (!ConnectionsManager.Check(tag)) continue;
+
+                messageManager.PullArchivesRequest.Add(tag);
+                _pullHeaderRequestCount++;
+
+                _lastUsedArchiveTimes[tag] = DateTime.UtcNow;
+            }
+
+            foreach (var tag in e.Chats.Take(_maxHeaderRequestCount))
+            {
+                if (!ConnectionsManager.Check(tag)) continue;
+
+                messageManager.PullChatsRequest.Add(tag);
+                _pullHeaderRequestCount++;
+
+                _lastUsedChatTimes[tag] = DateTime.UtcNow;
             }
         }
 
@@ -2300,19 +2751,93 @@ namespace Library.Net.Lair
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (e.Headers == null) return;
-            if (messageManager.PushHeaders.Count > _maxHeaderCount * messageManager.PushHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushSectionProfileHeaders.Count > _maxHeaderCount * messageManager.PushSectionProfileHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushSectionMessageHeaders.Count > _maxHeaderCount * messageManager.PushSectionMessageHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushArchiveDocumentHeaders.Count > _maxHeaderCount * messageManager.PushArchiveDocumentHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushArchiveVoteHeaders.Count > _maxHeaderCount * messageManager.PushArchiveVoteHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushChatTopicHeaders.Count > _maxHeaderCount * messageManager.PushChatTopicHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushChatMessageHeaders.Count > _maxHeaderCount * messageManager.PushChatMessageHeaders.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})", e.Headers.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})", e.SectionMessageHeaders.Count()
+                + e.SectionMessageHeaders.Count()
+                + e.ArchiveDocumentHeaders.Count()
+                + e.ArchiveVoteHeaders.Count()
+                + e.ChatTopicHeaders.Count()
+                + e.ChatMessageHeaders.Count()));
 
-            foreach (var header in e.Headers.Take(_maxHeaderCount))
+            foreach (var header in e.SectionProfileHeaders.Take(_maxHeaderCount))
             {
                 if (_headerManager.SetHeader(header))
                 {
-                    messageManager.PushHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.PushSectionProfileHeaders.Add(header.GetHash(_hashAlgorithm));
                     messageManager.LastPullTime = DateTime.UtcNow;
 
-                    _lastUsedHeaderTimes[header.Link] = DateTime.UtcNow;
+                    _lastUsedSectionTimes[header.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount++;
+            }
+
+            foreach (var header in e.SectionMessageHeaders.Take(_maxHeaderCount))
+            {
+                if (_headerManager.SetHeader(header))
+                {
+                    messageManager.PushSectionMessageHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.LastPullTime = DateTime.UtcNow;
+
+                    _lastUsedSectionTimes[header.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount++;
+            }
+
+            foreach (var header in e.ArchiveDocumentHeaders.Take(_maxHeaderCount))
+            {
+                if (_headerManager.SetHeader(header))
+                {
+                    messageManager.PushArchiveDocumentHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.LastPullTime = DateTime.UtcNow;
+
+                    _lastUsedArchiveTimes[header.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount++;
+            }
+
+            foreach (var header in e.ArchiveVoteHeaders.Take(_maxHeaderCount))
+            {
+                if (_headerManager.SetHeader(header))
+                {
+                    messageManager.PushArchiveVoteHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.LastPullTime = DateTime.UtcNow;
+
+                    _lastUsedArchiveTimes[header.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount++;
+            }
+
+            foreach (var header in e.ChatTopicHeaders.Take(_maxHeaderCount))
+            {
+                if (_headerManager.SetHeader(header))
+                {
+                    messageManager.PushChatTopicHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.LastPullTime = DateTime.UtcNow;
+
+                    _lastUsedChatTimes[header.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount++;
+            }
+
+            foreach (var header in e.ChatMessageHeaders.Take(_maxHeaderCount))
+            {
+                if (_headerManager.SetHeader(header))
+                {
+                    messageManager.PushChatMessageHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.LastPullTime = DateTime.UtcNow;
+
+                    _lastUsedChatTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount++;
@@ -2471,73 +2996,73 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section section)
+        public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _pushSectionHeadersRequestList.Add(section);
+                _pushSectionsRequestList.Add(tag);
 
-                return _headerManager.GetSectionProfileHeaders(section);
+                return _headerManager.GetSectionProfileHeaders(tag);
             }
         }
 
-        public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section section)
+        public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _pushSectionHeadersRequestList.Add(section);
+                _pushSectionsRequestList.Add(tag);
 
-                return _headerManager.GetSectionMessageHeaders(section);
+                return _headerManager.GetSectionMessageHeaders(tag);
             }
         }
 
-        public IEnumerable<DocumentArchiveHeader> GetDocumentArchiveHeaders(Document document)
+        public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders(Archive tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _headerManager.GetDocumentArchiveHeaders(document);
+                return _headerManager.GetArchiveDocumentHeaders(tag);
             }
         }
 
-        public IEnumerable<DocumentVoteHeader> GetDocumentVoteHeaders(Document document)
+        public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders(Archive tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _pushDocumentHeadersRequestList.Add(document);
+                _pushArchivesRequestList.Add(tag);
 
-                return _headerManager.GetDocumentVoteHeaders(document);
+                return _headerManager.GetArchiveVoteHeaders(tag);
             }
         }
 
-        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat chat)
+        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _pushChatHeadersRequestList.Add(chat);
+                _pushChatsRequestList.Add(tag);
 
-                return _headerManager.GetChatTopicHeaders(chat);
+                return _headerManager.GetChatTopicHeaders(tag);
             }
         }
 
-        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat chat)
+        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _pushChatHeadersRequestList.Add(chat);
+                _pushChatsRequestList.Add(tag);
 
-                return _headerManager.GetChatMessageHeaders(chat);
+                return _headerManager.GetChatMessageHeaders(tag);
             }
         }
 
@@ -2561,7 +3086,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(DocumentArchiveHeader header)
+        public void Upload(ArchiveDocumentHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -2571,7 +3096,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(DocumentVoteHeader header)
+        public void Upload(ArchiveVoteHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -2733,12 +3258,12 @@ namespace Library.Net.Lair
                     _headerManager.SetHeader(header);
                 }
 
-                foreach (var header in _settings.DocumentArchiveHeaders)
+                foreach (var header in _settings.ArchiveDocumentHeaders)
                 {
                     _headerManager.SetHeader(header);
                 }
 
-                foreach (var header in _settings.DocumentVoteHeaders)
+                foreach (var header in _settings.ArchiveVoteHeaders)
                 {
                     _headerManager.SetHeader(header);
                 }
@@ -2774,16 +3299,16 @@ namespace Library.Net.Lair
                         _settings.SectionMessageHeaders.AddRange(_headerManager.GetSectionMessageHeaders());
                     }
 
-                    lock (_settings.DocumentArchiveHeaders.ThisLock)
+                    lock (_settings.ArchiveDocumentHeaders.ThisLock)
                     {
-                        _settings.DocumentArchiveHeaders.Clear();
-                        _settings.DocumentArchiveHeaders.AddRange(_headerManager.GetDocumentArchiveHeaders());
+                        _settings.ArchiveDocumentHeaders.Clear();
+                        _settings.ArchiveDocumentHeaders.AddRange(_headerManager.GetArchiveDocumentHeaders());
                     }
 
-                    lock (_settings.DocumentVoteHeaders.ThisLock)
+                    lock (_settings.ArchiveVoteHeaders.ThisLock)
                     {
-                        _settings.DocumentVoteHeaders.Clear();
-                        _settings.DocumentVoteHeaders.AddRange(_headerManager.GetDocumentVoteHeaders());
+                        _settings.ArchiveVoteHeaders.Clear();
+                        _settings.ArchiveVoteHeaders.AddRange(_headerManager.GetArchiveVoteHeaders());
                     }
 
                     lock (_settings.ChatTopicHeaders.ThisLock)
@@ -2829,8 +3354,8 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedList<SectionProfileHeader>>() { Name = "SectionProfileHeaders", Value = new LockedList<SectionProfileHeader>() },
                     new Library.Configuration.SettingContent<LockedList<SectionMessageHeader>>() { Name = "SectionMessageHeaders", Value = new LockedList<SectionMessageHeader>() },
-                    new Library.Configuration.SettingContent<LockedList<DocumentArchiveHeader>>() { Name = "DocumentArchiveHeaders", Value = new LockedList<DocumentArchiveHeader>() },
-                    new Library.Configuration.SettingContent<LockedList<DocumentVoteHeader>>() { Name = "DocumentVoteHeaders", Value = new LockedList<DocumentVoteHeader>() },
+                    new Library.Configuration.SettingContent<LockedList<ArchiveDocumentHeader>>() { Name = "ArchiveDocumentHeaders", Value = new LockedList<ArchiveDocumentHeader>() },
+                    new Library.Configuration.SettingContent<LockedList<ArchiveVoteHeader>>() { Name = "ArchiveVoteHeaders", Value = new LockedList<ArchiveVoteHeader>() },
                     new Library.Configuration.SettingContent<LockedList<ChatTopicHeader>>() { Name = "ChatTopicHeaders", Value = new LockedList<ChatTopicHeader>() },
                     new Library.Configuration.SettingContent<LockedList<ChatMessageHeader>>() { Name = "ChatMessageHeaders", Value = new LockedList<ChatMessageHeader>() },
                 })
@@ -2963,24 +3488,24 @@ namespace Library.Net.Lair
                 }
             }
 
-            public LockedList<DocumentArchiveHeader> DocumentArchiveHeaders
+            public LockedList<ArchiveDocumentHeader> ArchiveDocumentHeaders
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedList<DocumentArchiveHeader>)this["DocumentArchiveHeaders"];
+                        return (LockedList<ArchiveDocumentHeader>)this["ArchiveDocumentHeaders"];
                     }
                 }
             }
 
-            public LockedList<DocumentVoteHeader> DocumentVoteHeaders
+            public LockedList<ArchiveVoteHeader> ArchiveVoteHeaders
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedList<DocumentVoteHeader>)this["DocumentVoteHeaders"];
+                        return (LockedList<ArchiveVoteHeader>)this["ArchiveVoteHeaders"];
                     }
                 }
             }
@@ -3012,8 +3537,8 @@ namespace Library.Net.Lair
         {
             private Dictionary<Section, Dictionary<string, SectionProfileHeader>> _sectionProfileHeaders = new Dictionary<Section, Dictionary<string, SectionProfileHeader>>();
             private Dictionary<Section, Dictionary<string, HashSet<SectionMessageHeader>>> _sectionMessageHeaders = new Dictionary<Section, Dictionary<string, HashSet<SectionMessageHeader>>>();
-            private Dictionary<Document, Dictionary<string, DocumentArchiveHeader>> _documentArchiveHeaders = new Dictionary<Document, Dictionary<string, DocumentArchiveHeader>>();
-            private Dictionary<Document, Dictionary<string, DocumentVoteHeader>> _documentVoteHeaders = new Dictionary<Document, Dictionary<string, DocumentVoteHeader>>();
+            private Dictionary<Archive, Dictionary<string, ArchiveDocumentHeader>> _archiveDocumentHeaders = new Dictionary<Archive, Dictionary<string, ArchiveDocumentHeader>>();
+            private Dictionary<Archive, Dictionary<string, ArchiveVoteHeader>> _archiveVoteHeaders = new Dictionary<Archive, Dictionary<string, ArchiveVoteHeader>>();
             private Dictionary<Chat, Dictionary<string, ChatTopicHeader>> _chatTopicHeaders = new Dictionary<Chat, Dictionary<string, ChatTopicHeader>>();
             private Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>> _chatMessageHeaders = new Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>>();
 
@@ -3032,12 +3557,12 @@ namespace Library.Net.Lair
                 return hashset;
             }
 
-            public IEnumerable<Document> GetDocuments()
+            public IEnumerable<Archive> GetArchives()
             {
-                var hashset = new HashSet<Document>();
+                var hashset = new HashSet<Archive>();
 
-                hashset.UnionWith(_documentArchiveHeaders.Keys);
-                hashset.UnionWith(_documentVoteHeaders.Keys);
+                hashset.UnionWith(_archiveDocumentHeaders.Keys);
+                hashset.UnionWith(_archiveVoteHeaders.Keys);
 
                 return hashset;
             }
@@ -3052,27 +3577,27 @@ namespace Library.Net.Lair
                 return hashset;
             }
 
-            public void RemoveSections(IEnumerable<Section> sections)
+            public void RemoveTags(IEnumerable<Section> tags)
             {
-                foreach (var section in sections)
+                foreach (var section in tags)
                 {
                     _sectionProfileHeaders.Remove(section);
                     _sectionMessageHeaders.Remove(section);
                 }
             }
 
-            public void RemoveDocuments(IEnumerable<Document> documents)
+            public void RemoveTags(IEnumerable<Archive> tags)
             {
-                foreach (var document in documents)
+                foreach (var archive in tags)
                 {
-                    _documentArchiveHeaders.Remove(document);
-                    _documentVoteHeaders.Remove(document);
+                    _archiveDocumentHeaders.Remove(archive);
+                    _archiveVoteHeaders.Remove(archive);
                 }
             }
 
-            public void RemoveChats(IEnumerable<Chat> chats)
+            public void RemoveTags(IEnumerable<Chat> tags)
             {
-                foreach (var chat in chats)
+                foreach (var chat in tags)
                 {
                     _chatTopicHeaders.Remove(chat);
                     _chatMessageHeaders.Remove(chat);
@@ -3084,11 +3609,11 @@ namespace Library.Net.Lair
                 return _sectionProfileHeaders.Values.SelectMany(n => n.Values);
             }
 
-            public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section section)
+            public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
             {
                 Dictionary<string, SectionProfileHeader> dic = null;
 
-                if (_sectionProfileHeaders.TryGetValue(section, out dic))
+                if (_sectionProfileHeaders.TryGetValue(tag, out dic))
                 {
                     return dic.Values.ToArray();
                 }
@@ -3101,11 +3626,11 @@ namespace Library.Net.Lair
                 return _sectionMessageHeaders.Values.SelectMany(n => n.Values.SelectMany(m => m));
             }
 
-            public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section section)
+            public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
             {
                 Dictionary<string, HashSet<SectionMessageHeader>> dic = null;
 
-                if (_sectionMessageHeaders.TryGetValue(section, out dic))
+                if (_sectionMessageHeaders.TryGetValue(tag, out dic))
                 {
                     return dic.Values.SelectMany(n => n).ToArray();
                 }
@@ -3113,38 +3638,38 @@ namespace Library.Net.Lair
                 return new SectionMessageHeader[0];
             }
 
-            public IEnumerable<DocumentArchiveHeader> GetDocumentArchiveHeaders()
+            public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders()
             {
-                return _documentArchiveHeaders.Values.SelectMany(n => n.Values);
+                return _archiveDocumentHeaders.Values.SelectMany(n => n.Values);
             }
 
-            public IEnumerable<DocumentArchiveHeader> GetDocumentArchiveHeaders(Document document)
+            public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders(Archive tag)
             {
-                Dictionary<string, DocumentArchiveHeader> dic = null;
+                Dictionary<string, ArchiveDocumentHeader> dic = null;
 
-                if (_documentArchiveHeaders.TryGetValue(document, out dic))
+                if (_archiveDocumentHeaders.TryGetValue(tag, out dic))
                 {
                     return dic.Values.ToArray();
                 }
 
-                return new DocumentArchiveHeader[0];
+                return new ArchiveDocumentHeader[0];
             }
 
-            public IEnumerable<DocumentVoteHeader> GetDocumentVoteHeaders()
+            public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders()
             {
-                return _documentVoteHeaders.Values.SelectMany(n => n.Values);
+                return _archiveVoteHeaders.Values.SelectMany(n => n.Values);
             }
 
-            public IEnumerable<DocumentVoteHeader> GetDocumentVoteHeaders(Document document)
+            public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders(Archive tag)
             {
-                Dictionary<string, DocumentVoteHeader> dic = null;
+                Dictionary<string, ArchiveVoteHeader> dic = null;
 
-                if (_documentVoteHeaders.TryGetValue(document, out dic))
+                if (_archiveVoteHeaders.TryGetValue(tag, out dic))
                 {
                     return dic.Values.ToArray();
                 }
 
-                return new DocumentVoteHeader[0];
+                return new ArchiveVoteHeader[0];
             }
 
             public IEnumerable<ChatTopicHeader> GetChatTopicHeaders()
@@ -3169,11 +3694,11 @@ namespace Library.Net.Lair
                 return _chatMessageHeaders.Values.SelectMany(n => n.Values.SelectMany(m => m));
             }
 
-            public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat chat)
+            public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
             {
                 Dictionary<string, HashSet<ChatMessageHeader>> dic = null;
 
-                if (_chatMessageHeaders.TryGetValue(chat, out dic))
+                if (_chatMessageHeaders.TryGetValue(tag, out dic))
                 {
                     return dic.Values.SelectMany(n => n).ToArray();
                 }
@@ -3248,7 +3773,7 @@ namespace Library.Net.Lair
                 return hashset.Add(header);
             }
 
-            public bool SetHeader(DocumentArchiveHeader header)
+            public bool SetHeader(ArchiveDocumentHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3261,15 +3786,15 @@ namespace Library.Net.Lair
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, DocumentArchiveHeader> dic = null;
+                Dictionary<string, ArchiveDocumentHeader> dic = null;
 
-                if (!_documentArchiveHeaders.TryGetValue(header.Tag, out dic))
+                if (!_archiveDocumentHeaders.TryGetValue(header.Tag, out dic))
                 {
-                    dic = new Dictionary<string, DocumentArchiveHeader>();
-                    _documentArchiveHeaders[header.Tag] = dic;
+                    dic = new Dictionary<string, ArchiveDocumentHeader>();
+                    _archiveDocumentHeaders[header.Tag] = dic;
                 }
 
-                DocumentArchiveHeader tempHeader = null;
+                ArchiveDocumentHeader tempHeader = null;
 
                 if (!dic.TryGetValue(signature, out tempHeader)
                     || header.CreationTime > tempHeader.CreationTime)
@@ -3282,7 +3807,7 @@ namespace Library.Net.Lair
                 return false;
             }
 
-            public bool SetHeader(DocumentVoteHeader header)
+            public bool SetHeader(ArchiveVoteHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3295,15 +3820,15 @@ namespace Library.Net.Lair
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, DocumentVoteHeader> dic = null;
+                Dictionary<string, ArchiveVoteHeader> dic = null;
 
-                if (!_documentVoteHeaders.TryGetValue(header.Tag, out dic))
+                if (!_archiveVoteHeaders.TryGetValue(header.Tag, out dic))
                 {
-                    dic = new Dictionary<string, DocumentVoteHeader>();
-                    _documentVoteHeaders[header.Tag] = dic;
+                    dic = new Dictionary<string, ArchiveVoteHeader>();
+                    _archiveVoteHeaders[header.Tag] = dic;
                 }
 
-                DocumentVoteHeader tempHeader = null;
+                ArchiveVoteHeader tempHeader = null;
 
                 if (!dic.TryGetValue(signature, out tempHeader)
                     || header.CreationTime > tempHeader.CreationTime)
@@ -3435,7 +3960,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public void RemoveHeader(DocumentArchiveHeader header)
+            public void RemoveHeader(ArchiveDocumentHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3448,11 +3973,11 @@ namespace Library.Net.Lair
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, DocumentArchiveHeader> dic = null;
+                Dictionary<string, ArchiveDocumentHeader> dic = null;
 
-                if (!_documentArchiveHeaders.TryGetValue(header.Tag, out dic)) return;
+                if (!_archiveDocumentHeaders.TryGetValue(header.Tag, out dic)) return;
 
-                DocumentArchiveHeader tempHeader = null;
+                ArchiveDocumentHeader tempHeader = null;
 
                 if (dic.TryGetValue(signature, out tempHeader)
                     && header == tempHeader)
@@ -3461,7 +3986,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public void RemoveHeader(DocumentVoteHeader header)
+            public void RemoveHeader(ArchiveVoteHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3474,11 +3999,11 @@ namespace Library.Net.Lair
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, DocumentVoteHeader> dic = null;
+                Dictionary<string, ArchiveVoteHeader> dic = null;
 
-                if (!_documentVoteHeaders.TryGetValue(header.Tag, out dic)) return;
+                if (!_archiveVoteHeaders.TryGetValue(header.Tag, out dic)) return;
 
-                DocumentVoteHeader tempHeader = null;
+                ArchiveVoteHeader tempHeader = null;
 
                 if (dic.TryGetValue(signature, out tempHeader)
                     && header == tempHeader)

@@ -18,6 +18,5 @@ namespace Library.Net.Lair
         string Name { get; }
         HypertextFormatType FormatType { get; }
         string Hypertext { get; }
-        string Comment { get; }
     }
 }

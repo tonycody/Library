@@ -2,7 +2,7 @@
 
 namespace Library.Net.Lair
 {
-    interface IDocumentVoteContent<TKey>
+    interface IArchiveVoteContent<TKey>
         where TKey : IKey
     {
         IEnumerable<TKey> Goods { get; }

@@ -309,97 +309,185 @@ namespace Library.Net.Lair
             }
         }
 
-        public SectionManager GetSectionManager(Tag tag, string leaderSignature)
+        public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
         {
-            return new SectionManager(tag, leaderSignature, this, _bufferManager);
-        }
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-        internal IEnumerable<Header> GetHeaders(Link link)
-        {
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
-                return _connectionsManager.GetHeaders(link);
+                return _connectionsManager.GetSectionProfileHeaders(tag);
             }
         }
 
-        internal ArraySegment<byte>? Download(Header header)
+        public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetSectionMessageHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders(Archive tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetArchiveDocumentHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders(Archive tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetArchiveVoteHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetChatTopicHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetChatMessageHeaders(tag);
+            }
+        }
+
+        public SectionProfileContent GetContent(SectionProfileHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
             lock (this.ThisLock)
             {
                 return _downloadManager.Download(header);
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
-            SectionProfileContent content,
+        public SectionMessageContent GetContent(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
 
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header, exchangePrivateKey);
+            }
+        }
+
+        public ArchiveDocumentContent GetContent(ArchiveDocumentHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public ArchiveVoteContent GetContent(ArchiveVoteHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public ChatTopicContent GetContent(ChatTopicHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public ChatMessageContent GetContent(ChatMessageHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public void Upload(Section tag,
+            SectionProfileContent content,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, path, content, digitalSignature);
+                _uploadManager.Upload(tag, content, digitalSignature);
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
+        public void Upload(Section tag,
             SectionMessageContent content,
-
             ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, path, content, exchangePublicKey, digitalSignature);
+                _uploadManager.Upload(tag, content, exchangePublicKey, digitalSignature);
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
-            DocumentPageContent content,
-
+        public void Upload(Archive tag,
+            ArchiveDocumentContent content,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, path, content, digitalSignature);
+                _uploadManager.Upload(tag, content, digitalSignature);
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
-            DocumentVoteContent content,
-
+        public void Upload(Archive tag,
+            ArchiveVoteContent content,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, path, content, digitalSignature);
+                _uploadManager.Upload(tag, content, digitalSignature);
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
+        public void Upload(Chat tag,
             ChatTopicContent content,
-
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, path, content, digitalSignature);
+                _uploadManager.Upload(tag, content, digitalSignature);
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
+        public void Upload(Chat tag,
             ChatMessageContent content,
-
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, path, content, digitalSignature);
+                _uploadManager.Upload(tag, content, digitalSignature);
             }
         }
 

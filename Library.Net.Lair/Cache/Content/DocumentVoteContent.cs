@@ -7,8 +7,8 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentVoteContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentVoteContent : ItemBase<DocumentVoteContent>, IDocumentVoteContent<Key>
+    [DataContract(Name = "ArchiveVoteContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class ArchiveVoteContent : ItemBase<ArchiveVoteContent>, IArchiveVoteContent<Key>
     {
         private enum SerializeId : byte
         {
@@ -25,7 +25,7 @@ namespace Library.Net.Lair
         public static readonly int MaxGoodsCount = 1024;
         public static readonly int MaxBadsCount = 1024;
 
-        public DocumentVoteContent(IEnumerable<Key> goods, IEnumerable<Key> bads)
+        public ArchiveVoteContent(IEnumerable<Key> goods, IEnumerable<Key> bads)
         {
             if (goods != null) this.ProtectedGoods.AddRange(goods);
             if (bads != null) this.ProtectedBads.AddRange(bads);
@@ -104,12 +104,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is DocumentVoteContent)) return false;
+            if ((object)obj == null || !(obj is ArchiveVoteContent)) return false;
 
-            return this.Equals((DocumentVoteContent)obj);
+            return this.Equals((ArchiveVoteContent)obj);
         }
 
-        public override bool Equals(DocumentVoteContent other)
+        public override bool Equals(ArchiveVoteContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -153,7 +153,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IDocumentVotesContent<Key>
+        #region IArchiveVotesContent<Key>
 
         private volatile ReadOnlyCollection<Key> _readOnlyGoods;
 
@@ -179,7 +179,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_goods == null)
-                        _goods = new KeyCollection(DocumentVoteContent.MaxGoodsCount);
+                        _goods = new KeyCollection(ArchiveVoteContent.MaxGoodsCount);
 
                     return _goods;
                 }
@@ -210,7 +210,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_bads == null)
-                        _bads = new KeyCollection(DocumentVoteContent.MaxBadsCount);
+                        _bads = new KeyCollection(ArchiveVoteContent.MaxBadsCount);
 
                     return _bads;
                 }

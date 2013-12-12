@@ -9,15 +9,21 @@ namespace Library.Net.Lair
     public class Criterion
     {
         private SignatureCollection _trustSignatures;
-        private LinkCollection _links;
+
+        private SectionCollection _sections;
+        private ArchiveCollection _archives;
+        private ChatCollection _chats;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public Criterion(IEnumerable<string> trustSignatures, IEnumerable<Link> links)
+        public Criterion(IEnumerable<string> trustSignatures, IEnumerable<Section> sections, IEnumerable<Archive> archives, IEnumerable<Chat> chats)
         {
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            if (links != null) this.ProtectedLinks.AddRange(links);
+
+            if (sections != null) this.ProtectedSections.AddRange(sections);
+            if (Archives != null) this.ProtectedArchives.AddRange(archives);
+            if (Chats != null) this.ProtectedChats.AddRange(chats);
         }
 
         private object ThisLock
@@ -70,33 +76,95 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<Link> _readOnlyLinks;
+        private volatile ReadOnlyCollection<Section> _readOnlySections;
 
-        public IEnumerable<Link> Links
+        public IEnumerable<Section> Sections
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_readOnlyLinks == null)
-                        _readOnlyLinks = new ReadOnlyCollection<Link>(this.ProtectedLinks);
+                    if (_readOnlySections == null)
+                        _readOnlySections = new ReadOnlyCollection<Section>(this.ProtectedSections);
 
-                    return _readOnlyLinks;
+                    return _readOnlySections;
                 }
             }
         }
 
-        [DataMember(Name = "Links")]
-        private LinkCollection ProtectedLinks
+        [DataMember(Name = "Sections")]
+        private SectionCollection ProtectedSections
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_links == null)
-                        _links = new LinkCollection();
+                    if (_sections == null)
+                        _sections = new SectionCollection();
 
-                    return _links;
+                    return _sections;
+                }
+            }
+        }
+
+        private volatile ReadOnlyCollection<Archive> _readOnlyArchives;
+
+        public IEnumerable<Archive> Archives
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_readOnlyArchives == null)
+                        _readOnlyArchives = new ReadOnlyCollection<Archive>(this.ProtectedArchives);
+
+                    return _readOnlyArchives;
+                }
+            }
+        }
+
+        [DataMember(Name = "Archives")]
+        private ArchiveCollection ProtectedArchives
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_archives == null)
+                        _archives = new ArchiveCollection();
+
+                    return _archives;
+                }
+            }
+        }
+
+        private volatile ReadOnlyCollection<Chat> _readOnlyChats;
+
+        public IEnumerable<Chat> Chats
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_readOnlyChats == null)
+                        _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats);
+
+                    return _readOnlyChats;
+                }
+            }
+        }
+
+        [DataMember(Name = "Chats")]
+        private ChatCollection ProtectedChats
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_chats == null)
+                        _chats = new ChatCollection();
+
+                    return _chats;
                 }
             }
         }

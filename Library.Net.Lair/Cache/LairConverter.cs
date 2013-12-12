@@ -241,15 +241,15 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToLinkString(Link item)
+        public static string ToSectionString(Section item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
             try
             {
-                using (Stream stream = LairConverter.ToStream<Link>(item))
+                using (Stream stream = LairConverter.ToStream<Section>(item))
                 {
-                    return "Link:" + LairConverter.ToBase64String(stream);
+                    return "Section:" + LairConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -258,16 +258,86 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Link FromLinkString(string item)
+        public static Section FromSectionString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Link:") && !item.StartsWith("Link@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
 
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Link:".Length)))
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Section:".Length)))
                 {
-                    return LairConverter.FromStream<Link>(stream);
+                    return LairConverter.FromStream<Section>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static string ToArchiveString(Archive item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.ToStream<Archive>(item))
+                {
+                    return "Archive:" + LairConverter.ToBase64String(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Archive FromArchiveString(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (!item.StartsWith("Archive:") && !item.StartsWith("Archive@")) throw new ArgumentException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Archive:".Length)))
+                {
+                    return LairConverter.FromStream<Archive>(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static string ToChatString(Chat item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.ToStream<Chat>(item))
+                {
+                    return "Chat:" + LairConverter.ToBase64String(stream);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Chat FromChatString(string item)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
+
+            try
+            {
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
+                {
+                    return LairConverter.FromStream<Chat>(stream);
                 }
             }
             catch (Exception)

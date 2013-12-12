@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 
 namespace Library.Net.Lair
 {
-    interface IDocumentArchiveContent<TPage>
+    interface IArchiveDocumentContent<TPage>
         where TPage : IPage
     {
         IEnumerable<TPage> Pages { get; }

@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    public sealed class DocumentCollection : FilterList<Document>, IEnumerable<Document>
+    internal sealed class ArchiveVoteHeaderCollection : FilterList<ArchiveVoteHeader>, IEnumerable<ArchiveVoteHeader>
     {
-        public DocumentCollection() : base() { }
-        public DocumentCollection(int capacity) : base(capacity) { }
-        public DocumentCollection(IEnumerable<Document> collections) : base(collections) { }
+        public ArchiveVoteHeaderCollection() : base() { }
+        public ArchiveVoteHeaderCollection(int capacity) : base(capacity) { }
+        public ArchiveVoteHeaderCollection(IEnumerable<ArchiveVoteHeader> collections) : base(collections) { }
 
-        protected override bool Filter(Document item)
+        protected override bool Filter(ArchiveVoteHeader item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Document>
+        #region IEnumerable<ArchiveVoteHeader>
 
-        IEnumerator<Document> IEnumerable<Document>.GetEnumerator()
+        IEnumerator<ArchiveVoteHeader> IEnumerable<ArchiveVoteHeader>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

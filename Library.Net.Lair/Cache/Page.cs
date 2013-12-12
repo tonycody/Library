@@ -195,7 +195,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IDocumentPage
+        #region IArchivePage
 
         [DataMember(Name = "Name")]
         public string Name

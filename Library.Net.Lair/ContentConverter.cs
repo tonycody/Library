@@ -628,7 +628,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToDocumentArchiveContentBlock(DocumentArchiveContent content)
+        public static ArraySegment<byte> ToArchiveDocumentContentBlock(ArchiveDocumentContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -636,7 +636,7 @@ namespace Library.Net.Lair
 
             using (Stream contentStream = content.Export(_bufferManager))
             using (Stream compressStream = ContentConverter.Compress(contentStream))
-            using (Stream typeStream = ContentConverter.AddType(compressStream, "DocumentArchive"))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "ArchiveDocument"))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
                 typeStream.Read(value.Array, value.Offset, value.Count);
@@ -645,17 +645,17 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static DocumentArchiveContent FromDocumentArchiveContentBlock(ArraySegment<byte> content)
+        public static ArchiveDocumentContent FromArchiveDocumentContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
             try
             {
                 using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "DocumentArchive"))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "ArchiveDocument"))
                 using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return DocumentArchiveContent.Import(contentStream, _bufferManager);
+                    return ArchiveDocumentContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -664,7 +664,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToDocumentVoteContentBlock(DocumentVoteContent content)
+        public static ArraySegment<byte> ToArchiveVoteContentBlock(ArchiveVoteContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -672,7 +672,7 @@ namespace Library.Net.Lair
 
             using (Stream contentStream = content.Export(_bufferManager))
             using (Stream compressStream = ContentConverter.Compress(contentStream))
-            using (Stream typeStream = ContentConverter.AddType(compressStream, "DocumentVote"))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "ArchiveVote"))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
                 typeStream.Read(value.Array, value.Offset, value.Count);
@@ -681,17 +681,17 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static DocumentVoteContent FromDocumentVoteContentBlock(ArraySegment<byte> content)
+        public static ArchiveVoteContent FromArchiveVoteContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
             try
             {
                 using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "DocumentVote"))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "ArchiveVote"))
                 using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return DocumentVoteContent.Import(contentStream, _bufferManager);
+                    return ArchiveVoteContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)

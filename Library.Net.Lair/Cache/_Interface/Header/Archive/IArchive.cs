@@ -2,7 +2,7 @@
 
 namespace Library.Net.Lair
 {
-    public interface IDocument : ITag
+    public interface IArchive : ITag
     {
 
     }

@@ -24,8 +24,6 @@ namespace Library.Net.Lair
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
-        private const int _maxRawContentSize = 256;
-
         public UploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _connectionsManager = connectionsManager;
@@ -88,80 +86,74 @@ namespace Library.Net.Lair
 
                         try
                         {
-                            if (item.LinkType == "Section")
+                            if (item.SectionProfileContent != null)
                             {
-                                if (item.HeaderType == "Profile")
-                                {
-                                    buffer = ContentConverter.ToSectionProfileContentBlock(item.SectionProfileContent);
-                                }
-                                else if (item.HeaderType == "Message")
-                                {
-                                    buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
-                                }
+                                buffer = ContentConverter.ToSectionProfileContentBlock(item.SectionProfileContent);
                             }
-                            else if (item.LinkType == "Document")
+                            else if (item.SectionMessageContent != null)
                             {
-                                if (item.HeaderType == "Page")
-                                {
-                                    buffer = ContentConverter.ToDocumentArchiveContentBlock(item.DocumentArchiveContent);
-                                }
-                                else if (item.HeaderType == "Vote")
-                                {
-                                    buffer = ContentConverter.ToDocumentVoteContentBlock(item.DocumentVoteContent);
-                                }
+                                buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
                             }
-                            else if (item.LinkType == "Chat")
+                            else if (item.ArchiveDocumentContent != null)
                             {
-                                if (item.HeaderType == "Topic")
-                                {
-                                    buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
-                                }
-                                else if (item.HeaderType == "Message")
-                                {
-                                    buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
-                                }
+                                buffer = ContentConverter.ToArchiveDocumentContentBlock(item.ArchiveDocumentContent);
+                            }
+                            else if (item.ArchiveVoteContent != null)
+                            {
+                                buffer = ContentConverter.ToArchiveVoteContentBlock(item.ArchiveVoteContent);
+                            }
+                            else if (item.ChatTopicContent != null)
+                            {
+                                buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
+                            }
+                            else if (item.ChatMessageContent != null)
+                            {
+                                buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
                             }
 
-                            if (buffer.Count < _maxRawContentSize)
+                            Key key = null;
+
                             {
-                                byte[] binaryContent = new byte[1 + buffer.Count];
-                                binaryContent[0] = 0; // Content type
-                                Array.Copy(buffer.Array, buffer.Offset, binaryContent, 1, buffer.Count - 1);
+                                if (_hashAlgorithm == HashAlgorithm.Sha512)
+                                {
+                                    key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                                }
 
-                                var link = new Link(item.Tag, item.LinkType, item.Path);
+                                _cacheManager.Lock(key);
+                                _settings.LifeSpans[key] = DateTime.UtcNow;
+                            }
 
-                                var header = new Header(link, item.HeaderType, binaryContent, item.DigitalSignature);
+                            _cacheManager[key] = buffer;
+                            _connectionsManager.Upload(key);
+
+                            if (item.SectionProfileContent != null)
+                            {
+                                var header = new SectionProfileHeader(item.Section, key, item.DigitalSignature);
                                 _connectionsManager.Upload(header);
                             }
-                            else
+                            else if (item.SectionMessageContent != null)
                             {
-                                byte[] binaryKey;
-
-                                {
-                                    Key key = null;
-
-                                    if (_hashAlgorithm == HashAlgorithm.Sha512)
-                                    {
-                                        key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                                    }
-
-                                    _cacheManager.Lock(key);
-                                    _settings.LifeSpans[key] = DateTime.UtcNow;
-
-                                    _cacheManager[key] = buffer;
-                                    _connectionsManager.Upload(key);
-
-                                    using (var stream = key.Export(_bufferManager))
-                                    {
-                                        binaryKey = new byte[1 + stream.Length];
-                                        binaryKey[0] = 1; // Content type
-                                        stream.Read(binaryKey, 1, binaryKey.Length - 1);
-                                    }
-                                }
-
-                                var link = new Link(item.Tag, item.LinkType, item.Path);
-
-                                var header = new Header(link, item.HeaderType, binaryKey, item.DigitalSignature);
+                                var header = new SectionMessageHeader(item.Section, key, item.DigitalSignature);
+                                _connectionsManager.Upload(header);
+                            }
+                            else if (item.ArchiveDocumentContent != null)
+                            {
+                                var header = new ArchiveDocumentHeader(item.Archive, key, item.DigitalSignature);
+                                _connectionsManager.Upload(header);
+                            }
+                            else if (item.ArchiveVoteContent != null)
+                            {
+                                var header = new ArchiveVoteHeader(item.Archive, key, item.DigitalSignature);
+                                _connectionsManager.Upload(header);
+                            }
+                            else if (item.ChatTopicContent != null)
+                            {
+                                var header = new ChatTopicHeader(item.Chat, key, item.DigitalSignature);
+                                _connectionsManager.Upload(header);
+                            }
+                            else if (item.ChatMessageContent != null)
+                            {
+                                var header = new ChatMessageHeader(item.Chat, key, item.DigitalSignature);
                                 _connectionsManager.Upload(header);
                             }
                         }
@@ -181,130 +173,82 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
+        public void Upload(Section tag,
             SectionProfileContent content,
-
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = tag;
-                uploadItem.Path = path;
-
-                uploadItem.LinkType = "Section";
-                uploadItem.HeaderType = "Profile";
-
+                uploadItem.Section = tag;
                 uploadItem.SectionProfileContent = content;
-
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
+        public void Upload(Section tag,
             SectionMessageContent content,
-
             ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = tag;
-                uploadItem.Path = path;
-
-                uploadItem.LinkType = "Section";
-                uploadItem.HeaderType = "Message";
-
+                uploadItem.Section = tag;
                 uploadItem.SectionMessageContent = content;
-
                 uploadItem.ExchangePublicKey = exchangePublicKey;
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
-            DocumentArchiveContent content,
-
+        public void Upload(Archive tag,
+            ArchiveDocumentContent content,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = tag;
-                uploadItem.Path = path;
-
-                uploadItem.LinkType = "Document";
-                uploadItem.HeaderType = "Page";
-
-                uploadItem.DocumentArchiveContent = content;
-
+                uploadItem.Archive = tag;
+                uploadItem.ArchiveDocumentContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
-            DocumentVoteContent content,
-
+        public void Upload(Archive tag,
+            ArchiveVoteContent content,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = tag;
-                uploadItem.Path = path;
-
-                uploadItem.LinkType = "Document";
-                uploadItem.HeaderType = "Vote";
-
-                uploadItem.DocumentVoteContent = content;
-
+                uploadItem.Archive = tag;
+                uploadItem.ArchiveVoteContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
+        public void Upload(Chat tag,
             ChatTopicContent content,
-
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = tag;
-                uploadItem.Path = path;
-
-                uploadItem.LinkType = "Chat";
-                uploadItem.HeaderType = "Topic";
-
+                uploadItem.Chat = tag;
                 uploadItem.ChatTopicContent = content;
-
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }
 
-        public void Upload(Tag tag,
-            string path,
+        public void Upload(Chat tag,
             ChatMessageContent content,
-
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Tag = tag;
-                uploadItem.Path = path;
-
-                uploadItem.LinkType = "Chat";
-                uploadItem.HeaderType = "Message";
-
+                uploadItem.Chat = tag;
                 uploadItem.ChatMessageContent = content;
-
                 uploadItem.DigitalSignature = digitalSignature;
             }
         }

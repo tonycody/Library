@@ -6,19 +6,17 @@ namespace Library.Net.Lair
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Lair")]
     sealed class UploadItem
     {
-        private Tag _tag;
-        private string _path;
-
-        private string _linkType;
-        private string _headerType;
+        private Section _section;
+        private Archive _archive;
+        private Chat _chat;
 
         private DigitalSignature _digitalSignature;
         private ExchangePublicKey _exchangePublicKey;
 
         private SectionProfileContent _sectionProfileContent;
         private SectionMessageContent _sectionMessageContent;
-        private DocumentPageContent _documentPageContent;
-        private DocumentVoteContent _documentVoteContent;
+        private ArchiveDocumentContent _archiveDocumentContent;
+        private ArchiveVoteContent _archiveVoteContent;
         private ChatTopicContent _chatTopicContent;
         private ChatMessageContent _chatMessageContent;
 
@@ -44,78 +42,56 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Tag")]
-        public Tag Tag
+        public Section Section
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _tag;
+                    return _section;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _tag = value;
+                    _section = value;
                 }
             }
         }
 
-        [DataMember(Name = "Path")]
-        public string Path
+        public Archive Archive
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _path;
+                    return _archive;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _path = value;
+                    _archive = value;
                 }
             }
         }
 
-        [DataMember(Name = "LinkType")]
-        public string LinkType
+        public Chat Chat
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _linkType;
+                    return _chat;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _linkType = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "HeaderType")]
-        public string HeaderType
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _headerType;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _headerType = value;
+                    _chat = value;
                 }
             }
         }
@@ -196,40 +172,40 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "DocumentPageContent")]
-        public DocumentPageContent DocumentPageContent
+        [DataMember(Name = "ArchiveDocumentContent")]
+        public ArchiveDocumentContent ArchiveDocumentContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _documentPageContent;
+                    return _archiveDocumentContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _documentPageContent = value;
+                    _archiveDocumentContent = value;
                 }
             }
         }
 
-        [DataMember(Name = "DocumentVoteContent")]
-        public DocumentVoteContent DocumentVoteContent
+        [DataMember(Name = "ArchiveVoteContent")]
+        public ArchiveVoteContent ArchiveVoteContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _documentVoteContent;
+                    return _archiveVoteContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _documentVoteContent = value;
+                    _archiveVoteContent = value;
                 }
             }
         }

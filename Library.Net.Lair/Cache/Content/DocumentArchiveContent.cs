@@ -8,8 +8,8 @@ using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "DocumentArchiveContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class DocumentArchiveContent : ItemBase<DocumentArchiveContent>, IDocumentArchiveContent<Page>
+    [DataContract(Name = "ArchiveDocumentContent", Namespace = "http://Library/Net/Lair")]
+    public sealed class ArchiveDocumentContent : ItemBase<ArchiveDocumentContent>, IArchiveDocumentContent<Page>
     {
         private enum SerializeId : byte
         {
@@ -23,7 +23,7 @@ namespace Library.Net.Lair
 
         public static readonly int MaxPagesCount = 256;
 
-        public DocumentArchiveContent(IEnumerable<Page> pages)
+        public ArchiveDocumentContent(IEnumerable<Page> pages)
         {
             if (pages != null) this.ProtectedPages.AddRange(pages);
         }
@@ -86,12 +86,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is DocumentArchiveContent)) return false;
+            if ((object)obj == null || !(obj is ArchiveDocumentContent)) return false;
 
-            return this.Equals((DocumentArchiveContent)obj);
+            return this.Equals((ArchiveDocumentContent)obj);
         }
 
-        public override bool Equals(DocumentArchiveContent other)
+        public override bool Equals(ArchiveDocumentContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -155,7 +155,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_pages == null)
-                        _pages = new PageCollection(DocumentArchiveContent.MaxPagesCount);
+                        _pages = new PageCollection(ArchiveDocumentContent.MaxPagesCount);
 
                     return _pages;
                 }
