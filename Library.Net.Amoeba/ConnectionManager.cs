@@ -39,6 +39,12 @@ namespace Library.Net.Amoeba
         public IEnumerable<string> Signatures { get; set; }
     }
 
+    [Obsolete]
+    class PullSeedEventArgs : EventArgs
+    {
+        public Seed Seed { get; set; }
+    }
+
     class PullSeedsEventArgs : EventArgs
     {
         public IEnumerable<Seed> Seeds { get; set; }
@@ -51,6 +57,8 @@ namespace Library.Net.Amoeba
     delegate void PullBlockEventHandler(object sender, PullBlockEventArgs e);
 
     delegate void PullSeedsRequestEventHandler(object sender, PullSeedsRequestEventArgs e);
+    [Obsolete]
+    delegate void PullSeedEventHandler(object sender, PullSeedEventArgs e);
     delegate void PullSeedsEventHandler(object sender, PullSeedsEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
@@ -80,7 +88,8 @@ namespace Library.Net.Amoeba
             Block = 7,
 
             SeedsRequest = 8,
-            // Seed = 9,
+            [Obsolete]
+            Seed = 9,
             Seeds = 10,
         }
 
@@ -124,6 +133,8 @@ namespace Library.Net.Amoeba
         public event PullBlockEventHandler PullBlockEvent;
 
         public event PullSeedsRequestEventHandler PullSeedsRequestEvent;
+        [Obsolete]
+        public event PullSeedEventHandler PullSeedEvent;
         public event PullSeedsEventHandler PullSeedsEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
@@ -573,6 +584,11 @@ namespace Library.Net.Amoeba
                                     var message = SeedsRequestMessage.Import(stream2, _bufferManager);
                                     this.OnPullSeedsRequest(new PullSeedsRequestEventArgs() { Signatures = message.Signatures });
                                 }
+                                else if (type == (byte)SerializeId.Seed)
+                                {
+                                    var seed = Seed.Import(stream2, _bufferManager);
+                                    this.OnPullSeed(new PullSeedEventArgs() { Seed = seed });
+                                }
                                 else if (type == (byte)SerializeId.Seeds)
                                 {
                                     var message = SeedsMessage.Import(stream2, _bufferManager);
@@ -649,6 +665,15 @@ namespace Library.Net.Amoeba
             if (this.PullSeedsRequestEvent != null)
             {
                 this.PullSeedsRequestEvent(this, e);
+            }
+        }
+
+        [Obsolete]
+        protected virtual void OnPullSeed(PullSeedEventArgs e)
+        {
+            if (this.PullSeedEvent != null)
+            {
+                this.PullSeedEvent(this, e);
             }
         }
 

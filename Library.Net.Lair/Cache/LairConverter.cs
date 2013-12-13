@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Library.Io;
+using Library.Security;
 
 namespace Library.Net.Lair
 {
@@ -241,7 +242,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToSectionString(Section item)
+        public static string ToSectionString(Section item, string option)
         {
             if (item == null) throw new ArgumentNullException("item");
 
@@ -249,7 +250,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = LairConverter.ToStream<Section>(item))
                 {
-                    return "Section:" + LairConverter.ToBase64String(stream);
+                    return "Section@" + LairConverter.ToBase64String(stream) + "," + option;
                 }
             }
             catch (Exception)
@@ -258,17 +259,28 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Section FromSectionString(string item)
+        public static Section FromSectionString(string item, out string option)
         {
             if (item == null) throw new ArgumentNullException("item");
             if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
 
+            option = null;
+
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Section:".Length)))
+                if (item.Contains(","))
                 {
-                    return LairConverter.FromStream<Section>(stream);
+                    var list = item.Split(new char[] { ',' }, 2);
+
+                    option = list[1];
+
+                    using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, "Section:".Length)))
+                    {
+                        return LairConverter.FromStream<Section>(stream);
+                    }
                 }
+
+                return null;
             }
             catch (Exception)
             {
@@ -276,7 +288,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToArchiveString(Archive item)
+        public static string ToArchiveString(Archive item, string option)
         {
             if (item == null) throw new ArgumentNullException("item");
 
@@ -284,7 +296,7 @@ namespace Library.Net.Lair
             {
                 using (Stream stream = LairConverter.ToStream<Archive>(item))
                 {
-                    return "Archive:" + LairConverter.ToBase64String(stream);
+                    return "Archive@" + LairConverter.ToBase64String(stream) + "," + option;
                 }
             }
             catch (Exception)
@@ -293,17 +305,28 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Archive FromArchiveString(string item)
+        public static Archive FromArchiveString(string item, out string option)
         {
             if (item == null) throw new ArgumentNullException("item");
             if (!item.StartsWith("Archive:") && !item.StartsWith("Archive@")) throw new ArgumentException("item");
 
+            option = null;
+
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Archive:".Length)))
+                if (item.Contains(","))
                 {
-                    return LairConverter.FromStream<Archive>(stream);
+                    var list = item.Split(new char[] { ',' }, 2);
+
+                    option = list[1];
+
+                    using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, "Archive:".Length)))
+                    {
+                        return LairConverter.FromStream<Archive>(stream);
+                    }
                 }
+
+                return null;
             }
             catch (Exception)
             {

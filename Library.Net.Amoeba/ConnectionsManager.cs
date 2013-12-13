@@ -696,6 +696,7 @@ namespace Library.Net.Amoeba
                 connectionManager.PullBlocksRequestEvent += this.connectionManager_BlocksRequestEvent;
                 connectionManager.PullBlockEvent += this.connectionManager_BlockEvent;
                 connectionManager.PullSeedsRequestEvent += this.connectionManager_SeedsRequestEvent;
+                connectionManager.PullSeedEvent += connectionManager_SeedEvent;
                 connectionManager.PullSeedsEvent += this.connectionManager_SeedsEvent;
                 connectionManager.PullCancelEvent += this.connectionManager_PullCancelEvent;
                 connectionManager.CloseEvent += this.connectionManager_CloseEvent;
@@ -2060,6 +2061,39 @@ namespace Library.Net.Amoeba
 
                 _lastUsedSeedTimes[signature] = DateTime.UtcNow;
             }
+        }
+
+        private void connectionManager_SeedEvent(object sender, PullSeedEventArgs e)
+        {
+            var connectionManager = sender as ConnectionManager;
+            if (connectionManager == null) return;
+
+            var messageManager = _messagesManager[connectionManager.Node];
+
+            if (_settings.SetLinkSeed(e.Seed))
+            {
+                var signature = e.Seed.Certificate.ToString();
+
+                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed ({0})", ConnectionsManager.Keyword_Link));
+
+                messageManager.PushLinkSeeds[signature] = e.Seed.CreationTime;
+                messageManager.LastPullTime = DateTime.UtcNow;
+
+                _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+            }
+            else if (_settings.SetStoreSeed(e.Seed))
+            {
+                var signature = e.Seed.Certificate.ToString();
+
+                Debug.WriteLine(string.Format("ConnectionManager: Pull Seed ({0})", ConnectionsManager.Keyword_Store));
+
+                messageManager.PushStoreSeeds[signature] = e.Seed.CreationTime;
+                messageManager.LastPullTime = DateTime.UtcNow;
+
+                _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+            }
+
+            _pullSeedCount++;
         }
 
         private void connectionManager_SeedsEvent(object sender, PullSeedsEventArgs e)
