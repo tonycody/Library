@@ -276,5 +276,40 @@ namespace Library.Net.Lair
         }
 
         #endregion
+        
+        #region IComputeHash
+
+        private byte[] _sha512_hash;
+
+        public byte[] GetHash(HashAlgorithm hashAlgorithm)
+        {
+            lock (this.ThisLock)
+            {
+                if (_sha512_hash == null)
+                {
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        _sha512_hash = Sha512.ComputeHash(stream);
+                    }
+                }
+
+                if (hashAlgorithm == HashAlgorithm.Sha512)
+                {
+                    return _sha512_hash;
+                }
+
+                return null;
+            }
+        }
+
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        {
+            lock (this.ThisLock)
+            {
+                return Collection.Equals(this.GetHash(hashAlgorithm), hash);
+            }
+        }
+
+        #endregion
     }
 }

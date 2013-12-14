@@ -482,7 +482,7 @@ namespace Library.Net.Lair
         private static Stream RemoveType(Stream stream, string type)
         {
             if (stream == null) throw new ArgumentNullException("stream");
-            if (stream.Length >= 4) throw new ArgumentOutOfRangeException("stream");
+            if (stream.Length <= 4) throw new ArgumentOutOfRangeException("stream");
 
             Encoding encoding = new UTF8Encoding(false);
 

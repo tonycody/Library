@@ -82,92 +82,95 @@ namespace Library.Net.Lair
 
                     try
                     {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
+                        if (item != null)
                         {
-                            if (item.SectionProfileContent != null)
-                            {
-                                buffer = ContentConverter.ToSectionProfileContentBlock(item.SectionProfileContent);
-                            }
-                            else if (item.SectionMessageContent != null)
-                            {
-                                buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
-                            }
-                            else if (item.ArchiveDocumentContent != null)
-                            {
-                                buffer = ContentConverter.ToArchiveDocumentContentBlock(item.ArchiveDocumentContent);
-                            }
-                            else if (item.ArchiveVoteContent != null)
-                            {
-                                buffer = ContentConverter.ToArchiveVoteContentBlock(item.ArchiveVoteContent);
-                            }
-                            else if (item.ChatTopicContent != null)
-                            {
-                                buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
-                            }
-                            else if (item.ChatMessageContent != null)
-                            {
-                                buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
-                            }
+                            ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                            Key key = null;
-
+                            try
                             {
-                                if (_hashAlgorithm == HashAlgorithm.Sha512)
+                                if (item.Type == "SectionProfile")
                                 {
-                                    key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                                    buffer = ContentConverter.ToSectionProfileContentBlock(item.SectionProfileContent);
+                                }
+                                else if (item.Type == "SectionMessage")
+                                {
+                                    buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
+                                }
+                                else if (item.Type == "ArchiveDocument")
+                                {
+                                    buffer = ContentConverter.ToArchiveDocumentContentBlock(item.ArchiveDocumentContent);
+                                }
+                                else if (item.Type == "ArchiveVote")
+                                {
+                                    buffer = ContentConverter.ToArchiveVoteContentBlock(item.ArchiveVoteContent);
+                                }
+                                else if (item.Type == "ChatTopic")
+                                {
+                                    buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
+                                }
+                                else if (item.Type == "ChatMessage")
+                                {
+                                    buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
                                 }
 
-                                _cacheManager.Lock(key);
-                                _settings.LifeSpans[key] = DateTime.UtcNow;
-                            }
+                                Key key = null;
 
-                            _cacheManager[key] = buffer;
-                            _connectionsManager.Upload(key);
+                                {
+                                    if (_hashAlgorithm == HashAlgorithm.Sha512)
+                                    {
+                                        key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                                    }
 
-                            if (item.SectionProfileContent != null)
-                            {
-                                var header = new SectionProfileHeader(item.Section, key, item.DigitalSignature);
-                                _connectionsManager.Upload(header);
+                                    _cacheManager.Lock(key);
+                                    _settings.LifeSpans[key] = DateTime.UtcNow;
+                                }
+
+                                _cacheManager[key] = buffer;
+                                _connectionsManager.Upload(key);
+
+                                if (item.Type == "SectionProfile")
+                                {
+                                    var header = new SectionProfileHeader(item.Section, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "SectionMessage")
+                                {
+                                    var header = new SectionMessageHeader(item.Section, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "ArchiveDocument")
+                                {
+                                    var header = new ArchiveDocumentHeader(item.Archive, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "ArchiveVote")
+                                {
+                                    var header = new ArchiveVoteHeader(item.Archive, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "ChatTopic")
+                                {
+                                    var header = new ChatTopicHeader(item.Chat, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "ChatMessage")
+                                {
+                                    var header = new ChatMessageHeader(item.Chat, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
                             }
-                            else if (item.SectionMessageContent != null)
+                            finally
                             {
-                                var header = new SectionMessageHeader(item.Section, key, item.DigitalSignature);
-                                _connectionsManager.Upload(header);
-                            }
-                            else if (item.ArchiveDocumentContent != null)
-                            {
-                                var header = new ArchiveDocumentHeader(item.Archive, key, item.DigitalSignature);
-                                _connectionsManager.Upload(header);
-                            }
-                            else if (item.ArchiveVoteContent != null)
-                            {
-                                var header = new ArchiveVoteHeader(item.Archive, key, item.DigitalSignature);
-                                _connectionsManager.Upload(header);
-                            }
-                            else if (item.ChatTopicContent != null)
-                            {
-                                var header = new ChatTopicHeader(item.Chat, key, item.DigitalSignature);
-                                _connectionsManager.Upload(header);
-                            }
-                            else if (item.ChatMessageContent != null)
-                            {
-                                var header = new ChatMessageHeader(item.Chat, key, item.DigitalSignature);
-                                _connectionsManager.Upload(header);
-                            }
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
+                                if (buffer.Array != null)
+                                {
+                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                }
                             }
                         }
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-
+                        Log.Warning(e);
                     }
                 }
             }
@@ -180,9 +183,12 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
+                uploadItem.Type = "SectionProfile";
                 uploadItem.Section = tag;
                 uploadItem.SectionProfileContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -194,10 +200,13 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
+                uploadItem.Type = "SectionMessage";
                 uploadItem.Section = tag;
                 uploadItem.SectionMessageContent = content;
                 uploadItem.ExchangePublicKey = exchangePublicKey;
                 uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -208,9 +217,12 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
+                uploadItem.Type = "ArchiveDocument";
                 uploadItem.Archive = tag;
                 uploadItem.ArchiveDocumentContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -221,9 +233,12 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
+                uploadItem.Type = "ArchiveVote";
                 uploadItem.Archive = tag;
                 uploadItem.ArchiveVoteContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -234,9 +249,12 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
+                uploadItem.Type = "ChatTopic";
                 uploadItem.Chat = tag;
                 uploadItem.ChatTopicContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -247,9 +265,12 @@ namespace Library.Net.Lair
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
+                uploadItem.Type = "ChatMessage";
                 uploadItem.Chat = tag;
                 uploadItem.ChatMessageContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 

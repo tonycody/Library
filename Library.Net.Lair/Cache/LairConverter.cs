@@ -231,7 +231,7 @@ namespace Library.Net.Lair
 
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, 5)))
+                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Node:".Length)))
                 {
                     return LairConverter.FromStream<Node>(stream);
                 }
@@ -244,13 +244,23 @@ namespace Library.Net.Lair
 
         public static string ToSectionString(Section item, string option)
         {
-            if (item == null) throw new ArgumentNullException("item");
+            if (item == null) throw new ArgumentNullException("Section");
 
             try
             {
-                using (Stream stream = LairConverter.ToStream<Section>(item))
+                if (option != null)
                 {
-                    return "Section@" + LairConverter.ToBase64String(stream) + "," + option;
+                    using (Stream stream = LairConverter.ToStream<Section>(item))
+                    {
+                        return "Section:" + LairConverter.ToBase64String(stream) + "," + option;
+                    }
+                }
+                else
+                {
+                    using (Stream stream = LairConverter.ToStream<Section>(item))
+                    {
+                        return "Section:" + LairConverter.ToBase64String(stream);
+                    }
                 }
             }
             catch (Exception)
@@ -279,8 +289,13 @@ namespace Library.Net.Lair
                         return LairConverter.FromStream<Section>(stream);
                     }
                 }
-
-                return null;
+                else
+                {
+                    using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Section:".Length)))
+                    {
+                        return LairConverter.FromStream<Section>(stream);
+                    }
+                }
             }
             catch (Exception)
             {
@@ -290,13 +305,23 @@ namespace Library.Net.Lair
 
         public static string ToArchiveString(Archive item, string option)
         {
-            if (item == null) throw new ArgumentNullException("item");
+            if (item == null) throw new ArgumentNullException("Archive");
 
             try
             {
-                using (Stream stream = LairConverter.ToStream<Archive>(item))
+                if (option != null)
                 {
-                    return "Archive@" + LairConverter.ToBase64String(stream) + "," + option;
+                    using (Stream stream = LairConverter.ToStream<Archive>(item))
+                    {
+                        return "Archive:" + LairConverter.ToBase64String(stream) + "," + option;
+                    }
+                }
+                else
+                {
+                    using (Stream stream = LairConverter.ToStream<Archive>(item))
+                    {
+                        return "Archive:" + LairConverter.ToBase64String(stream);
+                    }
                 }
             }
             catch (Exception)
@@ -325,24 +350,12 @@ namespace Library.Net.Lair
                         return LairConverter.FromStream<Archive>(stream);
                     }
                 }
-
-                return null;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static string ToChatString(Chat item)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-
-            try
-            {
-                using (Stream stream = LairConverter.ToStream<Chat>(item))
+                else
                 {
-                    return "Chat:" + LairConverter.ToBase64String(stream);
+                    using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Archive:".Length)))
+                    {
+                        return LairConverter.FromStream<Archive>(stream);
+                    }
                 }
             }
             catch (Exception)
@@ -351,16 +364,59 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Chat FromChatString(string item)
+        public static string ToChatString(Chat item, string option)
+        {
+            if (item == null) throw new ArgumentNullException("Chat");
+
+            try
+            {
+                if (option != null)
+                {
+                    using (Stream stream = LairConverter.ToStream<Chat>(item))
+                    {
+                        return "Chat:" + LairConverter.ToBase64String(stream) + "," + option;
+                    }
+                }
+                else
+                {
+                    using (Stream stream = LairConverter.ToStream<Chat>(item))
+                    {
+                        return "Chat:" + LairConverter.ToBase64String(stream);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static Chat FromChatString(string item, out string option)
         {
             if (item == null) throw new ArgumentNullException("item");
             if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
 
+            option = null;
+
             try
             {
-                using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
+                if (item.Contains(","))
                 {
-                    return LairConverter.FromStream<Chat>(stream);
+                    var list = item.Split(new char[] { ',' }, 2);
+
+                    option = list[1];
+
+                    using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, "Chat:".Length)))
+                    {
+                        return LairConverter.FromStream<Chat>(stream);
+                    }
+                }
+                else
+                {
+                    using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
+                    {
+                        return LairConverter.FromStream<Chat>(stream);
+                    }
                 }
             }
             catch (Exception)

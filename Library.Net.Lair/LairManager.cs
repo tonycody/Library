@@ -510,6 +510,8 @@ namespace Library.Net.Lair
                 _state = ManagerState.Start;
 
                 _connectionsManager.Start();
+                _downloadManager.Start();
+                _uploadManager.Start();
             }
         }
 
@@ -520,6 +522,8 @@ namespace Library.Net.Lair
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
 
+                _uploadManager.Stop();
+                _downloadManager.Stop();
                 _connectionsManager.Stop();
             }
         }
@@ -536,6 +540,7 @@ namespace Library.Net.Lair
 
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
+                _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
             }
@@ -549,6 +554,7 @@ namespace Library.Net.Lair
             {
                 _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
+                _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
             }

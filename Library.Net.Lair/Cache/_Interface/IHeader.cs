@@ -2,7 +2,7 @@
 
 namespace Library.Net.Lair
 {
-    interface IHeader<TTag> : IComputeHash
+    public interface IHeader<TTag> : IComputeHash
         where TTag : ITag
     {
         TTag Tag { get; }

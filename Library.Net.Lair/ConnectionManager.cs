@@ -1398,9 +1398,9 @@ namespace Library.Net.Lair
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
                 // Archives
-                foreach (var d in this.Archives)
+                foreach (var a in this.Archives)
                 {
-                    Stream exportStream = d.Export(bufferManager);
+                    Stream exportStream = a.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);

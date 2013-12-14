@@ -178,9 +178,7 @@
     <Compile Include="Cache\_Interface\IKey.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\IPage.cs">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="Cache\_Interface\IPage.cs" />
     <Compile Include="Cache\_Interface\ITag.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -194,12 +192,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ContentConverter.cs" />
+    <Compile Include="LairManager.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="EqualityComparer.cs" />
     <Compile Include="CriterionCollection.cs" />
-    <Compile Include="LairManager.cs" />
     <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />

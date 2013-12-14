@@ -14,12 +14,7 @@ namespace Library.Net.Lair
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private VolatileDictionary<SectionProfileHeader, DownloadItem> _sectionProfileDownloadItems;
-        private VolatileDictionary<SectionMessageHeader, DownloadItem> _sectionMessageDownloadItems;
-        private VolatileDictionary<ArchiveDocumentHeader, DownloadItem> _archiveDocumentDownloadItems;
-        private VolatileDictionary<ArchiveVoteHeader, DownloadItem> _archiveVoteDownloadItems;
-        private VolatileDictionary<ChatTopicHeader, DownloadItem> _chatTopicDownloadItems;
-        private VolatileDictionary<ChatMessageHeader, DownloadItem> _chatMessageDownloadItems;
+        private VolatileDictionary<byte[], DownloadItem> _downloadItems;
 
         private volatile Thread _downloadManagerThread;
 
@@ -36,12 +31,7 @@ namespace Library.Net.Lair
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
 
-            _sectionProfileDownloadItems = new VolatileDictionary<SectionProfileHeader, DownloadItem>(new TimeSpan(0, 3, 0));
-            _sectionMessageDownloadItems = new VolatileDictionary<SectionMessageHeader, DownloadItem>(new TimeSpan(0, 3, 0));
-            _archiveDocumentDownloadItems = new VolatileDictionary<ArchiveDocumentHeader, DownloadItem>(new TimeSpan(0, 3, 0));
-            _archiveVoteDownloadItems = new VolatileDictionary<ArchiveVoteHeader, DownloadItem>(new TimeSpan(0, 3, 0));
-            _chatTopicDownloadItems = new VolatileDictionary<ChatTopicHeader, DownloadItem>(new TimeSpan(0, 3, 0));
-            _chatMessageDownloadItems = new VolatileDictionary<ChatMessageHeader, DownloadItem>(new TimeSpan(0, 3, 0));
+            _downloadItems = new VolatileDictionary<byte[], DownloadItem>(new TimeSpan(0, 12, 0), new ByteArrayEqualityComparer());
         }
 
         private void DownloadThread()
@@ -57,12 +47,9 @@ namespace Library.Net.Lair
                 {
                     refreshStopwatch.Restart();
 
-                    foreach (var pair in _sectionProfileDownloadItems.ToArray())
+                    foreach (var item in _downloadItems.Values.ToArray())
                     {
                         if (this.State == ManagerState.Stop) return;
-
-                        var header = pair.Key;
-                        var item = pair.Value;
 
                         try
                         {
@@ -72,9 +59,9 @@ namespace Library.Net.Lair
 
                             try
                             {
-                                if (!_cacheManager.Contains(header.Key))
+                                if (!_cacheManager.Contains(item.Key))
                                 {
-                                    _connectionsManager.Download(header.Key);
+                                    _connectionsManager.Download(item.Key);
 
                                     continue;
                                 }
@@ -82,7 +69,7 @@ namespace Library.Net.Lair
                                 {
                                     try
                                     {
-                                        binaryContent = _cacheManager[header.Key];
+                                        binaryContent = _cacheManager[item.Key];
                                     }
                                     catch (BlockNotFoundException)
                                     {
@@ -90,272 +77,30 @@ namespace Library.Net.Lair
                                     }
                                 }
 
-                                item.SectionProfileContent = ContentConverter.FromSectionProfileContentBlock(binaryContent);
-
-                                item.State = DownloadState.Completed;
-                            }
-                            finally
-                            {
-                                if (binaryContent.Array != null)
+                                if (item.Type == "SectionProfile")
                                 {
-                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                    item.SectionProfileContent = ContentConverter.FromSectionProfileContentBlock(binaryContent);
                                 }
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            item.State = DownloadState.Error;
-
-                            continue;
-                        }
-                    }
-
-                    foreach (var pair in _sectionMessageDownloadItems.ToArray())
-                    {
-                        if (this.State == ManagerState.Stop) return;
-
-                        var header = pair.Key;
-                        var item = pair.Value;
-
-                        try
-                        {
-                            if (item.State != DownloadState.Downloading) continue;
-
-                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
-
-                            try
-                            {
-                                if (!_cacheManager.Contains(header.Key))
+                                else if (item.Type == "SectionMessage")
                                 {
-                                    _connectionsManager.Download(header.Key);
-
-                                    continue;
+                                    item.SectionMessageContent = ContentConverter.FromSectionMessageContentBlock(binaryContent, item.ExchangePrivateKey);
                                 }
-                                else
+                                else if (item.Type == "ArchiveDocument")
                                 {
-                                    try
-                                    {
-                                        binaryContent = _cacheManager[header.Key];
-                                    }
-                                    catch (BlockNotFoundException)
-                                    {
-                                        continue;
-                                    }
+                                    item.ArchiveDocumentContent = ContentConverter.FromArchiveDocumentContentBlock(binaryContent);
                                 }
-
-                                item.SectionMessageContent = ContentConverter.FromSectionMessageContentBlock(binaryContent, item.ExchangePrivateKey);
-
-                                item.State = DownloadState.Completed;
-                            }
-                            finally
-                            {
-                                if (binaryContent.Array != null)
+                                else if (item.Type == "ArchiveVote")
                                 {
-                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                    item.ArchiveVoteContent = ContentConverter.FromArchiveVoteContentBlock(binaryContent);
                                 }
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            item.State = DownloadState.Error;
-
-                            continue;
-                        }
-                    }
-
-                    foreach (var pair in _archiveDocumentDownloadItems.ToArray())
-                    {
-                        if (this.State == ManagerState.Stop) return;
-
-                        var header = pair.Key;
-                        var item = pair.Value;
-
-                        try
-                        {
-                            if (item.State != DownloadState.Downloading) continue;
-
-                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
-
-                            try
-                            {
-                                if (!_cacheManager.Contains(header.Key))
+                                else if (item.Type == "ChatTopic")
                                 {
-                                    _connectionsManager.Download(header.Key);
-
-                                    continue;
+                                    item.ChatTopicContent = ContentConverter.FromChatTopicContentBlock(binaryContent);
                                 }
-                                else
+                                else if (item.Type == "ChatMessage")
                                 {
-                                    try
-                                    {
-                                        binaryContent = _cacheManager[header.Key];
-                                    }
-                                    catch (BlockNotFoundException)
-                                    {
-                                        continue;
-                                    }
+                                    item.ChatMessageContent = ContentConverter.FromChatMessageContentBlock(binaryContent);
                                 }
-
-                                item.ArchiveDocumentContent = ContentConverter.FromArchiveDocumentContentBlock(binaryContent);
-
-                                item.State = DownloadState.Completed;
-                            }
-                            finally
-                            {
-                                if (binaryContent.Array != null)
-                                {
-                                    _bufferManager.ReturnBuffer(binaryContent.Array);
-                                }
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            item.State = DownloadState.Error;
-
-                            continue;
-                        }
-                    }
-
-                    foreach (var pair in _archiveVoteDownloadItems.ToArray())
-                    {
-                        if (this.State == ManagerState.Stop) return;
-
-                        var header = pair.Key;
-                        var item = pair.Value;
-
-                        try
-                        {
-                            if (item.State != DownloadState.Downloading) continue;
-
-                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
-
-                            try
-                            {
-                                if (!_cacheManager.Contains(header.Key))
-                                {
-                                    _connectionsManager.Download(header.Key);
-
-                                    continue;
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        binaryContent = _cacheManager[header.Key];
-                                    }
-                                    catch (BlockNotFoundException)
-                                    {
-                                        continue;
-                                    }
-                                }
-
-                                item.ArchiveVoteContent = ContentConverter.FromArchiveVoteContentBlock(binaryContent);
-
-                                item.State = DownloadState.Completed;
-                            }
-                            finally
-                            {
-                                if (binaryContent.Array != null)
-                                {
-                                    _bufferManager.ReturnBuffer(binaryContent.Array);
-                                }
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            item.State = DownloadState.Error;
-
-                            continue;
-                        }
-                    }
-
-                    foreach (var pair in _chatTopicDownloadItems.ToArray())
-                    {
-                        if (this.State == ManagerState.Stop) return;
-
-                        var header = pair.Key;
-                        var item = pair.Value;
-
-                        try
-                        {
-                            if (item.State != DownloadState.Downloading) continue;
-
-                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
-
-                            try
-                            {
-                                if (!_cacheManager.Contains(header.Key))
-                                {
-                                    _connectionsManager.Download(header.Key);
-
-                                    continue;
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        binaryContent = _cacheManager[header.Key];
-                                    }
-                                    catch (BlockNotFoundException)
-                                    {
-                                        continue;
-                                    }
-                                }
-
-                                item.ChatTopicContent = ContentConverter.FromChatTopicContentBlock(binaryContent);
-
-                                item.State = DownloadState.Completed;
-                            }
-                            finally
-                            {
-                                if (binaryContent.Array != null)
-                                {
-                                    _bufferManager.ReturnBuffer(binaryContent.Array);
-                                }
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            item.State = DownloadState.Error;
-
-                            continue;
-                        }
-                    }
-
-                    foreach (var pair in _chatMessageDownloadItems.ToArray())
-                    {
-                        if (this.State == ManagerState.Stop) return;
-
-                        var header = pair.Key;
-                        var item = pair.Value;
-
-                        try
-                        {
-                            if (item.State != DownloadState.Downloading) continue;
-
-                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
-
-                            try
-                            {
-                                if (!_cacheManager.Contains(header.Key))
-                                {
-                                    _connectionsManager.Download(header.Key);
-
-                                    continue;
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        binaryContent = _cacheManager[header.Key];
-                                    }
-                                    catch (BlockNotFoundException)
-                                    {
-                                        continue;
-                                    }
-                                }
-
-                                item.ChatMessageContent = ContentConverter.FromChatMessageContentBlock(binaryContent);
 
                                 item.State = DownloadState.Completed;
                             }
@@ -384,12 +129,17 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                var hash = header.GetHash(_hashAlgorithm);
+
                 DownloadItem item;
 
-                if (!_sectionProfileDownloadItems.TryGetValue(header, out item))
+                if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    _sectionProfileDownloadItems.Add(header, item);
+                    item.Type = "SectionProfile";
+                    item.Key = header.Key;
+
+                    _downloadItems.Add(hash, item);
                 }
 
                 if (item.State == DownloadState.Completed)
@@ -412,13 +162,17 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                var hash = header.GetHash(_hashAlgorithm);
+
                 DownloadItem item;
 
-                if (!_sectionMessageDownloadItems.TryGetValue(header, out item))
+                if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    item.ExchangePrivateKey = exchangePrivateKey;
-                    _sectionMessageDownloadItems.Add(header, item);
+                    item.Type = "SectionMessage";
+                    item.Key = header.Key;
+
+                    _downloadItems.Add(hash, item);
                 }
 
                 if (item.State == DownloadState.Completed)
@@ -440,12 +194,17 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                var hash = header.GetHash(_hashAlgorithm);
+
                 DownloadItem item;
 
-                if (!_archiveDocumentDownloadItems.TryGetValue(header, out item))
+                if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    _archiveDocumentDownloadItems.Add(header, item);
+                    item.Type = "ArchiveDocument";
+                    item.Key = header.Key;
+
+                    _downloadItems.Add(hash, item);
                 }
 
                 if (item.State == DownloadState.Completed)
@@ -467,12 +226,17 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                var hash = header.GetHash(_hashAlgorithm);
+
                 DownloadItem item;
 
-                if (!_archiveVoteDownloadItems.TryGetValue(header, out item))
+                if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    _archiveVoteDownloadItems.Add(header, item);
+                    item.Type = "ArchiveVote";
+                    item.Key = header.Key;
+
+                    _downloadItems.Add(hash, item);
                 }
 
                 if (item.State == DownloadState.Completed)
@@ -494,12 +258,17 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                var hash = header.GetHash(_hashAlgorithm);
+
                 DownloadItem item;
 
-                if (!_chatTopicDownloadItems.TryGetValue(header, out item))
+                if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    _chatTopicDownloadItems.Add(header, item);
+                    item.Type = "ChatTopic";
+                    item.Key = header.Key;
+
+                    _downloadItems.Add(hash, item);
                 }
 
                 if (item.State == DownloadState.Completed)
@@ -521,12 +290,17 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
+                var hash = header.GetHash(_hashAlgorithm);
+
                 DownloadItem item;
 
-                if (!_chatMessageDownloadItems.TryGetValue(header, out item))
+                if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    _chatMessageDownloadItems.Add(header, item);
+                    item.Type = "ChatMessage";
+                    item.Key = header.Key;
+
+                    _downloadItems.Add(hash, item);
                 }
 
                 if (item.State == DownloadState.Completed)

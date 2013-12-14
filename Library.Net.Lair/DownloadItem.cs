@@ -21,6 +21,10 @@ namespace Library.Net.Lair
     sealed class DownloadItem
     {
         private DownloadState _state;
+
+        private string _type;
+        private Key _key;
+
         private ExchangePrivateKey _exchangePrivateKey;
 
         private SectionProfileContent _sectionProfileContent;
@@ -67,6 +71,44 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     _state = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Type")]
+        public string Type
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _type;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _type = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Key")]
+        public Key Key
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _key;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _key = value;
                 }
             }
         }

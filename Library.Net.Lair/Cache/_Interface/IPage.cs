@@ -13,7 +13,7 @@ namespace Library.Net.Lair
         MiniWiki = 0,
     }
 
-    public interface IPage
+    public interface IPage : IComputeHash
     {
         string Name { get; }
         HypertextFormatType FormatType { get; }

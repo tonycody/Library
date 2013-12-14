@@ -6,6 +6,8 @@ namespace Library.Net.Lair
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Lair")]
     sealed class UploadItem
     {
+        private string _type;
+
         private Section _section;
         private Archive _archive;
         private Chat _chat;
@@ -39,6 +41,25 @@ namespace Library.Net.Lair
                 }
 
                 return _thisLock;
+            }
+        }
+
+        [DataMember(Name = "Type")]
+        public string Type
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _type;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _type = value;
+                }
             }
         }
 
