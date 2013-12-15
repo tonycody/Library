@@ -7,30 +7,25 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Archive", Namespace = "http://Library/Net/Lair")]
-    public sealed class Archive : ItemBase<Archive>, IArchive
+    [DataContract(Name = "Anchor", Namespace = "http://Library/Net/Lair")]
+    public sealed class Anchor : ItemBase<Anchor>, IAnchor
     {
         private enum SerializeId : byte
         {
-            Id = 0,
-            Name = 1,
+            Signature = 0,
+            CreationTime = 1,
         }
 
-        private byte[] _id;
-        private string _name;
-
-        private int _hashCode;
+        private string _signature;
+        private DateTime _creationTime;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxIdLength = 64;
-        public static readonly int MaxNameLength = 256;
-
-        public Archive(byte[] id, string name)
+        public Anchor(string signature, DateTime creationTime)
         {
-            this.Id = id;
-            this.Name = name;
+            this.Signature = signature;
+            this.CreationTime = creationTime;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -48,18 +43,18 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Id)
-                        {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.Id = buffer;
-                        }
-                        else if (id == (byte)SerializeId.Name)
+                        if (id == (byte)SerializeId.Signature)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Name = reader.ReadToEnd();
+                                this.Signature = reader.ReadToEnd();
+                            }
+                        }
+                        else if (id == (byte)SerializeId.CreationTime)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                             }
                         }
                     }
@@ -74,18 +69,8 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Id
-                if (this.Id != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Id);
-                    bufferStream.Write(this.Id, 0, this.Id.Length);
-
-                    streams.Add(bufferStream);
-                }
-                // Name
-                if (this.Name != null)
+                // Signature
+                if (this.Signature != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -94,12 +79,31 @@ namespace Library.Net.Lair
                     using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                     using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        writer.Write(this.Name);
+                        writer.Write(this.Signature);
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Name);
+                    bufferStream.WriteByte((byte)SerializeId.Signature);
+
+                    streams.Add(bufferStream);
+                }
+                // CreationTime
+                if (this.CreationTime != DateTime.MinValue)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.CreationTime);
 
                     streams.Add(bufferStream);
                 }
@@ -112,32 +116,27 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                return _hashCode;
+                return this.Signature.GetHashCode() ^ this.CreationTime.GetHashCode();
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Archive)) return false;
+            if ((object)obj == null || !(obj is Anchor)) return false;
 
-            return this.Equals((Archive)obj);
+            return this.Equals((Anchor)obj);
         }
 
-        public override bool Equals(Archive other)
+        public override bool Equals(Anchor other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if ((this.Id == null) != (other.Id == null)
-                || this.Name != other.Name)
+            if (this.Signature != other.Signature
+                || this.CreationTime != other.CreationTime)
             {
                 return false;
-            }
-
-            if (this.Id != null && other.Id != null)
-            {
-                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;
@@ -162,67 +161,56 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IArchive
+        #region IAnchor
 
-        [DataMember(Name = "Id")]
-        public byte[] Id
+        public bool Check<TMessage>(TMessage message)
+            where TMessage : IMessage<ITag>
+        {
+            return (message.Signature == this.Signature && message.CreationTime == this.CreationTime);
+        }
+
+        [DataMember(Name = "Signature")]
+        public string Signature
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _id;
+                    return _signature;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && (value.Length > Archive.MaxIdLength))
+                    if (value != null && !Library.Security.Signature.HasSignature(value))
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _id = value;
-                    }
-
-                    if (value != null && value.Length != 0)
-                    {
-                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                        else _hashCode = value[0];
-                    }
-                    else
-                    {
-                        _hashCode = 0;
+                        _signature = value;
                     }
                 }
             }
         }
 
-        [DataMember(Name = "Name")]
-        public string Name
+        [DataMember(Name = "CreationTime")]
+        public DateTime CreationTime
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _name;
+                    return _creationTime;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Archive.MaxNameLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _name = value;
-                    }
+                    var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+                    _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                 }
             }
         }

@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "ArchiveVoteHeader", Namespace = "http://Library/Net/Lair")]
-    public sealed class ArchiveVoteHeader : ReadOnlyCertificateItemBase<ArchiveVoteHeader>, IArchiveVoteHeader<Archive>
+    [DataContract(Name = "WikiPageHeader", Namespace = "http://Library/Net/Lair")]
+    sealed class WikiPageHeader : ReadOnlyCertificateItemBase<WikiPageHeader>, IWikiPageHeader<Wiki>
     {
         private enum SerializeId : byte
         {
@@ -20,7 +20,7 @@ namespace Library.Net.Lair
             Certificate = 3,
         }
 
-        private Archive _tag;
+        private Wiki _tag;
         private DateTime _creationTime;
         private Key _key;
 
@@ -29,7 +29,7 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public ArchiveVoteHeader(Archive tag, Key key, DigitalSignature digitalSignature)
+        public WikiPageHeader(Wiki tag, Key key, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
             this.CreationTime = DateTime.UtcNow;
@@ -55,7 +55,7 @@ namespace Library.Net.Lair
                     {
                         if (id == (byte)SerializeId.Tag)
                         {
-                            this.Tag = Archive.Import(rangeStream, bufferManager);
+                            this.Tag = Wiki.Import(rangeStream, bufferManager);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
@@ -153,12 +153,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is ArchiveVoteHeader)) return false;
+            if ((object)obj == null || !(obj is WikiPageHeader)) return false;
 
-            return this.Equals((ArchiveVoteHeader)obj);
+            return this.Equals((WikiPageHeader)obj);
         }
 
-        public override bool Equals(ArchiveVoteHeader other)
+        public override bool Equals(WikiPageHeader other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -247,10 +247,10 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IArchiveVoteHeader<Archive>
+        #region IWikiPageHeader<Wiki>
 
         [DataMember(Name = "Tag")]
-        public Archive Tag
+        public Wiki Tag
         {
             get
             {

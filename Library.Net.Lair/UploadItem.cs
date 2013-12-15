@@ -9,7 +9,7 @@ namespace Library.Net.Lair
         private string _type;
 
         private Section _section;
-        private Archive _archive;
+        private Wiki _wiki;
         private Chat _chat;
 
         private DigitalSignature _digitalSignature;
@@ -17,8 +17,8 @@ namespace Library.Net.Lair
 
         private SectionProfileContent _sectionProfileContent;
         private SectionMessageContent _sectionMessageContent;
-        private ArchiveDocumentContent _archiveDocumentContent;
-        private ArchiveVoteContent _archiveVoteContent;
+        private WikiPageContent _wikiDocumentContent;
+        private WikiVoteContent _wikiVoteContent;
         private ChatTopicContent _chatTopicContent;
         private ChatMessageContent _chatMessageContent;
 
@@ -81,20 +81,20 @@ namespace Library.Net.Lair
             }
         }
 
-        public Archive Archive
+        public Wiki Wiki
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _archive;
+                    return _wiki;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _archive = value;
+                    _wiki = value;
                 }
             }
         }
@@ -193,40 +193,40 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "ArchiveDocumentContent")]
-        public ArchiveDocumentContent ArchiveDocumentContent
+        [DataMember(Name = "WikiPageContent")]
+        public WikiPageContent WikiPageContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _archiveDocumentContent;
+                    return _wikiDocumentContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _archiveDocumentContent = value;
+                    _wikiDocumentContent = value;
                 }
             }
         }
 
-        [DataMember(Name = "ArchiveVoteContent")]
-        public ArchiveVoteContent ArchiveVoteContent
+        [DataMember(Name = "WikiVoteContent")]
+        public WikiVoteContent WikiVoteContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _archiveVoteContent;
+                    return _wikiVoteContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _archiveVoteContent = value;
+                    _wikiVoteContent = value;
                 }
             }
         }

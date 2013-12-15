@@ -303,24 +303,24 @@ namespace Library.Net.Lair
             }
         }
 
-        public static string ToArchiveString(Archive item, string option)
+        public static string ToWikiString(Wiki item, string option)
         {
-            if (item == null) throw new ArgumentNullException("Archive");
+            if (item == null) throw new ArgumentNullException("Wiki");
 
             try
             {
                 if (option != null)
                 {
-                    using (Stream stream = LairConverter.ToStream<Archive>(item))
+                    using (Stream stream = LairConverter.ToStream<Wiki>(item))
                     {
-                        return "Archive:" + LairConverter.ToBase64String(stream) + "," + option;
+                        return "Wiki:" + LairConverter.ToBase64String(stream) + "," + option;
                     }
                 }
                 else
                 {
-                    using (Stream stream = LairConverter.ToStream<Archive>(item))
+                    using (Stream stream = LairConverter.ToStream<Wiki>(item))
                     {
-                        return "Archive:" + LairConverter.ToBase64String(stream);
+                        return "Wiki:" + LairConverter.ToBase64String(stream);
                     }
                 }
             }
@@ -330,10 +330,10 @@ namespace Library.Net.Lair
             }
         }
 
-        public static Archive FromArchiveString(string item, out string option)
+        public static Wiki FromWikiString(string item, out string option)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Archive:") && !item.StartsWith("Archive@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Wiki:") && !item.StartsWith("Wiki@")) throw new ArgumentException("item");
 
             option = null;
 
@@ -345,16 +345,16 @@ namespace Library.Net.Lair
 
                     option = list[1];
 
-                    using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, "Archive:".Length)))
+                    using (Stream stream = LairConverter.FromBase64String(list[0].Remove(0, "Wiki:".Length)))
                     {
-                        return LairConverter.FromStream<Archive>(stream);
+                        return LairConverter.FromStream<Wiki>(stream);
                     }
                 }
                 else
                 {
-                    using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Archive:".Length)))
+                    using (Stream stream = LairConverter.FromBase64String(item.Remove(0, "Wiki:".Length)))
                     {
-                        return LairConverter.FromStream<Archive>(stream);
+                        return LairConverter.FromStream<Wiki>(stream);
                     }
                 }
             }

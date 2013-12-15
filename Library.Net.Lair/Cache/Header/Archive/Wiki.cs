@@ -7,29 +7,30 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "SectionMessageContent", Namespace = "http://Library/Net/Lair")]
-    sealed class SectionMessageContent : ItemBase<SectionMessageContent>, ISectionMessageContent<Anchor>
+    [DataContract(Name = "Wiki", Namespace = "http://Library/Net/Lair")]
+    public sealed class Wiki : ItemBase<Wiki>, IWiki
     {
         private enum SerializeId : byte
         {
-            Comment = 0,
-            Anchor = 1,
+            Id = 0,
+            Name = 1,
         }
 
-        private string _comment;
-        private Anchor _anchor;
+        private byte[] _id;
+        private string _name;
 
         private int _hashCode;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxIdLength = 64;
+        public static readonly int MaxNameLength = 256;
 
-        public SectionMessageContent(string comment, Anchor anchor)
+        public Wiki(byte[] id, string name)
         {
-            this.Comment = comment;
-            this.Anchor = anchor;
+            this.Id = id;
+            this.Name = name;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -47,16 +48,19 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Comment)
+                        if (id == (byte)SerializeId.Id)
+                        {
+                            byte[] buffer = new byte[rangeStream.Length];
+                            rangeStream.Read(buffer, 0, buffer.Length);
+
+                            this.Id = buffer;
+                        }
+                        else if (id == (byte)SerializeId.Name)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Comment = reader.ReadToEnd();
+                                this.Name = reader.ReadToEnd();
                             }
-                        }
-                        else if (id == (byte)SerializeId.Anchor)
-                        {
-                            this.Anchor = Anchor.Import(rangeStream, bufferManager);
                         }
                     }
                 }
@@ -70,8 +74,18 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Comment
-                if (this.Comment != null)
+                // Id
+                if (this.Id != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Id);
+                    bufferStream.Write(this.Id, 0, this.Id.Length);
+
+                    streams.Add(bufferStream);
+                }
+                // Name
+                if (this.Name != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -80,25 +94,14 @@ namespace Library.Net.Lair
                     using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                     using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        writer.Write(this.Comment);
+                        writer.Write(this.Name);
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Comment);
+                    bufferStream.WriteByte((byte)SerializeId.Name);
 
                     streams.Add(bufferStream);
-                }
-                // Anchor
-                if (this.Anchor != null)
-                {
-                    Stream exportStream = this.Anchor.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Anchor);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
                 }
 
                 return new JoinStream(streams);
@@ -115,21 +118,26 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is SectionMessageContent)) return false;
+            if ((object)obj == null || !(obj is Wiki)) return false;
 
-            return this.Equals((SectionMessageContent)obj);
+            return this.Equals((Wiki)obj);
         }
 
-        public override bool Equals(SectionMessageContent other)
+        public override bool Equals(Wiki other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Comment != other.Comment
-                || this.Anchor != other.Anchor)
+            if ((this.Id == null) != (other.Id == null)
+                || this.Name != other.Name)
             {
                 return false;
+            }
+
+            if (this.Id != null && other.Id != null)
+            {
+                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;
@@ -154,57 +162,66 @@ namespace Library.Net.Lair
             }
         }
 
-        #region ISectionMessageContent
+        #region IWiki
 
-        [DataMember(Name = "Comment")]
-        public string Comment
+        [DataMember(Name = "Id")]
+        public byte[] Id
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _comment;
+                    return _id;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > SectionMessageContent.MaxCommentLength)
+                    if (value != null && (value.Length > Wiki.MaxIdLength))
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _comment = value;
+                        _id = value;
+                    }
+
+                    if (value != null && value.Length != 0)
+                    {
+                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                        else _hashCode = value[0];
+                    }
+                    else
+                    {
+                        _hashCode = 0;
                     }
                 }
             }
         }
 
-        [DataMember(Name = "Anchor")]
-        public Anchor Anchor
+        [DataMember(Name = "Name")]
+        public string Name
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _anchor;
+                    return _name;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    _anchor = value;
-
-                    if (_anchor == null)
+                    if (value != null && value.Length > Wiki.MaxNameLength)
                     {
-                        _hashCode = 0;
+                        throw new ArgumentException();
                     }
                     else
                     {
-                        _hashCode = _anchor.GetHashCode();
+                        _name = value;
                     }
                 }
             }

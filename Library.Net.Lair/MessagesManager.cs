@@ -39,8 +39,8 @@ namespace Library.Net.Lair
                         messageManager.PushBlocks.Refresh();
                         messageManager.PushSectionProfileHeaders.Refresh();
                         messageManager.PushSectionMessageHeaders.Refresh();
-                        messageManager.PushArchiveDocumentHeaders.Refresh();
-                        messageManager.PushArchiveVoteHeaders.Refresh();
+                        messageManager.PushWikiPageHeaders.Refresh();
+                        messageManager.PushWikiVoteHeaders.Refresh();
                         messageManager.PushChatTopicHeaders.Refresh();
                         messageManager.PushChatMessageHeaders.Refresh();
 
@@ -53,8 +53,8 @@ namespace Library.Net.Lair
                         messageManager.PushSectionsRequest.Refresh();
                         messageManager.PullSectionsRequest.Refresh();
 
-                        messageManager.PushArchivesRequest.Refresh();
-                        messageManager.PullArchivesRequest.Refresh();
+                        messageManager.PushWikisRequest.Refresh();
+                        messageManager.PullWikisRequest.Refresh();
 
                         messageManager.PushChatsRequest.Refresh();
                         messageManager.PullChatsRequest.Refresh();
@@ -173,8 +173,8 @@ namespace Library.Net.Lair
         private VolatileCollection<Key> _pushBlocks;
         private VolatileCollection<byte[]> _pushSectionProfileHeaders;
         private VolatileCollection<byte[]> _pushSectionMessageHeaders;
-        private VolatileCollection<byte[]> _pushArchiveDocumentHeaders;
-        private VolatileCollection<byte[]> _pushArchiveVoteHeaders;
+        private VolatileCollection<byte[]> _pushWikiPageHeaders;
+        private VolatileCollection<byte[]> _pushWikiVoteHeaders;
         private VolatileCollection<byte[]> _pushChatTopicHeaders;
         private VolatileCollection<byte[]> _pushChatMessageHeaders;
 
@@ -187,8 +187,8 @@ namespace Library.Net.Lair
         private VolatileCollection<Section> _pushSectionsRequest;
         private VolatileCollection<Section> _pullSectionsRequest;
 
-        private VolatileCollection<Archive> _pushArchivesRequest;
-        private VolatileCollection<Archive> _pullArchivesRequest;
+        private VolatileCollection<Wiki> _pushWikisRequest;
+        private VolatileCollection<Wiki> _pullWikisRequest;
 
         private VolatileCollection<Chat> _pushChatsRequest;
         private VolatileCollection<Chat> _pullChatsRequest;
@@ -204,8 +204,8 @@ namespace Library.Net.Lair
             _pushBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
             _pushSectionProfileHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _pushSectionMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _pushArchiveDocumentHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _pushArchiveVoteHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushWikiPageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _pushWikiVoteHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _pushChatTopicHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _pushChatMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
 
@@ -218,8 +218,8 @@ namespace Library.Net.Lair
             _pushSectionsRequest = new VolatileCollection<Section>(new TimeSpan(0, 30, 0));
             _pullSectionsRequest = new VolatileCollection<Section>(new TimeSpan(0, 30, 0));
 
-            _pushArchivesRequest = new VolatileCollection<Archive>(new TimeSpan(0, 30, 0));
-            _pullArchivesRequest = new VolatileCollection<Archive>(new TimeSpan(0, 30, 0));
+            _pushWikisRequest = new VolatileCollection<Wiki>(new TimeSpan(0, 30, 0));
+            _pullWikisRequest = new VolatileCollection<Wiki>(new TimeSpan(0, 30, 0));
 
             _pushChatsRequest = new VolatileCollection<Chat>(new TimeSpan(0, 30, 0));
             _pullChatsRequest = new VolatileCollection<Chat>(new TimeSpan(0, 30, 0));
@@ -370,24 +370,24 @@ namespace Library.Net.Lair
             }
         }
 
-        public VolatileCollection<byte[]> PushArchiveDocumentHeaders
+        public VolatileCollection<byte[]> PushWikiPageHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushArchiveDocumentHeaders;
+                    return _pushWikiPageHeaders;
                 }
             }
         }
 
-        public VolatileCollection<byte[]> PushArchiveVoteHeaders
+        public VolatileCollection<byte[]> PushWikiVoteHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushArchiveVoteHeaders;
+                    return _pushWikiVoteHeaders;
                 }
             }
         }
@@ -480,24 +480,24 @@ namespace Library.Net.Lair
             }
         }
 
-        public VolatileCollection<Archive> PushArchivesRequest
+        public VolatileCollection<Wiki> PushWikisRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushArchivesRequest;
+                    return _pushWikisRequest;
                 }
             }
         }
 
-        public VolatileCollection<Archive> PullArchivesRequest
+        public VolatileCollection<Wiki> PullWikisRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullArchivesRequest;
+                    return _pullWikisRequest;
                 }
             }
         }

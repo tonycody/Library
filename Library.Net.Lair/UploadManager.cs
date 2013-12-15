@@ -96,13 +96,13 @@ namespace Library.Net.Lair
                                 {
                                     buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
                                 }
-                                else if (item.Type == "ArchiveDocument")
+                                else if (item.Type == "WikiDocument")
                                 {
-                                    buffer = ContentConverter.ToArchiveDocumentContentBlock(item.ArchiveDocumentContent);
+                                    buffer = ContentConverter.ToWikiPageContentBlock(item.WikiPageContent);
                                 }
-                                else if (item.Type == "ArchiveVote")
+                                else if (item.Type == "WikiVote")
                                 {
-                                    buffer = ContentConverter.ToArchiveVoteContentBlock(item.ArchiveVoteContent);
+                                    buffer = ContentConverter.ToWikiVoteContentBlock(item.WikiVoteContent);
                                 }
                                 else if (item.Type == "ChatTopic")
                                 {
@@ -138,14 +138,14 @@ namespace Library.Net.Lair
                                     var header = new SectionMessageHeader(item.Section, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
-                                else if (item.Type == "ArchiveDocument")
+                                else if (item.Type == "WikiDocument")
                                 {
-                                    var header = new ArchiveDocumentHeader(item.Archive, key, item.DigitalSignature);
+                                    var header = new WikiPageHeader(item.Wiki, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
-                                else if (item.Type == "ArchiveVote")
+                                else if (item.Type == "WikiVote")
                                 {
-                                    var header = new ArchiveVoteHeader(item.Archive, key, item.DigitalSignature);
+                                    var header = new WikiVoteHeader(item.Wiki, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
                                 else if (item.Type == "ChatTopic")
@@ -210,32 +210,32 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(Archive tag,
-            ArchiveDocumentContent content,
+        public void Upload(Wiki tag,
+            WikiPageContent content,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Type = "ArchiveDocument";
-                uploadItem.Archive = tag;
-                uploadItem.ArchiveDocumentContent = content;
+                uploadItem.Type = "WikiDocument";
+                uploadItem.Wiki = tag;
+                uploadItem.WikiPageContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
             }
         }
 
-        public void Upload(Archive tag,
-            ArchiveVoteContent content,
+        public void Upload(Wiki tag,
+            WikiVoteContent content,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Type = "ArchiveVote";
-                uploadItem.Archive = tag;
-                uploadItem.ArchiveVoteContent = content;
+                uploadItem.Type = "WikiVote";
+                uploadItem.Wiki = tag;
+                uploadItem.WikiVoteContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);

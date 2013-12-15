@@ -7,8 +7,8 @@ using Library.Io;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "ArchiveVoteContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class ArchiveVoteContent : ItemBase<ArchiveVoteContent>, IArchiveVoteContent<Key>
+    [DataContract(Name = "WikiVoteContent", Namespace = "http://Library/Net/Lair")]
+    sealed class WikiVoteContent : ItemBase<WikiVoteContent>, IWikiVoteContent<Anchor>
     {
         private enum SerializeId : byte
         {
@@ -16,8 +16,8 @@ namespace Library.Net.Lair
             Bad = 1,
         }
 
-        private KeyCollection _goods;
-        private KeyCollection _bads;
+        private AnchorCollection _goods;
+        private AnchorCollection _bads;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
@@ -25,7 +25,7 @@ namespace Library.Net.Lair
         public static readonly int MaxGoodsCount = 1024;
         public static readonly int MaxBadsCount = 1024;
 
-        public ArchiveVoteContent(IEnumerable<Key> goods, IEnumerable<Key> bads)
+        public WikiVoteContent(IEnumerable<Anchor> goods, IEnumerable<Anchor> bads)
         {
             if (goods != null) this.ProtectedGoods.AddRange(goods);
             if (bads != null) this.ProtectedBads.AddRange(bads);
@@ -48,11 +48,11 @@ namespace Library.Net.Lair
                     {
                         if (id == (byte)SerializeId.Good)
                         {
-                            this.ProtectedGoods.Add(Key.Import(rangeStream, bufferManager));
+                            this.ProtectedGoods.Add(Anchor.Import(rangeStream, bufferManager));
                         }
                         else if (id == (byte)SerializeId.Bad)
                         {
-                            this.ProtectedBads.Add(Key.Import(rangeStream, bufferManager));
+                            this.ProtectedBads.Add(Anchor.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -104,12 +104,12 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is ArchiveVoteContent)) return false;
+            if ((object)obj == null || !(obj is WikiVoteContent)) return false;
 
-            return this.Equals((ArchiveVoteContent)obj);
+            return this.Equals((WikiVoteContent)obj);
         }
 
-        public override bool Equals(ArchiveVoteContent other)
+        public override bool Equals(WikiVoteContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -153,18 +153,18 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IArchiveVotesContent<Key>
+        #region IWikiVotesContent<Anchor>
 
-        private volatile ReadOnlyCollection<Key> _readOnlyGoods;
+        private volatile ReadOnlyCollection<Anchor> _readOnlyGoods;
 
-        public IEnumerable<Key> Goods
+        public IEnumerable<Anchor> Goods
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_readOnlyGoods == null)
-                        _readOnlyGoods = new ReadOnlyCollection<Key>(this.ProtectedGoods);
+                        _readOnlyGoods = new ReadOnlyCollection<Anchor>(this.ProtectedGoods);
 
                     return _readOnlyGoods;
                 }
@@ -172,30 +172,30 @@ namespace Library.Net.Lair
         }
 
         [DataMember(Name = "Goods")]
-        private KeyCollection ProtectedGoods
+        private AnchorCollection ProtectedGoods
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_goods == null)
-                        _goods = new KeyCollection(ArchiveVoteContent.MaxGoodsCount);
+                        _goods = new AnchorCollection(WikiVoteContent.MaxGoodsCount);
 
                     return _goods;
                 }
             }
         }
 
-        private volatile ReadOnlyCollection<Key> _readOnlyBads;
+        private volatile ReadOnlyCollection<Anchor> _readOnlyBads;
 
-        public IEnumerable<Key> Bads
+        public IEnumerable<Anchor> Bads
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_readOnlyBads == null)
-                        _readOnlyBads = new ReadOnlyCollection<Key>(this.ProtectedBads);
+                        _readOnlyBads = new ReadOnlyCollection<Anchor>(this.ProtectedBads);
 
                     return _readOnlyBads;
                 }
@@ -203,14 +203,14 @@ namespace Library.Net.Lair
         }
 
         [DataMember(Name = "Bads")]
-        private KeyCollection ProtectedBads
+        private AnchorCollection ProtectedBads
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_bads == null)
-                        _bads = new KeyCollection(ArchiveVoteContent.MaxBadsCount);
+                        _bads = new AnchorCollection(WikiVoteContent.MaxBadsCount);
 
                     return _bads;
                 }

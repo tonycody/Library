@@ -8,23 +8,26 @@ using Library.Io;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatTopicContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent
+    sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IChatTopicContent
     {
         private enum SerializeId : byte
         {
-            Comment = 0,
+            FormatType = 0,
+            Hypertext = 1,
         }
 
-        private string _comment;
+        private HypertextFormatType _formatType;
+        private string _hypertext;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxCommentLength = 1024 * 32;
+        public static readonly int MaxHypertextLength = 1024 * 32;
 
-        public ChatTopicContent(string comment)
+        public ChatTopicContent(HypertextFormatType formatType, string hypertext)
         {
-            this.Comment = comment;
+            this.FormatType = formatType;
+            this.Hypertext = hypertext;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -42,11 +45,18 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Comment)
+                        if (id == (byte)SerializeId.FormatType)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.Comment = reader.ReadToEnd();
+                                this.FormatType = (HypertextFormatType)Enum.Parse(typeof(HypertextFormatType), reader.ReadToEnd());
+                            }
+                        }
+                        else if (id == (byte)SerializeId.Hypertext)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.Hypertext = reader.ReadToEnd();
                             }
                         }
                     }
@@ -61,8 +71,8 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Comment
-                if (this.Comment != null)
+                // FormatType
+                if (this.FormatType != 0)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.SetLength(5);
@@ -71,12 +81,31 @@ namespace Library.Net.Lair
                     using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                     using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                     {
-                        writer.Write(this.Comment);
+                        writer.Write(this.FormatType.ToString());
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
                     bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Comment);
+                    bufferStream.WriteByte((byte)SerializeId.FormatType);
+
+                    streams.Add(bufferStream);
+                }
+                // Hypertext
+                if (this.Hypertext != null)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(this.Hypertext);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Hypertext);
 
                     streams.Add(bufferStream);
                 }
@@ -89,8 +118,8 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                if (this.Comment == null) return 0;
-                else return this.Comment.GetHashCode();
+                if (this.Hypertext == null) return 0;
+                else return this.Hypertext.GetHashCode();
             }
         }
 
@@ -107,7 +136,8 @@ namespace Library.Net.Lair
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Comment != other.Comment)
+            if (this.FormatType != other.FormatType
+                || this.Hypertext != other.Hypertext)
             {
                 return false;
             }
@@ -134,29 +164,55 @@ namespace Library.Net.Lair
             }
         }
 
-        #region ITopicContent
+        #region IChatTopicContent
 
-        [DataMember(Name = "Comment")]
-        public string Comment
+        [DataMember(Name = "FormatType")]
+        public HypertextFormatType FormatType
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _comment;
+                    return _formatType;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    if (!Enum.IsDefined(typeof(HypertextFormatType), value))
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _formatType = value;
+                    }
+                }
+            }
+        }
+
+        [DataMember(Name = "Hypertext")]
+        public string Hypertext
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _hypertext;
                 }
             }
             private set
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > ChatTopicContent.MaxCommentLength)
+                    if (value != null && value.Length > ChatTopicContent.MaxHypertextLength)
                     {
                         throw new ArgumentException();
                     }
                     else
                     {
-                        _comment = value;
+                        _hypertext = value;
                     }
                 }
             }

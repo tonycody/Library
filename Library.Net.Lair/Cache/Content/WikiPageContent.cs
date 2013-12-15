@@ -4,32 +4,29 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
+using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
-    [DataContract(Name = "Page", Namespace = "http://Library/Net/Lair")]
-    public sealed class Page : ItemBase<Page>, IPage
+    [DataContract(Name = "WikiPageContent", Namespace = "http://Library/Net/Lair")]
+    sealed class WikiPageContent : ItemBase<WikiPageContent>, IWikiPageContent
     {
         private enum SerializeId : byte
         {
-            Name = 0,
-            FormatType = 1,
-            Hypertext = 2,
+            FormatType = 0,
+            Hypertext = 1,
         }
 
-        private string _name;
         private HypertextFormatType _formatType;
         private string _hypertext;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxNameLength = 1024;
         public static readonly int MaxHypertextLength = 1024 * 32;
 
-        public Page(string name, HypertextFormatType formatType, string hypertext)
+        public WikiPageContent(HypertextFormatType formatType, string hypertext)
         {
-            this.Name = name;
             this.FormatType = formatType;
             this.Hypertext = hypertext;
         }
@@ -49,14 +46,7 @@ namespace Library.Net.Lair
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Name)
-                        {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Name = reader.ReadToEnd();
-                            }
-                        }
-                        else if (id == (byte)SerializeId.FormatType)
+                        if (id == (byte)SerializeId.FormatType)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
@@ -82,25 +72,6 @@ namespace Library.Net.Lair
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Name
-                if (this.Name != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.Name);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Name);
-
-                    streams.Add(bufferStream);
-                }
                 // FormatType
                 if (this.FormatType != 0)
                 {
@@ -155,19 +126,18 @@ namespace Library.Net.Lair
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Page)) return false;
+            if ((object)obj == null || !(obj is WikiPageContent)) return false;
 
-            return this.Equals((Page)obj);
+            return this.Equals((WikiPageContent)obj);
         }
 
-        public override bool Equals(Page other)
+        public override bool Equals(WikiPageContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Name != other.Name
-                || this.FormatType != other.FormatType
+            if (this.FormatType != other.FormatType
                 || this.Hypertext != other.Hypertext)
             {
                 return false;
@@ -195,33 +165,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IArchivePage
-
-        [DataMember(Name = "Name")]
-        public string Name
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _name;
-                }
-            }
-            private set
-            {
-                lock (this.ThisLock)
-                {
-                    if (value != null && value.Length > Page.MaxNameLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _name = value;
-                    }
-                }
-            }
-        }
+        #region IWikiPageContent
 
         [DataMember(Name = "FormatType")]
         public HypertextFormatType FormatType
@@ -263,7 +207,7 @@ namespace Library.Net.Lair
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Page.MaxHypertextLength)
+                    if (value != null && value.Length > WikiPageContent.MaxHypertextLength)
                     {
                         throw new ArgumentException();
                     }
@@ -272,41 +216,6 @@ namespace Library.Net.Lair
                         _hypertext = value;
                     }
                 }
-            }
-        }
-
-        #endregion
-        
-        #region IComputeHash
-
-        private byte[] _sha512_hash;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            lock (this.ThisLock)
-            {
-                if (_sha512_hash == null)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        _sha512_hash = Sha512.ComputeHash(stream);
-                    }
-                }
-
-                if (hashAlgorithm == HashAlgorithm.Sha512)
-                {
-                    return _sha512_hash;
-                }
-
-                return null;
-            }
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            lock (this.ThisLock)
-            {
-                return Collection.Equals(this.GetHash(hashAlgorithm), hash);
             }
         }
 

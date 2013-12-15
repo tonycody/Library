@@ -1,7 +1,7 @@
 ﻿
 namespace Library.Net.Amoeba
 {
-    interface IKey : IHashAlgorithm
+    public interface IKey : IHashAlgorithm
     {
         byte[] Hash { get; }
     }

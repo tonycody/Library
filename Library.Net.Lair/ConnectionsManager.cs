@@ -32,7 +32,7 @@ namespace Library.Net.Lair
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksRequestDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Key>> _pushBlocksDictionary = new LockedDictionary<Node, HashSet<Key>>();
         private LockedDictionary<Node, HashSet<Section>> _pushSectionsRequestDictionary = new LockedDictionary<Node, HashSet<Section>>();
-        private LockedDictionary<Node, HashSet<Archive>> _pushArchivesRequestDictionary = new LockedDictionary<Node, HashSet<Archive>>();
+        private LockedDictionary<Node, HashSet<Wiki>> _pushWikisRequestDictionary = new LockedDictionary<Node, HashSet<Wiki>>();
         private LockedDictionary<Node, HashSet<Chat>> _pushChatsRequestDictionary = new LockedDictionary<Node, HashSet<Chat>>();
 
         private LockedList<Node> _creatingNodes;
@@ -42,12 +42,12 @@ namespace Library.Net.Lair
         private VolatileDictionary<Node, int> _nodesStatus;
 
         private VolatileCollection<Section> _pushSectionsRequestList;
-        private VolatileCollection<Archive> _pushArchivesRequestList;
+        private VolatileCollection<Wiki> _pushWikisRequestList;
         private VolatileCollection<Chat> _pushChatsRequestList;
         private VolatileCollection<Key> _downloadBlocks;
 
         private LockedDictionary<Section, DateTime> _lastUsedSectionTimes = new LockedDictionary<Section, DateTime>();
-        private LockedDictionary<Archive, DateTime> _lastUsedArchiveTimes = new LockedDictionary<Archive, DateTime>();
+        private LockedDictionary<Wiki, DateTime> _lastUsedWikiTimes = new LockedDictionary<Wiki, DateTime>();
         private LockedDictionary<Chat, DateTime> _lastUsedChatTimes = new LockedDictionary<Chat, DateTime>();
 
         private volatile Thread _connectionsManagerThread;
@@ -142,7 +142,7 @@ namespace Library.Net.Lair
 
             _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 3, 0));
             _pushSectionsRequestList = new VolatileCollection<Section>(new TimeSpan(0, 3, 0));
-            _pushArchivesRequestList = new VolatileCollection<Archive>(new TimeSpan(0, 3, 0));
+            _pushWikisRequestList = new VolatileCollection<Wiki>(new TimeSpan(0, 3, 0));
             _pushChatsRequestList = new VolatileCollection<Chat>(new TimeSpan(0, 3, 0));
 
             _relayBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
@@ -1054,32 +1054,32 @@ namespace Library.Net.Lair
                                     }
 
                                     {
-                                        var removeArchives = new HashSet<Archive>();
-                                        removeArchives.UnionWith(_headerManager.GetArchives());
-                                        removeArchives.ExceptWith(lockCriteriaList.SelectMany(n => n.Archives));
+                                        var removeWikis = new HashSet<Wiki>();
+                                        removeWikis.UnionWith(_headerManager.GetWikis());
+                                        removeWikis.ExceptWith(lockCriteriaList.SelectMany(n => n.Wikis));
 
-                                        var sortList = removeArchives.ToList();
+                                        var sortList = removeWikis.ToList();
 
                                         sortList.Sort((x, y) =>
                                         {
                                             DateTime tx;
                                             DateTime ty;
 
-                                            _lastUsedArchiveTimes.TryGetValue(x, out tx);
-                                            _lastUsedArchiveTimes.TryGetValue(y, out ty);
+                                            _lastUsedWikiTimes.TryGetValue(x, out tx);
+                                            _lastUsedWikiTimes.TryGetValue(y, out ty);
 
                                             return tx.CompareTo(ty);
                                         });
 
                                         _headerManager.RemoveTags(sortList.Take(sortList.Count - 1024));
 
-                                        var liveArchives = new HashSet<Archive>(_headerManager.GetArchives());
+                                        var liveWikis = new HashSet<Wiki>(_headerManager.GetWikis());
 
-                                        foreach (var section in _lastUsedArchiveTimes.Keys.ToArray())
+                                        foreach (var section in _lastUsedWikiTimes.Keys.ToArray())
                                         {
-                                            if (liveArchives.Contains(section)) continue;
+                                            if (liveWikis.Contains(section)) continue;
 
-                                            _lastUsedArchiveTimes.Remove(section);
+                                            _lastUsedWikiTimes.Remove(section);
                                         }
                                     }
 
@@ -1132,6 +1132,7 @@ namespace Library.Net.Lair
                                     {
                                         List<HashSet<string>> trustList;
 
+                                        // Turstリストの抽出
                                         {
                                             var tempList = patternList.Where(n => n.Key.Contains(section)).ToList();
                                             if (tempList.Count == 0) continue;
@@ -1139,6 +1140,7 @@ namespace Library.Net.Lair
                                             trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
                                         }
 
+                                        // SectionProfileの選別
                                         {
                                             var untrustHeaders = new List<SectionProfileHeader>();
 
@@ -1157,6 +1159,7 @@ namespace Library.Net.Lair
                                             removeSectionProfileHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
                                         }
 
+                                        // SectionMessageの選別
                                         {
                                             var trustMessageHeaders = new Dictionary<string, List<SectionMessageHeader>>();
                                             var untrustMessageHeaders = new Dictionary<string, List<SectionMessageHeader>>();
@@ -1231,23 +1234,24 @@ namespace Library.Net.Lair
                                 }
 
                                 {
-                                    var patternList = new List<KeyValuePair<HashSet<Archive>, HashSet<string>>>();
+                                    var patternList = new List<KeyValuePair<HashSet<Wiki>, HashSet<string>>>();
 
                                     foreach (var criterion in lockCriteriaList)
                                     {
-                                        var tagHashset = new HashSet<Archive>(criterion.Archives);
+                                        var tagHashset = new HashSet<Wiki>(criterion.Wikis);
                                         var signatureHashset = new HashSet<string>(criterion.TrustSignatures);
 
-                                        patternList.Add(new KeyValuePair<HashSet<Archive>, HashSet<string>>(tagHashset, signatureHashset));
+                                        patternList.Add(new KeyValuePair<HashSet<Wiki>, HashSet<string>>(tagHashset, signatureHashset));
                                     }
 
-                                    var removeArchiveProfileHeaders = new List<ArchiveDocumentHeader>();
-                                    var removeArchiveVoteHeaders = new List<ArchiveVoteHeader>();
+                                    var removeWikiPageHeaders = new List<WikiPageHeader>();
+                                    var removeWikiVoteHeaders = new List<WikiVoteHeader>();
 
-                                    foreach (var section in _headerManager.GetArchives())
+                                    foreach (var section in _headerManager.GetWikis())
                                     {
                                         List<HashSet<string>> trustList;
 
+                                        // Turstリストの抽出
                                         {
                                             var tempList = patternList.Where(n => n.Key.Contains(section)).ToList();
                                             if (tempList.Count == 0) continue;
@@ -1255,10 +1259,59 @@ namespace Library.Net.Lair
                                             trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
                                         }
 
+                                        // WikiPageの選別
                                         {
-                                            var untrustHeaders = new List<ArchiveDocumentHeader>();
+                                            var trustMessageHeaders = new Dictionary<string, List<WikiPageHeader>>();
+                                            var untrustMessageHeaders = new Dictionary<string, List<WikiPageHeader>>();
 
-                                            var headers = _headerManager.GetArchiveDocumentHeaders(section).ToList();
+                                            var headers = _headerManager.GetWikiPageHeaders(section).ToList();
+
+                                            foreach (var header in headers)
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (trustList.Any(n => n.Contains(signature)))
+                                                {
+                                                    List<WikiPageHeader> list;
+
+                                                    if (!trustMessageHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<WikiPageHeader>();
+                                                        trustMessageHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                                else
+                                                {
+                                                    List<WikiPageHeader> list;
+
+                                                    if (!untrustMessageHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<WikiPageHeader>();
+                                                        trustMessageHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                            }
+
+                                            removeWikiPageHeaders.AddRange(untrustMessageHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in Collection.Merge(trustMessageHeaders.Values, untrustMessageHeaders.Values))
+                                            {
+                                                if (list.Count <= 32) continue;
+
+                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
+                                                removeWikiPageHeaders.AddRange(list.Take(list.Count - 32));
+                                            }
+                                        }
+
+                                        // WikiVoteの選別
+                                        {
+                                            var untrustHeaders = new List<WikiVoteHeader>();
+
+                                            var headers = _headerManager.GetWikiVoteHeaders(section).ToList();
 
                                             foreach (var header in headers)
                                             {
@@ -1270,33 +1323,15 @@ namespace Library.Net.Lair
                                                 }
                                             }
 
-                                            removeArchiveProfileHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
+                                            removeWikiVoteHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
                                         }
 
-                                        {
-                                            var untrustHeaders = new List<ArchiveVoteHeader>();
-
-                                            var headers = _headerManager.GetArchiveVoteHeaders(section).ToList();
-
-                                            foreach (var header in headers)
-                                            {
-                                                var signature = header.Certificate.ToString();
-
-                                                if (!trustList.Any(n => n.Contains(signature)))
-                                                {
-                                                    untrustHeaders.Add(header);
-                                                }
-                                            }
-
-                                            removeArchiveVoteHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
-                                        }
-
-                                        foreach (var header in removeArchiveProfileHeaders)
+                                        foreach (var header in removeWikiPageHeaders)
                                         {
                                             _headerManager.RemoveHeader(header);
                                         }
 
-                                        foreach (var header in removeArchiveVoteHeaders)
+                                        foreach (var header in removeWikiVoteHeaders)
                                         {
                                             _headerManager.RemoveHeader(header);
                                         }
@@ -1321,6 +1356,7 @@ namespace Library.Net.Lair
                                     {
                                         List<HashSet<string>> trustList;
 
+                                        // Turstリストの抽出
                                         {
                                             var tempList = patternList.Where(n => n.Key.Contains(section)).ToList();
                                             if (tempList.Count == 0) continue;
@@ -1328,6 +1364,7 @@ namespace Library.Net.Lair
                                             trustList = new List<HashSet<string>>(tempList.Select(n => n.Value));
                                         }
 
+                                        // ChatTopicの選別
                                         {
                                             var untrustHeaders = new List<ChatTopicHeader>();
 
@@ -1346,6 +1383,7 @@ namespace Library.Net.Lair
                                             removeChatTopicHeaders.AddRange(untrustHeaders.Randomize().Skip(32));
                                         }
 
+                                        // ChatMessageの選別
                                         {
                                             var trustMessageHeaders = new Dictionary<string, List<ChatMessageHeader>>();
                                             var untrustMessageHeaders = new Dictionary<string, List<ChatMessageHeader>>();
@@ -1731,7 +1769,7 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    foreach (var item in _headerManager.GetArchives())
+                    foreach (var item in _headerManager.GetWikis())
                     {
                         try
                         {
@@ -1742,7 +1780,7 @@ namespace Library.Net.Lair
                             {
                                 var messageManager = _messagesManager[requestNodes[i]];
 
-                                messageManager.PullArchivesRequest.Add(item);
+                                messageManager.PullWikisRequest.Add(item);
                             }
                         }
                         catch (Exception e)
@@ -1778,7 +1816,7 @@ namespace Library.Net.Lair
                     pushHeaderDownloadStopwatch.Restart();
 
                     HashSet<Section> pushSectionsRequestList = new HashSet<Section>();
-                    HashSet<Archive> pushArchivesRequestList = new HashSet<Archive>();
+                    HashSet<Wiki> pushWikisRequestList = new HashSet<Wiki>();
                     HashSet<Chat> pushChatsRequestList = new HashSet<Chat>();
                     List<Node> nodes = new List<Node>();
 
@@ -1823,16 +1861,16 @@ namespace Library.Net.Lair
                         }
 
                         {
-                            var list = _pushArchivesRequestList
+                            var list = _pushWikisRequestList
                                 .ToArray()
                                 .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushArchivesRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushWikisRequest.Contains(list[i])))
                                 {
-                                    pushArchivesRequestList.Add(list[i]);
+                                    pushWikisRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1841,16 +1879,16 @@ namespace Library.Net.Lair
                         foreach (var node in nodes)
                         {
                             var messageManager = _messagesManager[node];
-                            var list = messageManager.PullArchivesRequest
+                            var list = messageManager.PullWikisRequest
                                 .ToArray()
                                 .Randomize()
                                 .ToList();
 
                             for (int i = 0, j = 0; j < 1024 && i < list.Count; i++)
                             {
-                                if (!nodes.Any(n => _messagesManager[n].PushArchivesRequest.Contains(list[i])))
+                                if (!nodes.Any(n => _messagesManager[n].PushWikisRequest.Contains(list[i])))
                                 {
-                                    pushArchivesRequestList.Add(list[i]);
+                                    pushWikisRequestList.Add(list[i]);
                                     j++;
                                 }
                             }
@@ -1932,9 +1970,9 @@ namespace Library.Net.Lair
                     }
 
                     {
-                        Dictionary<Node, HashSet<Archive>> pushArchivesRequestDictionary = new Dictionary<Node, HashSet<Archive>>();
+                        Dictionary<Node, HashSet<Wiki>> pushWikisRequestDictionary = new Dictionary<Node, HashSet<Wiki>>();
 
-                        foreach (var item in pushArchivesRequestList)
+                        foreach (var item in pushWikisRequestList)
                         {
                             try
                             {
@@ -1943,12 +1981,12 @@ namespace Library.Net.Lair
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    HashSet<Archive> hashset;
+                                    HashSet<Wiki> hashset;
 
-                                    if (!pushArchivesRequestDictionary.TryGetValue(requestNodes[i], out hashset))
+                                    if (!pushWikisRequestDictionary.TryGetValue(requestNodes[i], out hashset))
                                     {
-                                        hashset = new HashSet<Archive>();
-                                        pushArchivesRequestDictionary[requestNodes[i]] = hashset;
+                                        hashset = new HashSet<Wiki>();
+                                        pushWikisRequestDictionary[requestNodes[i]] = hashset;
                                     }
 
                                     hashset.Add(item);
@@ -1960,13 +1998,13 @@ namespace Library.Net.Lair
                             }
                         }
 
-                        lock (_pushArchivesRequestDictionary.ThisLock)
+                        lock (_pushWikisRequestDictionary.ThisLock)
                         {
-                            _pushArchivesRequestDictionary.Clear();
+                            _pushWikisRequestDictionary.Clear();
 
-                            foreach (var item in pushArchivesRequestDictionary)
+                            foreach (var item in pushWikisRequestDictionary)
                             {
-                                _pushArchivesRequestDictionary.Add(item.Key, item.Value);
+                                _pushWikisRequestDictionary.Add(item.Key, item.Value);
                             }
                         }
                     }
@@ -2194,7 +2232,7 @@ namespace Library.Net.Lair
                         if (_connectionManagers.Count >= _downloadingConnectionCountLowerLimit)
                         {
                             SectionCollection sectionList = new SectionCollection();
-                            ArchiveCollection archiveList = new ArchiveCollection();
+                            WikiCollection wikiList = new WikiCollection();
                             ChatCollection chatList = new ChatCollection();
 
                             int count = (int)(_maxHeaderRequestCount * this.ResponseTimePriority(connectionManager.Node));
@@ -2212,16 +2250,16 @@ namespace Library.Net.Lair
                                 }
                             }
 
-                            lock (_pushArchivesRequestDictionary.ThisLock)
+                            lock (_pushWikisRequestDictionary.ThisLock)
                             {
-                                HashSet<Archive> hashset;
+                                HashSet<Wiki> hashset;
 
-                                if (_pushArchivesRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
+                                if (_pushWikisRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    archiveList.AddRange(hashset.Randomize().Take(count));
+                                    wikiList.AddRange(hashset.Randomize().Take(count));
 
-                                    hashset.ExceptWith(archiveList);
-                                    messageManager.PushArchivesRequest.AddRange(archiveList);
+                                    hashset.ExceptWith(wikiList);
+                                    messageManager.PushWikisRequest.AddRange(wikiList);
                                 }
                             }
 
@@ -2238,20 +2276,20 @@ namespace Library.Net.Lair
                                 }
                             }
 
-                            if (sectionList.Count > 0 || archiveList.Count > 0 || chatList.Count > 0)
+                            if (sectionList.Count > 0 || wikiList.Count > 0 || chatList.Count > 0)
                             {
                                 try
                                 {
-                                    connectionManager.PushHeadersRequest(sectionList, archiveList, chatList);
+                                    connectionManager.PushHeadersRequest(sectionList, wikiList, chatList);
 
                                     foreach (var item in sectionList)
                                     {
                                         _pushSectionsRequestList.Remove(item);
                                     }
 
-                                    foreach (var item in archiveList)
+                                    foreach (var item in wikiList)
                                     {
-                                        _pushArchivesRequestList.Remove(item);
+                                        _pushWikisRequestList.Remove(item);
                                     }
 
                                     foreach (var item in chatList)
@@ -2260,7 +2298,7 @@ namespace Library.Net.Lair
                                     }
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest ({0})",
-                                        sectionList.Count + archiveList.Count + chatList.Count));
+                                        sectionList.Count + wikiList.Count + chatList.Count));
 
                                     _pushHeaderRequestCount += sectionList.Count;
                                 }
@@ -2271,9 +2309,9 @@ namespace Library.Net.Lair
                                         messageManager.PushSectionsRequest.Remove(item);
                                     }
 
-                                    foreach (var item in archiveList)
+                                    foreach (var item in wikiList)
                                     {
-                                        messageManager.PushArchivesRequest.Remove(item);
+                                        messageManager.PushWikisRequest.Remove(item);
                                     }
 
                                     foreach (var item in chatList)
@@ -2411,13 +2449,13 @@ namespace Library.Net.Lair
                         if (_connectionManagers.Count >= _uploadingConnectionCountLowerLimit)
                         {
                             var sections = messageManager.PullSectionsRequest.ToList();
-                            var archives = messageManager.PullArchivesRequest.ToList();
+                            var wikis = messageManager.PullWikisRequest.ToList();
                             var chats = messageManager.PullChatsRequest.ToList();
 
                             var sectionProfileHeaders = new List<SectionProfileHeader>();
                             var sectionMessageHeaders = new List<SectionMessageHeader>();
-                            var archiveDocumentHeaders = new List<ArchiveDocumentHeader>();
-                            var archiveVoteHeaders = new List<ArchiveVoteHeader>();
+                            var wikiPageHeaders = new List<WikiPageHeader>();
+                            var wikiVoteHeaders = new List<WikiVoteHeader>();
                             var chatTopicHeaders = new List<ChatTopicHeader>();
                             var chatMessageHeaders = new List<ChatMessageHeader>();
 
@@ -2447,30 +2485,30 @@ namespace Library.Net.Lair
                                 if (sectionMessageHeaders.Count >= _maxHeaderCount) break;
                             }
 
-                            foreach (var tag in archives.Randomize())
+                            foreach (var tag in wikis.Randomize())
                             {
-                                foreach (var header in _headerManager.GetArchiveDocumentHeaders(tag))
+                                foreach (var header in _headerManager.GetWikiPageHeaders(tag))
                                 {
-                                    if (!messageManager.PushArchiveDocumentHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    if (!messageManager.PushWikiPageHeaders.Contains(header.GetHash(_hashAlgorithm)))
                                     {
-                                        archiveDocumentHeaders.Add(header);
+                                        wikiPageHeaders.Add(header);
 
-                                        if (archiveDocumentHeaders.Count >= _maxHeaderCount) break;
+                                        if (wikiPageHeaders.Count >= _maxHeaderCount) break;
                                     }
                                 }
 
-                                foreach (var header in _headerManager.GetArchiveVoteHeaders(tag))
+                                foreach (var header in _headerManager.GetWikiVoteHeaders(tag))
                                 {
-                                    if (!messageManager.PushArchiveVoteHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    if (!messageManager.PushWikiVoteHeaders.Contains(header.GetHash(_hashAlgorithm)))
                                     {
-                                        archiveVoteHeaders.Add(header);
+                                        wikiVoteHeaders.Add(header);
 
-                                        if (archiveVoteHeaders.Count >= _maxHeaderCount) break;
+                                        if (wikiVoteHeaders.Count >= _maxHeaderCount) break;
                                     }
                                 }
 
-                                if (archiveDocumentHeaders.Count >= _maxHeaderCount) break;
-                                if (archiveVoteHeaders.Count >= _maxHeaderCount) break;
+                                if (wikiPageHeaders.Count >= _maxHeaderCount) break;
+                                if (wikiVoteHeaders.Count >= _maxHeaderCount) break;
                             }
 
                             foreach (var tag in chats.Randomize())
@@ -2501,22 +2539,22 @@ namespace Library.Net.Lair
 
                             if (sectionProfileHeaders.Count > 0
                                 || sectionMessageHeaders.Count > 0
-                                || archiveDocumentHeaders.Count > 0
-                                || archiveVoteHeaders.Count > 0
+                                || wikiPageHeaders.Count > 0
+                                || wikiVoteHeaders.Count > 0
                                 || chatTopicHeaders.Count > 0
                                 || chatMessageHeaders.Count > 0)
                             {
                                 connectionManager.PushHeaders(sectionProfileHeaders,
                                     sectionMessageHeaders,
-                                    archiveDocumentHeaders,
-                                    archiveVoteHeaders,
+                                    wikiPageHeaders,
+                                    wikiVoteHeaders,
                                     chatTopicHeaders,
                                     chatMessageHeaders);
 
                                 var headerCount = sectionProfileHeaders.Count
                                     + sectionMessageHeaders.Count
-                                    + archiveDocumentHeaders.Count
-                                    + archiveVoteHeaders.Count
+                                    + wikiPageHeaders.Count
+                                    + wikiVoteHeaders.Count
                                     + chatTopicHeaders.Count
                                     + chatMessageHeaders.Count;
 
@@ -2533,14 +2571,14 @@ namespace Library.Net.Lair
                                     messageManager.PushSectionMessageHeaders.Add(header.GetHash(_hashAlgorithm));
                                 }
 
-                                foreach (var header in archiveDocumentHeaders)
+                                foreach (var header in wikiPageHeaders)
                                 {
-                                    messageManager.PushArchiveDocumentHeaders.Add(header.GetHash(_hashAlgorithm));
+                                    messageManager.PushWikiPageHeaders.Add(header.GetHash(_hashAlgorithm));
                                 }
 
-                                foreach (var header in archiveVoteHeaders)
+                                foreach (var header in wikiVoteHeaders)
                                 {
-                                    messageManager.PushArchiveVoteHeaders.Add(header.GetHash(_hashAlgorithm));
+                                    messageManager.PushWikiVoteHeaders.Add(header.GetHash(_hashAlgorithm));
                                 }
 
                                 foreach (var header in chatTopicHeaders)
@@ -2707,11 +2745,11 @@ namespace Library.Net.Lair
             var messageManager = _messagesManager[connectionManager.Node];
 
             if (messageManager.PullSectionsRequest.Count > _maxHeaderRequestCount * messageManager.PullSectionsRequest.SurvivalTime.TotalMinutes) return;
-            if (messageManager.PullArchivesRequest.Count > _maxHeaderRequestCount * messageManager.PullArchivesRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullWikisRequest.Count > _maxHeaderRequestCount * messageManager.PullWikisRequest.SurvivalTime.TotalMinutes) return;
             if (messageManager.PullChatsRequest.Count > _maxHeaderRequestCount * messageManager.PullChatsRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})",
-                e.Sections.Count() + e.Archives.Count() + e.Chats.Count()));
+                e.Sections.Count() + e.Wikis.Count() + e.Chats.Count()));
 
             foreach (var tag in e.Sections.Take(_maxHeaderRequestCount))
             {
@@ -2723,14 +2761,14 @@ namespace Library.Net.Lair
                 _lastUsedSectionTimes[tag] = DateTime.UtcNow;
             }
 
-            foreach (var tag in e.Archives.Take(_maxHeaderRequestCount))
+            foreach (var tag in e.Wikis.Take(_maxHeaderRequestCount))
             {
                 if (!ConnectionsManager.Check(tag)) continue;
 
-                messageManager.PullArchivesRequest.Add(tag);
+                messageManager.PullWikisRequest.Add(tag);
                 _pullHeaderRequestCount++;
 
-                _lastUsedArchiveTimes[tag] = DateTime.UtcNow;
+                _lastUsedWikiTimes[tag] = DateTime.UtcNow;
             }
 
             foreach (var tag in e.Chats.Take(_maxHeaderRequestCount))
@@ -2753,15 +2791,15 @@ namespace Library.Net.Lair
 
             if (messageManager.PushSectionProfileHeaders.Count > _maxHeaderCount * messageManager.PushSectionProfileHeaders.SurvivalTime.TotalMinutes) return;
             if (messageManager.PushSectionMessageHeaders.Count > _maxHeaderCount * messageManager.PushSectionMessageHeaders.SurvivalTime.TotalMinutes) return;
-            if (messageManager.PushArchiveDocumentHeaders.Count > _maxHeaderCount * messageManager.PushArchiveDocumentHeaders.SurvivalTime.TotalMinutes) return;
-            if (messageManager.PushArchiveVoteHeaders.Count > _maxHeaderCount * messageManager.PushArchiveVoteHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushWikiPageHeaders.Count > _maxHeaderCount * messageManager.PushWikiPageHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PushWikiVoteHeaders.Count > _maxHeaderCount * messageManager.PushWikiVoteHeaders.SurvivalTime.TotalMinutes) return;
             if (messageManager.PushChatTopicHeaders.Count > _maxHeaderCount * messageManager.PushChatTopicHeaders.SurvivalTime.TotalMinutes) return;
             if (messageManager.PushChatMessageHeaders.Count > _maxHeaderCount * messageManager.PushChatMessageHeaders.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})", e.SectionMessageHeaders.Count()
                 + e.SectionMessageHeaders.Count()
-                + e.ArchiveDocumentHeaders.Count()
-                + e.ArchiveVoteHeaders.Count()
+                + e.WikiPageHeaders.Count()
+                + e.WikiVoteHeaders.Count()
                 + e.ChatTopicHeaders.Count()
                 + e.ChatMessageHeaders.Count()));
 
@@ -2791,27 +2829,27 @@ namespace Library.Net.Lair
                 _pullHeaderCount++;
             }
 
-            foreach (var header in e.ArchiveDocumentHeaders.Take(_maxHeaderCount))
+            foreach (var header in e.WikiPageHeaders.Take(_maxHeaderCount))
             {
                 if (_headerManager.SetHeader(header))
                 {
-                    messageManager.PushArchiveDocumentHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.PushWikiPageHeaders.Add(header.GetHash(_hashAlgorithm));
                     messageManager.LastPullTime = DateTime.UtcNow;
 
-                    _lastUsedArchiveTimes[header.Tag] = DateTime.UtcNow;
+                    _lastUsedWikiTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount++;
             }
 
-            foreach (var header in e.ArchiveVoteHeaders.Take(_maxHeaderCount))
+            foreach (var header in e.WikiVoteHeaders.Take(_maxHeaderCount))
             {
                 if (_headerManager.SetHeader(header))
                 {
-                    messageManager.PushArchiveVoteHeaders.Add(header.GetHash(_hashAlgorithm));
+                    messageManager.PushWikiVoteHeaders.Add(header.GetHash(_hashAlgorithm));
                     messageManager.LastPullTime = DateTime.UtcNow;
 
-                    _lastUsedArchiveTimes[header.Tag] = DateTime.UtcNow;
+                    _lastUsedWikiTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount++;
@@ -3020,25 +3058,25 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders(Archive tag)
+        public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _headerManager.GetArchiveDocumentHeaders(tag);
+                return _headerManager.GetWikiPageHeaders(tag);
             }
         }
 
-        public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders(Archive tag)
+        public IEnumerable<WikiVoteHeader> GetWikiVoteHeaders(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _pushArchivesRequestList.Add(tag);
+                _pushWikisRequestList.Add(tag);
 
-                return _headerManager.GetArchiveVoteHeaders(tag);
+                return _headerManager.GetWikiVoteHeaders(tag);
             }
         }
 
@@ -3086,7 +3124,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(ArchiveDocumentHeader header)
+        public void Upload(WikiPageHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3096,7 +3134,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(ArchiveVoteHeader header)
+        public void Upload(WikiVoteHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3258,12 +3296,12 @@ namespace Library.Net.Lair
                     _headerManager.SetHeader(header);
                 }
 
-                foreach (var header in _settings.ArchiveDocumentHeaders)
+                foreach (var header in _settings.WikiPageHeaders)
                 {
                     _headerManager.SetHeader(header);
                 }
 
-                foreach (var header in _settings.ArchiveVoteHeaders)
+                foreach (var header in _settings.WikiVoteHeaders)
                 {
                     _headerManager.SetHeader(header);
                 }
@@ -3299,16 +3337,16 @@ namespace Library.Net.Lair
                         _settings.SectionMessageHeaders.AddRange(_headerManager.GetSectionMessageHeaders());
                     }
 
-                    lock (_settings.ArchiveDocumentHeaders.ThisLock)
+                    lock (_settings.WikiPageHeaders.ThisLock)
                     {
-                        _settings.ArchiveDocumentHeaders.Clear();
-                        _settings.ArchiveDocumentHeaders.AddRange(_headerManager.GetArchiveDocumentHeaders());
+                        _settings.WikiPageHeaders.Clear();
+                        _settings.WikiPageHeaders.AddRange(_headerManager.GetWikiPageHeaders());
                     }
 
-                    lock (_settings.ArchiveVoteHeaders.ThisLock)
+                    lock (_settings.WikiVoteHeaders.ThisLock)
                     {
-                        _settings.ArchiveVoteHeaders.Clear();
-                        _settings.ArchiveVoteHeaders.AddRange(_headerManager.GetArchiveVoteHeaders());
+                        _settings.WikiVoteHeaders.Clear();
+                        _settings.WikiVoteHeaders.AddRange(_headerManager.GetWikiVoteHeaders());
                     }
 
                     lock (_settings.ChatTopicHeaders.ThisLock)
@@ -3354,8 +3392,8 @@ namespace Library.Net.Lair
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedList<SectionProfileHeader>>() { Name = "SectionProfileHeaders", Value = new LockedList<SectionProfileHeader>() },
                     new Library.Configuration.SettingContent<LockedList<SectionMessageHeader>>() { Name = "SectionMessageHeaders", Value = new LockedList<SectionMessageHeader>() },
-                    new Library.Configuration.SettingContent<LockedList<ArchiveDocumentHeader>>() { Name = "ArchiveDocumentHeaders", Value = new LockedList<ArchiveDocumentHeader>() },
-                    new Library.Configuration.SettingContent<LockedList<ArchiveVoteHeader>>() { Name = "ArchiveVoteHeaders", Value = new LockedList<ArchiveVoteHeader>() },
+                    new Library.Configuration.SettingContent<LockedList<WikiPageHeader>>() { Name = "WikiPageHeaders", Value = new LockedList<WikiPageHeader>() },
+                    new Library.Configuration.SettingContent<LockedList<WikiVoteHeader>>() { Name = "WikiVoteHeaders", Value = new LockedList<WikiVoteHeader>() },
                     new Library.Configuration.SettingContent<LockedList<ChatTopicHeader>>() { Name = "ChatTopicHeaders", Value = new LockedList<ChatTopicHeader>() },
                     new Library.Configuration.SettingContent<LockedList<ChatMessageHeader>>() { Name = "ChatMessageHeaders", Value = new LockedList<ChatMessageHeader>() },
                 })
@@ -3488,24 +3526,24 @@ namespace Library.Net.Lair
                 }
             }
 
-            public LockedList<ArchiveDocumentHeader> ArchiveDocumentHeaders
+            public LockedList<WikiPageHeader> WikiPageHeaders
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedList<ArchiveDocumentHeader>)this["ArchiveDocumentHeaders"];
+                        return (LockedList<WikiPageHeader>)this["WikiPageHeaders"];
                     }
                 }
             }
 
-            public LockedList<ArchiveVoteHeader> ArchiveVoteHeaders
+            public LockedList<WikiVoteHeader> WikiVoteHeaders
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedList<ArchiveVoteHeader>)this["ArchiveVoteHeaders"];
+                        return (LockedList<WikiVoteHeader>)this["WikiVoteHeaders"];
                     }
                 }
             }
@@ -3537,8 +3575,8 @@ namespace Library.Net.Lair
         {
             private Dictionary<Section, Dictionary<string, SectionProfileHeader>> _sectionProfileHeaders = new Dictionary<Section, Dictionary<string, SectionProfileHeader>>();
             private Dictionary<Section, Dictionary<string, HashSet<SectionMessageHeader>>> _sectionMessageHeaders = new Dictionary<Section, Dictionary<string, HashSet<SectionMessageHeader>>>();
-            private Dictionary<Archive, Dictionary<string, ArchiveDocumentHeader>> _archiveDocumentHeaders = new Dictionary<Archive, Dictionary<string, ArchiveDocumentHeader>>();
-            private Dictionary<Archive, Dictionary<string, ArchiveVoteHeader>> _archiveVoteHeaders = new Dictionary<Archive, Dictionary<string, ArchiveVoteHeader>>();
+            private Dictionary<Wiki, Dictionary<string, HashSet<WikiPageHeader>>> _wikiPageHeaders = new Dictionary<Wiki, Dictionary<string, HashSet<WikiPageHeader>>>();
+            private Dictionary<Wiki, Dictionary<string, WikiVoteHeader>> _wikiVoteHeaders = new Dictionary<Wiki, Dictionary<string, WikiVoteHeader>>();
             private Dictionary<Chat, Dictionary<string, ChatTopicHeader>> _chatTopicHeaders = new Dictionary<Chat, Dictionary<string, ChatTopicHeader>>();
             private Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>> _chatMessageHeaders = new Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>>();
 
@@ -3557,12 +3595,12 @@ namespace Library.Net.Lair
                 return hashset;
             }
 
-            public IEnumerable<Archive> GetArchives()
+            public IEnumerable<Wiki> GetWikis()
             {
-                var hashset = new HashSet<Archive>();
+                var hashset = new HashSet<Wiki>();
 
-                hashset.UnionWith(_archiveDocumentHeaders.Keys);
-                hashset.UnionWith(_archiveVoteHeaders.Keys);
+                hashset.UnionWith(_wikiPageHeaders.Keys);
+                hashset.UnionWith(_wikiVoteHeaders.Keys);
 
                 return hashset;
             }
@@ -3586,12 +3624,12 @@ namespace Library.Net.Lair
                 }
             }
 
-            public void RemoveTags(IEnumerable<Archive> tags)
+            public void RemoveTags(IEnumerable<Wiki> tags)
             {
-                foreach (var archive in tags)
+                foreach (var wiki in tags)
                 {
-                    _archiveDocumentHeaders.Remove(archive);
-                    _archiveVoteHeaders.Remove(archive);
+                    _wikiPageHeaders.Remove(wiki);
+                    _wikiVoteHeaders.Remove(wiki);
                 }
             }
 
@@ -3638,38 +3676,38 @@ namespace Library.Net.Lair
                 return new SectionMessageHeader[0];
             }
 
-            public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders()
+            public IEnumerable<WikiPageHeader> GetWikiPageHeaders()
             {
-                return _archiveDocumentHeaders.Values.SelectMany(n => n.Values);
+                return _wikiPageHeaders.Values.SelectMany(n => n.Values.SelectMany(m => m));
             }
 
-            public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders(Archive tag)
+            public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
             {
-                Dictionary<string, ArchiveDocumentHeader> dic = null;
+                Dictionary<string, HashSet<WikiPageHeader>> dic = null;
 
-                if (_archiveDocumentHeaders.TryGetValue(tag, out dic))
+                if (_wikiPageHeaders.TryGetValue(tag, out dic))
+                {
+                    return dic.Values.SelectMany(n => n).ToArray();
+                }
+
+                return new WikiPageHeader[0];
+            }
+
+            public IEnumerable<WikiVoteHeader> GetWikiVoteHeaders()
+            {
+                return _wikiVoteHeaders.Values.SelectMany(n => n.Values);
+            }
+
+            public IEnumerable<WikiVoteHeader> GetWikiVoteHeaders(Wiki tag)
+            {
+                Dictionary<string, WikiVoteHeader> dic = null;
+
+                if (_wikiVoteHeaders.TryGetValue(tag, out dic))
                 {
                     return dic.Values.ToArray();
                 }
 
-                return new ArchiveDocumentHeader[0];
-            }
-
-            public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders()
-            {
-                return _archiveVoteHeaders.Values.SelectMany(n => n.Values);
-            }
-
-            public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders(Archive tag)
-            {
-                Dictionary<string, ArchiveVoteHeader> dic = null;
-
-                if (_archiveVoteHeaders.TryGetValue(tag, out dic))
-                {
-                    return dic.Values.ToArray();
-                }
-
-                return new ArchiveVoteHeader[0];
+                return new WikiVoteHeader[0];
             }
 
             public IEnumerable<ChatTopicHeader> GetChatTopicHeaders()
@@ -3770,10 +3808,12 @@ namespace Library.Net.Lair
                     dic[signature] = hashset;
                 }
 
+                if (hashset.Any(n => n.CreationTime == header.CreationTime)) return false;
+
                 return hashset.Add(header);
             }
 
-            public bool SetHeader(ArchiveDocumentHeader header)
+            public bool SetHeader(WikiPageHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3786,28 +3826,28 @@ namespace Library.Net.Lair
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, ArchiveDocumentHeader> dic = null;
+                Dictionary<string, HashSet<WikiPageHeader>> dic = null;
 
-                if (!_archiveDocumentHeaders.TryGetValue(header.Tag, out dic))
+                if (!_wikiPageHeaders.TryGetValue(header.Tag, out dic))
                 {
-                    dic = new Dictionary<string, ArchiveDocumentHeader>();
-                    _archiveDocumentHeaders[header.Tag] = dic;
+                    dic = new Dictionary<string, HashSet<WikiPageHeader>>();
+                    _wikiPageHeaders[header.Tag] = dic;
                 }
 
-                ArchiveDocumentHeader tempHeader = null;
+                HashSet<WikiPageHeader> hashset = null;
 
-                if (!dic.TryGetValue(signature, out tempHeader)
-                    || header.CreationTime > tempHeader.CreationTime)
+                if (!dic.TryGetValue(signature, out hashset))
                 {
-                    dic[signature] = header;
-
-                    return true;
+                    hashset = new HashSet<WikiPageHeader>();
+                    dic[signature] = hashset;
                 }
 
-                return false;
+                if (hashset.Any(n => n.CreationTime == header.CreationTime)) return false;
+
+                return hashset.Add(header);
             }
 
-            public bool SetHeader(ArchiveVoteHeader header)
+            public bool SetHeader(WikiVoteHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3820,15 +3860,15 @@ namespace Library.Net.Lair
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, ArchiveVoteHeader> dic = null;
+                Dictionary<string, WikiVoteHeader> dic = null;
 
-                if (!_archiveVoteHeaders.TryGetValue(header.Tag, out dic))
+                if (!_wikiVoteHeaders.TryGetValue(header.Tag, out dic))
                 {
-                    dic = new Dictionary<string, ArchiveVoteHeader>();
-                    _archiveVoteHeaders[header.Tag] = dic;
+                    dic = new Dictionary<string, WikiVoteHeader>();
+                    _wikiVoteHeaders[header.Tag] = dic;
                 }
 
-                ArchiveVoteHeader tempHeader = null;
+                WikiVoteHeader tempHeader = null;
 
                 if (!dic.TryGetValue(signature, out tempHeader)
                     || header.CreationTime > tempHeader.CreationTime)
@@ -3905,6 +3945,8 @@ namespace Library.Net.Lair
                     dic[signature] = hashset;
                 }
 
+                if (hashset.Any(n => n.CreationTime == header.CreationTime)) return false;
+
                 return hashset.Add(header);
             }
 
@@ -3960,7 +4002,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public void RemoveHeader(ArchiveDocumentHeader header)
+            public void RemoveHeader(WikiPageHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3969,24 +4011,24 @@ namespace Library.Net.Lair
                         || header.Tag.Id == null || header.Tag.Id.Length == 0
                         || string.IsNullOrWhiteSpace(header.Tag.Name)
                     || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                    || (now - header.CreationTime) > new TimeSpan(64, 0, 0, 0)
                     || header.Certificate == null || !header.VerifyCertificate()) return;
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, ArchiveDocumentHeader> dic = null;
+                Dictionary<string, HashSet<WikiPageHeader>> dic = null;
 
-                if (!_archiveDocumentHeaders.TryGetValue(header.Tag, out dic)) return;
+                if (!_wikiPageHeaders.TryGetValue(header.Tag, out dic)) return;
 
-                ArchiveDocumentHeader tempHeader = null;
+                HashSet<WikiPageHeader> hashset = null;
 
-                if (dic.TryGetValue(signature, out tempHeader)
-                    && header == tempHeader)
+                if (dic.TryGetValue(signature, out hashset))
                 {
-                    dic.Remove(signature);
+                    hashset.Remove(header);
                 }
             }
 
-            public void RemoveHeader(ArchiveVoteHeader header)
+            public void RemoveHeader(WikiVoteHeader header)
             {
                 var now = DateTime.UtcNow;
 
@@ -3999,11 +4041,11 @@ namespace Library.Net.Lair
 
                 var signature = header.Certificate.ToString();
 
-                Dictionary<string, ArchiveVoteHeader> dic = null;
+                Dictionary<string, WikiVoteHeader> dic = null;
 
-                if (!_archiveVoteHeaders.TryGetValue(header.Tag, out dic)) return;
+                if (!_wikiVoteHeaders.TryGetValue(header.Tag, out dic)) return;
 
-                ArchiveVoteHeader tempHeader = null;
+                WikiVoteHeader tempHeader = null;
 
                 if (dic.TryGetValue(signature, out tempHeader)
                     && header == tempHeader)

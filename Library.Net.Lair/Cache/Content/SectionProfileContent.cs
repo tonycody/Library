@@ -10,21 +10,21 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "SectionProfileContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Archive, Chat>
+    sealed class SectionProfileContent : ItemBase<SectionProfileContent>, ISectionProfileContent<Wiki, Chat, ExchangePublicKey>
     {
         private enum SerializeId : byte
         {
             Comment = 0,
             ExchangePublicKey = 1,
             TrustSignature = 2,
-            Archive = 3,
+            Wiki = 3,
             Chat = 4,
         }
 
         private string _comment;
         private ExchangePublicKey _exchangePublicKey;
         private SignatureCollection _trustSignatures;
-        private ArchiveCollection _archives;
+        private WikiCollection _wikis;
         private ChatCollection _chats;
 
         private volatile object _thisLock;
@@ -32,18 +32,17 @@ namespace Library.Net.Lair
 
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxTrustSignaturesCount = 1024;
-        public static readonly int MaxArchivesCount = 256;
+        public static readonly int MaxWikisCount = 256;
         public static readonly int MaxChatsCount = 256;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfileContent(string comment, ExchangePublicKey publicKey, IEnumerable<string> trustSignatures,
-            IEnumerable<Archive> archives, IEnumerable<Chat> chats)
+        public SectionProfileContent(string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             this.Comment = comment;
-            this.ExchangePublicKey = publicKey;
+            this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
-            if (archives != null) this.ProtectedArchives.AddRange(archives);
+            if (wikis != null) this.ProtectedWikis.AddRange(wikis);
             if (chats != null) this.ProtectedChats.AddRange(chats);
         }
 
@@ -80,9 +79,9 @@ namespace Library.Net.Lair
                                 this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
                             }
                         }
-                        else if (id == (byte)SerializeId.Archive)
+                        else if (id == (byte)SerializeId.Wiki)
                         {
-                            this.ProtectedArchives.Add(Archive.Import(rangeStream, bufferManager));
+                            this.ProtectedWikis.Add(Wiki.Import(rangeStream, bufferManager));
                         }
                         else if (id == (byte)SerializeId.Chat)
                         {
@@ -149,14 +148,14 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
-                // Archives
-                foreach (var d in this.Archives)
+                // Wikis
+                foreach (var d in this.Wikis)
                 {
                     Stream exportStream = d.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Archive);
+                    bufferStream.WriteByte((byte)SerializeId.Wiki);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -201,7 +200,7 @@ namespace Library.Net.Lair
             if (this.Comment != other.Comment
                 || this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
-                || (this.Archives == null) != (other.Archives == null)
+                || (this.Wikis == null) != (other.Wikis == null)
                 || (this.Chats == null) != (other.Chats == null))
             {
                 return false;
@@ -212,9 +211,9 @@ namespace Library.Net.Lair
                 if (!Collection.Equals(this.TrustSignatures, other.TrustSignatures)) return false;
             }
 
-            if (this.Archives != null && other.Archives != null)
+            if (this.Wikis != null && other.Wikis != null)
             {
-                if (!Collection.Equals(this.Archives, other.Archives)) return false;
+                if (!Collection.Equals(this.Wikis, other.Wikis)) return false;
             }
 
             if (this.Chats != null && other.Chats != null)
@@ -323,33 +322,33 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<Archive> _readOnlyArchives;
+        private volatile ReadOnlyCollection<Wiki> _readOnlyWikis;
 
-        public IEnumerable<Archive> Archives
+        public IEnumerable<Wiki> Wikis
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_readOnlyArchives == null)
-                        _readOnlyArchives = new ReadOnlyCollection<Archive>(this.ProtectedArchives);
+                    if (_readOnlyWikis == null)
+                        _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis);
 
-                    return _readOnlyArchives;
+                    return _readOnlyWikis;
                 }
             }
         }
 
-        [DataMember(Name = "Archives")]
-        private ArchiveCollection ProtectedArchives
+        [DataMember(Name = "Wikis")]
+        private WikiCollection ProtectedWikis
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_archives == null)
-                        _archives = new ArchiveCollection(SectionProfileContent.MaxArchivesCount);
+                    if (_wikis == null)
+                        _wikis = new WikiCollection(SectionProfileContent.MaxWikisCount);
 
-                    return _archives;
+                    return _wikis;
                 }
             }
         }

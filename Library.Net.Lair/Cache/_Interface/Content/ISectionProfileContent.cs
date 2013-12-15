@@ -3,14 +3,15 @@ using Library.Security;
 
 namespace Library.Net.Lair
 {
-    interface ISectionProfileContent<TArchive, TChat>
-        where TArchive : IArchive
+    interface ISectionProfileContent<TWiki, TChat, TExchangePublicKey>
+        where TWiki : IWiki
         where TChat : IChat
+        where TExchangePublicKey : IExchangeEncrypt
     {
         string Comment { get; }
-        ExchangePublicKey ExchangePublicKey { get; }
+        TExchangePublicKey ExchangePublicKey { get; }
         IEnumerable<string> TrustSignatures { get; }
-        IEnumerable<TArchive> Archives { get; }
+        IEnumerable<TWiki> Wikis { get; }
         IEnumerable<TChat> Chats { get; }
     }
 }

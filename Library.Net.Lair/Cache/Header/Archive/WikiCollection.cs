@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    internal sealed class ArchiveVoteHeaderCollection : FilterList<ArchiveVoteHeader>, IEnumerable<ArchiveVoteHeader>
+    public sealed class WikiCollection : FilterList<Wiki>, IEnumerable<Wiki>
     {
-        public ArchiveVoteHeaderCollection() : base() { }
-        public ArchiveVoteHeaderCollection(int capacity) : base(capacity) { }
-        public ArchiveVoteHeaderCollection(IEnumerable<ArchiveVoteHeader> collections) : base(collections) { }
+        public WikiCollection() : base() { }
+        public WikiCollection(int capacity) : base(capacity) { }
+        public WikiCollection(IEnumerable<Wiki> collections) : base(collections) { }
 
-        protected override bool Filter(ArchiveVoteHeader item)
+        protected override bool Filter(Wiki item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<ArchiveVoteHeader>
+        #region IEnumerable<Wiki>
 
-        IEnumerator<ArchiveVoteHeader> IEnumerable<ArchiveVoteHeader>.GetEnumerator()
+        IEnumerator<Wiki> IEnumerable<Wiki>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

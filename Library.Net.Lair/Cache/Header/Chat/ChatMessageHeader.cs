@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatMessageHeader", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatMessageHeader : ReadOnlyCertificateItemBase<ChatMessageHeader>, IChatMessageHeader<Chat>
+    sealed class ChatMessageHeader : ReadOnlyCertificateItemBase<ChatMessageHeader>, IChatMessageHeader<Chat>
     {
         private enum SerializeId : byte
         {

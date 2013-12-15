@@ -9,7 +9,7 @@ namespace Library.Net.Lair
         Sha512 = 0,
     }
 
-    public interface IHashAlgorithm
+    interface IHashAlgorithm
     {
         HashAlgorithm HashAlgorithm { get; }
     }

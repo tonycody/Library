@@ -5,7 +5,7 @@ using Library.Security;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "DownloadState", Namespace = "http://Library/Net/Lair")]
-    public enum DownloadState
+    enum DownloadState
     {
         [EnumMember(Value = "Downloading")]
         Downloading = 0,
@@ -29,8 +29,8 @@ namespace Library.Net.Lair
 
         private SectionProfileContent _sectionProfileContent;
         private SectionMessageContent _sectionMessageContent;
-        private ArchiveDocumentContent _archiveDocumentContent;
-        private ArchiveVoteContent _archiveVoteContent;
+        private WikiPageContent _wikiDocumentContent;
+        private WikiVoteContent _wikiVoteContent;
         private ChatTopicContent _chatTopicContent;
         private ChatMessageContent _chatMessageContent;
 
@@ -170,40 +170,40 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "ArchiveDocumentContent")]
-        public ArchiveDocumentContent ArchiveDocumentContent
+        [DataMember(Name = "WikiPageContent")]
+        public WikiPageContent WikiPageContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _archiveDocumentContent;
+                    return _wikiDocumentContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _archiveDocumentContent = value;
+                    _wikiDocumentContent = value;
                 }
             }
         }
 
-        [DataMember(Name = "ArchiveVoteContent")]
-        public ArchiveVoteContent ArchiveVoteContent
+        [DataMember(Name = "WikiVoteContent")]
+        public WikiVoteContent WikiVoteContent
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _archiveVoteContent;
+                    return _wikiVoteContent;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _archiveVoteContent = value;
+                    _wikiVoteContent = value;
                 }
             }
         }

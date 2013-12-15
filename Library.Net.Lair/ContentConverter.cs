@@ -628,7 +628,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToArchiveDocumentContentBlock(ArchiveDocumentContent content)
+        public static ArraySegment<byte> ToWikiPageContentBlock(WikiPageContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -636,7 +636,7 @@ namespace Library.Net.Lair
 
             using (Stream contentStream = content.Export(_bufferManager))
             using (Stream compressStream = ContentConverter.Compress(contentStream))
-            using (Stream typeStream = ContentConverter.AddType(compressStream, "ArchiveDocument"))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "WikiDocument"))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
                 typeStream.Read(value.Array, value.Offset, value.Count);
@@ -645,17 +645,17 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static ArchiveDocumentContent FromArchiveDocumentContentBlock(ArraySegment<byte> content)
+        public static WikiPageContent FromWikiPageContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
             try
             {
                 using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "ArchiveDocument"))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "WikiDocument"))
                 using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ArchiveDocumentContent.Import(contentStream, _bufferManager);
+                    return WikiPageContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -664,7 +664,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public static ArraySegment<byte> ToArchiveVoteContentBlock(ArchiveVoteContent content)
+        public static ArraySegment<byte> ToWikiVoteContentBlock(WikiVoteContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -672,7 +672,7 @@ namespace Library.Net.Lair
 
             using (Stream contentStream = content.Export(_bufferManager))
             using (Stream compressStream = ContentConverter.Compress(contentStream))
-            using (Stream typeStream = ContentConverter.AddType(compressStream, "ArchiveVote"))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "WikiVote"))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
                 typeStream.Read(value.Array, value.Offset, value.Count);
@@ -681,17 +681,17 @@ namespace Library.Net.Lair
             return value;
         }
 
-        public static ArchiveVoteContent FromArchiveVoteContentBlock(ArraySegment<byte> content)
+        public static WikiVoteContent FromWikiVoteContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
             try
             {
                 using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "ArchiveVote"))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "WikiVote"))
                 using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return ArchiveVoteContent.Import(contentStream, _bufferManager);
+                    return WikiVoteContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)

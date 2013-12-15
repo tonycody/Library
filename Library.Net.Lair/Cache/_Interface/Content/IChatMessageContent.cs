@@ -2,10 +2,10 @@
 
 namespace Library.Net.Lair
 {
-    interface IChatMessageContent<TKey>
-        where TKey : IKey
+    interface IChatMessageContent<TAnchor>
+        where TAnchor : IAnchor
     {
         string Comment { get; }
-        IEnumerable<TKey> Anchors { get; }
+        IEnumerable<TAnchor> Anchors { get; }
     }
 }

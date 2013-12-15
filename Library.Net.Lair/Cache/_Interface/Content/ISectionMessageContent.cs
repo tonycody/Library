@@ -1,10 +1,10 @@
 ﻿
 namespace Library.Net.Lair
 {
-    interface ISectionMessageContent<TKey>
-        where TKey : IKey
+    interface ISectionMessageContent<TAnchor>
+        where TAnchor : IAnchor
     {
         string Comment { get; }
-        TKey Anchor { get; }
+        TAnchor Anchor { get; }
     }
 }

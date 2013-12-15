@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Lair
 {
-    internal sealed class SectionMessageHeaderCollection : FilterList<SectionMessageHeader>, IEnumerable<SectionMessageHeader>
+    public sealed class AnchorCollection : FilterList<Anchor>, IEnumerable<Anchor>
     {
-        public SectionMessageHeaderCollection() : base() { }
-        public SectionMessageHeaderCollection(int capacity) : base(capacity) { }
-        public SectionMessageHeaderCollection(IEnumerable<SectionMessageHeader> collections) : base(collections) { }
+        public AnchorCollection() : base() { }
+        public AnchorCollection(int capacity) : base(capacity) { }
+        public AnchorCollection(IEnumerable<Anchor> collections) : base(collections) { }
 
-        protected override bool Filter(SectionMessageHeader item)
+        protected override bool Filter(Anchor item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<SectionMessageHeader>
+        #region IEnumerable<Anchor>
 
-        IEnumerator<SectionMessageHeader> IEnumerable<SectionMessageHeader>.GetEnumerator()
+        IEnumerator<Anchor> IEnumerable<Anchor>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

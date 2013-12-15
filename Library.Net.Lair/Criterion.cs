@@ -11,18 +11,18 @@ namespace Library.Net.Lair
         private SignatureCollection _trustSignatures;
 
         private SectionCollection _sections;
-        private ArchiveCollection _archives;
+        private WikiCollection _wikis;
         private ChatCollection _chats;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public Criterion(IEnumerable<string> trustSignatures, IEnumerable<Section> sections, IEnumerable<Archive> archives, IEnumerable<Chat> chats)
+        public Criterion(IEnumerable<string> trustSignatures, IEnumerable<Section> sections, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
 
             if (sections != null) this.ProtectedSections.AddRange(sections);
-            if (Archives != null) this.ProtectedArchives.AddRange(archives);
+            if (Wikis != null) this.ProtectedWikis.AddRange(wikis);
             if (Chats != null) this.ProtectedChats.AddRange(chats);
         }
 
@@ -107,33 +107,33 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<Archive> _readOnlyArchives;
+        private volatile ReadOnlyCollection<Wiki> _readOnlyWikis;
 
-        public IEnumerable<Archive> Archives
+        public IEnumerable<Wiki> Wikis
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_readOnlyArchives == null)
-                        _readOnlyArchives = new ReadOnlyCollection<Archive>(this.ProtectedArchives);
+                    if (_readOnlyWikis == null)
+                        _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis);
 
-                    return _readOnlyArchives;
+                    return _readOnlyWikis;
                 }
             }
         }
 
-        [DataMember(Name = "Archives")]
-        private ArchiveCollection ProtectedArchives
+        [DataMember(Name = "Wikis")]
+        private WikiCollection ProtectedWikis
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    if (_archives == null)
-                        _archives = new ArchiveCollection();
+                    if (_wikis == null)
+                        _wikis = new WikiCollection();
 
-                    return _archives;
+                    return _wikis;
                 }
             }
         }

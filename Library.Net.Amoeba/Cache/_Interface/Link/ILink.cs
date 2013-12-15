@@ -2,7 +2,7 @@
 
 namespace Library.Net.Amoeba
 {
-    interface ILink
+    public interface ILink
     {
         SignatureCollection TrustSignatures { get; }
     }

@@ -99,26 +99,19 @@
     <Compile Include="Cache\CacheManager.cs" />
     <Compile Include="Cache\Content\ChatMessageContent.cs" />
     <Compile Include="Cache\Content\ChatTopicContent.cs" />
-    <Compile Include="Cache\Content\DocumentVoteContent.cs" />
-    <Compile Include="Cache\Content\DocumentArchiveContent.cs" />
-    <Compile Include="Cache\PageCollection.cs" />
-    <Compile Include="Cache\Page.cs" />
+    <Compile Include="Cache\Content\WikiVoteContent.cs" />
+    <Compile Include="Cache\Content\WikiPageContent.cs" />
+    <Compile Include="Cache\Anchor.cs" />
+    <Compile Include="Cache\AnchorCollection.cs" />
     <Compile Include="Cache\Header\Chat\ChatMessageHeader.cs" />
-    <Compile Include="Cache\Header\Chat\ChatMessageHeaderCollection.cs" />
     <Compile Include="Cache\Header\Section\SectionProfileHeader.cs" />
-    <Compile Include="Cache\Header\Section\SectionProfileHeaderCollection.cs" />
-    <Compile Include="Cache\Header\Archive\ArchiveDocumentHeader.cs" />
-    <Compile Include="Cache\Header\Archive\ArchiveDocumentHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Archive\WikiPageHeader.cs" />
     <Compile Include="Cache\Header\Chat\Chat.cs" />
     <Compile Include="Cache\Header\Chat\ChatCollection.cs" />
     <Compile Include="Cache\Header\Chat\ChatTopicHeader.cs" />
-    <Compile Include="Cache\Header\Chat\ChatTopicHeaderCollection.cs" />
-    <Compile Include="Cache\Header\Archive\Archive.cs" />
-    <Compile Include="Cache\Header\Archive\ArchiveCollection.cs" />
-    <Compile Include="Cache\Header\Archive\ArchiveVoteHeader.cs" />
-    <Compile Include="Cache\Header\Archive\ArchiveVoteHeaderCollection.cs" />
-    <Compile Include="Cache\OptionCollection.cs" />
-    <Compile Include="Cache\Header\Section\SectionMessageHeaderCollection.cs" />
+    <Compile Include="Cache\Header\Archive\Wiki.cs" />
+    <Compile Include="Cache\Header\Archive\WikiCollection.cs" />
+    <Compile Include="Cache\Header\Archive\WikiVoteHeader.cs" />
     <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
     <Compile Include="Cache\LairConverter.cs" />
     <Compile Include="Cache\Header\Section\SectionCollection.cs" />
@@ -133,10 +126,10 @@
     <Compile Include="Cache\_Interface\Content\IChatTopicContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Content\IArchiveDocumentContent.cs">
+    <Compile Include="Cache\_Interface\Content\IWikiPageContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Content\IArchiveVoteContent.cs">
+    <Compile Include="Cache\_Interface\Content\IWikiVoteContent.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Content\ISectionMessageContent.cs">
@@ -145,16 +138,11 @@
     <Compile Include="Cache\_Interface\Content\ISectionProfileContent.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Cache\_Interface\IAnchor.cs" />
     <Compile Include="Cache\_Interface\Header\Chat\IChatMessageHeader.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Header\Chat\IChatTopicHeader.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Cache\_Interface\Header\Archive\IArchiveDocumentHeader.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Cache\_Interface\Header\Archive\IArchiveVoteHeader.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Header\Section\ISectionMessageHeader.cs">
@@ -163,6 +151,9 @@
     <Compile Include="Cache\_Interface\Header\Section\ISectionProfileHeader.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Cache\_Interface\Header\Wiki\IWiki.cs" />
+    <Compile Include="Cache\_Interface\Header\Wiki\IWikiPageHeader.cs" />
+    <Compile Include="Cache\_Interface\Header\Wiki\IWikiVoteHeader.cs" />
     <Compile Include="Cache\_Interface\IComputeHash.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -178,20 +169,24 @@
     <Compile Include="Cache\_Interface\IKey.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\IPage.cs" />
     <Compile Include="Cache\_Interface\ITag.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Header\Chat\IChat.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Header\Archive\IArchive.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Cache\_Interface\Header\Section\ISection.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Cache\_Interface\IHypertextFormatType.cs" />
     <Compile Include="ContentConverter.cs" />
+    <Compile Include="Information\ChatMessage.cs" />
+    <Compile Include="Information\ChatTopic.cs" />
+    <Compile Include="Information\_Interface\IMessage.cs" />
+    <Compile Include="Information\SectionMessage.cs" />
+    <Compile Include="Information\SectionProfile.cs" />
+    <Compile Include="Information\WikiPage.cs" />
+    <Compile Include="Information\WikiVote.cs" />
     <Compile Include="LairManager.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="DownloadItem.cs" />

@@ -1,8 +1,8 @@
 ﻿
 namespace Library.Net.Lair
 {
-    interface IChatTopicContent
+    interface IChatTopicContent : IHypertextFormatType
     {
-        string Comment { get; }
+
     }
 }

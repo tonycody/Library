@@ -9,7 +9,7 @@ using Library.Io;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "ChatMessageContent", Namespace = "http://Library/Net/Lair")]
-    public sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Key>
+    sealed class ChatMessageContent : ItemBase<ChatMessageContent>, IChatMessageContent<Anchor>
     {
         private enum SerializeId : byte
         {
@@ -18,7 +18,7 @@ namespace Library.Net.Lair
         }
 
         private string _comment;
-        private KeyCollection _anchors;
+        private AnchorCollection _anchors;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
@@ -26,7 +26,7 @@ namespace Library.Net.Lair
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxAnchorCount = 32;
 
-        public ChatMessageContent(string comment, IEnumerable<Key> anchors)
+        public ChatMessageContent(string comment, IEnumerable<Anchor> anchors)
         {
             this.Comment = comment;
             if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
@@ -56,7 +56,7 @@ namespace Library.Net.Lair
                         }
                         else if (id == (byte)SerializeId.Anchor)
                         {
-                            this.ProtectedAnchors.Add(Key.Import(rangeStream, bufferManager));
+                            this.ProtectedAnchors.Add(Anchor.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -160,7 +160,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region IChatMessageContent<Key>
+        #region IChatMessageContent<Anchor>
 
         [DataMember(Name = "Comment")]
         public string Comment
@@ -188,16 +188,16 @@ namespace Library.Net.Lair
             }
         }
 
-        private volatile ReadOnlyCollection<Key> _readOnlyAnchors;
+        private volatile ReadOnlyCollection<Anchor> _readOnlyAnchors;
 
-        public IEnumerable<Key> Anchors
+        public IEnumerable<Anchor> Anchors
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_readOnlyAnchors == null)
-                        _readOnlyAnchors = new ReadOnlyCollection<Key>(this.ProtectedAnchors);
+                        _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors);
 
                     return _readOnlyAnchors;
                 }
@@ -205,14 +205,14 @@ namespace Library.Net.Lair
         }
 
         [DataMember(Name = "Anchors")]
-        private KeyCollection ProtectedAnchors
+        private AnchorCollection ProtectedAnchors
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_anchors == null)
-                        _anchors = new KeyCollection(ChatMessageContent.MaxAnchorCount);
+                        _anchors = new AnchorCollection(ChatMessageContent.MaxAnchorCount);
 
                     return _anchors;
                 }

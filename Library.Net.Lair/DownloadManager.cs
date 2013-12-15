@@ -85,13 +85,13 @@ namespace Library.Net.Lair
                                 {
                                     item.SectionMessageContent = ContentConverter.FromSectionMessageContentBlock(binaryContent, item.ExchangePrivateKey);
                                 }
-                                else if (item.Type == "ArchiveDocument")
+                                else if (item.Type == "WikiDocument")
                                 {
-                                    item.ArchiveDocumentContent = ContentConverter.FromArchiveDocumentContentBlock(binaryContent);
+                                    item.WikiPageContent = ContentConverter.FromWikiPageContentBlock(binaryContent);
                                 }
-                                else if (item.Type == "ArchiveVote")
+                                else if (item.Type == "WikiVote")
                                 {
-                                    item.ArchiveVoteContent = ContentConverter.FromArchiveVoteContentBlock(binaryContent);
+                                    item.WikiVoteContent = ContentConverter.FromWikiVoteContentBlock(binaryContent);
                                 }
                                 else if (item.Type == "ChatTopic")
                                 {
@@ -123,7 +123,142 @@ namespace Library.Net.Lair
             }
         }
 
-        public SectionProfileContent Download(SectionProfileHeader header)
+        public IEnumerable<SectionProfile> GetSectionProfile(Section tag, IEnumerable<string> trustSignatures)
+        {
+            var hashset = new HashSet<string>(trustSignatures);
+            var items = new List<SectionProfile>();
+
+            foreach (var header in _connectionsManager.GetSectionProfileHeaders(tag))
+            {
+                if (!hashset.Contains(header.Certificate.ToString())) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new SectionProfile(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Comment,
+                    content.ExchangePublicKey,
+                    content.TrustSignatures,
+                    content.Wikis,
+                    content.Chats));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<SectionMessage> GetSectionMessage(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
+        {
+            var hashset = new HashSet<string>(trustSignatures);
+            var items = new List<SectionMessage>();
+
+            foreach (var header in _connectionsManager.GetSectionMessageHeaders(tag))
+            {
+                if (!hashset.Contains(header.Certificate.ToString())) continue;
+
+                var content = this.Download(header, exchangePrivateKey);
+                if (content == null) continue;
+
+                items.Add(new SectionMessage(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Comment,
+                    content.Anchor));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<WikiPage> GetWikiPage(Wiki tag, IEnumerable<string> trustSignatures)
+        {
+            var hashset = new HashSet<string>(trustSignatures);
+            var items = new List<WikiPage>();
+
+            foreach (var header in _connectionsManager.GetWikiPageHeaders(tag))
+            {
+                if (!hashset.Contains(header.Certificate.ToString())) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new WikiPage(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.FormatType,
+                    content.Hypertext));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<WikiVote> GetWikiVote(Wiki tag, IEnumerable<string> trustSignatures)
+        {
+            var hashset = new HashSet<string>(trustSignatures);
+            var items = new List<WikiVote>();
+
+            foreach (var header in _connectionsManager.GetWikiVoteHeaders(tag))
+            {
+                if (!hashset.Contains(header.Certificate.ToString())) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new WikiVote(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Goods,
+                    content.Bads));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<ChatTopic> GetChatTopic(Chat tag, IEnumerable<string> trustSignatures)
+        {
+            var hashset = new HashSet<string>(trustSignatures);
+            var items = new List<ChatTopic>();
+
+            foreach (var header in _connectionsManager.GetChatTopicHeaders(tag))
+            {
+                if (!hashset.Contains(header.Certificate.ToString())) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new ChatTopic(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.FormatType,
+                    content.Hypertext));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<ChatMessage> GetChatMessage(Chat tag, IEnumerable<string> trustSignatures)
+        {
+            var hashset = new HashSet<string>(trustSignatures);
+            var items = new List<ChatMessage>();
+
+            foreach (var header in _connectionsManager.GetChatMessageHeaders(tag))
+            {
+                if (!hashset.Contains(header.Certificate.ToString())) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new ChatMessage(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Comment,
+                    content.Anchors));
+            }
+
+            return items;
+        }
+
+        private SectionProfileContent Download(SectionProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -146,16 +281,12 @@ namespace Library.Net.Lair
                 {
                     return item.SectionProfileContent;
                 }
-                else if (item.State == DownloadState.Error)
-                {
-                    throw new DecodeException();
-                }
 
                 return null;
             }
         }
 
-        public SectionMessageContent Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        private SectionMessageContent Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
             if (header == null) throw new ArgumentNullException("header");
             if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
@@ -179,16 +310,12 @@ namespace Library.Net.Lair
                 {
                     return item.SectionMessageContent;
                 }
-                else if (item.State == DownloadState.Error)
-                {
-                    throw new DecodeException();
-                }
 
                 return null;
             }
         }
 
-        public ArchiveDocumentContent Download(ArchiveDocumentHeader header)
+        private WikiPageContent Download(WikiPageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -201,7 +328,7 @@ namespace Library.Net.Lair
                 if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    item.Type = "ArchiveDocument";
+                    item.Type = "WikiDocument";
                     item.Key = header.Key;
 
                     _downloadItems.Add(hash, item);
@@ -209,18 +336,14 @@ namespace Library.Net.Lair
 
                 if (item.State == DownloadState.Completed)
                 {
-                    return item.ArchiveDocumentContent;
-                }
-                else if (item.State == DownloadState.Error)
-                {
-                    throw new DecodeException();
+                    return item.WikiPageContent;
                 }
 
                 return null;
             }
         }
 
-        public ArchiveVoteContent Download(ArchiveVoteHeader header)
+        private WikiVoteContent Download(WikiVoteHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -233,7 +356,7 @@ namespace Library.Net.Lair
                 if (!_downloadItems.TryGetValue(hash, out item))
                 {
                     item = new DownloadItem();
-                    item.Type = "ArchiveVote";
+                    item.Type = "WikiVote";
                     item.Key = header.Key;
 
                     _downloadItems.Add(hash, item);
@@ -241,18 +364,14 @@ namespace Library.Net.Lair
 
                 if (item.State == DownloadState.Completed)
                 {
-                    return item.ArchiveVoteContent;
-                }
-                else if (item.State == DownloadState.Error)
-                {
-                    throw new DecodeException();
+                    return item.WikiVoteContent;
                 }
 
                 return null;
             }
         }
 
-        public ChatTopicContent Download(ChatTopicHeader header)
+        private ChatTopicContent Download(ChatTopicHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -275,16 +394,12 @@ namespace Library.Net.Lair
                 {
                     return item.ChatTopicContent;
                 }
-                else if (item.State == DownloadState.Error)
-                {
-                    throw new DecodeException();
-                }
 
                 return null;
             }
         }
 
-        public ChatMessageContent Download(ChatMessageHeader header)
+        private ChatMessageContent Download(ChatMessageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -306,10 +421,6 @@ namespace Library.Net.Lair
                 if (item.State == DownloadState.Completed)
                 {
                     return item.ChatMessageContent;
-                }
-                else if (item.State == DownloadState.Error)
-                {
-                    throw new DecodeException();
                 }
 
                 return null;

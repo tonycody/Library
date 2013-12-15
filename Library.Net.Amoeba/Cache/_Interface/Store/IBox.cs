@@ -2,7 +2,7 @@
 
 namespace Library.Net.Amoeba
 {
-    interface IBox
+   public interface IBox
     {
         string Name { get; }
         DateTime CreationTime { get; }

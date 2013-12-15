@@ -2,7 +2,7 @@
 
 namespace Library.Net.Amoeba
 {
-    interface IKeywords
+    public interface IKeywords
     {
         IList<string> Keywords { get; }
     }

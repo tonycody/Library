@@ -194,7 +194,7 @@ namespace Library.Tool
                         File.Delete(args[2] + "~");
                     }
                 }
-                else if (args.Length >= 2 && args[0] == "settings")
+                else if (args.Length >= 1 && args[0] == "settings")
                 {
                     string settingsPath = args[1];
 
@@ -310,7 +310,7 @@ namespace Library.Tool
                 else if (args.Length >= 3 && args[0] == "languages")
                 {
                     string languageManagerPath = args[1];
-                    string languageXmlPath = args[2];
+                    string languageXmlPath = Path.Combine(args[2], "English.xml");
                     StringBuilder builder = new StringBuilder();
 
                     using (FileStream stream = new FileStream(languageXmlPath, FileMode.Open))

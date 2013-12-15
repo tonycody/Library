@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Library.Security;
 
 namespace Library.Net.Lair
@@ -18,10 +19,9 @@ namespace Library.Net.Lair
 
         private ManagerState _state = ManagerState.Stop;
 
-        private GetCriteriaEventHandler _getLockCriteriaEvent;
-
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
+        private GetCriteriaEventHandler _getLockCriteriaEvent;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -309,185 +309,184 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
+        public IEnumerable<SectionProfile> GetSectionProfile(Section tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetSectionProfileHeaders(tag);
+                return _downloadManager.GetSectionProfile(tag, trustSignatures);
             }
         }
 
-        public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
+        public SectionProfile GetSectionProfile(Section tag, string trustSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetSectionMessageHeaders(tag);
+                return _downloadManager.GetSectionProfile(tag, new string[] { trustSignature }).FirstOrDefault();
             }
         }
 
-        public IEnumerable<ArchiveDocumentHeader> GetArchiveDocumentHeaders(Archive tag)
+        public IEnumerable<SectionMessage> GetSectionMessage(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetArchiveDocumentHeaders(tag);
+                return _downloadManager.GetSectionMessage(tag, trustSignatures, exchangePrivateKey);
             }
         }
 
-        public IEnumerable<ArchiveVoteHeader> GetArchiveVoteHeaders(Archive tag)
+        public IEnumerable<SectionMessage> GetSectionMessage(Section tag, string trustSignature, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetArchiveVoteHeaders(tag);
+                return _downloadManager.GetSectionMessage(tag, new string[] { trustSignature }, exchangePrivateKey);
             }
         }
 
-        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
+        public IEnumerable<WikiPage> GetWikiPage(Wiki tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetChatTopicHeaders(tag);
+                return _downloadManager.GetWikiPage(tag, trustSignatures);
             }
         }
 
-        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+        public IEnumerable<WikiPage> GetWikiPage(Wiki tag, string trustSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetChatMessageHeaders(tag);
+                return _downloadManager.GetWikiPage(tag, new string[] { trustSignature });
             }
         }
 
-        public SectionProfileContent GetContent(SectionProfileHeader header)
+        public IEnumerable<WikiVote> GetWikiVote(Wiki tag, IEnumerable<string> trustSignatures)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.Download(header);
+                return _downloadManager.GetWikiVote(tag, trustSignatures);
             }
         }
 
-        public SectionMessageContent GetContent(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        public WikiVote GetWikiVote(Wiki tag, string trustSignature)
         {
-            if (header == null) throw new ArgumentNullException("header");
-            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.Download(header, exchangePrivateKey);
+                return _downloadManager.GetWikiVote(tag, new string[] { trustSignature }).FirstOrDefault();
             }
         }
 
-        public ArchiveDocumentContent GetContent(ArchiveDocumentHeader header)
+        public IEnumerable<ChatTopic> GetChatTopic(Chat tag, IEnumerable<string> trustSignatures)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.Download(header);
+                return _downloadManager.GetChatTopic(tag, trustSignatures);
             }
         }
 
-        public ArchiveVoteContent GetContent(ArchiveVoteHeader header)
+        public ChatTopic GetChatTopic(Chat tag, string trustSignature)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.Download(header);
+                return _downloadManager.GetChatTopic(tag, new string[] { trustSignature }).FirstOrDefault();
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopicHeader header)
+        public IEnumerable<ChatMessage> GetChatMessage(Chat tag, IEnumerable<string> trustSignatures)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.Download(header);
+                return _downloadManager.GetChatMessage(tag, trustSignatures);
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessageHeader header)
+        public IEnumerable<ChatMessage> GetChatMessage(Chat tag, string trustSignature)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.Download(header);
+                return _downloadManager.GetChatMessage(tag, new string[] { trustSignature });
             }
         }
 
-        public void Upload(Section tag,
-            SectionProfileContent content,
+        public void UploadSectionProfile(Section tag,
+            string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, digitalSignature);
+                _uploadManager.Upload(tag, new SectionProfileContent(comment, exchangePublicKey, trustSignatures, wikis, chats), digitalSignature);
             }
         }
 
-        public void Upload(Section tag,
-            SectionMessageContent content,
+        public void UploadSectionMessage(Section tag,
+            string comment, Anchor anchor,
             ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, exchangePublicKey, digitalSignature);
+                _uploadManager.Upload(tag, new SectionMessageContent(comment, anchor), exchangePublicKey, digitalSignature);
             }
         }
 
-        public void Upload(Archive tag,
-            ArchiveDocumentContent content,
+        public void UploadWikiPage(Wiki tag,
+            HypertextFormatType formatType, string hypertext,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, digitalSignature);
+                _uploadManager.Upload(tag, new WikiPageContent(formatType, hypertext), digitalSignature);
             }
         }
 
-        public void Upload(Archive tag,
-            ArchiveVoteContent content,
+        public void UploadWikiVote(Wiki tag,
+            IEnumerable<Anchor> goods, IEnumerable<Anchor> bads,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, digitalSignature);
+                _uploadManager.Upload(tag, new WikiVoteContent(goods, bads), digitalSignature);
             }
         }
 
-        public void Upload(Chat tag,
-            ChatTopicContent content,
+        public void UploadChatTopic(Chat tag,
+            HypertextFormatType formatType, string hypertext,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, digitalSignature);
+                _uploadManager.Upload(tag, new ChatTopicContent(formatType, hypertext), digitalSignature);
             }
         }
 
-        public void Upload(Chat tag,
-            ChatMessageContent content,
+        public void UploadChatMessage(Chat tag,
+            string comment, IEnumerable<Anchor> anchors,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, digitalSignature);
+                _uploadManager.Upload(tag, new ChatMessageContent(comment, anchors), digitalSignature);
             }
         }
 

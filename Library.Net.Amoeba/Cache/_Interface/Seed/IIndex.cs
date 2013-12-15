@@ -2,7 +2,7 @@
 
 namespace Library.Net.Amoeba
 {
-    interface IIndex<TGroup, TKey> : ICompressionAlgorithm, ICryptoAlgorithm
+    public interface IIndex<TGroup, TKey> : ICompressionAlgorithm, ICryptoAlgorithm
         where TGroup : IGroup<TKey>
         where TKey : IKey
     {
