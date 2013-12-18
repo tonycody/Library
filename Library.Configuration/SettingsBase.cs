@@ -89,10 +89,7 @@ namespace Library.Configuration
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
+            if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
 
             HashSet<string> successNames = new HashSet<string>();
 

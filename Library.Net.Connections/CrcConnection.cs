@@ -68,12 +68,7 @@ namespace Library.Net.Connections
 
         public override void Connect(TimeSpan timeout)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                _connect = true;
-            }
+            throw new NotSupportedException();
         }
 
         public override void Close(TimeSpan timeout)

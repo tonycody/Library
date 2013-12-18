@@ -22,7 +22,7 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxHypertextLength = 1024 * 32;
+        public static readonly int MaxHypertextLength = 1024 * 4;
 
         public ChatTopicContent(HypertextFormatType formatType, string hypertext)
         {

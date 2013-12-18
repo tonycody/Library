@@ -123,7 +123,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<SectionProfile> GetSectionProfile(Section tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<SectionProfile> GetSectionProfiles(Section tag, IEnumerable<string> trustSignatures)
         {
             var hashset = new HashSet<string>(trustSignatures);
             var items = new List<SectionProfile>();
@@ -148,7 +148,29 @@ namespace Library.Net.Lair
             return items;
         }
 
-        public IEnumerable<SectionMessage> GetSectionMessage(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
+        public IEnumerable<SectionProfile> GetSectionProfiles(Section tag)
+        {
+            var items = new List<SectionProfile>();
+
+            foreach (var header in _connectionsManager.GetSectionProfileHeaders(tag))
+            {
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new SectionProfile(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Comment,
+                    content.ExchangePublicKey,
+                    content.TrustSignatures,
+                    content.Wikis,
+                    content.Chats));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<SectionMessage> GetSectionMessages(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
         {
             var hashset = new HashSet<string>(trustSignatures);
             var items = new List<SectionMessage>();
@@ -170,7 +192,26 @@ namespace Library.Net.Lair
             return items;
         }
 
-        public IEnumerable<WikiPage> GetWikiPage(Wiki tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<SectionMessage> GetSectionMessages(Section tag, ExchangePrivateKey exchangePrivateKey)
+        {
+            var items = new List<SectionMessage>();
+
+            foreach (var header in _connectionsManager.GetSectionMessageHeaders(tag))
+            {
+                var content = this.Download(header, exchangePrivateKey);
+                if (content == null) continue;
+
+                items.Add(new SectionMessage(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Comment,
+                    content.Anchor));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<WikiPage> GetWikiPages(Wiki tag, IEnumerable<string> trustSignatures)
         {
             var hashset = new HashSet<string>(trustSignatures);
             var items = new List<WikiPage>();
@@ -192,7 +233,26 @@ namespace Library.Net.Lair
             return items;
         }
 
-        public IEnumerable<WikiVote> GetWikiVote(Wiki tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<WikiPage> GetWikiPages(Wiki tag)
+        {
+            var items = new List<WikiPage>();
+
+            foreach (var header in _connectionsManager.GetWikiPageHeaders(tag))
+            {
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new WikiPage(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.FormatType,
+                    content.Hypertext));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<WikiVote> GetWikiVotes(Wiki tag, IEnumerable<string> trustSignatures)
         {
             var hashset = new HashSet<string>(trustSignatures);
             var items = new List<WikiVote>();
@@ -214,7 +274,26 @@ namespace Library.Net.Lair
             return items;
         }
 
-        public IEnumerable<ChatTopic> GetChatTopic(Chat tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<WikiVote> GetWikiVotes(Wiki tag)
+        {
+            var items = new List<WikiVote>();
+
+            foreach (var header in _connectionsManager.GetWikiVoteHeaders(tag))
+            {
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new WikiVote(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Goods,
+                    content.Bads));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<ChatTopic> GetChatTopics(Chat tag, IEnumerable<string> trustSignatures)
         {
             var hashset = new HashSet<string>(trustSignatures);
             var items = new List<ChatTopic>();
@@ -236,7 +315,26 @@ namespace Library.Net.Lair
             return items;
         }
 
-        public IEnumerable<ChatMessage> GetChatMessage(Chat tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<ChatTopic> GetChatTopics(Chat tag)
+        {
+            var items = new List<ChatTopic>();
+
+            foreach (var header in _connectionsManager.GetChatTopicHeaders(tag))
+            {
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new ChatTopic(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.FormatType,
+                    content.Hypertext));
+            }
+
+            return items;
+        }
+
+        public IEnumerable<ChatMessage> GetChatMessages(Chat tag, IEnumerable<string> trustSignatures)
         {
             var hashset = new HashSet<string>(trustSignatures);
             var items = new List<ChatMessage>();
@@ -258,6 +356,85 @@ namespace Library.Net.Lair
             return items;
         }
 
+        public IEnumerable<ChatMessage> GetChatMessages(Chat tag)
+        {
+            var items = new List<ChatMessage>();
+
+            foreach (var header in _connectionsManager.GetChatMessageHeaders(tag))
+            {
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                items.Add(new ChatMessage(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Comment,
+                    content.Anchors));
+            }
+
+            return items;
+        }
+
+        public SectionProfile GetSectionProfile(Section tag, string targetSignatures)
+        {
+            foreach (var header in _connectionsManager.GetSectionProfileHeaders(tag))
+            {
+                if (header.Certificate.ToString() != targetSignatures) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                return new SectionProfile(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Comment,
+                    content.ExchangePublicKey,
+                    content.TrustSignatures,
+                    content.Wikis,
+                    content.Chats);
+            }
+
+            return null;
+        }
+
+        public WikiVote GetWikiVote(Wiki tag, string targetSignatures)
+        {
+            foreach (var header in _connectionsManager.GetWikiVoteHeaders(tag))
+            {
+                if (header.Certificate.ToString() != targetSignatures) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                return new WikiVote(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.Goods,
+                    content.Bads);
+            }
+
+            return null;
+        }
+
+        public ChatTopic GetChatTopic(Chat tag, string targetSignatures)
+        {
+            foreach (var header in _connectionsManager.GetChatTopicHeaders(tag))
+            {
+                if (header.Certificate.ToString() != targetSignatures) continue;
+
+                var content = this.Download(header);
+                if (content == null) continue;
+
+                return new ChatTopic(header.Tag,
+                    header.Certificate.ToString(),
+                    header.CreationTime,
+                    content.FormatType,
+                    content.Hypertext);
+            }
+
+            return null;
+        }
+
         private SectionProfileContent Download(SectionProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
@@ -275,6 +452,10 @@ namespace Library.Net.Lair
                     item.Key = header.Key;
 
                     _downloadItems.Add(hash, item);
+                }
+                else
+                {
+                    _downloadItems.Refresh(hash);
                 }
 
                 if (item.State == DownloadState.Completed)
@@ -305,6 +486,10 @@ namespace Library.Net.Lair
 
                     _downloadItems.Add(hash, item);
                 }
+                else
+                {
+                    _downloadItems.Refresh(hash);
+                }
 
                 if (item.State == DownloadState.Completed)
                 {
@@ -332,6 +517,10 @@ namespace Library.Net.Lair
                     item.Key = header.Key;
 
                     _downloadItems.Add(hash, item);
+                }
+                else
+                {
+                    _downloadItems.Refresh(hash);
                 }
 
                 if (item.State == DownloadState.Completed)
@@ -361,6 +550,10 @@ namespace Library.Net.Lair
 
                     _downloadItems.Add(hash, item);
                 }
+                else
+                {
+                    _downloadItems.Refresh(hash);
+                }
 
                 if (item.State == DownloadState.Completed)
                 {
@@ -389,6 +582,10 @@ namespace Library.Net.Lair
 
                     _downloadItems.Add(hash, item);
                 }
+                else
+                {
+                    _downloadItems.Refresh(hash);
+                }
 
                 if (item.State == DownloadState.Completed)
                 {
@@ -416,6 +613,10 @@ namespace Library.Net.Lair
                     item.Key = header.Key;
 
                     _downloadItems.Add(hash, item);
+                }
+                else
+                {
+                    _downloadItems.Refresh(hash);
                 }
 
                 if (item.State == DownloadState.Completed)

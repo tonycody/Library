@@ -9,9 +9,11 @@ namespace Library.Net.Amoeba
         public UriCollection(int capacity) : base(capacity) { }
         public UriCollection(IEnumerable<string> collections) : base(collections) { }
 
+        public static readonly int MaxUriLength = 256;
+
         protected override bool Filter(string item)
         {
-            if (item == null || item.Length > 256) return true;
+            if (item == null || item.Length > UriCollection.MaxUriLength) return true;
 
             return false;
         }

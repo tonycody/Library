@@ -23,6 +23,8 @@ namespace Library.Net.Lair
         private AcceptCapEventHandler _acceptCapEvent;
         private GetCriteriaEventHandler _getLockCriteriaEvent;
 
+        private volatile bool _isLoaded;
+
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
@@ -109,6 +111,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -126,6 +129,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -139,6 +143,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -152,6 +157,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -165,6 +171,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -174,6 +181,7 @@ namespace Library.Net.Lair
             set
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -187,6 +195,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -196,6 +205,7 @@ namespace Library.Net.Lair
             set
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -209,6 +219,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -222,6 +233,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -235,6 +247,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -248,6 +261,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -261,6 +275,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -272,6 +287,7 @@ namespace Library.Net.Lair
         public void SetBaseNode(Node baseNode)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -292,6 +308,7 @@ namespace Library.Net.Lair
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -302,6 +319,7 @@ namespace Library.Net.Lair
         public void Resize(long size)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -309,123 +327,168 @@ namespace Library.Net.Lair
             }
         }
 
-        public IEnumerable<SectionProfile> GetSectionProfile(Section tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<SectionProfile> GetSectionProfiles(Section tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetSectionProfile(tag, trustSignatures);
+                return _downloadManager.GetSectionProfiles(tag, trustSignatures);
             }
         }
 
-        public SectionProfile GetSectionProfile(Section tag, string trustSignature)
+        public IEnumerable<SectionProfile> GetSectionProfiles(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetSectionProfile(tag, new string[] { trustSignature }).FirstOrDefault();
+                return _downloadManager.GetSectionProfiles(tag);
             }
         }
 
-        public IEnumerable<SectionMessage> GetSectionMessage(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
+        public IEnumerable<SectionMessage> GetSectionMessages(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetSectionMessage(tag, trustSignatures, exchangePrivateKey);
+                return _downloadManager.GetSectionMessages(tag, trustSignatures, exchangePrivateKey);
             }
         }
 
-        public IEnumerable<SectionMessage> GetSectionMessage(Section tag, string trustSignature, ExchangePrivateKey exchangePrivateKey)
+        public IEnumerable<SectionMessage> GetSectionMessages(Section tag, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetSectionMessage(tag, new string[] { trustSignature }, exchangePrivateKey);
+                return _downloadManager.GetSectionMessages(tag, exchangePrivateKey);
             }
         }
 
-        public IEnumerable<WikiPage> GetWikiPage(Wiki tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<WikiPage> GetWikiPages(Wiki tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetWikiPage(tag, trustSignatures);
+                return _downloadManager.GetWikiPages(tag, trustSignatures);
             }
         }
 
-        public IEnumerable<WikiPage> GetWikiPage(Wiki tag, string trustSignature)
+        public IEnumerable<WikiPage> GetWikiPages(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetWikiPage(tag, new string[] { trustSignature });
+                return _downloadManager.GetWikiPages(tag);
             }
         }
 
-        public IEnumerable<WikiVote> GetWikiVote(Wiki tag, IEnumerable<string> trustSignatures)
+        public IEnumerable<WikiVote> GetWikiVotes(Wiki tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetWikiVote(tag, trustSignatures);
+                return _downloadManager.GetWikiVotes(tag, trustSignatures);
             }
         }
 
-        public WikiVote GetWikiVote(Wiki tag, string trustSignature)
+        public IEnumerable<WikiVote> GetWikiVotes(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetWikiVote(tag, new string[] { trustSignature }).FirstOrDefault();
+                return _downloadManager.GetWikiVotes(tag);
             }
         }
 
         public IEnumerable<ChatTopic> GetChatTopic(Chat tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatTopic(tag, trustSignatures);
+                return _downloadManager.GetChatTopics(tag, trustSignatures);
             }
         }
 
-        public ChatTopic GetChatTopic(Chat tag, string trustSignature)
+        public IEnumerable<ChatTopic> GetChatTopic(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatTopic(tag, new string[] { trustSignature }).FirstOrDefault();
+                return _downloadManager.GetChatTopics(tag);
             }
         }
 
         public IEnumerable<ChatMessage> GetChatMessage(Chat tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatMessage(tag, trustSignatures);
+                return _downloadManager.GetChatMessages(tag, trustSignatures);
             }
         }
 
-        public IEnumerable<ChatMessage> GetChatMessage(Chat tag, string trustSignature)
+        public IEnumerable<ChatMessage> GetChatMessage(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatMessage(tag, new string[] { trustSignature });
+                return _downloadManager.GetChatMessages(tag);
+            }
+        }
+
+        public SectionProfile GetSectionProfile(Section tag, string targetSignatures)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.GetSectionProfile(tag, targetSignatures);
+            }
+        }
+
+        public WikiVote GetWikiVote(Wiki tag, string targetSignatures)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.GetWikiVote(tag, targetSignatures);
+            }
+        }
+
+        public ChatTopic GetChatTopic(Chat tag, string targetSignatures)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.GetChatTopic(tag, targetSignatures);
             }
         }
 
@@ -433,6 +496,9 @@ namespace Library.Net.Lair
             string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats,
             DigitalSignature digitalSignature)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 _uploadManager.Upload(tag, new SectionProfileContent(comment, exchangePublicKey, trustSignatures, wikis, chats), digitalSignature);
@@ -444,6 +510,9 @@ namespace Library.Net.Lair
             ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 _uploadManager.Upload(tag, new SectionMessageContent(comment, anchor), exchangePublicKey, digitalSignature);
@@ -454,6 +523,9 @@ namespace Library.Net.Lair
             HypertextFormatType formatType, string hypertext,
             DigitalSignature digitalSignature)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 _uploadManager.Upload(tag, new WikiPageContent(formatType, hypertext), digitalSignature);
@@ -464,6 +536,9 @@ namespace Library.Net.Lair
             IEnumerable<Anchor> goods, IEnumerable<Anchor> bads,
             DigitalSignature digitalSignature)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 _uploadManager.Upload(tag, new WikiVoteContent(goods, bads), digitalSignature);
@@ -474,6 +549,9 @@ namespace Library.Net.Lair
             HypertextFormatType formatType, string hypertext,
             DigitalSignature digitalSignature)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 _uploadManager.Upload(tag, new ChatTopicContent(formatType, hypertext), digitalSignature);
@@ -484,6 +562,9 @@ namespace Library.Net.Lair
             string comment, IEnumerable<Anchor> anchors,
             DigitalSignature digitalSignature)
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 _uploadManager.Upload(tag, new ChatMessageContent(comment, anchors), digitalSignature);
@@ -494,6 +575,9 @@ namespace Library.Net.Lair
         {
             get
             {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
                 lock (this.ThisLock)
                 {
                     return _state;
@@ -503,6 +587,9 @@ namespace Library.Net.Lair
 
         public override void Start()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Start) return;
@@ -516,6 +603,9 @@ namespace Library.Net.Lair
 
         public override void Stop()
         {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+
             lock (this.ThisLock)
             {
                 if (this.State == ManagerState.Stop) return;
@@ -535,7 +625,8 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                this.Stop();
+                if (_isLoaded) throw new LairManagerException("LairManager was already loaded.");
+                _isLoaded = true;
 
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
@@ -548,6 +639,7 @@ namespace Library.Net.Lair
         public void Save(string directoryPath)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -587,5 +679,13 @@ namespace Library.Net.Lair
         }
 
         #endregion
+    }
+
+    [Serializable]
+    class LairManagerException : StateManagerException
+    {
+        public LairManagerException() : base() { }
+        public LairManagerException(string message) : base(message) { }
+        public LairManagerException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

@@ -310,6 +310,8 @@ namespace Library.Net.Lair
                     contexts.Add(new InformationContext("BlockCount", _cacheManager.Count));
                     contexts.Add(new InformationContext("RelayBlockCount", _relayBlockCount));
 
+                    contexts.Add(new InformationContext("HeaderCount", _headerManager.Count));
+
                     return new Information(contexts);
                 }
             }
@@ -3583,6 +3585,23 @@ namespace Library.Net.Lair
             public HeaderManager()
             {
 
+            }
+
+            public int Count
+            {
+                get
+                {
+                    int count = 0;
+
+                    count += _sectionProfileHeaders.Values.Sum(n => n.Values.Count);
+                    count += _sectionMessageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
+                    count += _wikiPageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
+                    count += _wikiVoteHeaders.Values.Sum(n => n.Values.Count);
+                    count += _chatTopicHeaders.Values.Sum(n => n.Values.Count);
+                    count += _chatMessageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
+
+                    return count;
+                }
             }
 
             public IEnumerable<Section> GetSections()

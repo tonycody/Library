@@ -48,7 +48,14 @@ namespace Library.Collections
             }
         }
 
-        public void Refresh()
+        public void Refresh(TKey item)
+        {
+            this.CheckLifeTime();
+
+            _volatileDictionary[item] = DateTime.UtcNow;
+        }
+
+        private void CheckLifeTime()
         {
             lock (this.ThisLock)
             {
@@ -77,13 +84,21 @@ namespace Library.Collections
             }
         }
 
+        public void TrimExcess()
+        {
+            lock (this.ThisLock)
+            {
+                this.CheckLifeTime();
+            }
+        }
+
         public VolatileKeyCollection Keys
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    this.Refresh();
+                    this.CheckLifeTime();
 
                     return new VolatileKeyCollection(_dic.Keys, this.ThisLock);
                 }
@@ -96,7 +111,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Refresh();
+                    this.CheckLifeTime();
 
                     return new VolatileValueCollection(_dic.Values, this.ThisLock);
                 }
@@ -120,7 +135,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Refresh();
+                    this.CheckLifeTime();
 
                     return _dic.Count;
                 }
@@ -133,7 +148,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Refresh();
+                    this.CheckLifeTime();
 
                     return _dic[key];
                 }
@@ -142,7 +157,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Refresh();
+                    this.CheckLifeTime();
 
                     _volatileDictionary[key] = DateTime.UtcNow;
                     _dic[key] = value;
@@ -154,7 +169,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 int count = _dic.Count;
                 _dic[key] = value;
@@ -177,7 +192,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _dic.ContainsKey(key);
             }
@@ -187,7 +202,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _dic.ContainsValue(value);
             }
@@ -197,7 +212,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _dic.Remove(key);
             }
@@ -207,7 +222,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _dic.TryGetValue(key, out value);
             }
@@ -357,7 +372,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _dic.Contains(item);
             }
@@ -367,7 +382,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 ((IDictionary<TKey, TValue>)_dic).CopyTo(array, arrayIndex);
             }
@@ -377,7 +392,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return ((IDictionary<TKey, TValue>)_dic).Remove(keyValuePair);
             }
@@ -406,7 +421,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 ((ICollection)_dic).CopyTo(array, index);
             }
@@ -416,7 +431,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 foreach (var item in _dic)
                 {

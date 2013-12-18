@@ -41,13 +41,20 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _hashSet.ToArray();
             }
         }
 
-        public void Refresh()
+        public void Refresh(T item)
+        {
+            this.CheckLifeTime();
+
+            _volatileDictionary[item] = DateTime.UtcNow;
+        }
+
+        private void CheckLifeTime()
         {
             lock (this.ThisLock)
             {
@@ -93,7 +100,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.Refresh();
+                    this.CheckLifeTime();
 
                     return _hashSet.Count;
                 }
@@ -104,7 +111,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 foreach (var item in collection)
                 {
@@ -118,7 +125,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 _volatileDictionary[item] = DateTime.UtcNow;
                 return _hashSet.Add(item);
@@ -138,7 +145,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _hashSet.Contains(item);
             }
@@ -148,7 +155,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 _hashSet.CopyTo(array, arrayIndex);
             }
@@ -158,7 +165,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 return _hashSet.Remove(item);
             }
@@ -168,9 +175,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
-
-                _hashSet.TrimExcess();
+                this.CheckLifeTime();
             }
         }
 
@@ -224,7 +229,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.Refresh();
+                this.CheckLifeTime();
 
                 foreach (var item in _hashSet)
                 {

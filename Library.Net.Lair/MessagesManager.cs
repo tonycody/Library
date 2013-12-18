@@ -36,28 +36,28 @@ namespace Library.Net.Lair
                     {
                         var messageManager = _messageManagerDictionary[node];
 
-                        messageManager.PushBlocks.Refresh();
-                        messageManager.PushSectionProfileHeaders.Refresh();
-                        messageManager.PushSectionMessageHeaders.Refresh();
-                        messageManager.PushWikiPageHeaders.Refresh();
-                        messageManager.PushWikiVoteHeaders.Refresh();
-                        messageManager.PushChatTopicHeaders.Refresh();
-                        messageManager.PushChatMessageHeaders.Refresh();
+                        messageManager.PushBlocks.TrimExcess();
+                        messageManager.PushSectionProfileHeaders.TrimExcess();
+                        messageManager.PushSectionMessageHeaders.TrimExcess();
+                        messageManager.PushWikiPageHeaders.TrimExcess();
+                        messageManager.PushWikiVoteHeaders.TrimExcess();
+                        messageManager.PushChatTopicHeaders.TrimExcess();
+                        messageManager.PushChatMessageHeaders.TrimExcess();
 
-                        messageManager.PushBlocksLink.Refresh();
-                        messageManager.PullBlocksLink.Refresh();
+                        messageManager.PushBlocksLink.TrimExcess();
+                        messageManager.PullBlocksLink.TrimExcess();
 
-                        messageManager.PushBlocksRequest.Refresh();
-                        messageManager.PullBlocksRequest.Refresh();
+                        messageManager.PushBlocksRequest.TrimExcess();
+                        messageManager.PullBlocksRequest.TrimExcess();
 
-                        messageManager.PushSectionsRequest.Refresh();
-                        messageManager.PullSectionsRequest.Refresh();
+                        messageManager.PushSectionsRequest.TrimExcess();
+                        messageManager.PullSectionsRequest.TrimExcess();
 
-                        messageManager.PushWikisRequest.Refresh();
-                        messageManager.PullWikisRequest.Refresh();
+                        messageManager.PushWikisRequest.TrimExcess();
+                        messageManager.PullWikisRequest.TrimExcess();
 
-                        messageManager.PushChatsRequest.Refresh();
-                        messageManager.PullChatsRequest.Refresh();
+                        messageManager.PushChatsRequest.TrimExcess();
+                        messageManager.PullChatsRequest.TrimExcess();
                     }
 
                     _lastCircularTime = now;

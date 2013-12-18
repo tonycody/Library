@@ -105,7 +105,7 @@ namespace Library.Net.Lair
 #if DEBUG
             if (list[0].Value.Length != stream.Length)
             {
-                Debug.WriteLine("ContentConverter ToStream {3} : {0}→{1} {2}",
+                Debug.WriteLine("ContentConverter Compress {3} : {0}→{1} {2}",
                     NetworkConverter.ToSizeString(stream.Length),
                     NetworkConverter.ToSizeString(list[0].Value.Length),
                     NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length),
@@ -154,7 +154,7 @@ namespace Library.Net.Lair
                             }
 
 #if DEBUG
-                            Debug.WriteLine("ContentConverter FromStream {3} : {0}→{1} {2}",
+                            Debug.WriteLine("ContentConverter Decompress {3} : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(lzmaBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - lzmaBufferStream.Length),
@@ -204,7 +204,7 @@ namespace Library.Net.Lair
                             }
 
 #if DEBUG
-                            Debug.WriteLine("ContentConverter FromStream {3} : {0}→{1} {2}",
+                            Debug.WriteLine("ContentConverter Decompress {3} : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length),

@@ -36,18 +36,18 @@ namespace Library.Net.Amoeba
                     {
                         var messageManager = _messageManagerDictionary[node];
 
-                        messageManager.PushBlocks.Refresh();
-                        messageManager.PushLinkSeeds.Refresh();
-                        messageManager.PushStoreSeeds.Refresh();
+                        messageManager.PushBlocks.TrimExcess();
+                        messageManager.PushLinkSeeds.TrimExcess();
+                        messageManager.PushStoreSeeds.TrimExcess();
 
-                        messageManager.PushBlocksLink.Refresh();
-                        messageManager.PullBlocksLink.Refresh();
+                        messageManager.PushBlocksLink.TrimExcess();
+                        messageManager.PullBlocksLink.TrimExcess();
 
-                        messageManager.PushBlocksRequest.Refresh();
-                        messageManager.PullBlocksRequest.Refresh();
+                        messageManager.PushBlocksRequest.TrimExcess();
+                        messageManager.PullBlocksRequest.TrimExcess();
 
-                        messageManager.PushSeedsRequest.Refresh();
-                        messageManager.PullSeedsRequest.Refresh();
+                        messageManager.PushSeedsRequest.TrimExcess();
+                        messageManager.PullSeedsRequest.TrimExcess();
                     }
 
                     _lastCircularTime = now;
