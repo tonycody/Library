@@ -21,7 +21,7 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxCommentLength = SectionMessageContent.MaxCommentLength;
 
         internal SectionMessage(Section tag, string signature, DateTime creationTime, string comment, Anchor anchor)
         {

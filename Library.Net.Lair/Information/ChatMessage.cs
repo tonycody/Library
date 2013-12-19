@@ -20,8 +20,8 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxCommentLength = 1024 * 4;
-        public static readonly int MaxAnchorCount = 32;
+        public static readonly int MaxCommentLength = ChatMessageContent.MaxCommentLength;
+        public static readonly int MaxAnchorCount = ChatMessageContent.MaxAnchorCount;
 
         internal ChatMessage(Chat tag, string signature, DateTime creationTime, string comment, IEnumerable<Anchor> anchors)
         {

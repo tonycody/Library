@@ -31,9 +31,9 @@ namespace Library.Net.Lair
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 4;
-        public static readonly int MaxTrustSignaturesCount = 1024;
-        public static readonly int MaxWikisCount = 256;
-        public static readonly int MaxChatsCount = 256;
+        public static readonly int MaxTrustSignatureCount = 1024;
+        public static readonly int MaxWikiCount = 256;
+        public static readonly int MaxChatCount = 256;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
@@ -315,7 +315,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_trustSignatures == null)
-                        _trustSignatures = new SignatureCollection(SectionProfileContent.MaxTrustSignaturesCount);
+                        _trustSignatures = new SignatureCollection(SectionProfileContent.MaxTrustSignatureCount);
 
                     return _trustSignatures;
                 }
@@ -346,7 +346,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_wikis == null)
-                        _wikis = new WikiCollection(SectionProfileContent.MaxWikisCount);
+                        _wikis = new WikiCollection(SectionProfileContent.MaxWikiCount);
 
                     return _wikis;
                 }
@@ -377,7 +377,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_chats == null)
-                        _chats = new ChatCollection(SectionProfileContent.MaxChatsCount);
+                        _chats = new ChatCollection(SectionProfileContent.MaxChatCount);
 
                     return _chats;
                 }

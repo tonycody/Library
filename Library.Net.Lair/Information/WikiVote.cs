@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
-using System;
 
 namespace Library.Net.Lair
 {
@@ -20,8 +20,8 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxGoodsCount = 1024;
-        public static readonly int MaxBadsCount = 1024;
+        public static readonly int MaxGoodCount = WikiVoteContent.MaxGoodCount;
+        public static readonly int MaxBadCount = WikiVoteContent.MaxBadCount;
 
         internal WikiVote(Wiki tag, string signature, DateTime creationTime, IEnumerable<Anchor> goods, IEnumerable<Anchor> bads)
         {
@@ -188,7 +188,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_goods == null)
-                        _goods = new AnchorCollection(WikiVote.MaxGoodsCount);
+                        _goods = new AnchorCollection(WikiVote.MaxGoodCount);
 
                     return _goods;
                 }
@@ -219,7 +219,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_bads == null)
-                        _bads = new AnchorCollection(WikiVote.MaxBadsCount);
+                        _bads = new AnchorCollection(WikiVote.MaxBadCount);
 
                     return _bads;
                 }

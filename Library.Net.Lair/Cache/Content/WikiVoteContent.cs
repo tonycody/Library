@@ -22,8 +22,8 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxGoodsCount = 1024;
-        public static readonly int MaxBadsCount = 1024;
+        public static readonly int MaxGoodCount = 1024;
+        public static readonly int MaxBadCount = 1024;
 
         public WikiVoteContent(IEnumerable<Anchor> goods, IEnumerable<Anchor> bads)
         {
@@ -179,7 +179,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_goods == null)
-                        _goods = new AnchorCollection(WikiVoteContent.MaxGoodsCount);
+                        _goods = new AnchorCollection(WikiVoteContent.MaxGoodCount);
 
                     return _goods;
                 }
@@ -210,7 +210,7 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     if (_bads == null)
-                        _bads = new AnchorCollection(WikiVoteContent.MaxBadsCount);
+                        _bads = new AnchorCollection(WikiVoteContent.MaxBadCount);
 
                     return _bads;
                 }

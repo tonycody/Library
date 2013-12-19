@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
-using System.Collections.ObjectModel;
 
 namespace Library.Net.Lair
 {
@@ -20,7 +20,7 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public static readonly int MaxHypertextLength = 1024 * 32;
+        public static readonly int MaxHypertextLength = WikiPageContent.MaxHypertextLength;
 
         internal WikiPage(Wiki tag, string signature, DateTime creationTime, HypertextFormatType formatType, string hypertext)
         {

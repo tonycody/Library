@@ -2798,7 +2798,7 @@ namespace Library.Net.Lair
             if (messageManager.PushChatTopicHeaders.Count > _maxHeaderCount * messageManager.PushChatTopicHeaders.SurvivalTime.TotalMinutes) return;
             if (messageManager.PushChatMessageHeaders.Count > _maxHeaderCount * messageManager.PushChatMessageHeaders.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})", e.SectionMessageHeaders.Count()
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})", e.SectionProfileHeaders.Count()
                 + e.SectionMessageHeaders.Count()
                 + e.WikiPageHeaders.Count()
                 + e.WikiVoteHeaders.Count()
