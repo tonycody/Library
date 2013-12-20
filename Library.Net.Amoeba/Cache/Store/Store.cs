@@ -18,6 +18,8 @@ namespace Library.Net.Amoeba
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
+        public static readonly int MaxBoxCount = 8192;
+
         public Store()
         {
 
@@ -113,7 +115,7 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_boxes == null)
-                        _boxes = new BoxCollection();
+                        _boxes = new BoxCollection(Store.MaxBoxCount);
 
                     return _boxes;
                 }

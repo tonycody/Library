@@ -22,7 +22,7 @@ namespace Library.Net.Lair
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
 
             if (sections != null) this.ProtectedSections.AddRange(sections);
-            if (Wikis != null) this.ProtectedWikis.AddRange(wikis);
+            if (wikis != null) this.ProtectedWikis.AddRange(wikis);
             if (Chats != null) this.ProtectedChats.AddRange(chats);
         }
 

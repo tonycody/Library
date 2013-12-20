@@ -350,8 +350,12 @@ namespace Library.Net.Connections
 
                         if (hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
                         {
-                            myHash = Sha512.ComputeHash(myProtocol2.Export(_bufferManager));
-                            otherHash = Sha512.ComputeHash(otherProtocol2.Export(_bufferManager));
+                            using (var myHashStream = myProtocol2.Export(_bufferManager))
+                            using (var otherHashStream = otherProtocol2.Export(_bufferManager))
+                            {
+                                myHash = Sha512.ComputeHash(myHashStream);
+                                otherHash = Sha512.ComputeHash(otherHashStream);
+                            }
                         }
 
                         byte[] seed;

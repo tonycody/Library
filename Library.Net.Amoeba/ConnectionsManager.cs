@@ -118,7 +118,7 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings(this.ThisLock);
 
-            _routeTable = new Kademlia<Node>(512, 20);
+            _routeTable = new Kademlia<Node>(512, 30);
 
             _connectionManagers = new LockedList<ConnectionManager>();
             _messagesManager = new MessagesManager();
@@ -131,10 +131,10 @@ namespace Library.Net.Amoeba
             };
 
             _creatingNodes = new LockedList<Node>();
-            _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 30));
+            _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 10));
             _cuttingNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
-            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
-            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
+            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 3, 0));
+            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 3, 0));
 
             _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
             _pushSeedsRequestList = new VolatileCollection<string>(new TimeSpan(0, 3, 0));

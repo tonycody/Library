@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 using Library.Security;
+using System.Diagnostics;
 
 namespace Library.Net.Amoeba
 {
@@ -37,6 +38,8 @@ namespace Library.Net.Amoeba
 
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxCommentLength = 1024;
+        public static readonly int MaxBoxCount = 8192;
+        public static readonly int MaxSeedCount = 1024 * 64;
 
         public Box()
         {
@@ -45,6 +48,25 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
         {
+            this.ProtectedImport(stream, bufferManager, 0);
+        }
+
+        public override Stream Export(BufferManager bufferManager)
+        {
+            return this.Export(bufferManager, 0);
+        }
+
+        private static Box Import(Stream stream, BufferManager bufferManager, int count)
+        {
+            var item = (Box)FormatterServices.GetUninitializedObject(typeof(Box));
+            item.ProtectedImport(stream, bufferManager);
+            return item;
+        }
+
+        private void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+        {
+            if (count > 256) throw new ArgumentException();
+
             lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
@@ -85,7 +107,7 @@ namespace Library.Net.Amoeba
                         }
                         else if (id == (byte)SerializeId.Box)
                         {
-                            this.Boxes.Add(Box.Import(rangeStream, bufferManager));
+                            this.Boxes.Add(Box.Import(rangeStream, bufferManager, count + 1));
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -97,8 +119,10 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        private Stream Export(BufferManager bufferManager, int count)
         {
+            if (count > 256) throw new ArgumentException();
+
             lock (this.ThisLock)
             {
                 List<Stream> streams = new List<Stream>();
@@ -175,7 +199,7 @@ namespace Library.Net.Amoeba
                 // Boxes
                 foreach (var b in this.Boxes)
                 {
-                    Stream exportStream = b.Export(bufferManager);
+                    Stream exportStream = b.Export(bufferManager, count + 1);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
@@ -389,7 +413,7 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_seeds == null)
-                        _seeds = new SeedCollection();
+                        _seeds = new SeedCollection(Box.MaxSeedCount);
 
                     return _seeds;
                 }
@@ -404,7 +428,7 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_boxes == null)
-                        _boxes = new BoxCollection();
+                        _boxes = new BoxCollection(Box.MaxBoxCount);
 
                     return _boxes;
                 }
