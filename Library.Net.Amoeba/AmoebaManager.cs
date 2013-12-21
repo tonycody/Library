@@ -419,17 +419,7 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                if (this.State == ManagerState.Start)
-                {
-                    _connectionsManager.Stop();
-                }
-
                 _connectionsManager.SetBaseNode(baseNode);
-
-                if (this.State == ManagerState.Start)
-                {
-                    _connectionsManager.Start();
-                }
             }
         }
 

@@ -1757,7 +1757,7 @@ namespace Library.Net.Lair
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
@@ -1777,7 +1777,7 @@ namespace Library.Net.Lair
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
@@ -1797,7 +1797,7 @@ namespace Library.Net.Lair
                         try
                         {
                             List<Node> requestNodes = new List<Node>();
-                            requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                            requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
@@ -1940,7 +1940,7 @@ namespace Library.Net.Lair
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
@@ -1980,7 +1980,7 @@ namespace Library.Net.Lair
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
@@ -2020,7 +2020,7 @@ namespace Library.Net.Lair
                             try
                             {
                                 List<Node> requestNodes = new List<Node>();
-                                requestNodes.AddRange(this.GetSearchNode(item.Id, 1));
+                                requestNodes.AddRange(this.GetSearchNode(item.Id, 2));
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
@@ -2700,13 +2700,14 @@ namespace Library.Net.Lair
 
         private void connectionManager_BlockEvent(object sender, PullBlockEventArgs e)
         {
-            var connectionManager = sender as ConnectionManager;
-            if (connectionManager == null) return;
-
-            var messageManager = _messagesManager[connectionManager.Node];
-
+            // tryですべて囲まないとメモリーリークの恐れあり。
             try
             {
+                var connectionManager = sender as ConnectionManager;
+                if (connectionManager == null) return;
+
+                var messageManager = _messagesManager[connectionManager.Node];
+
                 if (!ConnectionsManager.Check(e.Key) || e.Value.Array == null) return;
 
                 _cacheManager[e.Key] = e.Value;

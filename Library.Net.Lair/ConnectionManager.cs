@@ -1251,28 +1251,38 @@ namespace Library.Net.Lair
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
             {
-                Encoding encoding = new UTF8Encoding(false);
-                byte[] lengthBuffer = new byte[4];
-
-                for (; ; )
+                try
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    Encoding encoding = new UTF8Encoding(false);
+                    byte[] lengthBuffer = new byte[4];
 
-                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    for (; ; )
                     {
-                        if (id == (byte)SerializeId.Key)
-                        {
-                            _key = Key.Import(rangeStream, bufferManager);
-                        }
-                        else if (id == (byte)SerializeId.Value)
-                        {
-                            byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                            rangeStream.Read(buff, 0, (int)rangeStream.Length);
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        int length = NetworkConverter.ToInt32(lengthBuffer);
+                        byte id = (byte)stream.ReadByte();
 
-                            _value = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
+                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        {
+                            if (id == (byte)SerializeId.Key)
+                            {
+                                _key = Key.Import(rangeStream, bufferManager);
+                            }
+                            else if (id == (byte)SerializeId.Value)
+                            {
+                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
+                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
+
+                                _value = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
+                            }
                         }
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (_value.Array != null)
+                    {
+                        bufferManager.ReturnBuffer(_value.Array);
                     }
                 }
             }

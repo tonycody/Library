@@ -6,7 +6,7 @@ using System.Diagnostics;
 namespace Library
 {
 
-#if !MONITOR
+#if !DEBUG
 
     public class BufferManager : ManagerBase, IThisLock
     {
@@ -175,7 +175,7 @@ namespace Library
 
     public class BufferManager : ManagerBase, IThisLock
     {
-        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 32);
+        private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 256, 1024 * 1024 * 256);
 
         private System.ServiceModel.Channels.BufferManager _bufferManager;
         private ConditionalWeakTable<byte[], BufferTracker> _trackLeakedBuffers = new ConditionalWeakTable<byte[], BufferTracker>();
@@ -283,7 +283,7 @@ namespace Library
             }
         }
 
-    #endregion
+        #endregion
     }
 
     [Serializable]

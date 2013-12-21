@@ -291,17 +291,7 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                if (this.State == ManagerState.Start)
-                {
-                    _connectionsManager.Stop();
-                }
-
                 _connectionsManager.SetBaseNode(baseNode);
-
-                if (this.State == ManagerState.Start)
-                {
-                    _connectionsManager.Start();
-                }
             }
         }
 

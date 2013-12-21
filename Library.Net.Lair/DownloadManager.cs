@@ -43,7 +43,7 @@ namespace Library.Net.Lair
                 Thread.Sleep(1000 * 1);
                 if (this.State == ManagerState.Stop) return;
 
-                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 1)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalSeconds >= 20)
                 {
                     refreshStopwatch.Restart();
 
