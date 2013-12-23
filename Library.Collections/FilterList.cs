@@ -18,7 +18,8 @@ namespace Library.Collections
 
         public FilterList(int capacity)
         {
-            _list = new List<T>(capacity);
+            _list = new List<T>();
+            _capacity = capacity;
         }
 
         public FilterList(IEnumerable<T> collection)

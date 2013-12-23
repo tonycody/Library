@@ -47,12 +47,13 @@ namespace Library.UnitTest
 
                 Task.WaitAll(clientSendTask, serverReceiveTask);
 
-                var returnStream = serverReceiveTask.Result;
+                using (var returnStream = serverReceiveTask.Result)
+                {
+                    var buff2 = new byte[(int)returnStream.Length];
+                    returnStream.Read(buff2, 0, buff2.Length);
 
-                var buff2 = new byte[(int)returnStream.Length];
-                returnStream.Read(buff2, 0, buff2.Length);
-
-                Assert.IsTrue(Collection.Equals(buffer, buff2), "CapConnection #1");
+                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CapConnection #1");
+                }
             }
 
             using (MemoryStream stream = new MemoryStream())
@@ -68,12 +69,13 @@ namespace Library.UnitTest
 
                 Task.WaitAll(serverSendTask, clientReceiveTask);
 
-                var returnStream = clientReceiveTask.Result;
+                using (var returnStream = clientReceiveTask.Result)
+                {
+                    var buff2 = new byte[(int)returnStream.Length];
+                    returnStream.Read(buff2, 0, buff2.Length);
 
-                var buff2 = new byte[(int)returnStream.Length];
-                returnStream.Read(buff2, 0, buff2.Length);
-
-                Assert.IsTrue(Collection.Equals(buffer, buff2), "CapConnection #2");
+                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CapConnection #2");
+                }
             }
 
             client.Close();
@@ -109,12 +111,13 @@ namespace Library.UnitTest
 
                 Task.WaitAll(clientSendTask, serverReceiveTask);
 
-                var returnStream = serverReceiveTask.Result;
+                using (var returnStream = serverReceiveTask.Result)
+                {
+                    var buff2 = new byte[(int)returnStream.Length];
+                    returnStream.Read(buff2, 0, buff2.Length);
 
-                var buff2 = new byte[(int)returnStream.Length];
-                returnStream.Read(buff2, 0, buff2.Length);
-
-                Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #1");
+                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #1");
+                }
             }
 
             using (MemoryStream stream = new MemoryStream())
@@ -130,12 +133,13 @@ namespace Library.UnitTest
 
                 Task.WaitAll(serverSendTask, clientReceiveTask);
 
-                var returnStream = clientReceiveTask.Result;
+                using (var returnStream = clientReceiveTask.Result)
+                {
+                    var buff2 = new byte[(int)returnStream.Length];
+                    returnStream.Read(buff2, 0, buff2.Length);
 
-                var buff2 = new byte[(int)returnStream.Length];
-                returnStream.Read(buff2, 0, buff2.Length);
-
-                Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #2");
+                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #2");
+                }
             }
 
             client.Close();
@@ -176,12 +180,13 @@ namespace Library.UnitTest
 
                     Task.WaitAll(clientConnectTask, serverReceiveTask);
 
-                    var returnStream = serverReceiveTask.Result;
+                    using (var returnStream = serverReceiveTask.Result)
+                    {
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
 
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
-
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CompressConnection #1");
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CompressConnection #1");
+                    }
                 }
 
                 using (MemoryStream stream = new MemoryStream())
@@ -197,12 +202,13 @@ namespace Library.UnitTest
 
                     Task.WaitAll(serverSendTask, clientReceiveTask);
 
-                    var returnStream = clientReceiveTask.Result;
+                    using (var returnStream = clientReceiveTask.Result)
+                    {
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
 
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
-
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CompressConnection #2");
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CompressConnection #2");
+                    }
                 }
             }
 
@@ -306,12 +312,13 @@ namespace Library.UnitTest
 
                             Task.WaitAll(clientConnectTask, serverReceiveTask);
 
-                            var returnStream = serverReceiveTask.Result;
+                            using (var returnStream = serverReceiveTask.Result)
+                            {
+                                var buff2 = new byte[(int)returnStream.Length];
+                                returnStream.Read(buff2, 0, buff2.Length);
 
-                            var buff2 = new byte[(int)returnStream.Length];
-                            returnStream.Read(buff2, 0, buff2.Length);
-
-                            Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #1");
+                                Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #1");
+                            }
                         }
 
                         using (MemoryStream stream = new MemoryStream())
@@ -327,12 +334,13 @@ namespace Library.UnitTest
 
                             Task.WaitAll(serverSendTask, clientReceiveTask);
 
-                            var returnStream = clientReceiveTask.Result;
+                            using (var returnStream = clientReceiveTask.Result)
+                            {
+                                var buff2 = new byte[(int)returnStream.Length];
+                                returnStream.Read(buff2, 0, buff2.Length);
 
-                            var buff2 = new byte[(int)returnStream.Length];
-                            returnStream.Read(buff2, 0, buff2.Length);
-
-                            Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #2");
+                                Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #2");
+                            }
                         }
                     }
                     catch (AggregateException e)

@@ -18,7 +18,7 @@ namespace Library.Collections
 
         public LockedQueue(int capacity)
         {
-            _queue = new Queue<T>(capacity);
+            _queue = new Queue<T>();
             _capacity = capacity;
         }
 

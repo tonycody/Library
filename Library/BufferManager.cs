@@ -6,7 +6,7 @@ using System.Diagnostics;
 namespace Library
 {
 
-#if !DEBUG
+#if !MONITOR
 
     public class BufferManager : ManagerBase, IThisLock
     {

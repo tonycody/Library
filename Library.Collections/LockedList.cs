@@ -59,7 +59,8 @@ namespace Library.Collections
 
         public LockedList(int capacity)
         {
-            _list = new List<T>(capacity);
+            _list = new List<T>();
+            _capacity = capacity;
         }
 
         public LockedList(IEnumerable<T> collection)

@@ -1,16 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.Serialization;
+using System.Linq;
 using System.Text;
-using Library.Io;
+using System.Runtime.Serialization;
 using Library.Security;
-using System.Diagnostics;
+using Library.Net.Amoeba;
+using System.IO;
+using Library.Io;
+using Library.Collections;
 
-namespace Library.Net.Amoeba
+namespace Library.UnitTest
 {
-    [DataContract(Name = "Box", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Box : CertificateItemBase<Box>, IBox, ICloneable<Box>, IThisLock
+    [DataContract(Name = "D_Box", Namespace = "http://Library/Net/Amoeba")]
+    public sealed class D_Box : CertificateItemBase<D_Box>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -18,7 +20,7 @@ namespace Library.Net.Amoeba
             CreationTime = 1,
             Comment = 2,
             Seed = 3,
-            Box = 4,
+            D_Box = 4,
 
             Certificate = 5,
         }
@@ -27,7 +29,7 @@ namespace Library.Net.Amoeba
         private DateTime _creationTime;
         private string _comment;
         private SeedCollection _seeds;
-        private BoxCollection _boxes;
+        private LockedList<D_Box> _boxes;
 
         private Certificate _certificate;
 
@@ -38,10 +40,10 @@ namespace Library.Net.Amoeba
 
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxCommentLength = 1024;
-        public static readonly int MaxBoxCount = 8192;
+        public static readonly int MaxD_BoxCount = 8192;
         public static readonly int MaxSeedCount = 1024 * 64;
 
-        public Box()
+        public D_Box()
         {
 
         }
@@ -56,16 +58,16 @@ namespace Library.Net.Amoeba
             return this.Export(bufferManager, 0);
         }
 
-        private static Box Import(Stream stream, BufferManager bufferManager, int count)
+        private static D_Box Import(Stream stream, BufferManager bufferManager, int count)
         {
-            var item = (Box)FormatterServices.GetUninitializedObject(typeof(Box));
+            var item = (D_Box)FormatterServices.GetUninitializedObject(typeof(D_Box));
             item.ProtectedImport(stream, bufferManager, count);
             return item;
         }
 
         private void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            if (count > 256) throw new ArgumentException();
+            //if (count > 256) throw new ArgumentException();
 
             lock (this.ThisLock)
             {
@@ -105,9 +107,9 @@ namespace Library.Net.Amoeba
                         {
                             this.Seeds.Add(Seed.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.Box)
+                        else if (id == (byte)SerializeId.D_Box)
                         {
-                            this.Boxes.Add(Box.Import(rangeStream, bufferManager, count + 1));
+                            this.D_Boxes.Add(D_Box.Import(rangeStream, bufferManager, count + 1));
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -121,7 +123,7 @@ namespace Library.Net.Amoeba
 
         private Stream Export(BufferManager bufferManager, int count)
         {
-            if (count > 256) throw new ArgumentException();
+            //if (count > 256) throw new ArgumentException();
 
             lock (this.ThisLock)
             {
@@ -196,14 +198,14 @@ namespace Library.Net.Amoeba
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
-                // Boxes
-                foreach (var b in this.Boxes)
+                // D_Boxes
+                foreach (var b in this.D_Boxes)
                 {
                     Stream exportStream = b.Export(bufferManager, count + 1);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Box);
+                    bufferStream.WriteByte((byte)SerializeId.D_Box);
 
                     streams.Add(new JoinStream(bufferStream, exportStream));
                 }
@@ -234,12 +236,12 @@ namespace Library.Net.Amoeba
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Box)) return false;
+            if ((object)obj == null || !(obj is D_Box)) return false;
 
-            return this.Equals((Box)obj);
+            return this.Equals((D_Box)obj);
         }
 
-        public override bool Equals(Box other)
+        public override bool Equals(D_Box other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -252,7 +254,7 @@ namespace Library.Net.Amoeba
                 || this.Certificate != other.Certificate
 
                 || (this.Seeds == null) != (other.Seeds == null)
-                || (this.Boxes == null) != (other.Boxes == null))
+                || (this.D_Boxes == null) != (other.D_Boxes == null))
             {
                 return false;
             }
@@ -262,9 +264,9 @@ namespace Library.Net.Amoeba
                 if (!Collection.Equals(this.Seeds, other.Seeds)) return false;
             }
 
-            if (this.Boxes != null && other.Boxes != null)
+            if (this.D_Boxes != null && other.D_Boxes != null)
             {
-                if (!Collection.Equals(this.Boxes, other.Boxes)) return false;
+                if (!Collection.Equals(this.D_Boxes, other.D_Boxes)) return false;
             }
 
             return true;
@@ -330,7 +332,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        #region IBox
+        #region ID_Box
 
         [DataMember(Name = "Name")]
         public string Name
@@ -346,7 +348,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Box.MaxNameLength)
+                    if (value != null && value.Length > D_Box.MaxNameLength)
                     {
                         throw new ArgumentException();
                     }
@@ -393,7 +395,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > Box.MaxCommentLength)
+                    if (value != null && value.Length > D_Box.MaxCommentLength)
                     {
                         throw new ArgumentException();
                     }
@@ -413,22 +415,22 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_seeds == null)
-                        _seeds = new SeedCollection(Box.MaxSeedCount);
+                        _seeds = new SeedCollection(D_Box.MaxSeedCount);
 
                     return _seeds;
                 }
             }
         }
 
-        [DataMember(Name = "Boxes")]
-        public BoxCollection Boxes
+        [DataMember(Name = "D_Boxes")]
+        public LockedList<D_Box> D_Boxes
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_boxes == null)
-                        _boxes = new BoxCollection(Box.MaxBoxCount);
+                        _boxes = new LockedList<D_Box>(D_Box.MaxD_BoxCount);
 
                     return _boxes;
                 }
@@ -437,15 +439,15 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        #region ICloneable<Box>
+        #region ICloneable<D_Box>
 
-        public Box Clone()
+        public D_Box Clone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return Box.Import(stream, BufferManager.Instance);
+                    return D_Box.Import(stream, BufferManager.Instance);
                 }
             }
         }

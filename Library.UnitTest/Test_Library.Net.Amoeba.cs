@@ -81,8 +81,12 @@ namespace Library.UnitTest
             DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
             box.CreateCertificate(digitalSignature);
 
-            var streamBox = AmoebaConverter.ToBoxStream(box);
-            var box2 = AmoebaConverter.FromBoxStream(streamBox);
+            Box box2;
+
+            using (var streamBox = AmoebaConverter.ToBoxStream(box))
+            {
+                box2 = AmoebaConverter.FromBoxStream(streamBox);
+            }
 
             Assert.AreEqual(box, box2, "AmoebaConverter #3");
         }
@@ -207,6 +211,80 @@ namespace Library.UnitTest
 
             Assert.AreEqual(box, box3, "Box #2");
             Assert.IsTrue(box3.VerifyCertificate(), "Box #3");
+
+            {
+                var parentBox = new Box();
+                var childBox = parentBox;
+
+                for (int i = 0; i < 256; i++)
+                {
+                    var tempBox = new Box();
+                    childBox.Boxes.Add(tempBox);
+                    childBox = tempBox;
+                }
+
+                using (var binaryBox = parentBox.Export(_bufferManager))
+                {
+
+                }
+            }
+
+            {
+                var parentBox = new Box();
+                var childBox = parentBox;
+
+                for (int i = 0; i < 256 + 1; i++)
+                {
+                    var tempBox = new Box();
+                    childBox.Boxes.Add(tempBox);
+                    childBox = tempBox;
+                }
+
+                Assert.Throws<ArgumentException>(() =>
+                {
+                    using (var binaryBox = parentBox.Export(_bufferManager))
+                    {
+
+                    }
+                });
+            }
+
+            {
+                var parentBox = new D_Box();
+                var childBox = parentBox;
+
+                for (int i = 0; i < 256; i++)
+                {
+                    var tempBox = new D_Box();
+                    childBox.D_Boxes.Add(tempBox);
+                    childBox = tempBox;
+                }
+
+                using (var binaryBox = parentBox.Export(_bufferManager))
+                {
+                    Box.Import(binaryBox, _bufferManager);
+                }
+            }
+
+            {
+                var parentBox = new D_Box();
+                var childBox = parentBox;
+
+                for (int i = 0; i < 256 + 1; i++)
+                {
+                    var tempBox = new D_Box();
+                    childBox.D_Boxes.Add(tempBox);
+                    childBox = tempBox;
+                }
+
+                Assert.Throws<ArgumentException>(() =>
+                {
+                    using (var binaryBox = parentBox.Export(_bufferManager))
+                    {
+                        Box.Import(binaryBox, _bufferManager);
+                    }
+                });
+            }
         }
 
         [Test]

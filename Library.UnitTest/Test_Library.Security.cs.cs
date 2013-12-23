@@ -13,10 +13,12 @@ namespace Library.UnitTest
             {
                 DigitalSignature sigunature = new DigitalSignature("123", a);
 
-                var streamSigunature = DigitalSignatureConverter.ToDigitalSignatureStream(sigunature);
-                var sigunature2 = DigitalSignatureConverter.FromDigitalSignatureStream(streamSigunature);
+                using (var streamSigunature = DigitalSignatureConverter.ToDigitalSignatureStream(sigunature))
+                {
+                    var sigunature2 = DigitalSignatureConverter.FromDigitalSignatureStream(streamSigunature);
 
-                Assert.AreEqual(sigunature, sigunature2, "AmoebaConverter #4");
+                    Assert.AreEqual(sigunature, sigunature2, "AmoebaConverter #4");
+                }
             }
         }
     }

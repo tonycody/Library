@@ -18,7 +18,7 @@ namespace Library.Collections
 
         public LockedDictionary(int capacity)
         {
-            _dic = new Dictionary<TKey, TValue>(capacity);
+            _dic = new Dictionary<TKey, TValue>();
             _capacity = capacity;
         }
 
@@ -39,7 +39,7 @@ namespace Library.Collections
 
         public LockedDictionary(int capacity, IEqualityComparer<TKey> comparer)
         {
-            _dic = new Dictionary<TKey, TValue>(capacity, comparer);
+            _dic = new Dictionary<TKey, TValue>(comparer);
             _capacity = capacity;
         }
 
