@@ -1,5 +1,4 @@
-﻿using System.Runtime.Serialization;
-using System.Text;
+using System.Runtime.Serialization;
 using System.Xml;
 using Library.Io;
 

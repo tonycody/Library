@@ -1,4 +1,4 @@
-﻿namespace: Library.Net.Connections
+namespace: Library.Net.Connections
 License: New BSD License
 
 Files: KeyDerivation/ANSI_X963_KDF.cs, KeyDerivation/KeyDerivationFunction.cs

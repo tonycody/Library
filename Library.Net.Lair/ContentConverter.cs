@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -335,8 +335,8 @@ namespace Library.Net.Lair
                             dataStream.Read(iv, 0, iv.Length);
 
                             using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                            using (var inStream = new RangeStream(dataStream, 0, dataStream.Length - 64))
-                            using (CryptoStream cs = new CryptoStream(dataStream, rijndael.CreateDecryptor(cryptoKey, iv), CryptoStreamMode.Read))
+                            using (var inStream = new RangeStream(dataStream, dataStream.Position, dataStream.Length - dataStream.Position))
+                            using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey, iv), CryptoStreamMode.Read))
                             {
                                 byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
@@ -511,9 +511,11 @@ namespace Library.Net.Lair
                 BufferStream headerStream = new BufferStream(_bufferManager);
                 headerStream.WriteByte((byte)ConvertHashAlgorithm.Sha512);
 
-                BufferStream hashStream = new BufferStream(_bufferManager);
+                stream.Seek(0, SeekOrigin.Begin);
                 var hash = Sha512.ComputeHash(stream);
-                headerStream.Write(hash, 0, hash.Length);
+
+                BufferStream hashStream = new BufferStream(_bufferManager);
+                hashStream.Write(hash, 0, hash.Length);
 
                 return new JoinStream(headerStream, new WrapperStream(stream, true), hashStream);
             }
@@ -532,17 +534,33 @@ namespace Library.Net.Lair
 
             if (type == (byte)ConvertHashAlgorithm.Sha512)
             {
-                var dataStream = new RangeStream(stream, 0, stream.Length - 64);
+                Stream dataStream = null;
 
-                using (RangeStream hashStream = new RangeStream(stream, stream.Length - 64, stream.Length))
+                try
                 {
                     byte[] hash = new byte[64];
-                    hashStream.Read(hash, 0, hash.Length);
 
+                    using (RangeStream hashStream = new RangeStream(stream, stream.Length - 64, 64, true))
+                    {
+                        hashStream.Read(hash, 0, hash.Length);
+                    }
+
+                    dataStream = new RangeStream(stream, 1, stream.Length - (1 + 64));
                     if (!Unsafe.Equals(hash, Sha512.ComputeHash(dataStream))) throw new FormatException();
-                }
 
-                dataStream.Seek(0, SeekOrigin.Begin);
+                    dataStream.Seek(0, SeekOrigin.Begin);
+
+                    return dataStream;
+                }
+                catch (Exception)
+                {
+                    if (dataStream != null)
+                    {
+                        dataStream.Dispose();
+                    }
+
+                    throw;
+                }
             }
 
             throw new NotSupportedException();
@@ -595,7 +613,7 @@ namespace Library.Net.Lair
             using (Stream compressStream = ContentConverter.Compress(contentStream))
             using (Stream paddingStream = ContentConverter.AddPadding(compressStream, 1024 * 32))
             using (Stream hashStream = ContentConverter.AddHash(paddingStream))
-            using (Stream cryptostream = ContentConverter.Encrypt(paddingStream, publicKey))
+            using (Stream cryptostream = ContentConverter.Encrypt(hashStream, publicKey))
             using (Stream typeStream = ContentConverter.AddType(cryptostream, "SectionMessage"))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);

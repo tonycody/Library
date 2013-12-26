@@ -1,4 +1,4 @@
-﻿namespace: Library.Correction
+namespace: Library.Correction
 License: New BSD License
 
 File: ReedSolomon.cs

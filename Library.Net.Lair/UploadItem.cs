@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+using System;
+using System.Runtime.Serialization;
 using Library.Security;
 
 namespace Library.Net.Lair
@@ -12,6 +13,7 @@ namespace Library.Net.Lair
         private Wiki _wiki;
         private Chat _chat;
 
+        private DateTime _creationTime;
         private DigitalSignature _digitalSignature;
         private ExchangePublicKey _exchangePublicKey;
 
@@ -63,6 +65,7 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "Section")]
         public Section Section
         {
             get
@@ -81,6 +84,7 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "Wiki")]
         public Wiki Wiki
         {
             get
@@ -99,6 +103,7 @@ namespace Library.Net.Lair
             }
         }
 
+        [DataMember(Name = "Chat")]
         public Chat Chat
         {
             get
@@ -113,6 +118,25 @@ namespace Library.Net.Lair
                 lock (this.ThisLock)
                 {
                     _chat = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "CreationTime")]
+        public DateTime CreationTime
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _creationTime;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _creationTime = value;
                 }
             }
         }

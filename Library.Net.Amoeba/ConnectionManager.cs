@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.Serialization;
@@ -9,7 +10,6 @@ using System.Xml;
 using Library.Io;
 using Library.Net.Connections;
 using Library.Security;
-using System.Collections.ObjectModel;
 
 namespace Library.Net.Amoeba
 {

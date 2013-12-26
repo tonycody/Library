@@ -1,4 +1,4 @@
-﻿using Library.Security;
+using Library.Security;
 
 namespace Library.Net.Amoeba
 {

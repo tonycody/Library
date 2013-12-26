@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
-using System.Text;
 using System.Xml;
 using Library.Io;
 using Library.Security;

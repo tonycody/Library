@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
@@ -29,10 +29,10 @@ namespace Library.Net.Lair
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public ChatMessageHeader(Chat tag, Key key, DigitalSignature digitalSignature)
+        public ChatMessageHeader(Chat tag, DateTime creationTime, Key key, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
-            this.CreationTime = DateTime.UtcNow;
+            this.CreationTime = creationTime;
             this.Key = key;
 
             this.CreateCertificate(digitalSignature);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -130,32 +130,32 @@ namespace Library.Net.Lair
 
                                 if (item.Type == "SectionProfile")
                                 {
-                                    var header = new SectionProfileHeader(item.Section, key, item.DigitalSignature);
+                                    var header = new SectionProfileHeader(item.Section, item.CreationTime, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
                                 else if (item.Type == "SectionMessage")
                                 {
-                                    var header = new SectionMessageHeader(item.Section, key, item.DigitalSignature);
+                                    var header = new SectionMessageHeader(item.Section, item.CreationTime, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
                                 else if (item.Type == "WikiDocument")
                                 {
-                                    var header = new WikiPageHeader(item.Wiki, key, item.DigitalSignature);
+                                    var header = new WikiPageHeader(item.Wiki, item.CreationTime, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
                                 else if (item.Type == "WikiVote")
                                 {
-                                    var header = new WikiVoteHeader(item.Wiki, key, item.DigitalSignature);
+                                    var header = new WikiVoteHeader(item.Wiki, item.CreationTime, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
                                 else if (item.Type == "ChatTopic")
                                 {
-                                    var header = new ChatTopicHeader(item.Chat, key, item.DigitalSignature);
+                                    var header = new ChatTopicHeader(item.Chat, item.CreationTime, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
                                 else if (item.Type == "ChatMessage")
                                 {
-                                    var header = new ChatMessageHeader(item.Chat, key, item.DigitalSignature);
+                                    var header = new ChatMessageHeader(item.Chat, item.CreationTime, key, item.DigitalSignature);
                                     _connectionsManager.Upload(header);
                                 }
                             }
@@ -176,7 +176,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void Upload(Section tag,
+        public SectionProfile Upload(Section tag,
             SectionProfileContent content,
             DigitalSignature digitalSignature)
         {
@@ -185,14 +185,24 @@ namespace Library.Net.Lair
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "SectionProfile";
                 uploadItem.Section = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.SectionProfileContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return new SectionProfile(uploadItem.Section,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Comment,
+                    content.ExchangePublicKey,
+                    content.TrustSignatures,
+                    content.Wikis,
+                    content.Chats);
             }
         }
 
-        public void Upload(Section tag,
+        public SectionMessage Upload(Section tag,
             SectionMessageContent content,
             ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
@@ -202,15 +212,22 @@ namespace Library.Net.Lair
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "SectionMessage";
                 uploadItem.Section = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.SectionMessageContent = content;
                 uploadItem.ExchangePublicKey = exchangePublicKey;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return new SectionMessage(uploadItem.Section,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Comment,
+                    content.Anchor);
             }
         }
 
-        public void Upload(Wiki tag,
+        public WikiPage Upload(Wiki tag,
             WikiPageContent content,
             DigitalSignature digitalSignature)
         {
@@ -219,14 +236,21 @@ namespace Library.Net.Lair
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "WikiDocument";
                 uploadItem.Wiki = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.WikiPageContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return new WikiPage(uploadItem.Wiki,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.FormatType,
+                    content.Hypertext);
             }
         }
 
-        public void Upload(Wiki tag,
+        public WikiVote Upload(Wiki tag,
             WikiVoteContent content,
             DigitalSignature digitalSignature)
         {
@@ -235,14 +259,21 @@ namespace Library.Net.Lair
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "WikiVote";
                 uploadItem.Wiki = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.WikiVoteContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return new WikiVote(uploadItem.Wiki,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Goods,
+                    content.Bads);
             }
         }
 
-        public void Upload(Chat tag,
+        public ChatTopic Upload(Chat tag,
             ChatTopicContent content,
             DigitalSignature digitalSignature)
         {
@@ -251,14 +282,21 @@ namespace Library.Net.Lair
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "ChatTopic";
                 uploadItem.Chat = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.ChatTopicContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return new ChatTopic(uploadItem.Chat,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.FormatType,
+                    content.Hypertext);
             }
         }
 
-        public void Upload(Chat tag,
+        public ChatMessage Upload(Chat tag,
             ChatMessageContent content,
             DigitalSignature digitalSignature)
         {
@@ -267,10 +305,17 @@ namespace Library.Net.Lair
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "ChatMessage";
                 uploadItem.Chat = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.ChatMessageContent = content;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return new ChatMessage(uploadItem.Chat,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Comment,
+                    content.Anchors);
             }
         }
 

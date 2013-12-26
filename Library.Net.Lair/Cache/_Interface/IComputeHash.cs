@@ -1,4 +1,4 @@
-﻿
+
 namespace Library.Net.Lair
 {
     public interface IComputeHash

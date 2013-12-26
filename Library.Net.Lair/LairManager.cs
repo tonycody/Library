@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Library.Security;
@@ -482,7 +482,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public void UploadSectionProfile(Section tag,
+        public SectionProfile UploadSectionProfile(Section tag,
             string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats,
             DigitalSignature digitalSignature)
         {
@@ -491,11 +491,11 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, new SectionProfileContent(comment, exchangePublicKey, trustSignatures, wikis, chats), digitalSignature);
+                return _uploadManager.Upload(tag, new SectionProfileContent(comment, exchangePublicKey, trustSignatures, wikis, chats), digitalSignature);
             }
         }
 
-        public void UploadSectionMessage(Section tag,
+        public SectionMessage UploadSectionMessage(Section tag,
             string comment, Anchor anchor,
             ExchangePublicKey exchangePublicKey,
             DigitalSignature digitalSignature)
@@ -505,11 +505,11 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, new SectionMessageContent(comment, anchor), exchangePublicKey, digitalSignature);
+                return _uploadManager.Upload(tag, new SectionMessageContent(comment, anchor), exchangePublicKey, digitalSignature);
             }
         }
 
-        public void UploadWikiPage(Wiki tag,
+        public WikiPage UploadWikiPage(Wiki tag,
             HypertextFormatType formatType, string hypertext,
             DigitalSignature digitalSignature)
         {
@@ -518,11 +518,11 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, new WikiPageContent(formatType, hypertext), digitalSignature);
+                return _uploadManager.Upload(tag, new WikiPageContent(formatType, hypertext), digitalSignature);
             }
         }
 
-        public void UploadWikiVote(Wiki tag,
+        public WikiVote UploadWikiVote(Wiki tag,
             IEnumerable<Anchor> goods, IEnumerable<Anchor> bads,
             DigitalSignature digitalSignature)
         {
@@ -531,11 +531,11 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, new WikiVoteContent(goods, bads), digitalSignature);
+                return _uploadManager.Upload(tag, new WikiVoteContent(goods, bads), digitalSignature);
             }
         }
 
-        public void UploadChatTopic(Chat tag,
+        public ChatTopic UploadChatTopic(Chat tag,
             HypertextFormatType formatType, string hypertext,
             DigitalSignature digitalSignature)
         {
@@ -544,11 +544,11 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, new ChatTopicContent(formatType, hypertext), digitalSignature);
+                return _uploadManager.Upload(tag, new ChatTopicContent(formatType, hypertext), digitalSignature);
             }
         }
 
-        public void UploadChatMessage(Chat tag,
+        public ChatMessage UploadChatMessage(Chat tag,
             string comment, IEnumerable<Anchor> anchors,
             DigitalSignature digitalSignature)
         {
@@ -557,7 +557,7 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, new ChatMessageContent(comment, anchors), digitalSignature);
+                return _uploadManager.Upload(tag, new ChatMessageContent(comment, anchors), digitalSignature);
             }
         }
 

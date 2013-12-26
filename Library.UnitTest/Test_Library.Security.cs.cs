@@ -1,4 +1,4 @@
-﻿using Library.Security;
+using Library.Security;
 using NUnit.Framework;
 
 namespace Library.UnitTest

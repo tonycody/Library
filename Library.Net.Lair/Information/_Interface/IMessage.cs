@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 
 namespace Library.Net.Lair
 {
-    public interface IMessage<TTag>
+    public interface IMessage<out TTag>
         where TTag : ITag
     {
         TTag Tag { get; }

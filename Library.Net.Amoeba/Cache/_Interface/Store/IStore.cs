@@ -1,4 +1,4 @@
-﻿
+
 namespace Library.Net.Amoeba
 {
    public interface IStore

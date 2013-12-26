@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Library.Net.Amoeba;
 using Library.Security;
 using NUnit.Framework;

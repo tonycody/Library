@@ -1,4 +1,4 @@
-﻿
+
 namespace Library.Security
 {
     public interface IExchangeEncrypt : IExchangeAlgorithm

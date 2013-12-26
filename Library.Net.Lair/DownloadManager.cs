@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -474,7 +474,21 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                var hash = header.GetHash(_hashAlgorithm);
+                byte[] hash;
+
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    var buffer = header.GetHash(_hashAlgorithm);
+                    memoryStream.Write(buffer, 0, buffer.Length);
+
+                    using (var stream = exchangePrivateKey.Export(_bufferManager))
+                    {
+                        var buffer2 = Sha512.ComputeHash(stream);
+                        memoryStream.Write(buffer2, 0, buffer2.Length);
+                    }
+
+                    hash = memoryStream.ToArray();
+                }
 
                 DownloadItem item;
 
@@ -483,6 +497,7 @@ namespace Library.Net.Lair
                     item = new DownloadItem();
                     item.Type = "SectionMessage";
                     item.Key = header.Key;
+                    item.ExchangePrivateKey = exchangePrivateKey;
 
                     _downloadItems.Add(hash, item);
                 }

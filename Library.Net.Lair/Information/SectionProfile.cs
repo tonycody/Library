@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -31,14 +31,14 @@ namespace Library.Net.Lair
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        internal SectionProfile(Section tag, string signature, DateTime creationTime, string comment, ExchangePublicKey publicKey, IEnumerable<string> trustSignatures,
+        internal SectionProfile(Section tag, string signature, DateTime creationTime, string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures,
             IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             this.Tag = tag;
             this.Signature = signature;
             this.CreationTime = creationTime;
             this.Comment = comment;
-            this.ExchangePublicKey = publicKey;
+            this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
             if (wikis != null) this.ProtectedWikis.AddRange(wikis);
             if (chats != null) this.ProtectedChats.AddRange(chats);

@@ -1,4 +1,4 @@
-﻿namespace: Library.Net.Proxy
+namespace: Library.Net.Proxy
 License: New BSD License
 
 Files: ProxyClientBase.cs, HttpProxyClient.cs, Socks4ProxyClient.cs, Socks4aProxyClient.cs, Socks5ProxyClient.cs

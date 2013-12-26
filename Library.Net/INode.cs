@@ -1,4 +1,4 @@
-﻿namespace Library.Net
+namespace Library.Net
 {
     /// <summary>
     /// ノードに関する情報を表します
