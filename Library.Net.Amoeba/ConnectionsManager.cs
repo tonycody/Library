@@ -1274,9 +1274,9 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                var requestNodes = this.GetSearchNode(item.Hash, 1).ToList();
+                                var requestNodes = this.GetSearchNode(item.Hash, 2).ToList();
 
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < 2 && i < requestNodes.Count; i++)
                                 {
                                     if (!_messagesManager[requestNodes[i]].PullBlocksLink.Contains(item))
                                     {
@@ -1331,9 +1331,9 @@ namespace Library.Net.Amoeba
                                     .ToList();
 
                                 if (requestNodes.Count == 0)
-                                    requestNodes.AddRange(this.GetSearchNode(item.Hash, 1));
+                                    requestNodes.AddRange(this.GetSearchNode(item.Hash, 2));
 
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < 2 && i < requestNodes.Count; i++)
                                 {
                                     if (!_messagesManager[requestNodes[i]].PullBlocksRequest.Contains(item))
                                     {
@@ -1507,7 +1507,7 @@ namespace Library.Net.Amoeba
 
                 for (; ; )
                 {
-                    Thread.Sleep(1000);
+                    Thread.Sleep(300);
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
 

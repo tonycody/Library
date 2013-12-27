@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -105,13 +105,13 @@
     <Compile Include="Cache\AnchorCollection.cs" />
     <Compile Include="Cache\Header\Chat\ChatMessageHeader.cs" />
     <Compile Include="Cache\Header\Section\SectionProfileHeader.cs" />
-    <Compile Include="Cache\Header\Archive\WikiPageHeader.cs" />
+    <Compile Include="Cache\Header\Wiki\WikiPageHeader.cs" />
     <Compile Include="Cache\Header\Chat\Chat.cs" />
     <Compile Include="Cache\Header\Chat\ChatCollection.cs" />
     <Compile Include="Cache\Header\Chat\ChatTopicHeader.cs" />
-    <Compile Include="Cache\Header\Archive\Wiki.cs" />
-    <Compile Include="Cache\Header\Archive\WikiCollection.cs" />
-    <Compile Include="Cache\Header\Archive\WikiVoteHeader.cs" />
+    <Compile Include="Cache\Header\Wiki\Wiki.cs" />
+    <Compile Include="Cache\Header\Wiki\WikiCollection.cs" />
+    <Compile Include="Cache\Header\Wiki\WikiVoteHeader.cs" />
     <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
     <Compile Include="Cache\LairConverter.cs" />
     <Compile Include="Cache\Header\Section\SectionCollection.cs" />
