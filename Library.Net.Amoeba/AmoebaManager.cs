@@ -481,17 +481,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void CheckSeeds()
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new AmoebaManagerException("AmoebaManager is not loaded.");
-
-            lock (this.ThisLock)
-            {
-                _cacheManager.CheckSeeds();
-            }
-        }
-
         public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);

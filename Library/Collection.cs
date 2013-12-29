@@ -138,7 +138,7 @@ namespace Library
 
             int c = 0;
 
-            for (int i = source.Count - 1; i >= 0; i--)
+            for (int i = 0; i < source.Count; i++)
             {
                 if ((c = comparer.Compare(source[i], destination[i])) != 0) return c;
             }

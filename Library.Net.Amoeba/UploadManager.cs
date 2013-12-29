@@ -242,7 +242,7 @@ namespace Library.Net.Amoeba
         {
             for (; ; )
             {
-                Thread.Sleep(1000 * 1);
+                Thread.Sleep(1000 * 3);
                 if (this.EncodeState == ManagerState.Stop) return;
 
                 UploadItem item = null;

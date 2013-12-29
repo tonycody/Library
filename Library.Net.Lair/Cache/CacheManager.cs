@@ -205,11 +205,11 @@ namespace Library.Net.Lair
                 this.CheckSpace(clusterCount);
                 if (clusterCount <= _spaceClusters.Count) return;
 
-                var usingHeaders = new HashSet<Key>();
-                usingHeaders.UnionWith(_lockedKeys.Keys);
+                var usingKeys = new HashSet<Key>();
+                usingKeys.UnionWith(_lockedKeys.Keys);
 
                 var removeKeys = _settings.ClustersIndex.Keys
-                    .Where(n => !usingHeaders.Contains(n))
+                    .Where(n => !usingKeys.Contains(n))
                     .ToList();
 
                 removeKeys.Sort((x, y) =>

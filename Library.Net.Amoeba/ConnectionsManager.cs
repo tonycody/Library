@@ -413,14 +413,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private double BlockPriority(Node node)
-        {
-            lock (this.ThisLock)
-            {
-                return _messagesManager[node].Priority + 128;
-            }
-        }
-
         private double ResponseTimePriority(Node node)
         {
             lock (this.ThisLock)
@@ -788,9 +780,7 @@ namespace Library.Net.Amoeba
                 try
                 {
                     HashSet<string> uris = new HashSet<string>();
-                    uris.UnionWith(node.Uris
-                        .Take(12)
-                        .Randomize());
+                    uris.UnionWith(node.Uris.Take(12));
 
                     if (uris.Count == 0)
                     {
@@ -1274,9 +1264,9 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                var requestNodes = this.GetSearchNode(item.Hash, 2).ToList();
+                                var requestNodes = this.GetSearchNode(item.Hash, 1).ToList();
 
-                                for (int i = 0; i < 2 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
                                     if (!_messagesManager[requestNodes[i]].PullBlocksLink.Contains(item))
                                     {
@@ -1774,7 +1764,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (messageManager.Priority > -128 && (_random.Next(0, 256 + 1) <= this.BlockPriority(connectionManager.Node)))
+                    if (messageManager.Priority > -128 && (_random.Next(0, 256 + 1) <= messageManager.Priority + 128))
                     {
                         // PushBlock
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)

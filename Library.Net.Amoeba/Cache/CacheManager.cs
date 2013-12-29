@@ -275,13 +275,15 @@ namespace Library.Net.Amoeba
 
                 Random random = new Random();
 
-                var keys = new HashSet<Key>();
+                var cachedkeys = new HashSet<Key>();
 
-                keys.UnionWith(_settings.ClustersIndex.Keys);
-
-                foreach (var item in _settings.ShareIndex)
                 {
-                    keys.UnionWith(item.Value.KeyAndCluster.Keys);
+                    cachedkeys.UnionWith(_settings.ClustersIndex.Keys);
+
+                    foreach (var item in _settings.ShareIndex)
+                    {
+                        cachedkeys.UnionWith(item.Value.KeyAndCluster.Keys);
+                    }
                 }
 
                 var pathList = new HashSet<string>();
@@ -298,7 +300,7 @@ namespace Library.Net.Amoeba
                         if (!(flag = pathList.Contains(info.Path))) goto Break;
                     }
 
-                    if (!(flag = keys.Contains(info.Seed.Key))) goto Break;
+                    if (!(flag = cachedkeys.Contains(info.Seed.Key))) goto Break;
 
                     foreach (var index in info.Indexes)
                     {
@@ -308,11 +310,10 @@ namespace Library.Net.Amoeba
 
                             foreach (var key in group.Keys)
                             {
-                                if (keys.Contains(key))
-                                {
-                                    count++;
-                                    if (count >= group.InformationLength) goto End;
-                                }
+                                if (!cachedkeys.Contains(key)) continue;
+
+                                count++;
+                                if (count >= group.InformationLength) goto End;
                             }
 
                             flag = false;
@@ -415,24 +416,38 @@ namespace Library.Net.Amoeba
                 this.CheckSpace(clusterCount);
                 if (clusterCount <= _spaceClusters.Count) return;
 
-                var usingHeaders = new HashSet<Key>();
-                usingHeaders.UnionWith(_lockedKeys.Keys);
+                var cachedkeys = new HashSet<Key>();
+
+                {
+                    cachedkeys.UnionWith(_settings.ClustersIndex.Keys);
+
+                    foreach (var item in _settings.ShareIndex)
+                    {
+                        cachedkeys.UnionWith(item.Value.KeyAndCluster.Keys);
+                    }
+                }
+
+                var usingKeys = new HashSet<Key>();
+                usingKeys.UnionWith(_lockedKeys.Keys);
 
                 foreach (var info in _settings.SeedInformation)
                 {
-                    usingHeaders.Add(info.Seed.Key);
+                    usingKeys.Add(info.Seed.Key);
 
                     foreach (var index in info.Indexes)
                     {
                         foreach (var group in index.Groups)
                         {
-                            usingHeaders.UnionWith(group.Keys.Take(group.InformationLength));
+                            usingKeys.UnionWith(group.Keys
+                                .Where(n => cachedkeys.Contains(n))
+                                .Reverse()
+                                .Take(group.InformationLength));
                         }
                     }
                 }
 
                 var removeKeys = _settings.ClustersIndex.Keys
-                    .Where(n => !usingHeaders.Contains(n))
+                    .Where(n => !usingKeys.Contains(n))
                     .ToList();
 
                 removeKeys.Sort((x, y) =>
