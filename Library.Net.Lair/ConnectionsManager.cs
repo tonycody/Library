@@ -2062,6 +2062,8 @@ namespace Library.Net.Lair
                 Stopwatch nodeUpdateTime = new Stopwatch();
                 Stopwatch updateTime = new Stopwatch();
                 updateTime.Start();
+                Stopwatch diffusionTime = new Stopwatch();
+                diffusionTime.Start();
                 Stopwatch headerUpdateTime = new Stopwatch();
                 headerUpdateTime.Start();
 
@@ -2318,8 +2320,10 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if ((_random.Next(0, 100) + 1) <= (int)(100 * this.ResponseTimePriority(connectionManager.Node)))
+                    if (diffusionTime.Elapsed.TotalSeconds >= 30)
                     {
+                        diffusionTime.Restart();
+
                         // PushBlock (Upload)
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
                         {
@@ -2382,7 +2386,7 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (messageManager.Priority > -128 && (_random.Next(0, 256 + 1) <= messageManager.Priority + 128))
+                    if (messageManager.Priority > -32 && (_random.Next(0, 64 + 1) <= messageManager.Priority + 32))
                     {
                         // PushBlock
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
