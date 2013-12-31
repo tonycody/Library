@@ -207,12 +207,12 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (!Collection.Equals(this.PublicKey, other.PublicKey)) return false;
+                if (!Unsafe.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             if (this.Signature != null && other.Signature != null)
             {
-                if (!Collection.Equals(this.Signature, other.Signature)) return false;
+                if (!Unsafe.Equals(this.Signature, other.Signature)) return false;
             }
 
             return true;

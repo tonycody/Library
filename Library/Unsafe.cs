@@ -5,15 +5,21 @@ using System.Text;
 
 namespace Library
 {
-    public class Unsafe
+    public static class Unsafe
     {
+        [Obsolete("Equals", true)]
+        public new static bool Equals(object obj1, object obj2)
+        {
+            throw new NotImplementedException();
+        }
+
         // Copyright (c) 2008-2013 Hafthor Stefansson
         // Distributed under the MIT/X11 software license
         // Ref: http://www.opensource.org/licenses/mit-license.php.
         public static unsafe bool Equals(byte[] a1, byte[] a2)
         {
             if (a1.Length != a2.Length) return false;
-
+            
             fixed (byte* p1 = a1, p2 = a2)
             {
                 byte* x1 = p1, x2 = p2;
