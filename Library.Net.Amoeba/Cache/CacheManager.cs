@@ -886,6 +886,11 @@ namespace Library.Net.Amoeba
 
             if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
+#if DEBUG
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+#endif
+
                 IList<Key> keys = new List<Key>();
 
                 try
@@ -906,6 +911,10 @@ namespace Library.Net.Amoeba
 
                     throw;
                 }
+
+#if DEBUG
+                Debug.WriteLine(string.Format("CacheManager_Encoding {0}:", sw.Elapsed.ToString()));
+#endif
 
                 return new KeyCollection(keys);
             }
@@ -1010,6 +1019,11 @@ namespace Library.Net.Amoeba
             }
             else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
+#if DEBUG
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+#endif
+
                 if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
 
                 List<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
@@ -1128,6 +1142,10 @@ namespace Library.Net.Amoeba
                     group.Length = sumLength;
                     group.Keys.AddRange(keys);
                     group.Keys.AddRange(parityHeaders);
+
+#if DEBUG
+                    Debug.WriteLine(string.Format("CacheManager_ParityEncoding {0}:", sw.Elapsed.ToString()));
+#endif
 
                     return group;
                 }

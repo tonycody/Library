@@ -115,143 +115,9 @@ namespace Library.Compression
                 _hash = new UInt32[_hashSizeSum = hs];
         }
 
-        public UInt32 GetMatches(UInt32[] distances)
+        public unsafe UInt32 GetMatches(UInt32[] distances)
         {
-            UInt32 lenLimit;
-            if (_pos + _matchMaxLen <= _streamPos)
-                lenLimit = _matchMaxLen;
-            else
-            {
-                lenLimit = _streamPos - _pos;
-                if (lenLimit < kMinMatchCheck)
-                {
-                    MovePos();
-                    return 0;
-                }
-            }
-
-            UInt32 offset = 0;
-            UInt32 matchMinPos = (_pos > _cyclicBufferSize) ? (_pos - _cyclicBufferSize) : 0;
-            UInt32 cur = _bufferOffset + _pos;
-            UInt32 maxLen = kStartMaxLen; // to avoid items for len < hashSize;
-            UInt32 hashValue, hash2Value = 0, hash3Value = 0;
-
-            if (HASH_ARRAY)
-            {
-                UInt32 temp = CRC.Table[_bufferBase[cur]] ^ _bufferBase[cur + 1];
-                hash2Value = temp & (kHash2Size - 1);
-                temp ^= ((UInt32)(_bufferBase[cur + 2]) << 8);
-                hash3Value = temp & (kHash3Size - 1);
-                hashValue = (temp ^ (CRC.Table[_bufferBase[cur + 3]] << 5)) & _hashMask;
-            }
-            else
-                hashValue = _bufferBase[cur] ^ ((UInt32)(_bufferBase[cur + 1]) << 8);
-
-            UInt32 curMatch = _hash[kFixHashSize + hashValue];
-            if (HASH_ARRAY)
-            {
-                UInt32 curMatch2 = _hash[hash2Value];
-                UInt32 curMatch3 = _hash[kHash3Offset + hash3Value];
-                _hash[hash2Value] = _pos;
-                _hash[kHash3Offset + hash3Value] = _pos;
-                if (curMatch2 > matchMinPos)
-                    if (_bufferBase[_bufferOffset + curMatch2] == _bufferBase[cur])
-                    {
-                        distances[offset++] = maxLen = 2;
-                        distances[offset++] = _pos - curMatch2 - 1;
-                    }
-                if (curMatch3 > matchMinPos)
-                    if (_bufferBase[_bufferOffset + curMatch3] == _bufferBase[cur])
-                    {
-                        if (curMatch3 == curMatch2)
-                            offset -= 2;
-                        distances[offset++] = maxLen = 3;
-                        distances[offset++] = _pos - curMatch3 - 1;
-                        curMatch2 = curMatch3;
-                    }
-                if (offset != 0 && curMatch2 == curMatch)
-                {
-                    offset -= 2;
-                    maxLen = kStartMaxLen;
-                }
-            }
-
-            _hash[kFixHashSize + hashValue] = _pos;
-
-            UInt32 ptr0 = (_cyclicBufferPos << 1) + 1;
-            UInt32 ptr1 = (_cyclicBufferPos << 1);
-
-            UInt32 len0, len1;
-            len0 = len1 = kNumHashDirectBytes;
-
-            if (kNumHashDirectBytes != 0)
-            {
-                if (curMatch > matchMinPos)
-                {
-                    if (_bufferBase[_bufferOffset + curMatch + kNumHashDirectBytes] !=
-                            _bufferBase[cur + kNumHashDirectBytes])
-                    {
-                        distances[offset++] = maxLen = kNumHashDirectBytes;
-                        distances[offset++] = _pos - curMatch - 1;
-                    }
-                }
-            }
-
-            UInt32 count = _cutValue;
-
-            while (true)
-            {
-                if (curMatch <= matchMinPos || count-- == 0)
-                {
-                    _son[ptr0] = _son[ptr1] = kEmptyHashValue;
-                    break;
-                }
-                UInt32 delta = _pos - curMatch;
-                UInt32 cyclicPos = ((delta <= _cyclicBufferPos) ?
-                            (_cyclicBufferPos - delta) :
-                            (_cyclicBufferPos - delta + _cyclicBufferSize)) << 1;
-
-                UInt32 pby1 = _bufferOffset + curMatch;
-                UInt32 len = Math.Min(len0, len1);
-                if (_bufferBase[pby1 + len] == _bufferBase[cur + len])
-                {
-                    while (++len != lenLimit)
-                        if (_bufferBase[pby1 + len] != _bufferBase[cur + len])
-                            break;
-                    if (maxLen < len)
-                    {
-                        distances[offset++] = maxLen = len;
-                        distances[offset++] = delta - 1;
-                        if (len == lenLimit)
-                        {
-                            _son[ptr1] = _son[cyclicPos];
-                            _son[ptr0] = _son[cyclicPos + 1];
-                            break;
-                        }
-                    }
-                }
-                if (_bufferBase[pby1 + len] < _bufferBase[cur + len])
-                {
-                    _son[ptr1] = curMatch;
-                    ptr1 = cyclicPos + 1;
-                    curMatch = _son[ptr1];
-                    len1 = len;
-                }
-                else
-                {
-                    _son[ptr0] = curMatch;
-                    ptr0 = cyclicPos;
-                    curMatch = _son[ptr0];
-                    len0 = len;
-                }
-            }
-            MovePos();
-            return offset;
-        }
-
-        public void Skip(UInt32 num)
-        {
-            do
+            fixed (byte* p = _bufferBase)
             {
                 UInt32 lenLimit;
                 if (_pos + _matchMaxLen <= _streamPos)
@@ -262,29 +128,56 @@ namespace Library.Compression
                     if (lenLimit < kMinMatchCheck)
                     {
                         MovePos();
-                        continue;
+                        return 0;
                     }
                 }
 
+                UInt32 offset = 0;
                 UInt32 matchMinPos = (_pos > _cyclicBufferSize) ? (_pos - _cyclicBufferSize) : 0;
                 UInt32 cur = _bufferOffset + _pos;
-
-                UInt32 hashValue;
+                UInt32 maxLen = kStartMaxLen; // to avoid items for len < hashSize;
+                UInt32 hashValue, hash2Value = 0, hash3Value = 0;
 
                 if (HASH_ARRAY)
                 {
-                    UInt32 temp = CRC.Table[_bufferBase[cur]] ^ _bufferBase[cur + 1];
-                    UInt32 hash2Value = temp & (kHash2Size - 1);
-                    _hash[hash2Value] = _pos;
-                    temp ^= ((UInt32)(_bufferBase[cur + 2]) << 8);
-                    UInt32 hash3Value = temp & (kHash3Size - 1);
-                    _hash[kHash3Offset + hash3Value] = _pos;
-                    hashValue = (temp ^ (CRC.Table[_bufferBase[cur + 3]] << 5)) & _hashMask;
+                    UInt32 temp = CRC.Table[p[cur]] ^ p[cur + 1];
+                    hash2Value = temp & (kHash2Size - 1);
+                    temp ^= ((UInt32)(p[cur + 2]) << 8);
+                    hash3Value = temp & (kHash3Size - 1);
+                    hashValue = (temp ^ (CRC.Table[p[cur + 3]] << 5)) & _hashMask;
                 }
                 else
-                    hashValue = _bufferBase[cur] ^ ((UInt32)(_bufferBase[cur + 1]) << 8);
+                    hashValue = p[cur] ^ ((UInt32)(p[cur + 1]) << 8);
 
                 UInt32 curMatch = _hash[kFixHashSize + hashValue];
+                if (HASH_ARRAY)
+                {
+                    UInt32 curMatch2 = _hash[hash2Value];
+                    UInt32 curMatch3 = _hash[kHash3Offset + hash3Value];
+                    _hash[hash2Value] = _pos;
+                    _hash[kHash3Offset + hash3Value] = _pos;
+                    if (curMatch2 > matchMinPos)
+                        if (p[_bufferOffset + curMatch2] == p[cur])
+                        {
+                            distances[offset++] = maxLen = 2;
+                            distances[offset++] = _pos - curMatch2 - 1;
+                        }
+                    if (curMatch3 > matchMinPos)
+                        if (p[_bufferOffset + curMatch3] == p[cur])
+                        {
+                            if (curMatch3 == curMatch2)
+                                offset -= 2;
+                            distances[offset++] = maxLen = 3;
+                            distances[offset++] = _pos - curMatch3 - 1;
+                            curMatch2 = curMatch3;
+                        }
+                    if (offset != 0 && curMatch2 == curMatch)
+                    {
+                        offset -= 2;
+                        maxLen = kStartMaxLen;
+                    }
+                }
+
                 _hash[kFixHashSize + hashValue] = _pos;
 
                 UInt32 ptr0 = (_cyclicBufferPos << 1) + 1;
@@ -293,7 +186,21 @@ namespace Library.Compression
                 UInt32 len0, len1;
                 len0 = len1 = kNumHashDirectBytes;
 
+                if (kNumHashDirectBytes != 0)
+                {
+                    if (curMatch > matchMinPos)
+                    {
+                        if (p[_bufferOffset + curMatch + kNumHashDirectBytes] !=
+                                p[cur + kNumHashDirectBytes])
+                        {
+                            distances[offset++] = maxLen = kNumHashDirectBytes;
+                            distances[offset++] = _pos - curMatch - 1;
+                        }
+                    }
+                }
+
                 UInt32 count = _cutValue;
+
                 while (true)
                 {
                     if (curMatch <= matchMinPos || count-- == 0)
@@ -301,7 +208,6 @@ namespace Library.Compression
                         _son[ptr0] = _son[ptr1] = kEmptyHashValue;
                         break;
                     }
-
                     UInt32 delta = _pos - curMatch;
                     UInt32 cyclicPos = ((delta <= _cyclicBufferPos) ?
                                 (_cyclicBufferPos - delta) :
@@ -309,19 +215,25 @@ namespace Library.Compression
 
                     UInt32 pby1 = _bufferOffset + curMatch;
                     UInt32 len = Math.Min(len0, len1);
-                    if (_bufferBase[pby1 + len] == _bufferBase[cur + len])
+                    if (p[pby1 + len] == p[cur + len])
                     {
                         while (++len != lenLimit)
-                            if (_bufferBase[pby1 + len] != _bufferBase[cur + len])
+                            if (p[pby1 + len] != p[cur + len])
                                 break;
-                        if (len == lenLimit)
+
+                        if (maxLen < len)
                         {
-                            _son[ptr1] = _son[cyclicPos];
-                            _son[ptr0] = _son[cyclicPos + 1];
-                            break;
+                            distances[offset++] = maxLen = len;
+                            distances[offset++] = delta - 1;
+                            if (len == lenLimit)
+                            {
+                                _son[ptr1] = _son[cyclicPos];
+                                _son[ptr0] = _son[cyclicPos + 1];
+                                break;
+                            }
                         }
                     }
-                    if (_bufferBase[pby1 + len] < _bufferBase[cur + len])
+                    if (p[pby1 + len] < p[cur + len])
                     {
                         _son[ptr1] = curMatch;
                         ptr1 = cyclicPos + 1;
@@ -337,8 +249,103 @@ namespace Library.Compression
                     }
                 }
                 MovePos();
+                return offset;
             }
-            while (--num != 0);
+        }
+
+        public unsafe void Skip(UInt32 num)
+        {
+            fixed (byte* p = _bufferBase)
+            {
+                do
+                {
+                    UInt32 lenLimit;
+                    if (_pos + _matchMaxLen <= _streamPos)
+                        lenLimit = _matchMaxLen;
+                    else
+                    {
+                        lenLimit = _streamPos - _pos;
+                        if (lenLimit < kMinMatchCheck)
+                        {
+                            MovePos();
+                            continue;
+                        }
+                    }
+
+                    UInt32 matchMinPos = (_pos > _cyclicBufferSize) ? (_pos - _cyclicBufferSize) : 0;
+                    UInt32 cur = _bufferOffset + _pos;
+
+                    UInt32 hashValue;
+
+                    if (HASH_ARRAY)
+                    {
+                        UInt32 temp = CRC.Table[p[cur]] ^ p[cur + 1];
+                        UInt32 hash2Value = temp & (kHash2Size - 1);
+                        _hash[hash2Value] = _pos;
+                        temp ^= ((UInt32)(p[cur + 2]) << 8);
+                        UInt32 hash3Value = temp & (kHash3Size - 1);
+                        _hash[kHash3Offset + hash3Value] = _pos;
+                        hashValue = (temp ^ (CRC.Table[p[cur + 3]] << 5)) & _hashMask;
+                    }
+                    else
+                        hashValue = p[cur] ^ ((UInt32)(p[cur + 1]) << 8);
+
+                    UInt32 curMatch = _hash[kFixHashSize + hashValue];
+                    _hash[kFixHashSize + hashValue] = _pos;
+
+                    UInt32 ptr0 = (_cyclicBufferPos << 1) + 1;
+                    UInt32 ptr1 = (_cyclicBufferPos << 1);
+
+                    UInt32 len0, len1;
+                    len0 = len1 = kNumHashDirectBytes;
+
+                    UInt32 count = _cutValue;
+                    while (true)
+                    {
+                        if (curMatch <= matchMinPos || count-- == 0)
+                        {
+                            _son[ptr0] = _son[ptr1] = kEmptyHashValue;
+                            break;
+                        }
+
+                        UInt32 delta = _pos - curMatch;
+                        UInt32 cyclicPos = ((delta <= _cyclicBufferPos) ?
+                                    (_cyclicBufferPos - delta) :
+                                    (_cyclicBufferPos - delta + _cyclicBufferSize)) << 1;
+
+                        UInt32 pby1 = _bufferOffset + curMatch;
+                        UInt32 len = Math.Min(len0, len1);
+                        if (p[pby1 + len] == p[cur + len])
+                        {
+                            while (++len != lenLimit)
+                                if (p[pby1 + len] != p[cur + len])
+                                    break;
+                            if (len == lenLimit)
+                            {
+                                _son[ptr1] = _son[cyclicPos];
+                                _son[ptr0] = _son[cyclicPos + 1];
+                                break;
+                            }
+                        }
+                        if (p[pby1 + len] < p[cur + len])
+                        {
+                            _son[ptr1] = curMatch;
+                            ptr1 = cyclicPos + 1;
+                            curMatch = _son[ptr1];
+                            len1 = len;
+                        }
+                        else
+                        {
+                            _son[ptr0] = curMatch;
+                            ptr0 = cyclicPos;
+                            curMatch = _son[ptr0];
+                            len0 = len;
+                        }
+                    }
+                    MovePos();
+                }
+                while (--num != 0);
+            }
         }
 
         void NormalizeLinks(UInt32[] items, UInt32 numItems, UInt32 subValue)

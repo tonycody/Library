@@ -219,8 +219,8 @@ namespace Library.Correction
 
         private class Math
         {
-            private int _gfBits;
-            private int _gfSize;
+            private volatile int _gfBits;
+            private volatile int _gfSize;
 
             /**
              * Primitive polynomials - see Lin & Costello, Appendix A,
@@ -256,11 +256,11 @@ namespace Library.Correction
              */
 
             // index->poly form conversion table
-            private byte[] _gf_exp;
+            private volatile byte[] _gf_exp;
             // Poly->index form conversion table
-            private int[] _gf_log;
+            private volatile int[] _gf_log;
             // inverse of field elem.
-            private byte[] _inverse;
+            private volatile byte[] _inverse;
 
             /**
              * gf_mul(x,y) multiplies two numbers. If gfBits&lt;=8, it is much
@@ -272,7 +272,7 @@ namespace Library.Correction
              * A value related to the multiplication is held in a local variable
              * declared with USE_GF_MULC . See usage in addMul1().
              */
-            private byte[][] _gf_mul_table;
+            private volatile byte[][] _gf_mul_table;
 
             public Math()
                 : this(8)
@@ -445,7 +445,7 @@ namespace Library.Correction
                     return;
                 }
 
-                int unroll = 16; // unroll the loop 16 times.
+                int unroll = 32; // unroll the loop 32 times.
                 int i = dstPos;
                 int j = srcPos;
                 int lim = dstPos + len;
@@ -458,34 +458,106 @@ namespace Library.Correction
                     // be used many times.
                     byte[] gf_mulc = _gf_mul_table[c];
 
-                    // Not sure if loop unrolling has any real benefit in Java, but 
-                    // what the hey.
-                    for (; i < lim && (lim - i) > unroll; i += unroll, j += unroll)
-                    {
-                        // dst ^= gf_mulc[x] is equal to mult then add (xor == add)
+                    //{   
+                    //    // Not sure if loop unrolling has any real benefit in Java, but 
+                    //    // what the hey.
+                    //    for (; i < lim && (lim - i) > unroll; i += unroll, j += unroll)
+                    //    {
+                    //        // dst ^= gf_mulc[x] is equal to mult then add (xor == add)
 
-                        dst[i] ^= gf_mulc[src[j]];
-                        dst[i + 1] ^= gf_mulc[src[j + 1]];
-                        dst[i + 2] ^= gf_mulc[src[j + 2]];
-                        dst[i + 3] ^= gf_mulc[src[j + 3]];
-                        dst[i + 4] ^= gf_mulc[src[j + 4]];
-                        dst[i + 5] ^= gf_mulc[src[j + 5]];
-                        dst[i + 6] ^= gf_mulc[src[j + 6]];
-                        dst[i + 7] ^= gf_mulc[src[j + 7]];
-                        dst[i + 8] ^= gf_mulc[src[j + 8]];
-                        dst[i + 9] ^= gf_mulc[src[j + 9]];
-                        dst[i + 10] ^= gf_mulc[src[j + 10]];
-                        dst[i + 11] ^= gf_mulc[src[j + 11]];
-                        dst[i + 12] ^= gf_mulc[src[j + 12]];
-                        dst[i + 13] ^= gf_mulc[src[j + 13]];
-                        dst[i + 14] ^= gf_mulc[src[j + 14]];
-                        dst[i + 15] ^= gf_mulc[src[j + 15]];
-                    }
+                    //        dst[i] ^= gf_mulc[src[j]];
+                    //        dst[i + 1] ^= gf_mulc[src[j + 1]];
+                    //        dst[i + 2] ^= gf_mulc[src[j + 2]];
+                    //        dst[i + 3] ^= gf_mulc[src[j + 3]];
+                    //        dst[i + 4] ^= gf_mulc[src[j + 4]];
+                    //        dst[i + 5] ^= gf_mulc[src[j + 5]];
+                    //        dst[i + 6] ^= gf_mulc[src[j + 6]];
+                    //        dst[i + 7] ^= gf_mulc[src[j + 7]];
+                    //        dst[i + 8] ^= gf_mulc[src[j + 8]];
+                    //        dst[i + 9] ^= gf_mulc[src[j + 9]];
+                    //        dst[i + 10] ^= gf_mulc[src[j + 10]];
+                    //        dst[i + 11] ^= gf_mulc[src[j + 11]];
+                    //        dst[i + 12] ^= gf_mulc[src[j + 12]];
+                    //        dst[i + 13] ^= gf_mulc[src[j + 13]];
+                    //        dst[i + 14] ^= gf_mulc[src[j + 14]];
+                    //        dst[i + 15] ^= gf_mulc[src[j + 15]];
+                    //        dst[i + 16] ^= gf_mulc[src[j + 16]];
+                    //        dst[i + 17] ^= gf_mulc[src[j + 17]];
+                    //        dst[i + 18] ^= gf_mulc[src[j + 18]];
+                    //        dst[i + 19] ^= gf_mulc[src[j + 19]];
+                    //        dst[i + 20] ^= gf_mulc[src[j + 20]];
+                    //        dst[i + 21] ^= gf_mulc[src[j + 21]];
+                    //        dst[i + 22] ^= gf_mulc[src[j + 22]];
+                    //        dst[i + 23] ^= gf_mulc[src[j + 23]];
+                    //        dst[i + 24] ^= gf_mulc[src[j + 24]];
+                    //        dst[i + 25] ^= gf_mulc[src[j + 25]];
+                    //        dst[i + 26] ^= gf_mulc[src[j + 26]];
+                    //        dst[i + 27] ^= gf_mulc[src[j + 27]];
+                    //        dst[i + 28] ^= gf_mulc[src[j + 28]];
+                    //        dst[i + 29] ^= gf_mulc[src[j + 29]];
+                    //        dst[i + 30] ^= gf_mulc[src[j + 30]];
+                    //        dst[i + 31] ^= gf_mulc[src[j + 31]];
+                    //    }
 
-                    // final components
-                    for (; i < lim; i++, j++)
+                    //    // final components
+                    //    for (; i < lim; i++, j++)
+                    //    {
+                    //        dst[i] ^= gf_mulc[src[j]];
+                    //    }
+                    //}
+
+                    unsafe
                     {
-                        dst[i] ^= gf_mulc[src[j]];
+                        fixed (byte* p_dst = dst)
+                        fixed (byte* p_gf_mulc = gf_mulc)
+                        fixed (byte* p_src = src)
+                        {
+                            // Not sure if loop unrolling has any real benefit in Java, but 
+                            // what the hey.
+                            for (; i < lim && (lim - i) > unroll; i += unroll, j += unroll)
+                            {
+                                // dst ^= gf_mulc[x] is equal to mult then add (xor == add)
+
+                                p_dst[i] ^= p_gf_mulc[p_src[j]];
+                                p_dst[i + 1] ^= p_gf_mulc[p_src[j + 1]];
+                                p_dst[i + 2] ^= p_gf_mulc[p_src[j + 2]];
+                                p_dst[i + 3] ^= p_gf_mulc[p_src[j + 3]];
+                                p_dst[i + 4] ^= p_gf_mulc[p_src[j + 4]];
+                                p_dst[i + 5] ^= p_gf_mulc[p_src[j + 5]];
+                                p_dst[i + 6] ^= p_gf_mulc[p_src[j + 6]];
+                                p_dst[i + 7] ^= p_gf_mulc[p_src[j + 7]];
+                                p_dst[i + 8] ^= p_gf_mulc[p_src[j + 8]];
+                                p_dst[i + 9] ^= p_gf_mulc[p_src[j + 9]];
+                                p_dst[i + 10] ^= p_gf_mulc[p_src[j + 10]];
+                                p_dst[i + 11] ^= p_gf_mulc[p_src[j + 11]];
+                                p_dst[i + 12] ^= p_gf_mulc[p_src[j + 12]];
+                                p_dst[i + 13] ^= p_gf_mulc[p_src[j + 13]];
+                                p_dst[i + 14] ^= p_gf_mulc[p_src[j + 14]];
+                                p_dst[i + 15] ^= p_gf_mulc[p_src[j + 15]];
+                                p_dst[i + 16] ^= p_gf_mulc[p_src[j + 16]];
+                                p_dst[i + 17] ^= p_gf_mulc[p_src[j + 17]];
+                                p_dst[i + 18] ^= p_gf_mulc[p_src[j + 18]];
+                                p_dst[i + 19] ^= p_gf_mulc[p_src[j + 19]];
+                                p_dst[i + 20] ^= p_gf_mulc[p_src[j + 20]];
+                                p_dst[i + 21] ^= p_gf_mulc[p_src[j + 21]];
+                                p_dst[i + 22] ^= p_gf_mulc[p_src[j + 22]];
+                                p_dst[i + 23] ^= p_gf_mulc[p_src[j + 23]];
+                                p_dst[i + 24] ^= p_gf_mulc[p_src[j + 24]];
+                                p_dst[i + 25] ^= p_gf_mulc[p_src[j + 25]];
+                                p_dst[i + 26] ^= p_gf_mulc[p_src[j + 26]];
+                                p_dst[i + 27] ^= p_gf_mulc[p_src[j + 27]];
+                                p_dst[i + 28] ^= p_gf_mulc[p_src[j + 28]];
+                                p_dst[i + 29] ^= p_gf_mulc[p_src[j + 29]];
+                                p_dst[i + 30] ^= p_gf_mulc[p_src[j + 30]];
+                                p_dst[i + 31] ^= p_gf_mulc[p_src[j + 31]];
+                            }
+
+                            // final components
+                            for (; i < lim; i++, j++)
+                            {
+                                p_dst[i] ^= p_gf_mulc[p_src[j]];
+                            }
+                        }
                     }
                 }
                 else

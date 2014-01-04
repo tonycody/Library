@@ -31,8 +31,10 @@ namespace Library.Compression
             UInt32 numBytes = (UInt32)(_bufferOffset) + _streamPos - offset;
 
             // check negative offset ????
-            for (UInt32 i = 0; i < numBytes; i++)
-                _bufferBase[i] = _bufferBase[offset + i];
+            //for (UInt32 i = 0; i < numBytes; i++)
+            //    _bufferBase[i] = _bufferBase[offset + i];
+            Array.Copy(_bufferBase, offset, _bufferBase, 0, numBytes);
+
             _bufferOffset -= offset;
         }
 

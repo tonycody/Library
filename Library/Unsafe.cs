@@ -19,7 +19,7 @@ namespace Library
         public static unsafe bool Equals(byte[] a1, byte[] a2)
         {
             if (a1.Length != a2.Length) return false;
-            
+
             fixed (byte* p1 = a1, p2 = a2)
             {
                 byte* x1 = p1, x2 = p2;

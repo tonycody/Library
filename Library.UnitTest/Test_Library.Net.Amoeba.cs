@@ -521,7 +521,7 @@ namespace Library.UnitTest
                     senderConnection.PushBlock(key, new ArraySegment<byte>(buffer, 0, 1024 * 1024 * 4));
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(Collection.Equals(key, item.Key), "ConnectionManager #4");
+                    Assert.AreEqual(key, item.Key, "ConnectionManager #4");
                     Assert.IsTrue(Collection.Equals(buffer, 0, item.Value.Array, item.Value.Offset, 1024 * 1024 * 4), "ConnectionManager #5");
 
                     _bufferManager.ReturnBuffer(buffer);
