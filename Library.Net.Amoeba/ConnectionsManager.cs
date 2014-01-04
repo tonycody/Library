@@ -1126,7 +1126,7 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                var requestNodes = this.GetSearchNode(item.Hash, 2).ToList();
+                                var requestNodes = this.GetSearchNode(item.Hash, 1).ToList();
 
                                 if (requestNodes.Count == 0)
                                 {
@@ -1138,7 +1138,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                for (int i = 0; i < 2 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
                                     HashSet<Key> hashset;
 
@@ -1700,7 +1700,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (diffusionTime.Elapsed.TotalSeconds >= 30)
+                    if (diffusionTime.Elapsed.TotalSeconds >= 10)
                     {
                         diffusionTime.Restart();
 
