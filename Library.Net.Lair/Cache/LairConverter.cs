@@ -209,7 +209,7 @@ namespace Library.Net.Lair
 
         public static string ToNodeString(Node item)
         {
-            if (item == null) throw new ArgumentNullException("item");
+            if (item == null) return null;
 
             try
             {
@@ -226,8 +226,8 @@ namespace Library.Net.Lair
 
         public static Node FromNodeString(string item)
         {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) throw new ArgumentException("item");
+            if (item == null) return null;
+            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) return null;
 
             try
             {
@@ -244,7 +244,7 @@ namespace Library.Net.Lair
 
         public static string ToSectionString(Section item, string option)
         {
-            if (item == null) throw new ArgumentNullException("Section");
+            if (item == null) return null;
 
             try
             {
@@ -271,10 +271,10 @@ namespace Library.Net.Lair
 
         public static Section FromSectionString(string item, out string option)
         {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
-
             option = null;
+
+            if (item == null) return null;
+            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) return null;
 
             try
             {
@@ -305,7 +305,7 @@ namespace Library.Net.Lair
 
         public static string ToWikiString(Wiki item, string option)
         {
-            if (item == null) throw new ArgumentNullException("Wiki");
+            if (item == null) return null;
 
             try
             {
@@ -332,10 +332,10 @@ namespace Library.Net.Lair
 
         public static Wiki FromWikiString(string item, out string option)
         {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Wiki:") && !item.StartsWith("Wiki@")) throw new ArgumentException("item");
-
             option = null;
+
+            if (item == null) return null;
+            if (!item.StartsWith("Wiki:") && !item.StartsWith("Wiki@")) return null;
 
             try
             {
@@ -366,7 +366,7 @@ namespace Library.Net.Lair
 
         public static string ToChatString(Chat item, string option)
         {
-            if (item == null) throw new ArgumentNullException("Chat");
+            if (item == null) return null;
 
             try
             {
@@ -393,10 +393,10 @@ namespace Library.Net.Lair
 
         public static Chat FromChatString(string item, out string option)
         {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
-
             option = null;
+
+            if (item == null) return null;
+            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) return null;
 
             try
             {
