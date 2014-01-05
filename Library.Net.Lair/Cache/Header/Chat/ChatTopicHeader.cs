@@ -147,7 +147,7 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                return _key.GetHashCode();
+                return _tag.GetHashCode() | _creationTime.GetHashCode() | _key.GetHashCode() | _certificate.GetHashCode();
             }
         }
 
