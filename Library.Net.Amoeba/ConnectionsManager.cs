@@ -133,8 +133,8 @@ namespace Library.Net.Amoeba
             _creatingNodes = new LockedList<Node>();
             _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 10));
             _cuttingNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
-            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 3, 0));
-            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 3, 0));
+            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 30, 0));
+            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
             _pushSeedsRequestList = new VolatileCollection<string>(new TimeSpan(0, 3, 0));
@@ -413,28 +413,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private double ResponseTimePriority(Node node)
+        private double GetPriority(Node node)
         {
             lock (this.ThisLock)
             {
-                List<KeyValuePair<Node, TimeSpan>> nodes = new List<KeyValuePair<Node, TimeSpan>>();
+                var priority = _messagesManager[node].Priority;
 
-                foreach (var connectionManager in _connectionManagers)
-                {
-                    nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
-                }
-
-                if (nodes.Count <= 1) return 0.5;
-
-                nodes.Sort((x, y) =>
-                {
-                    return y.Value.CompareTo(x.Value);
-                });
-
-                int i = 1;
-                while (i < nodes.Count && nodes[i].Key != node) i++;
-
-                return ((double)i / (double)nodes.Count);
+                return ((double)Math.Max(priority + 64, 128)) / 128;
             }
         }
 
@@ -916,8 +901,8 @@ namespace Library.Net.Amoeba
         private class NodeSortItem
         {
             public Node Node { get; set; }
+            public int Priority { get; set; }
             public TimeSpan ResponseTime { get; set; }
-            public DateTime LastPullTime { get; set; }
         }
 
         private volatile bool _refreshThreadRunning;
@@ -953,7 +938,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 30)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 20)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -966,15 +951,15 @@ namespace Library.Net.Amoeba
                             nodeSortItems.Add(new NodeSortItem()
                             {
                                 Node = connectionManager.Node,
+                                Priority = _messagesManager[connectionManager.Node].Priority,
                                 ResponseTime = connectionManager.ResponseTime,
-                                LastPullTime = _messagesManager[connectionManager.Node].LastPullTime,
                             });
                         }
                     }
 
                     nodeSortItems.Sort((x, y) =>
                     {
-                        int c = x.LastPullTime.CompareTo(y.LastPullTime);
+                        int c = x.Priority.CompareTo(y.Priority);
                         if (c != 0) return c;
 
                         return y.ResponseTime.CompareTo(x.ResponseTime);
@@ -1104,6 +1089,16 @@ namespace Library.Net.Amoeba
                         }
 
                         {
+                            lock (_settings.DiffusionBlocksRequest.ThisLock)
+                            {
+                                if (_settings.DiffusionBlocksRequest.Count > 10000)
+                                {
+                                    var tempList = _settings.DiffusionBlocksRequest.Randomize().Take(10000).ToList();
+                                    _settings.DiffusionBlocksRequest.Clear();
+                                    _settings.DiffusionBlocksRequest.UnionWith(tempList);
+                                }
+                            }
+
                             var list = _settings.DiffusionBlocksRequest
                                 .ToArray()
                                 .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
@@ -1244,9 +1239,9 @@ namespace Library.Net.Amoeba
                                 .Randomize()
                                 .ToList();
 
-                            if (list.Any(n => _cacheManager.Contains(n))) continue;
+                            int count = (int)(4096 * this.GetPriority(node));
 
-                            for (int i = 0, j = 0; j < 2048 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushBlocksRequest.Contains(list[i])) && !_cacheManager.Contains(list[i]))
                                 {
@@ -1499,7 +1494,7 @@ namespace Library.Net.Amoeba
 
                 for (; ; )
                 {
-                    Thread.Sleep(300);
+                    Thread.Sleep(1000);
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
 
@@ -1511,11 +1506,11 @@ namespace Library.Net.Amoeba
                     }
 
                     // Check
-                    if (checkTime.Elapsed.TotalSeconds >= 60)
+                    if (messageManager.Priority < 0 && checkTime.Elapsed.TotalSeconds >= 60)
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 30, 0))
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 10, 0))
                         {
                             lock (this.ThisLock)
                             {
@@ -1571,15 +1566,13 @@ namespace Library.Net.Amoeba
                         {
                             KeyCollection tempList = new KeyCollection();
 
-                            int count = (int)(_maxBlockLinkCount * this.ResponseTimePriority(connectionManager.Node));
-
                             lock (_pushBlocksLinkDictionary.ThisLock)
                             {
                                 HashSet<Key> hashset;
 
                                 if (_pushBlocksLinkDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList.AddRange(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(_maxBlockLinkCount));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksLink.AddRange(tempList);
@@ -1612,15 +1605,13 @@ namespace Library.Net.Amoeba
                         {
                             KeyCollection tempList = new KeyCollection();
 
-                            int count = (int)(_maxBlockRequestCount * this.ResponseTimePriority(connectionManager.Node));
-
                             lock (_pushBlocksRequestDictionary.ThisLock)
                             {
                                 HashSet<Key> hashset;
 
                                 if (_pushBlocksRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList.AddRange(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(_maxBlockRequestCount));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksRequest.AddRange(tempList);
@@ -1658,15 +1649,13 @@ namespace Library.Net.Amoeba
                         {
                             SignatureCollection tempList = new SignatureCollection();
 
-                            int count = (int)(_maxSeedRequestCount * this.ResponseTimePriority(connectionManager.Node));
-
                             lock (_pushSeedsRequestDictionary.ThisLock)
                             {
                                 HashSet<string> hashset;
 
                                 if (_pushSeedsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList.AddRange(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(_maxSeedRequestCount));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushSeedsRequest.AddRange(tempList);
@@ -1700,7 +1689,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (diffusionTime.Elapsed.TotalSeconds >= 10)
+                    if (diffusionTime.Elapsed.TotalSeconds >= 5)
                     {
                         diffusionTime.Restart();
 
@@ -1768,7 +1757,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (messageManager.Priority > -32 && (_random.Next(0, 64 + 1) <= messageManager.Priority + 32))
+                    if (_random.NextDouble() < this.GetPriority(connectionManager.Node))
                     {
                         // PushBlock
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
@@ -2072,7 +2061,6 @@ namespace Library.Net.Amoeba
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Seed ({0})", ConnectionsManager.Keyword_Link));
 
                 messageManager.PushLinkSeeds[signature] = e.Seed.CreationTime;
-                messageManager.LastPullTime = DateTime.UtcNow;
 
                 _lastUsedSeedTimes[signature] = DateTime.UtcNow;
             }
@@ -2083,7 +2071,6 @@ namespace Library.Net.Amoeba
                 Debug.WriteLine(string.Format("ConnectionManager: Pull Seed ({0})", ConnectionsManager.Keyword_Store));
 
                 messageManager.PushStoreSeeds[signature] = e.Seed.CreationTime;
-                messageManager.LastPullTime = DateTime.UtcNow;
 
                 _lastUsedSeedTimes[signature] = DateTime.UtcNow;
             }
@@ -2110,7 +2097,6 @@ namespace Library.Net.Amoeba
                     var signature = seed.Certificate.ToString();
 
                     messageManager.PushLinkSeeds[signature] = seed.CreationTime;
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedSeedTimes[signature] = DateTime.UtcNow;
                 }
@@ -2119,7 +2105,6 @@ namespace Library.Net.Amoeba
                     var signature = seed.Certificate.ToString();
 
                     messageManager.PushStoreSeeds[signature] = seed.CreationTime;
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedSeedTimes[signature] = DateTime.UtcNow;
                 }

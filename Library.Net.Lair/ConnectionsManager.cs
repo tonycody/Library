@@ -135,10 +135,10 @@ namespace Library.Net.Lair
             };
 
             _creatingNodes = new LockedList<Node>();
-            _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 30));
+            _waitingNodes = new VolatileCollection<Node>(new TimeSpan(0, 0, 10));
             _cuttingNodes = new VolatileCollection<Node>(new TimeSpan(0, 10, 0));
-            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 3, 0));
-            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 3, 0));
+            _removeNodes = new VolatileCollection<Node>(new TimeSpan(0, 30, 0));
+            _nodesStatus = new VolatileDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _downloadBlocks = new VolatileCollection<Key>(new TimeSpan(0, 3, 0));
             _pushSectionsRequestList = new VolatileCollection<Section>(new TimeSpan(0, 3, 0));
@@ -393,28 +393,13 @@ namespace Library.Net.Lair
             }
         }
 
-        private double ResponseTimePriority(Node node)
+        private double GetPriority(Node node)
         {
             lock (this.ThisLock)
             {
-                List<KeyValuePair<Node, TimeSpan>> nodes = new List<KeyValuePair<Node, TimeSpan>>();
+                var priority = _messagesManager[node].Priority;
 
-                foreach (var connectionManager in _connectionManagers)
-                {
-                    nodes.Add(new KeyValuePair<Node, TimeSpan>(connectionManager.Node, connectionManager.ResponseTime));
-                }
-
-                if (nodes.Count <= 1) return 0.5;
-
-                nodes.Sort((x, y) =>
-                {
-                    return y.Value.CompareTo(x.Value);
-                });
-
-                int i = 1;
-                while (i < nodes.Count && nodes[i].Key != node) i++;
-
-                return ((double)i / (double)nodes.Count);
+                return ((double)(priority + 64)) / 128;
             }
         }
 
@@ -895,8 +880,8 @@ namespace Library.Net.Lair
         private class NodeSortItem
         {
             public Node Node { get; set; }
+            public int Priority { get; set; }
             public TimeSpan ResponseTime { get; set; }
-            public DateTime LastPullTime { get; set; }
         }
 
         private volatile bool _refreshThreadRunning;
@@ -931,7 +916,7 @@ namespace Library.Net.Lair
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 30)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 20)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -944,15 +929,15 @@ namespace Library.Net.Lair
                             nodeSortItems.Add(new NodeSortItem()
                             {
                                 Node = connectionManager.Node,
+                                Priority = _messagesManager[connectionManager.Node].Priority,
                                 ResponseTime = connectionManager.ResponseTime,
-                                LastPullTime = _messagesManager[connectionManager.Node].LastPullTime,
                             });
                         }
                     }
 
                     nodeSortItems.Sort((x, y) =>
                     {
-                        int c = x.LastPullTime.CompareTo(y.LastPullTime);
+                        int c = x.Priority.CompareTo(y.Priority);
                         if (c != 0) return c;
 
                         return y.ResponseTime.CompareTo(x.ResponseTime);
@@ -1480,6 +1465,16 @@ namespace Library.Net.Lair
                         }
 
                         {
+                            lock (_settings.DiffusionBlocksRequest.ThisLock)
+                            {
+                                if (_settings.DiffusionBlocksRequest.Count > 10000)
+                                {
+                                    var tempList = _settings.DiffusionBlocksRequest.Randomize().Take(10000).ToList();
+                                    _settings.DiffusionBlocksRequest.Clear();
+                                    _settings.DiffusionBlocksRequest.UnionWith(tempList);
+                                }
+                            }
+
                             var list = _settings.DiffusionBlocksRequest
                                 .ToArray()
                                 .Where(n => n.HashAlgorithm == HashAlgorithm.Sha512)
@@ -1618,9 +1613,9 @@ namespace Library.Net.Lair
                                 .Randomize()
                                 .ToList();
 
-                            if (list.Any(n => _cacheManager.Contains(n))) continue;
+                            int count = (int)(4096 * this.GetPriority(node));
 
-                            for (int i = 0, j = 0; j < 2048 && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < count && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushBlocksRequest.Contains(list[i])) && !_cacheManager.Contains(list[i]))
                                 {
@@ -2063,7 +2058,7 @@ namespace Library.Net.Lair
 
                 for (; ; )
                 {
-                    Thread.Sleep(300);
+                    Thread.Sleep(1000);
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
 
@@ -2075,11 +2070,11 @@ namespace Library.Net.Lair
                     }
 
                     // Check
-                    if (checkTime.Elapsed.TotalSeconds >= 60)
+                    if (messageManager.Priority < 0 && checkTime.Elapsed.TotalSeconds >= 60)
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 30, 0))
+                        if ((DateTime.UtcNow - messageManager.LastPullTime) > new TimeSpan(0, 10, 0))
                         {
                             lock (this.ThisLock)
                             {
@@ -2135,15 +2130,13 @@ namespace Library.Net.Lair
                         {
                             KeyCollection tempList = new KeyCollection();
 
-                            int count = (int)(_maxBlockLinkCount * this.ResponseTimePriority(connectionManager.Node));
-
                             lock (_pushBlocksLinkDictionary.ThisLock)
                             {
                                 HashSet<Key> hashset;
 
                                 if (_pushBlocksLinkDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList.AddRange(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(_maxBlockLinkCount));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksLink.AddRange(tempList);
@@ -2176,15 +2169,13 @@ namespace Library.Net.Lair
                         {
                             KeyCollection tempList = new KeyCollection();
 
-                            int count = (int)(_maxBlockRequestCount * this.ResponseTimePriority(connectionManager.Node));
-
                             lock (_pushBlocksRequestDictionary.ThisLock)
                             {
                                 HashSet<Key> hashset;
 
                                 if (_pushBlocksRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    tempList.AddRange(hashset.Randomize().Take(count));
+                                    tempList.AddRange(hashset.Randomize().Take(_maxBlockRequestCount));
 
                                     hashset.ExceptWith(tempList);
                                     messageManager.PushBlocksRequest.AddRange(tempList);
@@ -2224,15 +2215,13 @@ namespace Library.Net.Lair
                             WikiCollection wikiList = new WikiCollection();
                             ChatCollection chatList = new ChatCollection();
 
-                            int count = (int)(_maxHeaderRequestCount * this.ResponseTimePriority(connectionManager.Node));
-
                             lock (_pushSectionsRequestDictionary.ThisLock)
                             {
                                 HashSet<Section> hashset;
 
                                 if (_pushSectionsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    sectionList.AddRange(hashset.Randomize().Take(count));
+                                    sectionList.AddRange(hashset.Randomize().Take(_maxHeaderRequestCount));
 
                                     hashset.ExceptWith(sectionList);
                                     messageManager.PushSectionsRequest.AddRange(sectionList);
@@ -2245,7 +2234,7 @@ namespace Library.Net.Lair
 
                                 if (_pushWikisRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    wikiList.AddRange(hashset.Randomize().Take(count));
+                                    wikiList.AddRange(hashset.Randomize().Take(_maxHeaderRequestCount));
 
                                     hashset.ExceptWith(wikiList);
                                     messageManager.PushWikisRequest.AddRange(wikiList);
@@ -2258,7 +2247,7 @@ namespace Library.Net.Lair
 
                                 if (_pushChatsRequestDictionary.TryGetValue(connectionManager.Node, out hashset))
                                 {
-                                    chatList.AddRange(hashset.Randomize().Take(count));
+                                    chatList.AddRange(hashset.Randomize().Take(_maxHeaderRequestCount));
 
                                     hashset.ExceptWith(chatList);
                                     messageManager.PushChatsRequest.AddRange(chatList);
@@ -2314,7 +2303,7 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (diffusionTime.Elapsed.TotalSeconds >= 10)
+                    if (diffusionTime.Elapsed.TotalSeconds >= 5)
                     {
                         diffusionTime.Restart();
 
@@ -2380,7 +2369,7 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (messageManager.Priority > -32 && (_random.Next(0, 64 + 1) <= messageManager.Priority + 32))
+                    if (_random.NextDouble() < this.GetPriority(connectionManager.Node))
                     {
                         // PushBlock
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
@@ -2581,7 +2570,6 @@ namespace Library.Net.Lair
                                 {
                                     messageManager.PushChatMessageHeaders.Add(header.GetHash(_hashAlgorithm));
                                 }
-
                             }
                         }
                     }
@@ -2707,7 +2695,6 @@ namespace Library.Net.Lair
                 {
                     messageManager.PushBlocksRequest.Remove(e.Key);
                     messageManager.PushBlocks.Add(e.Key);
-                    messageManager.LastPullTime = DateTime.UtcNow;
                     messageManager.Priority++;
 
                     // Information
