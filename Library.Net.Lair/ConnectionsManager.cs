@@ -399,7 +399,7 @@ namespace Library.Net.Lair
             {
                 var priority = _messagesManager[node].Priority;
 
-                return ((double)(priority + 64)) / 128;
+                return ((double)Math.Max(priority + 64, 128)) / 128;
             }
         }
 
