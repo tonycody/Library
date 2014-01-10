@@ -10,7 +10,7 @@ namespace Library.Net.Lair
         MiniWiki = 0,
     }
 
-    interface IHypertextFormatType
+    public interface IHypertext
     {
         HypertextFormatType FormatType { get; }
         string Hypertext { get; }

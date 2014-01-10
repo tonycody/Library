@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
@@ -14,29 +15,28 @@ namespace Library.Net.Lair
         private string _signature;
         private DateTime _creationTime;
         private string _comment;
-        private Anchor _anchor;
-
-        private int _hashCode;
+        private AnchorCollection _anchors;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = SectionMessageContent.MaxCommentLength;
+        public static readonly int MaxAnchorCount = SectionMessageContent.MaxAnchorCount;
 
-        internal SectionMessage(Section tag, string signature, DateTime creationTime, string comment, Anchor anchor)
+        internal SectionMessage(Section tag, string signature, DateTime creationTime, string comment, IEnumerable<Anchor> anchors)
         {
             this.Tag = tag;
             this.Signature = signature;
             this.CreationTime = creationTime;
             this.Comment = comment;
-            this.Anchor = anchor;
+            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         public override int GetHashCode()
         {
             lock (this.ThisLock)
             {
-                return _hashCode;
+                return this.CreationTime.GetHashCode();
             }
         }
 
@@ -57,9 +57,14 @@ namespace Library.Net.Lair
                 || this.Signature != other.Signature
                 || this.CreationTime != other.CreationTime
                 || this.Comment != other.Comment
-                || this.Anchor != other.Anchor)
+                || (this.Anchors == null) != (other.Anchors == null))
             {
                 return false;
+            }
+
+            if (this.Anchors != null && other.Anchors != null)
+            {
+                if (!Collection.Equals(this.Anchors, other.Anchors)) return false;
             }
 
             return true;
@@ -179,30 +184,33 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Anchor")]
-        public Anchor Anchor
+        private volatile ReadOnlyCollection<Anchor> _readOnlyAnchors;
+
+        public IEnumerable<Anchor> Anchors
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _anchor;
+                    if (_readOnlyAnchors == null)
+                        _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors);
+
+                    return _readOnlyAnchors;
                 }
             }
-            private set
+        }
+
+        [DataMember(Name = "Anchors")]
+        private AnchorCollection ProtectedAnchors
+        {
+            get
             {
                 lock (this.ThisLock)
                 {
-                    _anchor = value;
+                    if (_anchors == null)
+                        _anchors = new AnchorCollection(SectionMessage.MaxAnchorCount);
 
-                    if (_anchor == null)
-                    {
-                        _hashCode = 0;
-                    }
-                    else
-                    {
-                        _hashCode = _anchor.GetHashCode();
-                    }
+                    return _anchors;
                 }
             }
         }

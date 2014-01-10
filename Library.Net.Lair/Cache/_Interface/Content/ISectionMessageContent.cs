@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 
 namespace Library.Net.Lair
 {
@@ -5,6 +6,6 @@ namespace Library.Net.Lair
         where TAnchor : IAnchor
     {
         string Comment { get; }
-        TAnchor Anchor { get; }
+        IEnumerable<TAnchor> Anchors { get; }
     }
 }

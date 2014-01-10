@@ -17,6 +17,7 @@ namespace Library.Net.Lair
             Comment = 0,
             ExchangePublicKey = 1,
             TrustSignature = 2,
+            DeleterSignature = 5,
             Wiki = 3,
             Chat = 4,
         }
@@ -24,6 +25,7 @@ namespace Library.Net.Lair
         private string _comment;
         private ExchangePublicKey _exchangePublicKey;
         private SignatureCollection _trustSignatures;
+        private SignatureCollection _deleterSignatures;
         private WikiCollection _wikis;
         private ChatCollection _chats;
 
@@ -32,16 +34,18 @@ namespace Library.Net.Lair
 
         public static readonly int MaxCommentLength = 1024 * 4;
         public static readonly int MaxTrustSignatureCount = 1024;
+        public static readonly int MaxDeleterSignatureCount = 1024;
         public static readonly int MaxWikiCount = 256;
         public static readonly int MaxChatCount = 256;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        public SectionProfileContent(string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
+        public SectionProfileContent(string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<string> deleterSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             this.Comment = comment;
             this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
+            if (deleterSignatures != null) this.ProtectedDeleterSignatures.AddRange(deleterSignatures);
             if (wikis != null) this.ProtectedWikis.AddRange(wikis);
             if (chats != null) this.ProtectedChats.AddRange(chats);
         }
@@ -77,6 +81,13 @@ namespace Library.Net.Lair
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
                                 this.ProtectedTrustSignatures.Add(reader.ReadToEnd());
+                            }
+                        }
+                        else if (id == (byte)SerializeId.DeleterSignature)
+                        {
+                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
+                            {
+                                this.ProtectedDeleterSignatures.Add(reader.ReadToEnd());
                             }
                         }
                         else if (id == (byte)SerializeId.Wiki)
@@ -148,6 +159,25 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
+                // DeleterSignatures
+                foreach (var d in this.DeleterSignatures)
+                {
+                    BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.SetLength(5);
+                    bufferStream.Seek(5, SeekOrigin.Begin);
+
+                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    {
+                        writer.Write(d);
+                    }
+
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.DeleterSignature);
+
+                    streams.Add(bufferStream);
+                }
                 // Wikis
                 foreach (var d in this.Wikis)
                 {
@@ -200,6 +230,7 @@ namespace Library.Net.Lair
             if (this.Comment != other.Comment
                 || this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
+                || (this.DeleterSignatures == null) != (other.DeleterSignatures == null)
                 || (this.Wikis == null) != (other.Wikis == null)
                 || (this.Chats == null) != (other.Chats == null))
             {
@@ -209,6 +240,11 @@ namespace Library.Net.Lair
             if (this.TrustSignatures != null && other.TrustSignatures != null)
             {
                 if (!Collection.Equals(this.TrustSignatures, other.TrustSignatures)) return false;
+            }
+
+            if (this.DeleterSignatures != null && other.DeleterSignatures != null)
+            {
+                if (!Collection.Equals(this.DeleterSignatures, other.DeleterSignatures)) return false;
             }
 
             if (this.Wikis != null && other.Wikis != null)
@@ -318,6 +354,37 @@ namespace Library.Net.Lair
                         _trustSignatures = new SignatureCollection(SectionProfileContent.MaxTrustSignatureCount);
 
                     return _trustSignatures;
+                }
+            }
+        }
+
+        private volatile ReadOnlyCollection<string> _readOnlyDeleterSignatures;
+
+        public IEnumerable<string> DeleterSignatures
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_readOnlyDeleterSignatures == null)
+                        _readOnlyDeleterSignatures = new ReadOnlyCollection<string>(this.ProtectedDeleterSignatures);
+
+                    return _readOnlyDeleterSignatures;
+                }
+            }
+        }
+
+        [DataMember(Name = "DeleterSignatures")]
+        private SignatureCollection ProtectedDeleterSignatures
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_deleterSignatures == null)
+                        _deleterSignatures = new SignatureCollection(SectionProfileContent.MaxDeleterSignatureCount);
+
+                    return _deleterSignatures;
                 }
             }
         }

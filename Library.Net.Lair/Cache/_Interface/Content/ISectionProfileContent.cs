@@ -11,6 +11,7 @@ namespace Library.Net.Lair
         string Comment { get; }
         TExchangePublicKey ExchangePublicKey { get; }
         IEnumerable<string> TrustSignatures { get; }
+        IEnumerable<string> DeleterSignatures { get; }
         IEnumerable<TWiki> Wikis { get; }
         IEnumerable<TChat> Chats { get; }
     }

@@ -18,6 +18,7 @@ namespace Library.Net.Lair
         private string _comment;
         private ExchangePublicKey _exchangePublicKey;
         private SignatureCollection _trustSignatures;
+        private SignatureCollection _deleterSignatures;
         private WikiCollection _wikis;
         private ChatCollection _chats;
 
@@ -26,12 +27,14 @@ namespace Library.Net.Lair
 
         public static readonly int MaxCommentLength = SectionProfileContent.MaxCommentLength;
         public static readonly int MaxTrustSignatureCount = SectionProfileContent.MaxTrustSignatureCount;
+        public static readonly int MaxDeleterSignatureCount = SectionProfileContent.MaxDeleterSignatureCount;
         public static readonly int MaxWikiCount = SectionProfileContent.MaxWikiCount;
         public static readonly int MaxChatCount = SectionProfileContent.MaxChatCount;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
-        internal SectionProfile(Section tag, string signature, DateTime creationTime, string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures,
+        internal SectionProfile(Section tag, string signature, DateTime creationTime,
+            string comment, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<string> deleterSignatures,
             IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             this.Tag = tag;
@@ -40,6 +43,7 @@ namespace Library.Net.Lair
             this.Comment = comment;
             this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
+            if (deleterSignatures != null) this.ProtectedDeleterSignatures.AddRange(deleterSignatures);
             if (wikis != null) this.ProtectedWikis.AddRange(wikis);
             if (chats != null) this.ProtectedChats.AddRange(chats);
         }
@@ -72,6 +76,7 @@ namespace Library.Net.Lair
                 || this.Comment != other.Comment
                 || this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
+                || (this.DeleterSignatures == null) != (other.DeleterSignatures == null)
                 || (this.Wikis == null) != (other.Wikis == null)
                 || (this.Chats == null) != (other.Chats == null))
             {
@@ -81,6 +86,11 @@ namespace Library.Net.Lair
             if (this.TrustSignatures != null && other.TrustSignatures != null)
             {
                 if (!Collection.Equals(this.TrustSignatures, other.TrustSignatures)) return false;
+            }
+
+            if (this.DeleterSignatures != null && other.DeleterSignatures != null)
+            {
+                if (!Collection.Equals(this.DeleterSignatures, other.DeleterSignatures)) return false;
             }
 
             if (this.Wikis != null && other.Wikis != null)
@@ -257,6 +267,37 @@ namespace Library.Net.Lair
                         _trustSignatures = new SignatureCollection(SectionProfile.MaxTrustSignatureCount);
 
                     return _trustSignatures;
+                }
+            }
+        }
+
+        private volatile ReadOnlyCollection<string> _readOnlyDeleterSignatures;
+
+        public IEnumerable<string> DeleterSignatures
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_readOnlyDeleterSignatures == null)
+                        _readOnlyDeleterSignatures = new ReadOnlyCollection<string>(this.ProtectedDeleterSignatures);
+
+                    return _readOnlyDeleterSignatures;
+                }
+            }
+        }
+
+        [DataMember(Name = "DeleterSignatures")]
+        private SignatureCollection ProtectedDeleterSignatures
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    if (_deleterSignatures == null)
+                        _deleterSignatures = new SignatureCollection(SectionProfile.MaxDeleterSignatureCount);
+
+                    return _deleterSignatures;
                 }
             }
         }

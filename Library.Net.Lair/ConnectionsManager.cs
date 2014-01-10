@@ -399,7 +399,7 @@ namespace Library.Net.Lair
             {
                 var priority = _messagesManager[node].Priority;
 
-                return ((double)Math.Max(priority + 64, 128)) / 128;
+                return ((double)Math.Max(Math.Min(priority + 64, 128), 0)) / 128;
             }
         }
 
@@ -1613,9 +1613,7 @@ namespace Library.Net.Lair
                                 .Randomize()
                                 .ToList();
 
-                            int count = (int)(4096 * this.GetPriority(node));
-
-                            for (int i = 0, j = 0; j < count && i < list.Count; i++)
+                            for (int i = 0, j = 0; j < 2048 && i < list.Count; i++)
                             {
                                 if (!nodes.Any(n => _messagesManager[n].PushBlocksRequest.Contains(list[i])) && !_cacheManager.Contains(list[i]))
                                 {

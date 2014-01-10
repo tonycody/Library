@@ -1,7 +1,7 @@
 
 namespace Library.Net.Lair
 {
-    interface IWikiPageContent : IHypertextFormatType
+    interface IWikiPageContent : IHypertext
     {
 
     }

@@ -178,7 +178,7 @@
     <Compile Include="Cache\_Interface\Header\Section\ISection.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\IHypertextFormatType.cs" />
+    <Compile Include="Cache\_Interface\IHypertext.cs" />
     <Compile Include="ContentConverter.cs" />
     <Compile Include="Information\ChatMessage.cs" />
     <Compile Include="Information\ChatTopic.cs" />

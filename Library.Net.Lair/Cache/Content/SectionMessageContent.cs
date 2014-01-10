@@ -17,19 +17,18 @@ namespace Library.Net.Lair
         }
 
         private string _comment;
-        private Anchor _anchor;
-
-        private int _hashCode;
+        private AnchorCollection _anchors;
 
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxAnchorCount = 32;
 
-        public SectionMessageContent(string comment, Anchor anchor)
+        public SectionMessageContent(string comment, IEnumerable<Anchor> anchors)
         {
             this.Comment = comment;
-            this.Anchor = anchor;
+            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
@@ -56,7 +55,7 @@ namespace Library.Net.Lair
                         }
                         else if (id == (byte)SerializeId.Anchor)
                         {
-                            this.Anchor = Anchor.Import(rangeStream, bufferManager);
+                            this.ProtectedAnchors.Add(Anchor.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -89,10 +88,10 @@ namespace Library.Net.Lair
 
                     streams.Add(bufferStream);
                 }
-                // Anchor
-                if (this.Anchor != null)
+                // Anchors
+                foreach (var a in this.Anchors)
                 {
-                    Stream exportStream = this.Anchor.Export(bufferManager);
+                    Stream exportStream = a.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
@@ -109,7 +108,8 @@ namespace Library.Net.Lair
         {
             lock (this.ThisLock)
             {
-                return _hashCode;
+                if (this.Comment == null) return 0;
+                else return this.Comment.GetHashCode();
             }
         }
 
@@ -127,9 +127,14 @@ namespace Library.Net.Lair
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Comment != other.Comment
-                || this.Anchor != other.Anchor)
+                || (this.Anchors == null) != (other.Anchors == null))
             {
                 return false;
+            }
+
+            if (this.Anchors != null && other.Anchors != null)
+            {
+                if (!Collection.Equals(this.Anchors, other.Anchors)) return false;
             }
 
             return true;
@@ -154,7 +159,7 @@ namespace Library.Net.Lair
             }
         }
 
-        #region ISectionMessageContent
+        #region ISectionMessageContent<Anchor>
 
         [DataMember(Name = "Comment")]
         public string Comment
@@ -182,30 +187,33 @@ namespace Library.Net.Lair
             }
         }
 
-        [DataMember(Name = "Anchor")]
-        public Anchor Anchor
+        private volatile ReadOnlyCollection<Anchor> _readOnlyAnchors;
+
+        public IEnumerable<Anchor> Anchors
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _anchor;
+                    if (_readOnlyAnchors == null)
+                        _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors);
+
+                    return _readOnlyAnchors;
                 }
             }
-            private set
+        }
+
+        [DataMember(Name = "Anchors")]
+        private AnchorCollection ProtectedAnchors
+        {
+            get
             {
                 lock (this.ThisLock)
                 {
-                    _anchor = value;
+                    if (_anchors == null)
+                        _anchors = new AnchorCollection(SectionMessageContent.MaxAnchorCount);
 
-                    if (_anchor == null)
-                    {
-                        _hashCode = 0;
-                    }
-                    else
-                    {
-                        _hashCode = _anchor.GetHashCode();
-                    }
+                    return _anchors;
                 }
             }
         }
