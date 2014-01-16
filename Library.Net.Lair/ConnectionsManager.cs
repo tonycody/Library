@@ -2693,6 +2693,7 @@ namespace Library.Net.Lair
                 {
                     messageManager.PushBlocksRequest.Remove(e.Key);
                     messageManager.PushBlocks.Add(e.Key);
+                    messageManager.LastPullTime = DateTime.UtcNow;
                     messageManager.Priority++;
 
                     // Information
@@ -2785,7 +2786,6 @@ namespace Library.Net.Lair
                 if (_headerManager.SetHeader(header))
                 {
                     messageManager.PushSectionProfileHeaders.Add(header.GetHash(_hashAlgorithm));
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedSectionTimes[header.Tag] = DateTime.UtcNow;
                 }
@@ -2798,7 +2798,6 @@ namespace Library.Net.Lair
                 if (_headerManager.SetHeader(header))
                 {
                     messageManager.PushSectionMessageHeaders.Add(header.GetHash(_hashAlgorithm));
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedSectionTimes[header.Tag] = DateTime.UtcNow;
                 }
@@ -2811,7 +2810,6 @@ namespace Library.Net.Lair
                 if (_headerManager.SetHeader(header))
                 {
                     messageManager.PushWikiPageHeaders.Add(header.GetHash(_hashAlgorithm));
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedWikiTimes[header.Tag] = DateTime.UtcNow;
                 }
@@ -2824,7 +2822,6 @@ namespace Library.Net.Lair
                 if (_headerManager.SetHeader(header))
                 {
                     messageManager.PushWikiVoteHeaders.Add(header.GetHash(_hashAlgorithm));
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedWikiTimes[header.Tag] = DateTime.UtcNow;
                 }
@@ -2837,7 +2834,6 @@ namespace Library.Net.Lair
                 if (_headerManager.SetHeader(header))
                 {
                     messageManager.PushChatTopicHeaders.Add(header.GetHash(_hashAlgorithm));
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedChatTimes[header.Tag] = DateTime.UtcNow;
                 }
@@ -2850,7 +2846,6 @@ namespace Library.Net.Lair
                 if (_headerManager.SetHeader(header))
                 {
                     messageManager.PushChatMessageHeaders.Add(header.GetHash(_hashAlgorithm));
-                    messageManager.LastPullTime = DateTime.UtcNow;
 
                     _lastUsedChatTimes[header.Tag] = DateTime.UtcNow;
                 }

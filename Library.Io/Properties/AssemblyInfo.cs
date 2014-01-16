@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Library.Io")]
-[assembly: AssemblyCopyright("Copyright © Lyrise 2009-2013")]
+[assembly: AssemblyCopyright("Copyright © Lyrise 2009-2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

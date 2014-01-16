@@ -178,21 +178,6 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     return _settings.SeedInformation
-                        .Where(n => n.Path == null)
-                        .Select(n => n.Seed)
-                        .ToArray();
-                }
-            }
-        }
-
-        public IEnumerable<Seed> ShareSeeds
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _settings.SeedInformation
-                        .Where(n => n.Path != null)
                         .Select(n => n.Seed)
                         .ToArray();
                 }
@@ -581,8 +566,6 @@ namespace Library.Net.Amoeba
 
         public void Remove(Key key)
         {
-            bool flag = false;
-
             lock (this.ThisLock)
             {
                 Clusters clusters = null;
@@ -592,11 +575,9 @@ namespace Library.Net.Amoeba
                     _settings.ClustersIndex.Remove(key);
                     _spaceClusters.UnionWith(clusters.Indexes);
 
-                    flag = true;
+                    this.OnRemoveKeyEvent(new Key[] { key });
                 }
             }
-
-            if (flag) this.OnRemoveKeyEvent(new Key[] { key });
         }
 
         public void Resize(long size)
@@ -638,8 +619,6 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (path != null) this.RemoveCacheSeed(seed);
-
                 if (_settings.SeedInformation.Any(n => n.Seed == seed))
                     return;
 
@@ -659,30 +638,18 @@ namespace Library.Net.Amoeba
                 for (int i = 0; i < _settings.SeedInformation.Count; i++)
                 {
                     var info = _settings.SeedInformation[i];
-                    if (info.Path != null || seed != info.Seed) continue;
+                    if (seed != info.Seed) continue;
 
-                    _settings.SeedInformation.RemoveAt(i);
-                    i--;
-                }
-            }
-        }
-
-        public void RemoveShareSeed(Seed seed)
-        {
-            lock (this.ThisLock)
-            {
-                for (int i = 0; i < _settings.SeedInformation.Count; i++)
-                {
-                    var info = _settings.SeedInformation[i];
-                    if (info.Path == null || seed != info.Seed) continue;
-
-                    foreach (var item in _ids.ToArray())
+                    if (info.Path != null)
                     {
-                        if (item.Value == info.Path)
+                        foreach (var item in _ids.ToArray())
                         {
-                            this.RemoveShare(item.Key);
+                            if (item.Value == info.Path)
+                            {
+                                this.RemoveShare(item.Key);
 
-                            break;
+                                break;
+                            }
                         }
                     }
 
@@ -858,22 +825,21 @@ namespace Library.Net.Amoeba
 
         public void RemoveShare(int id)
         {
-            List<Key> keys = new List<Key>();
-            string path = null;
-
             lock (this.ThisLock)
             {
-                path = _ids[id];
+                string path = _ids[id];
+
+                List<Key> keys = new List<Key>();
                 keys.AddRange(_settings.ShareIndex[path].KeyAndCluster.Keys);
 
                 _settings.ShareIndex.Remove(path);
                 _ids.Remove(id);
 
                 _shareIndexLink = null;
-            }
 
-            this.OnRemoveShareEvent(path);
-            this.OnRemoveKeyEvent(keys);
+                this.OnRemoveShareEvent(path);
+                this.OnRemoveKeyEvent(keys);
+            }
         }
 
         public KeyCollection Encoding(Stream inStream,
@@ -1342,7 +1308,7 @@ namespace Library.Net.Amoeba
 
                                 if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                 {
-                                    if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
+                                    if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
                                     {
                                         this.Remove(key);
 
@@ -1389,7 +1355,7 @@ namespace Library.Net.Amoeba
 
                                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                     {
-                                        if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
+                                        if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
                                         {
                                             foreach (var item in _ids.ToArray())
                                             {
@@ -1432,7 +1398,7 @@ namespace Library.Net.Amoeba
 
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        if (!Collection.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
+                        if (!Unsafe.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
                     else
                     {
@@ -1498,9 +1464,9 @@ namespace Library.Net.Amoeba
                     clusters.Length = value.Count;
                     clusters.UpdateTime = DateTime.UtcNow;
                     _settings.ClustersIndex[key] = clusters;
-                }
 
-                this.OnSetKeyEvent(new Key[] { key });
+                    this.OnSetKeyEvent(new Key[] { key });
+                }
             }
         }
 

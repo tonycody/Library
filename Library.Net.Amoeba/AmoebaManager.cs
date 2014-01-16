@@ -318,20 +318,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<Seed> ShareSeeds
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new AmoebaManagerException("AmoebaManager is not loaded.");
-
-                lock (this.ThisLock)
-                {
-                    return _cacheManager.ShareSeeds;
-                }
-            }
-        }
-
         public long Size
         {
             get
@@ -602,17 +588,6 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 _cacheManager.RemoveCacheSeed(seed);
-            }
-        }
-
-        public void RemoveShareSeed(Seed seed)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new AmoebaManagerException("AmoebaManager is not loaded.");
-
-            lock (this.ThisLock)
-            {
-                _cacheManager.RemoveShareSeed(seed);
             }
         }
 

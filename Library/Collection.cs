@@ -6,7 +6,6 @@ namespace Library
 {
     public static class Collection
     {
-        [Obsolete("Equals", true)]
         public new static bool Equals(object obj1, object obj2)
         {
             throw new NotImplementedException();

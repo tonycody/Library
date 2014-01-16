@@ -434,7 +434,7 @@ namespace Library.Net.Lair
 
                             if (key.HashAlgorithm == HashAlgorithm.Sha512)
                             {
-                                if (!Collection.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
+                                if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, clusters.Length), key.Hash))
                                 {
                                     this.Remove(key);
 
@@ -467,7 +467,7 @@ namespace Library.Net.Lair
 
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        if (!Collection.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
+                        if (!Unsafe.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
                     else
                     {

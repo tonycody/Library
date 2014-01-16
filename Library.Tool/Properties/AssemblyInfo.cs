@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Library.Tool")]
-[assembly: AssemblyCopyright("Copyright © Lyrise 2010-2013")]
+[assembly: AssemblyCopyright("Copyright © Lyrise 2010-2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
