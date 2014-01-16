@@ -197,7 +197,7 @@ namespace Library.Net.Amoeba
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {
-                if (!Collection.Equals(this.CryptoKey, other.CryptoKey)) return false;
+                if (!Unsafe.Equals(this.CryptoKey, other.CryptoKey)) return false;
             }
 
             return true;
