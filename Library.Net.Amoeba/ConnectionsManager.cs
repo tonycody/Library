@@ -2318,46 +2318,43 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private readonly object _stateLock = new object();
+
         public override void Start()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            while (_createClientConnection1Thread != null) Thread.Sleep(1000);
-            while (_createClientConnection2Thread != null) Thread.Sleep(1000);
-            while (_createClientConnection3Thread != null) Thread.Sleep(1000);
-            while (_createServerConnection1Thread != null) Thread.Sleep(1000);
-            while (_createServerConnection2Thread != null) Thread.Sleep(1000);
-            while (_createServerConnection3Thread != null) Thread.Sleep(1000);
-            while (_connectionsManagerThread != null) Thread.Sleep(1000);
-
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Start) return;
-                _state = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
 
-                _serverManager.Start();
+                    _serverManager.Start();
 
-                _createClientConnection1Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection1Thread.Name = "ConnectionsManager_CreateClientConnection1Thread";
-                _createClientConnection1Thread.Start();
-                _createClientConnection2Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection2Thread.Name = "ConnectionsManager_CreateClientConnection2Thread";
-                _createClientConnection2Thread.Start();
-                _createClientConnection3Thread = new Thread(this.CreateClientConnectionThread);
-                _createClientConnection3Thread.Name = "ConnectionsManager_CreateClientConnection3Thread";
-                _createClientConnection3Thread.Start();
-                _createServerConnection1Thread = new Thread(this.CreateServerConnectionThread);
-                _createServerConnection1Thread.Name = "ConnectionsManager_CreateServerConnection1Thread";
-                _createServerConnection1Thread.Start();
-                _createServerConnection2Thread = new Thread(this.CreateServerConnectionThread);
-                _createServerConnection2Thread.Name = "ConnectionsManager_CreateServerConnection2Thread";
-                _createServerConnection2Thread.Start();
-                _createServerConnection3Thread = new Thread(this.CreateServerConnectionThread);
-                _createServerConnection3Thread.Name = "ConnectionsManager_CreateServerConnection3Thread";
-                _createServerConnection3Thread.Start();
-                _connectionsManagerThread = new Thread(this.ConnectionsManagerThread);
-                _connectionsManagerThread.Name = "ConnectionsManager_ConnectionsManagerThread";
-                _connectionsManagerThread.Start();
+                    _createClientConnection1Thread = new Thread(this.CreateClientConnectionThread);
+                    _createClientConnection1Thread.Name = "ConnectionsManager_CreateClientConnection1Thread";
+                    _createClientConnection1Thread.Start();
+                    _createClientConnection2Thread = new Thread(this.CreateClientConnectionThread);
+                    _createClientConnection2Thread.Name = "ConnectionsManager_CreateClientConnection2Thread";
+                    _createClientConnection2Thread.Start();
+                    _createClientConnection3Thread = new Thread(this.CreateClientConnectionThread);
+                    _createClientConnection3Thread.Name = "ConnectionsManager_CreateClientConnection3Thread";
+                    _createClientConnection3Thread.Start();
+                    _createServerConnection1Thread = new Thread(this.CreateServerConnectionThread);
+                    _createServerConnection1Thread.Name = "ConnectionsManager_CreateServerConnection1Thread";
+                    _createServerConnection1Thread.Start();
+                    _createServerConnection2Thread = new Thread(this.CreateServerConnectionThread);
+                    _createServerConnection2Thread.Name = "ConnectionsManager_CreateServerConnection2Thread";
+                    _createServerConnection2Thread.Start();
+                    _createServerConnection3Thread = new Thread(this.CreateServerConnectionThread);
+                    _createServerConnection3Thread.Name = "ConnectionsManager_CreateServerConnection3Thread";
+                    _createServerConnection3Thread.Start();
+                    _connectionsManagerThread = new Thread(this.ConnectionsManagerThread);
+                    _connectionsManagerThread.Name = "ConnectionsManager_ConnectionsManagerThread";
+                    _connectionsManagerThread.Start();
+                }
             }
         }
 
@@ -2365,41 +2362,44 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Stop) return;
-                _state = ManagerState.Stop;
-
-                _serverManager.Stop();
-            }
-
-            _createClientConnection1Thread.Join();
-            _createClientConnection1Thread = null;
-            _createClientConnection2Thread.Join();
-            _createClientConnection2Thread = null;
-            _createClientConnection3Thread.Join();
-            _createClientConnection3Thread = null;
-            _createServerConnection1Thread.Join();
-            _createServerConnection1Thread = null;
-            _createServerConnection2Thread.Join();
-            _createServerConnection2Thread = null;
-            _createServerConnection3Thread.Join();
-            _createServerConnection3Thread = null;
-            _connectionsManagerThread.Join();
-            _connectionsManagerThread = null;
-
-            lock (this.ThisLock)
-            {
-                foreach (var item in _connectionManagers.ToArray())
+                lock (this.ThisLock)
                 {
-                    this.RemoveConnectionManager(item);
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
+
+                    _serverManager.Stop();
                 }
 
-                _cuttingNodes.Clear();
-                _removeNodes.Clear();
-                _nodesStatus.Clear();
+                _createClientConnection1Thread.Join();
+                _createClientConnection1Thread = null;
+                _createClientConnection2Thread.Join();
+                _createClientConnection2Thread = null;
+                _createClientConnection3Thread.Join();
+                _createClientConnection3Thread = null;
+                _createServerConnection1Thread.Join();
+                _createServerConnection1Thread = null;
+                _createServerConnection2Thread.Join();
+                _createServerConnection2Thread = null;
+                _createServerConnection3Thread.Join();
+                _createServerConnection3Thread = null;
+                _connectionsManagerThread.Join();
+                _connectionsManagerThread = null;
 
-                _messagesManager.Clear();
+                lock (this.ThisLock)
+                {
+                    foreach (var item in _connectionManagers.ToArray())
+                    {
+                        this.RemoveConnectionManager(item);
+                    }
+
+                    _cuttingNodes.Clear();
+                    _removeNodes.Clear();
+                    _nodesStatus.Clear();
+
+                    _messagesManager.Clear();
+                }
             }
         }
 

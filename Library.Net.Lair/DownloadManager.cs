@@ -654,32 +654,38 @@ namespace Library.Net.Lair
             }
         }
 
+        private readonly object _stateLock = new object();
+
         public override void Start()
         {
-            while (_downloadManagerThread != null) Thread.Sleep(1000);
-
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Start) return;
-                _state = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
 
-                _downloadManagerThread = new Thread(this.DownloadThread);
-                _downloadManagerThread.Priority = ThreadPriority.Lowest;
-                _downloadManagerThread.Name = "DownloadManager_DownloadThread";
-                _downloadManagerThread.Start();
+                    _downloadManagerThread = new Thread(this.DownloadThread);
+                    _downloadManagerThread.Priority = ThreadPriority.Lowest;
+                    _downloadManagerThread.Name = "DownloadManager_DownloadThread";
+                    _downloadManagerThread.Start();
+                }
             }
         }
 
         public override void Stop()
         {
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Stop) return;
-                _state = ManagerState.Stop;
-            }
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
+                }
 
-            _downloadManagerThread.Join();
-            _downloadManagerThread = null;
+                _downloadManagerThread.Join();
+                _downloadManagerThread = null;
+            }
         }
 
         protected override void Dispose(bool disposing)

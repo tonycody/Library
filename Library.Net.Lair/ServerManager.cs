@@ -207,16 +207,21 @@ namespace Library.Net.Lair
             }
         }
 
+        private readonly object _stateLock = new object();
+
         public override void Start()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Start) return;
-                _state = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
 
-                _watchTimer.Change(0, 1000 * 10);
+                    _watchTimer.Change(0, 1000 * 10);
+                }
             }
         }
 
@@ -224,20 +229,23 @@ namespace Library.Net.Lair
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Stop) return;
-                _state = ManagerState.Stop;
-
-                _watchTimer.Change(Timeout.Infinite, Timeout.Infinite);
-
-                foreach (var tcpListener in _tcpListeners.Values)
+                lock (this.ThisLock)
                 {
-                    tcpListener.Stop();
-                }
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
 
-                _tcpListeners.Clear();
-                _urisHistory.Clear();
+                    _watchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+                    foreach (var tcpListener in _tcpListeners.Values)
+                    {
+                        tcpListener.Stop();
+                    }
+
+                    _tcpListeners.Clear();
+                    _urisHistory.Clear();
+                }
             }
         }
 

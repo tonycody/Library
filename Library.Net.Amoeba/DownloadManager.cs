@@ -1067,60 +1067,72 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private readonly object _stateLock = new object();
+
         public override void Start()
         {
-            while (_downloadManagerThread != null) Thread.Sleep(1000);
-
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Start) return;
-                _state = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
 
-                _downloadManagerThread = new Thread(this.DownloadManagerThread);
-                _downloadManagerThread.Priority = ThreadPriority.Lowest;
-                _downloadManagerThread.Name = "DownloadManager_DownloadManagerThread";
-                _downloadManagerThread.Start();
+                    _downloadManagerThread = new Thread(this.DownloadManagerThread);
+                    _downloadManagerThread.Priority = ThreadPriority.Lowest;
+                    _downloadManagerThread.Name = "DownloadManager_DownloadManagerThread";
+                    _downloadManagerThread.Start();
+                }
             }
         }
 
         public override void Stop()
         {
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Stop) return;
-                _state = ManagerState.Stop;
-            }
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
+                }
 
-            _downloadManagerThread.Join();
-            _downloadManagerThread = null;
+                _downloadManagerThread.Join();
+                _downloadManagerThread = null;
+            }
         }
+
+        private readonly object _decodeStateLock = new object();
 
         public void DecodeStart()
         {
-            while (_decodeManagerThread != null) Thread.Sleep(1000);
-
-            lock (this.ThisLock)
+            lock (_decodeStateLock)
             {
-                if (this.DecodeState == ManagerState.Start) return;
-                _decodeState = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.DecodeState == ManagerState.Start) return;
+                    _decodeState = ManagerState.Start;
 
-                _decodeManagerThread = new Thread(this.DecodeManagerThread);
-                _decodeManagerThread.Priority = ThreadPriority.Lowest;
-                _decodeManagerThread.Name = "DownloadManager_DecodeManagerThread";
-                _decodeManagerThread.Start();
+                    _decodeManagerThread = new Thread(this.DecodeManagerThread);
+                    _decodeManagerThread.Priority = ThreadPriority.Lowest;
+                    _decodeManagerThread.Name = "DownloadManager_DecodeManagerThread";
+                    _decodeManagerThread.Start();
+                }
             }
         }
 
         public void DecodeStop()
         {
-            lock (this.ThisLock)
+            lock (_decodeStateLock)
             {
-                if (this.DecodeState == ManagerState.Stop) return;
-                _decodeState = ManagerState.Stop;
-            }
+                lock (this.ThisLock)
+                {
+                    if (this.DecodeState == ManagerState.Stop) return;
+                    _decodeState = ManagerState.Stop;
+                }
 
-            _decodeManagerThread.Join();
-            _decodeManagerThread = null;
+                _decodeManagerThread.Join();
+                _decodeManagerThread = null;
+            }
         }
 
         #region ISettings

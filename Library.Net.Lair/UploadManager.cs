@@ -330,30 +330,38 @@ namespace Library.Net.Lair
             }
         }
 
+        private readonly object _stateLock = new object();
+
         public override void Start()
         {
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Start) return;
-                _state = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
 
-                _uploadThread = new Thread(this.UploadThread);
-                _uploadThread.Priority = ThreadPriority.Lowest;
-                _uploadThread.Name = "UploadManager_UploadManagerThread";
-                _uploadThread.Start();
+                    _uploadThread = new Thread(this.UploadThread);
+                    _uploadThread.Priority = ThreadPriority.Lowest;
+                    _uploadThread.Name = "UploadManager_UploadManagerThread";
+                    _uploadThread.Start();
+                }
             }
         }
 
         public override void Stop()
         {
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Stop) return;
-                _state = ManagerState.Stop;
-            }
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
+                }
 
-            _uploadThread.Join();
-            _uploadThread = null;
+                _uploadThread.Join();
+                _uploadThread = null;
+            }
         }
 
         #region ISettings

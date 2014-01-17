@@ -978,50 +978,54 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private readonly object _stateLock = new object();
+
         public override void Start()
         {
-            while (_downloadManagerThread != null) Thread.Sleep(1000);
-            while (_decodeManagerThread != null) Thread.Sleep(1000);
-            while (_watchThread != null) Thread.Sleep(1000);
-
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Start) return;
-                _state = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
 
-                _downloadManagerThread = new Thread(this.DownloadManagerThread);
-                _downloadManagerThread.Priority = ThreadPriority.Lowest;
-                _downloadManagerThread.Name = "BackgroundDownloadManager_DownloadManagerThread";
-                _downloadManagerThread.Start();
+                    _downloadManagerThread = new Thread(this.DownloadManagerThread);
+                    _downloadManagerThread.Priority = ThreadPriority.Lowest;
+                    _downloadManagerThread.Name = "BackgroundDownloadManager_DownloadManagerThread";
+                    _downloadManagerThread.Start();
 
-                _decodeManagerThread = new Thread(this.DecodeManagerThread);
-                _decodeManagerThread.Priority = ThreadPriority.Lowest;
-                _decodeManagerThread.Name = "BackgroundDownloadManager_DecodeManagerThread";
-                _decodeManagerThread.Start();
+                    _decodeManagerThread = new Thread(this.DecodeManagerThread);
+                    _decodeManagerThread.Priority = ThreadPriority.Lowest;
+                    _decodeManagerThread.Name = "BackgroundDownloadManager_DecodeManagerThread";
+                    _decodeManagerThread.Start();
 
-                _watchThread = new Thread(this.WatchThread);
-                _watchThread.Priority = ThreadPriority.Lowest;
-                _watchThread.Name = "BackgroundDownloadManager_WatchThread";
-                _watchThread.Start();
+                    _watchThread = new Thread(this.WatchThread);
+                    _watchThread.Priority = ThreadPriority.Lowest;
+                    _watchThread.Name = "BackgroundDownloadManager_WatchThread";
+                    _watchThread.Start();
+                }
             }
         }
 
         public override void Stop()
         {
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Stop) return;
-                _state = ManagerState.Stop;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
+                }
+
+                _downloadManagerThread.Join();
+                _downloadManagerThread = null;
+
+                _decodeManagerThread.Join();
+                _decodeManagerThread = null;
+
+                _watchThread.Join();
+                _watchThread = null;
             }
-
-            _downloadManagerThread.Join();
-            _downloadManagerThread = null;
-
-            _decodeManagerThread.Join();
-            _decodeManagerThread = null;
-
-            _watchThread.Join();
-            _watchThread = null;
         }
 
         #region ISettings

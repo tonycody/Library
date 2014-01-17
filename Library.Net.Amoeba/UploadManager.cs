@@ -942,50 +942,64 @@ namespace Library.Net.Amoeba
             }
         }
 
+        private readonly object _stateLock = new object();
+
         public override void Start()
         {
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Start) return;
-                _state = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
+                }
             }
         }
 
         public override void Stop()
         {
-            lock (this.ThisLock)
+            lock (_stateLock)
             {
-                if (this.State == ManagerState.Stop) return;
-                _state = ManagerState.Stop;
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
+                }
             }
         }
 
+        private readonly object _encodeStateLock = new object();
+
         public void EncodeStart()
         {
-            while (_uploadManagerThread != null) Thread.Sleep(1000);
-
-            lock (this.ThisLock)
+            lock (_encodeStateLock)
             {
-                if (this.EncodeState == ManagerState.Start) return;
-                _encodeState = ManagerState.Start;
+                lock (this.ThisLock)
+                {
+                    if (this.EncodeState == ManagerState.Start) return;
+                    _encodeState = ManagerState.Start;
 
-                _uploadManagerThread = new Thread(this.UploadManagerThread);
-                _uploadManagerThread.Priority = ThreadPriority.Lowest;
-                _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
-                _uploadManagerThread.Start();
+                    _uploadManagerThread = new Thread(this.UploadManagerThread);
+                    _uploadManagerThread.Priority = ThreadPriority.Lowest;
+                    _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
+                    _uploadManagerThread.Start();
+                }
             }
         }
 
         public void EncodeStop()
         {
-            lock (this.ThisLock)
+            lock (_encodeStateLock)
             {
-                if (this.EncodeState == ManagerState.Stop) return;
-                _encodeState = ManagerState.Stop;
-            }
+                lock (this.ThisLock)
+                {
+                    if (this.EncodeState == ManagerState.Stop) return;
+                    _encodeState = ManagerState.Stop;
+                }
 
-            _uploadManagerThread.Join();
-            _uploadManagerThread = null;
+                _uploadManagerThread.Join();
+                _uploadManagerThread = null;
+            }
         }
 
         #region ISettings
