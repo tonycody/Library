@@ -604,7 +604,7 @@ namespace Library.Net.Amoeba
 
                     sw.Stop();
 
-                    if (1000 > sw.ElapsedMilliseconds) Thread.Sleep(1000 - (int)sw.ElapsedMilliseconds);
+                    if (100 > sw.ElapsedMilliseconds) Thread.Sleep(100 - (int)sw.ElapsedMilliseconds);
                 }
             }
 #if DEBUG

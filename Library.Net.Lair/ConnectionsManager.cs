@@ -2056,7 +2056,7 @@ namespace Library.Net.Lair
 
                 for (; ; )
                 {
-                    Thread.Sleep(1000);
+                    Thread.Sleep(300);
                     if (this.State == ManagerState.Stop) return;
                     if (!_connectionManagers.Contains(connectionManager)) return;
 
@@ -2367,52 +2367,55 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    if (_random.NextDouble() < this.GetPriority(connectionManager.Node))
+                    for (int i = 0; i < 3; i++)
                     {
-                        // PushBlock
-                        if (connectionCount >= _uploadingConnectionCountLowerLimit)
+                        if (_random.NextDouble() < this.GetPriority(connectionManager.Node))
                         {
-                            foreach (var key in messageManager.PullBlocksRequest
-                                .ToArray()
-                                .Randomize())
+                            // PushBlock
+                            if (connectionCount >= _uploadingConnectionCountLowerLimit)
                             {
-                                if (!_cacheManager.Contains(key)) continue;
-
-                                ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                                try
+                                foreach (var key in messageManager.PullBlocksRequest
+                                    .ToArray()
+                                    .Randomize())
                                 {
-                                    buffer = _cacheManager[key];
+                                    if (!_cacheManager.Contains(key)) continue;
 
-                                    connectionManager.PushBlock(key, buffer);
+                                    ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64UrlString(key.Hash)));
-                                    _pushBlockCount++;
-
-                                    messageManager.PullBlocksRequest.Remove(key);
-                                    messageManager.PushBlocks.Add(key);
-
-                                    messageManager.Priority--;
-
-                                    // Infomation
+                                    try
                                     {
-                                        if (_relayBlocks.Contains(key))
+                                        buffer = _cacheManager[key];
+
+                                        connectionManager.PushBlock(key, buffer);
+
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push Block ({0})", NetworkConverter.ToBase64UrlString(key.Hash)));
+                                        _pushBlockCount++;
+
+                                        messageManager.PullBlocksRequest.Remove(key);
+                                        messageManager.PushBlocks.Add(key);
+
+                                        messageManager.Priority--;
+
+                                        // Infomation
                                         {
-                                            _relayBlockCount++;
+                                            if (_relayBlocks.Contains(key))
+                                            {
+                                                _relayBlockCount++;
+                                            }
                                         }
+
+                                        break;
                                     }
-
-                                    break;
-                                }
-                                catch (BlockNotFoundException)
-                                {
-
-                                }
-                                finally
-                                {
-                                    if (buffer.Array != null)
+                                    catch (BlockNotFoundException)
                                     {
-                                        _bufferManager.ReturnBuffer(buffer.Array);
+
+                                    }
+                                    finally
+                                    {
+                                        if (buffer.Array != null)
+                                        {
+                                            _bufferManager.ReturnBuffer(buffer.Array);
+                                        }
                                     }
                                 }
                             }

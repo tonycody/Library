@@ -791,10 +791,10 @@ namespace Library.Net.Amoeba
                             {
                                 _connectionsManager.SendSeedRequest(signature);
 
+                                // Link
                                 {
                                     Seed linkSeed;
 
-                                    // Link
                                     if (null != (linkSeed = _connectionsManager.GetLinkSeed(signature))
                                         && linkSeed.Length < 1024 * 1024 * 32)
                                     {
