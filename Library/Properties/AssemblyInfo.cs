@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library")]
@@ -11,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("1ce4cbc1-e4fb-4a20-a812-ccd90784efd4")]
-[assembly: AssemblyVersion("0.0.0.304")] // 0JUA1kmiOmOXwavMLO6ej0KzXk3sKm/1XlRnQUIoMcdHXx8rpDzsiMSvbG/s9Y/5Kts0voDhQWp+6cGqjG4bfQ==
+[assembly: AssemblyVersion("0.0.0.305")] // uM2vi2hsZnfG02aJQviMAv3nwtOK1gQ+eNvVgpE7Ra0v1G8aJqQdKCsYJ9OpEIw0PvXLm+AQ8s6rcaytutDqXw==

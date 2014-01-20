@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Library.Net.Connections")]
@@ -11,4 +11,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("67307ed2-d59b-4ba6-ba12-99bff3b73a75")]
-[assembly: AssemblyVersion("0.0.0.399")] // dthfZQxwCvjRyxOPDofUVIyYDUvHafAPmv9lrCmCND99RR2a+T4OY2Lj7EqMeGextugsKFn+rDw1RoBq9GUiVA==
+[assembly: AssemblyVersion("0.0.0.403")] // 9yP7x53BZiXJA/o8aa1vzaUs/VaUgFKU7jpobTrlOZoX40xVamctx1Sc9yyBZgrQIzY+XPGe0V+Q07sKPCB/aw==

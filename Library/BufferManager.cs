@@ -8,7 +8,7 @@ namespace Library
 
 #if !MONITOR
 
-    public class BufferManager : ManagerBase, IThisLock
+    public class BufferManager : ManagerBase
     {
         private static readonly BufferManager _instance = new BufferManager(1024 * 1024 * 1024, 1024 * 1024 * 256);
 
@@ -37,7 +37,7 @@ namespace Library
             List<int> sizes = new List<int>();
             List<List<byte[]>> buffers = new List<List<byte[]>>();
 
-            for (int i = 128; i < _maxBufferSize; i *= 2)
+            for (int i = 32; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
                 buffers.Add(new List<byte[]>());
@@ -60,7 +60,7 @@ namespace Library
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            lock (this.ThisLock)
+            lock (_thisLock)
             {
                 for (int i = 0; i < _sizes.Length; i++)
                 {
@@ -91,7 +91,7 @@ namespace Library
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (buffer == null) throw new ArgumentNullException("buffer");
 
-            lock (this.ThisLock)
+            lock (_thisLock)
             {
                 if (buffer.Length > _maxBufferSize) return;
 
@@ -157,18 +157,6 @@ namespace Library
 
             }
         }
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                return _thisLock;
-            }
-        }
-
-        #endregion
     }
 
 #else
@@ -283,7 +271,7 @@ namespace Library
             }
         }
 
-        #endregion
+    #endregion
     }
 
     [Serializable]

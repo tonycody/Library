@@ -95,6 +95,8 @@ namespace Library.Net.Connections
                     {
                         byte[] buffer = NetworkConverter.GetBytes((uint)_myCompressAlgorithm);
                         stream.Write(buffer, 0, buffer.Length);
+                        stream.Flush();
+                        stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
                     }

@@ -193,45 +193,55 @@ namespace Library.Net
             }
         }
 
-        private static byte[] Xor(byte[] x, byte[] y)
+        private unsafe static byte[] Xor(byte[] x, byte[] y)
         {
-            if (x.Length != y.Length)
+            fixed (byte* px = x, py = y)
             {
-                int length = Math.Min(x.Length, y.Length);
-                byte[] buffer = new byte[Math.Max(x.Length, y.Length)];
-
-                for (int i = 0; i < length; i++)
+                if (x.Length != y.Length)
                 {
-                    buffer[i] = (byte)(x[i] ^ y[i]);
-                }
+                    byte[] buffer = new byte[Math.Max(x.Length, y.Length)];
+                    int length = Math.Min(x.Length, y.Length);
 
-                if (x.Length > y.Length)
-                {
-                    for (int i = x.Length - y.Length; i < buffer.Length; i++)
+                    fixed (byte* pbuffer = buffer)
                     {
-                        buffer[i] = x[i];
+                        for (int i = 0; i < length; i++)
+                        {
+                            pbuffer[i] = (byte)(px[i] ^ py[i]);
+                        }
+
+                        if (x.Length > y.Length)
+                        {
+                            for (int i = x.Length - y.Length; i < buffer.Length; i++)
+                            {
+                                pbuffer[i] = px[i];
+                            }
+                        }
+                        else
+                        {
+                            for (int i = y.Length - x.Length; i < buffer.Length; i++)
+                            {
+                                pbuffer[i] = py[i];
+                            }
+                        }
                     }
+
+                    return buffer;
                 }
                 else
                 {
-                    for (int i = y.Length - x.Length; i < buffer.Length; i++)
+                    byte[] buffer = new byte[x.Length];
+                    int length = x.Length;
+
+                    fixed (byte* pbuffer = buffer)
                     {
-                        buffer[i] = y[i];
+                        for (int i = 0; i < length; i++)
+                        {
+                            pbuffer[i] = (byte)(px[i] ^ py[i]);
+                        }
                     }
+
+                    return buffer;
                 }
-
-                return buffer;
-            }
-            else
-            {
-                byte[] buffer = new byte[x.Length];
-
-                for (int i = 0; i < x.Length; i++)
-                {
-                    buffer[i] = (byte)(x[i] ^ y[i]);
-                }
-
-                return buffer;
             }
         }
 

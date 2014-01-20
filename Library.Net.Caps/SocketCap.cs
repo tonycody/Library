@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace Library.Net.Caps
 {
-    public class SocketCap : CapBase, IThisLock
+    public class SocketCap : CapBase
     {
         private Socket _socket;
 
@@ -24,10 +24,7 @@ namespace Library.Net.Caps
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _socket;
-                }
+                return _socket;
             }
         }
 
@@ -104,17 +101,5 @@ namespace Library.Net.Caps
                 _connect = false;
             }
         }
-
-        #region IThisLock
-
-        public object ThisLock
-        {
-            get
-            {
-                return _thisLock;
-            }
-        }
-
-        #endregion
     }
 }

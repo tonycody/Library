@@ -36,13 +36,13 @@ namespace Library.Net.Lair
                     {
                         var messageManager = _messageManagerDictionary[node];
 
-                        messageManager.PushBlocks.TrimExcess();
-                        messageManager.PushSectionProfileHeaders.TrimExcess();
-                        messageManager.PushSectionMessageHeaders.TrimExcess();
-                        messageManager.PushWikiPageHeaders.TrimExcess();
-                        messageManager.PushWikiVoteHeaders.TrimExcess();
-                        messageManager.PushChatTopicHeaders.TrimExcess();
-                        messageManager.PushChatMessageHeaders.TrimExcess();
+                        messageManager.StockBlocks.TrimExcess();
+                        messageManager.StockSectionProfileHeaders.TrimExcess();
+                        messageManager.StockSectionMessageHeaders.TrimExcess();
+                        messageManager.StockWikiPageHeaders.TrimExcess();
+                        messageManager.StockWikiVoteHeaders.TrimExcess();
+                        messageManager.StockChatTopicHeaders.TrimExcess();
+                        messageManager.StockChatMessageHeaders.TrimExcess();
 
                         messageManager.PushBlocksLink.TrimExcess();
                         messageManager.PullBlocksLink.TrimExcess();
@@ -168,15 +168,14 @@ namespace Library.Net.Lair
         private long _sentByteCount;
 
         private DateTime _lastPullTime = DateTime.UtcNow;
-        private LockedHashSet<Node> _surroundingNodes;
 
-        private VolatileCollection<Key> _pushBlocks;
-        private VolatileCollection<byte[]> _pushSectionProfileHeaders;
-        private VolatileCollection<byte[]> _pushSectionMessageHeaders;
-        private VolatileCollection<byte[]> _pushWikiPageHeaders;
-        private VolatileCollection<byte[]> _pushWikiVoteHeaders;
-        private VolatileCollection<byte[]> _pushChatTopicHeaders;
-        private VolatileCollection<byte[]> _pushChatMessageHeaders;
+        private VolatileCollection<Key> _stockBlocks;
+        private VolatileCollection<byte[]> _stockSectionProfileHeaders;
+        private VolatileCollection<byte[]> _stockSectionMessageHeaders;
+        private VolatileCollection<byte[]> _stockWikiPageHeaders;
+        private VolatileCollection<byte[]> _stockWikiVoteHeaders;
+        private VolatileCollection<byte[]> _stockChatTopicHeaders;
+        private VolatileCollection<byte[]> _stockChatMessageHeaders;
 
         private VolatileCollection<Key> _pushBlocksLink;
         private VolatileCollection<Key> _pullBlocksLink;
@@ -199,15 +198,13 @@ namespace Library.Net.Lair
         {
             _id = id;
 
-            _surroundingNodes = new LockedHashSet<Node>(128);
-
-            _pushBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushSectionProfileHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _pushSectionMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _pushWikiPageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _pushWikiVoteHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _pushChatTopicHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _pushChatMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _stockSectionProfileHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockSectionMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockWikiPageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockWikiVoteHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockChatTopicHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockChatMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
 
             _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
@@ -326,90 +323,79 @@ namespace Library.Net.Lair
             }
         }
 
-        public LockedHashSet<Node> SurroundingNodes
+        public VolatileCollection<Key> StockBlocks
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _surroundingNodes;
+                    return _stockBlocks;
                 }
             }
         }
 
-        public VolatileCollection<Key> PushBlocks
+        public VolatileCollection<byte[]> StockSectionProfileHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushBlocks;
+                    return _stockSectionProfileHeaders;
                 }
             }
         }
 
-        public VolatileCollection<byte[]> PushSectionProfileHeaders
+        public VolatileCollection<byte[]> StockSectionMessageHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSectionProfileHeaders;
+                    return _stockSectionMessageHeaders;
                 }
             }
         }
 
-        public VolatileCollection<byte[]> PushSectionMessageHeaders
+        public VolatileCollection<byte[]> StockWikiPageHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSectionMessageHeaders;
+                    return _stockWikiPageHeaders;
                 }
             }
         }
 
-        public VolatileCollection<byte[]> PushWikiPageHeaders
+        public VolatileCollection<byte[]> StockWikiVoteHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushWikiPageHeaders;
+                    return _stockWikiVoteHeaders;
                 }
             }
         }
 
-        public VolatileCollection<byte[]> PushWikiVoteHeaders
+        public VolatileCollection<byte[]> StockChatTopicHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushWikiVoteHeaders;
+                    return _stockChatTopicHeaders;
                 }
             }
         }
 
-        public VolatileCollection<byte[]> PushChatTopicHeaders
+        public VolatileCollection<byte[]> StockChatMessageHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushChatTopicHeaders;
-                }
-            }
-        }
-
-        public VolatileCollection<byte[]> PushChatMessageHeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushChatMessageHeaders;
+                    return _stockChatMessageHeaders;
                 }
             }
         }

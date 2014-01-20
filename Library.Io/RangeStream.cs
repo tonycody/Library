@@ -61,7 +61,7 @@ namespace Library.Io
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _stream.CanWrite;
+                return false;
             }
         }
 
@@ -121,7 +121,6 @@ namespace Library.Io
             if (value < 0 || _orignalLength < value) throw new ArgumentOutOfRangeException("value");
 
             _length = value;
-            _stream.SetLength(value + _offset);
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -151,28 +150,18 @@ namespace Library.Io
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
-            if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
-            if (count == 0) return;
-
-            count = (int)Math.Min(count, this.Length - this.Position);
-
-            _stream.Write(buffer, offset, count);
+            throw new NotSupportedException();
         }
 
         public override void Flush()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            _stream.Flush();
         }
 
         public override void Close()
         {
             if (_disposed) return;
 
-            this.Flush();
             base.Close();
         }
 

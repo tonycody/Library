@@ -448,7 +448,6 @@ namespace Library.Net.Lair
                     {
                         stream.WriteByte((byte)SerializeId.Ping);
                         stream.Write(value, 0, value.Length);
-
                         stream.Flush();
                         stream.Seek(0, SeekOrigin.Begin);
 
@@ -481,7 +480,6 @@ namespace Library.Net.Lair
                     {
                         stream.WriteByte((byte)SerializeId.Pong);
                         stream.Write(value, 0, value.Length);
-
                         stream.Flush();
                         stream.Seek(0, SeekOrigin.Begin);
 

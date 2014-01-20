@@ -36,9 +36,9 @@ namespace Library.Net.Amoeba
                     {
                         var messageManager = _messageManagerDictionary[node];
 
-                        messageManager.PushBlocks.TrimExcess();
-                        messageManager.PushLinkSeeds.TrimExcess();
-                        messageManager.PushStoreSeeds.TrimExcess();
+                        messageManager.StockBlocks.TrimExcess();
+                        messageManager.StockLinkSeeds.TrimExcess();
+                        messageManager.StockStoreSeeds.TrimExcess();
 
                         messageManager.PushBlocksLink.TrimExcess();
                         messageManager.PullBlocksLink.TrimExcess();
@@ -158,11 +158,10 @@ namespace Library.Net.Amoeba
         private long _sentByteCount;
 
         private DateTime _lastPullTime = DateTime.UtcNow;
-        private LockedHashSet<Node> _surroundingNodes;
 
-        private VolatileCollection<Key> _pushBlocks;
-        private VolatileDictionary<string, DateTime> _pushLinkSeeds;
-        private VolatileDictionary<string, DateTime> _pushStoreSeeds;
+        private VolatileCollection<Key> _stockBlocks;
+        private VolatileDictionary<string, DateTime> _stockLinkSeeds;
+        private VolatileDictionary<string, DateTime> _stockStoreSeeds;
 
         private VolatileCollection<Key> _pushBlocksLink;
         private VolatileCollection<Key> _pullBlocksLink;
@@ -179,11 +178,9 @@ namespace Library.Net.Amoeba
         {
             _id = id;
 
-            _surroundingNodes = new LockedHashSet<Node>(128);
-
-            _pushBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _pushLinkSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
-            _pushStoreSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
+            _stockBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
+            _stockLinkSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
+            _stockStoreSeeds = new VolatileDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
 
             _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
@@ -296,46 +293,35 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public LockedHashSet<Node> SurroundingNodes
+        public VolatileCollection<Key> StockBlocks
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _surroundingNodes;
+                    return _stockBlocks;
                 }
             }
         }
 
-        public VolatileCollection<Key> PushBlocks
+        public VolatileDictionary<string, DateTime> StockLinkSeeds
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushBlocks;
+                    return _stockLinkSeeds;
                 }
             }
         }
 
-        public VolatileDictionary<string, DateTime> PushLinkSeeds
+        public VolatileDictionary<string, DateTime> StockStoreSeeds
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushLinkSeeds;
-                }
-            }
-        }
-
-        public VolatileDictionary<string, DateTime> PushStoreSeeds
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushStoreSeeds;
+                    return _stockStoreSeeds;
                 }
             }
         }
