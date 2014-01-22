@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "HashAlgorithm", Namespace = "http://Library/Net/Amoeba")]
-    public enum HashAlgorithm
+    public enum HashAlgorithm : byte
     {
         [EnumMember(Value = "Sha512")]
         Sha512 = 0,

@@ -50,7 +50,6 @@ namespace Library.Net.Lair
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Tag != other.Tag
                 || this.Signature != other.Signature

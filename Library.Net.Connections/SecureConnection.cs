@@ -982,146 +982,149 @@ namespace Library.Net.Connections
             {
                 try
                 {
-                    if (_version.HasFlag(SecureConnectionVersion.Version2))
+                    using (RangeStream targetStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position, true))
                     {
-                        using (BufferStream bufferStream = new BufferStream(_bufferManager))
+                        if (_version.HasFlag(SecureConnectionVersion.Version2))
                         {
-                            bufferStream.SetLength(8);
-                            bufferStream.Seek(8, SeekOrigin.Begin);
-
-                            if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                            using (BufferStream bufferStream = new BufferStream(_bufferManager))
                             {
-                                byte[] iv = new byte[32];
-                                _random.GetBytes(iv);
-                                bufferStream.Write(iv, 0, iv.Length);
+                                bufferStream.SetLength(8);
+                                bufferStream.Seek(8, SeekOrigin.Begin);
 
-                                byte[] sendBuffer = null;
-
-                                try
+                                if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
                                 {
-                                    sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                    byte[] iv = new byte[32];
+                                    _random.GetBytes(iv);
+                                    bufferStream.Write(iv, 0, iv.Length);
 
-                                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                    using (CryptoStream cs = new CryptoStream(new WrapperStream(stream, true), rijndael.CreateEncryptor(_informationVersion2.MyCryptoKey, iv), CryptoStreamMode.Read))
+                                    byte[] sendBuffer = null;
+
+                                    try
                                     {
-                                        int i = -1;
+                                        sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                        while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true), rijndael.CreateEncryptor(_informationVersion2.MyCryptoKey, iv), CryptoStreamMode.Read))
                                         {
-                                            bufferStream.Write(sendBuffer, 0, i);
+                                            int i = -1;
+
+                                            while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                            {
+                                                bufferStream.Write(sendBuffer, 0, i);
+                                            }
                                         }
                                     }
-                                }
-                                finally
-                                {
-                                    _bufferManager.ReturnBuffer(sendBuffer);
-                                }
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
-
-                            _totalSendSize += (bufferStream.Length - 8);
-
-                            bufferStream.Seek(0, SeekOrigin.Begin);
-
-                            byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
-                            bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
-
-                            if (_informationVersion2.HashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
-                            {
-                                bufferStream.Seek(0, SeekOrigin.Begin);
-                                byte[] hmacBuff;
-
-                                using (var hmacSha512 = new HMACSHA512(_informationVersion2.MyHmacKey))
-                                {
-                                    hmacBuff = hmacSha512.ComputeHash(bufferStream);
-                                }
-
-                                bufferStream.Seek(0, SeekOrigin.End);
-                                bufferStream.Write(hmacBuff, 0, hmacBuff.Length);
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
-
-                            bufferStream.Seek(0, SeekOrigin.Begin);
-
-                            _connection.Send(bufferStream, timeout);
-                        }
-                    }
-                    else if (_version.HasFlag(SecureConnectionVersion.Version1))
-                    {
-                        using (BufferStream bufferStream = new BufferStream(_bufferManager))
-                        {
-                            bufferStream.SetLength(8);
-                            bufferStream.Seek(8, SeekOrigin.Begin);
-
-                            if (_informationVersion1.CryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
-                            {
-                                byte[] sendBuffer = null;
-
-                                try
-                                {
-                                    sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                    using (CryptoStream cs = new CryptoStream(new WrapperStream(stream, true),
-                                        rijndael.CreateEncryptor(_informationVersion1.MyCryptoKey.Take(32).ToArray(), _informationVersion1.MyCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                                    finally
                                     {
-                                        int i = -1;
-
-                                        while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
-                                        {
-                                            bufferStream.Write(sendBuffer, 0, i);
-                                        }
+                                        _bufferManager.ReturnBuffer(sendBuffer);
                                     }
                                 }
-                                finally
+                                else
                                 {
-                                    _bufferManager.ReturnBuffer(sendBuffer);
+                                    throw new ConnectionException();
                                 }
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
 
-                            _totalSendSize += (bufferStream.Length - 8);
+                                _totalSendSize += (bufferStream.Length - 8);
 
-                            bufferStream.Seek(0, SeekOrigin.Begin);
-
-                            byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
-                            bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
-
-                            if (_informationVersion1.HashAlgorithm.HasFlag(SecureVersion1.HashAlgorithm.Sha512))
-                            {
                                 bufferStream.Seek(0, SeekOrigin.Begin);
-                                byte[] hmacBuff;
 
-                                using (var hmacSha512 = new HMACSHA512(_informationVersion1.MyHmacKey))
+                                byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
+                                bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
+
+                                if (_informationVersion2.HashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
                                 {
-                                    hmacBuff = hmacSha512.ComputeHash(bufferStream);
+                                    bufferStream.Seek(0, SeekOrigin.Begin);
+                                    byte[] hmacBuff;
+
+                                    using (var hmacSha512 = new HMACSHA512(_informationVersion2.MyHmacKey))
+                                    {
+                                        hmacBuff = hmacSha512.ComputeHash(bufferStream);
+                                    }
+
+                                    bufferStream.Seek(0, SeekOrigin.End);
+                                    bufferStream.Write(hmacBuff, 0, hmacBuff.Length);
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
                                 }
 
-                                bufferStream.Seek(0, SeekOrigin.End);
-                                bufferStream.Write(hmacBuff, 0, hmacBuff.Length);
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
+                                bufferStream.Seek(0, SeekOrigin.Begin);
 
-                            bufferStream.Seek(0, SeekOrigin.Begin);
-
-                            _connection.Send(bufferStream, timeout);
+                                _connection.Send(bufferStream, timeout);
+                            }
                         }
-                    }
-                    else
-                    {
-                        throw new ConnectionException();
+                        else if (_version.HasFlag(SecureConnectionVersion.Version1))
+                        {
+                            using (BufferStream bufferStream = new BufferStream(_bufferManager))
+                            {
+                                bufferStream.SetLength(8);
+                                bufferStream.Seek(8, SeekOrigin.Begin);
+
+                                if (_informationVersion1.CryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
+                                {
+                                    byte[] sendBuffer = null;
+
+                                    try
+                                    {
+                                        sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
+
+                                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
+                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true),
+                                            rijndael.CreateEncryptor(_informationVersion1.MyCryptoKey.Take(32).ToArray(), _informationVersion1.MyCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                                        {
+                                            int i = -1;
+
+                                            while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                            {
+                                                bufferStream.Write(sendBuffer, 0, i);
+                                            }
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        _bufferManager.ReturnBuffer(sendBuffer);
+                                    }
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+
+                                _totalSendSize += (bufferStream.Length - 8);
+
+                                bufferStream.Seek(0, SeekOrigin.Begin);
+
+                                byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
+                                bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
+
+                                if (_informationVersion1.HashAlgorithm.HasFlag(SecureVersion1.HashAlgorithm.Sha512))
+                                {
+                                    bufferStream.Seek(0, SeekOrigin.Begin);
+                                    byte[] hmacBuff;
+
+                                    using (var hmacSha512 = new HMACSHA512(_informationVersion1.MyHmacKey))
+                                    {
+                                        hmacBuff = hmacSha512.ComputeHash(bufferStream);
+                                    }
+
+                                    bufferStream.Seek(0, SeekOrigin.End);
+                                    bufferStream.Write(hmacBuff, 0, hmacBuff.Length);
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+
+                                bufferStream.Seek(0, SeekOrigin.Begin);
+
+                                _connection.Send(bufferStream, timeout);
+                            }
+                        }
+                        else
+                        {
+                            throw new ConnectionException();
+                        }
                     }
                 }
                 catch (ConnectionException ex)

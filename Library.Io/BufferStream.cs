@@ -11,7 +11,7 @@ namespace Library.Io
         private List<byte[]> _buffers = new List<byte[]>();
         private long _position;
         private long _length;
-        private int _bufferSize = 128;
+        private int _bufferSize = 32;
         private bool _disposed;
 
         public BufferStream(BufferManager bufferManager)
@@ -105,7 +105,15 @@ namespace Library.Io
             while (_buffers.Sum(n => (long)n.Length) < value)
             {
                 _buffers.Add(_bufferManager.TakeBuffer(_bufferSize));
-                _bufferSize *= 2;
+
+                if (_bufferSize < 1024 * 32)
+                {
+                    _bufferSize *= 2;
+                }
+                else
+                {
+                    _bufferSize += 1024 * 32;
+                }
             }
 
             _length = value;

@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "CorrectionAlgorithm", Namespace = "http://Library/Net/Amoeba")]
-    public enum CorrectionAlgorithm
+    public enum CorrectionAlgorithm : byte
     {
         [EnumMember(Value = "None")]
         None = 0,

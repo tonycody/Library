@@ -48,24 +48,7 @@ namespace Library.UnitTest
 
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-        {
-            this.ProtectedImport(stream, bufferManager, 0);
-        }
-
-        public override Stream Export(BufferManager bufferManager)
-        {
-            return this.Export(bufferManager, 0);
-        }
-
-        private static D_Box Import(Stream stream, BufferManager bufferManager, int count)
-        {
-            var item = (D_Box)FormatterServices.GetUninitializedObject(typeof(D_Box));
-            item.ProtectedImport(stream, bufferManager, count);
-            return item;
-        }
-
-        private void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             //if (count > 256) throw new ArgumentException();
 
@@ -121,7 +104,7 @@ namespace Library.UnitTest
             }
         }
 
-        private Stream Export(BufferManager bufferManager, int count)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             //if (count > 256) throw new ArgumentException();
 
@@ -196,7 +179,7 @@ namespace Library.UnitTest
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Seed);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // D_Boxes
                 foreach (var b in this.D_Boxes)
@@ -207,7 +190,7 @@ namespace Library.UnitTest
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.D_Box);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
                 // Certificate
@@ -219,10 +202,10 @@ namespace Library.UnitTest
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Certificate);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
         }
 

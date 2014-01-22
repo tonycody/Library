@@ -8,7 +8,7 @@ using Library.Net.Caps;
 
 namespace Library.Net.Connections
 {
-    public class CapConnection : ConnectionBase, IThisLock
+    public class BaseConnection : ConnectionBase, IThisLock
     {
         private CapBase _cap;
         private int _maxReceiveCount;
@@ -26,6 +26,9 @@ namespace Library.Net.Connections
 
         private System.Threading.Timer _aliveTimer;
 
+        private Stopwatch _sendStopwatch = new Stopwatch();
+        private Stopwatch _receiveStopwatch = new Stopwatch();
+
         private readonly object _sendLock = new object();
         private readonly object _receiveLock = new object();
         private readonly object _thisLock = new object();
@@ -33,7 +36,7 @@ namespace Library.Net.Connections
         private volatile bool _connect;
         private volatile bool _disposed;
 
-        public CapConnection(CapBase cap, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
+        public BaseConnection(CapBase cap, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
         {
             _cap = cap;
             _bandwidthLimit = bandwidthLimit;
@@ -171,12 +174,9 @@ namespace Library.Net.Connections
 
             lock (_receiveLock)
             {
-                Stopwatch stopwatch = null;
-
                 try
                 {
-                    stopwatch = new Stopwatch();
-                    stopwatch.Start();
+                    _receiveStopwatch.Restart();
 
                 Restart: ;
 
@@ -185,7 +185,7 @@ namespace Library.Net.Connections
                     {
                         byte[] lengthbuffer = new byte[4];
 
-                        var time = CapConnection.CheckTimeout(stopwatch.Elapsed, timeout);
+                        var time = BaseConnection.CheckTimeout(_receiveStopwatch.Elapsed, timeout);
                         time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
                         if (_cap.Receive(lengthbuffer, time) != lengthbuffer.Length) throw new ConnectionException();
@@ -196,7 +196,7 @@ namespace Library.Net.Connections
 
                     if (length == 0)
                     {
-                        Thread.Sleep(1000);
+                        Thread.Sleep(100);
                         goto Restart;
                     }
                     else if (length > _maxReceiveCount)
@@ -225,7 +225,7 @@ namespace Library.Net.Connections
                                     if (receiveLength < 0) throw new ConnectionException();
                                 }
 
-                                var time = CapConnection.CheckTimeout(stopwatch.Elapsed, timeout);
+                                var time = BaseConnection.CheckTimeout(_receiveStopwatch.Elapsed, timeout);
                                 time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
                                 int i = _cap.Receive(receiveBuffer, 0, receiveLength, time);
@@ -271,60 +271,60 @@ namespace Library.Net.Connections
 
             lock (_sendLock)
             {
-                Stopwatch stopwatch = null;
-
-                try
+                using (RangeStream targetStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position, true))
                 {
-                    stopwatch = new Stopwatch();
-                    stopwatch.Start();
-
-                    Stream headerStream = new BufferStream(_bufferManager);
-                    headerStream.Write(NetworkConverter.GetBytes((int)stream.Length), 0, 4);
-
-                    byte[] sendBuffer = null;
-
                     try
                     {
-                        sendBuffer = _bufferManager.TakeBuffer(1024 * 8);
+                        _sendStopwatch.Restart();
 
-                        using (Stream dataStream = new JoinStream(headerStream, new WrapperStream(stream, true)))
+                        Stream headerStream = new BufferStream(_bufferManager);
+                        headerStream.Write(NetworkConverter.GetBytes((int)targetStream.Length), 0, 4);
+
+                        byte[] sendBuffer = null;
+
+                        try
                         {
-                            int i = -1;
+                            sendBuffer = _bufferManager.TakeBuffer(1024 * 8);
 
-                            for (; ; )
+                            using (Stream dataStream = new UniteStream(headerStream, new WrapperStream(targetStream, true)))
                             {
-                                int sendLength = (int)Math.Min(dataStream.Length - dataStream.Position, sendBuffer.Length);
-                                if (sendLength <= 0) break;
+                                int i = -1;
 
-                                if (_bandwidthLimit != null)
+                                for (; ; )
                                 {
-                                    sendLength = _bandwidthLimit.GetOutBandwidth(this, sendLength);
-                                    if (sendLength < 0) throw new ConnectionException();
+                                    int sendLength = (int)Math.Min(dataStream.Length - dataStream.Position, sendBuffer.Length);
+                                    if (sendLength <= 0) break;
+
+                                    if (_bandwidthLimit != null)
+                                    {
+                                        sendLength = _bandwidthLimit.GetOutBandwidth(this, sendLength);
+                                        if (sendLength < 0) throw new ConnectionException();
+                                    }
+
+                                    if ((i = dataStream.Read(sendBuffer, 0, sendLength)) < 0) break;
+
+                                    var time = BaseConnection.CheckTimeout(_sendStopwatch.Elapsed, timeout);
+                                    time = (time < _sendTimeSpan) ? time : _sendTimeSpan;
+
+                                    _cap.Send(sendBuffer, 0, i, time);
+                                    _sendUpdateTime = DateTime.UtcNow;
+                                    _sentByteCount += i;
                                 }
-
-                                if ((i = dataStream.Read(sendBuffer, 0, sendLength)) < 0) break;
-
-                                var time = CapConnection.CheckTimeout(stopwatch.Elapsed, timeout);
-                                time = (time < _sendTimeSpan) ? time : _sendTimeSpan;
-
-                                _cap.Send(sendBuffer, 0, i, time);
-                                _sendUpdateTime = DateTime.UtcNow;
-                                _sentByteCount += i;
                             }
                         }
+                        finally
+                        {
+                            _bufferManager.ReturnBuffer(sendBuffer);
+                        }
                     }
-                    finally
+                    catch (ConnectionException e)
                     {
-                        _bufferManager.ReturnBuffer(sendBuffer);
+                        throw e;
                     }
-                }
-                catch (ConnectionException e)
-                {
-                    throw e;
-                }
-                catch (Exception e)
-                {
-                    throw new ConnectionException(e.Message, e);
+                    catch (Exception e)
+                    {
+                        throw new ConnectionException(e.Message, e);
+                    }
                 }
             }
         }

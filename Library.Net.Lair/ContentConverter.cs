@@ -121,7 +121,7 @@ namespace Library.Net.Lair
             BufferStream headerStream = new BufferStream(_bufferManager);
             headerStream.WriteByte((byte)list[0].Key);
 
-            return new JoinStream(headerStream, list[0].Value);
+            return new UniteStream(headerStream, list[0].Value);
         }
 
         private static Stream Decompress(Stream stream)
@@ -420,7 +420,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                return new JoinStream(headerStream, new WrapperStream(stream, true), paddingStream);
+                return new UniteStream(headerStream, new WrapperStream(stream, true), paddingStream);
             }
             catch (Exception e)
             {
@@ -476,7 +476,7 @@ namespace Library.Net.Lair
 
             streams.Add(stream);
 
-            return new JoinStream(streams);
+            return new UniteStream(streams);
         }
 
         private static Stream RemoveType(Stream stream, string type)
@@ -517,7 +517,7 @@ namespace Library.Net.Lair
                 BufferStream hashStream = new BufferStream(_bufferManager);
                 hashStream.Write(hash, 0, hash.Length);
 
-                return new JoinStream(headerStream, new WrapperStream(stream, true), hashStream);
+                return new UniteStream(headerStream, new WrapperStream(stream, true), hashStream);
             }
             catch (Exception e)
             {

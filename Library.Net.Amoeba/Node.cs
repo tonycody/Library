@@ -20,13 +20,10 @@ namespace Library.Net.Amoeba
             Uri = 1,
         }
 
-        private byte[] _id;
-        private UriCollection _uris;
+        private volatile byte[] _id;
+        private volatile UriCollection _uris;
 
-        private int _hashCode;
-
-        private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
+        private volatile int _hashCode;
 
         public static readonly int MaxIdLength = 64;
         public static readonly int MaxUriCount = 32;
@@ -37,89 +34,80 @@ namespace Library.Net.Amoeba
             if (uris != null) this.ProtectedUris.AddRange(uris);
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            lock (this.ThisLock)
+            Encoding encoding = new UTF8Encoding(false);
+            byte[] lengthBuffer = new byte[4];
+
+            for (; ; )
             {
-                Encoding encoding = new UTF8Encoding(false);
-                byte[] lengthBuffer = new byte[4];
+                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                int length = NetworkConverter.ToInt32(lengthBuffer);
+                int id = (byte)stream.ReadByte();
 
-                for (; ; )
+                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    int id = (byte)stream.ReadByte();
-
-                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    if (id == (byte)SerializeId.Id)
                     {
-                        if (id == (byte)SerializeId.Id)
-                        {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
+                        byte[] buffer = new byte[rangeStream.Length];
+                        rangeStream.Read(buffer, 0, buffer.Length);
 
-                            this.Id = buffer;
-                        }
+                        this.Id = buffer;
+                    }
 
-                        else if (id == (byte)SerializeId.Uri)
+                    else if (id == (byte)SerializeId.Uri)
+                    {
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.ProtectedUris.Add(reader.ReadToEnd());
-                            }
+                            this.ProtectedUris.Add(reader.ReadToEnd());
                         }
                     }
                 }
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
-            lock (this.ThisLock)
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            // Id
+            if (this.Id != null)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Id);
+                bufferStream.Write(this.Id, 0, this.Id.Length);
 
-                // Id
-                if (this.Id != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Id);
-                    bufferStream.Write(this.Id, 0, this.Id.Length);
-
-                    streams.Add(bufferStream);
-                }
-
-                // Uris
-                foreach (var u in this.Uris)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(u);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Uri);
-
-                    streams.Add(bufferStream);
-                }
-
-                return new JoinStream(streams);
+                streams.Add(bufferStream);
             }
+
+            // Uris
+            foreach (var u in this.Uris)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
+
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                {
+                    writer.Write(u);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.Uri);
+
+                streams.Add(bufferStream);
+            }
+
+            return new UniteStream(streams);
         }
 
         public override int GetHashCode()
         {
-            lock (this.ThisLock)
-            {
-                return _hashCode;
-            }
+            return _hashCode;
         }
 
         public override bool Equals(object obj)
@@ -133,7 +121,6 @@ namespace Library.Net.Amoeba
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if ((this.Id == null) != (other.Id == null)
                 || (this.Uris == null) != (other.Uris == null))
@@ -156,29 +143,7 @@ namespace Library.Net.Amoeba
 
         public override string ToString()
         {
-            lock (this.ThisLock)
-            {
-                return String.Join(", ", this.Uris);
-            }
-        }
-
-        private object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
-            }
+            return String.Join(", ", this.Uris);
         }
 
         #region INode
@@ -191,34 +156,28 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _id;
-                }
+                return _id;
             }
             private set
             {
-                lock (this.ThisLock)
+                if (value != null && (value.Length > Node.MaxIdLength))
                 {
-                    if (value != null && (value.Length > Node.MaxIdLength))
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _id = value;
-                    }
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _id = value;
+                }
 
-                    if (value != null && value.Length != 0)
-                    {
-                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                        else _hashCode = value[0];
-                    }
-                    else
-                    {
-                        _hashCode = 0;
-                    }
+                if (value != null && value.Length != 0)
+                {
+                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                    else _hashCode = value[0];
+                }
+                else
+                {
+                    _hashCode = 0;
                 }
             }
         }
@@ -231,13 +190,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    if (_readOnlyUris == null)
-                        _readOnlyUris = new ReadOnlyCollection<string>(this.ProtectedUris);
+                if (_readOnlyUris == null)
+                    _readOnlyUris = new ReadOnlyCollection<string>(this.ProtectedUris);
 
-                    return _readOnlyUris;
-                }
+                return _readOnlyUris;
             }
         }
 
@@ -246,13 +202,10 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    if (_uris == null)
-                        _uris = new UriCollection(Node.MaxUriCount);
+                if (_uris == null)
+                    _uris = new UriCollection(Node.MaxUriCount);
 
-                    return _uris;
-                }
+                return _uris;
             }
         }
     }

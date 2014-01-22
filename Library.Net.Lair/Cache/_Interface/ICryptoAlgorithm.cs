@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "CryptoAlgorithm", Namespace = "http://Library/Net/Lair")]
-    public enum CryptoAlgorithm
+    public enum CryptoAlgorithm : byte
     {
         [EnumMember(Value = "Rijndael256")]
         Rijndael256 = 0,

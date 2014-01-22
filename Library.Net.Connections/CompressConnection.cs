@@ -249,82 +249,93 @@ namespace Library.Net.Connections
 
             lock (_sendLock)
             {
-                try
+                using (RangeStream targetStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position, true))
                 {
-                    List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
-
-                    if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
+                    try
                     {
-                        try
-                        {
-                            BufferStream deflateBufferStream = new BufferStream(_bufferManager);
-                            byte[] compressBuffer = null;
+                        List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
 
+                        if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
+                        {
                             try
                             {
-                                compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                BufferStream deflateBufferStream = new BufferStream(_bufferManager);
+                                byte[] compressBuffer = null;
 
-                                using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
+                                try
                                 {
-                                    int i = -1;
+                                    compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                    while ((i = stream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
+                                    using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                                     {
-                                        deflateStream.Write(compressBuffer, 0, i);
+                                        int i = -1;
+
+                                        while ((i = targetStream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
+                                        {
+                                            deflateStream.Write(compressBuffer, 0, i);
+                                        }
                                     }
                                 }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(compressBuffer);
+                                }
+
+                                deflateBufferStream.Seek(0, SeekOrigin.Begin);
+
+                                if (deflateBufferStream.Length < targetStream.Length)
+                                {
+                                    list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                                }
+                                else
+                                {
+                                    deflateBufferStream.Dispose();
+                                }
                             }
-                            finally
+                            catch (Exception)
                             {
-                                _bufferManager.ReturnBuffer(compressBuffer);
+                                throw;
                             }
-
-                            deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                            list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
                         }
-                        catch (Exception)
+
+                        list.Add(new KeyValuePair<int, Stream>(0, new WrapperStream(targetStream, true)));
+
+                        list.Sort((x, y) =>
                         {
-                            throw;
-                        }
-                    }
-
-                    list.Add(new KeyValuePair<int, Stream>(0, new WrapperStream(stream, true)));
-
-                    list.Sort((x, y) =>
-                    {
-                        return x.Value.Length.CompareTo(y.Value.Length);
-                    });
+                            return x.Value.Length.CompareTo(y.Value.Length);
+                        });
 
 #if DEBUG
-                    if (list[0].Value.Length != stream.Length)
-                    {
-                        Debug.WriteLine("Send : {0}→{1} {2}",
-                            NetworkConverter.ToSizeString(stream.Length),
-                            NetworkConverter.ToSizeString(list[0].Value.Length),
-                            NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
-                    }
+                        if (list[0].Value.Length != targetStream.Length)
+                        {
+                            Debug.WriteLine("Send : {0}→{1} {2}",
+                                NetworkConverter.ToSizeString(targetStream.Length),
+                                NetworkConverter.ToSizeString(list[0].Value.Length),
+                                NetworkConverter.ToSizeString(list[0].Value.Length - targetStream.Length));
+                        }
 #endif
 
-                    for (int i = 1; i < list.Count; i++)
-                    {
-                        list[i].Value.Dispose();
-                    }
+                        for (int i = 1; i < list.Count; i++)
+                        {
+                            list[i].Value.Dispose();
+                        }
 
-                    BufferStream headerStream = new BufferStream(_bufferManager);
-                    headerStream.WriteByte((byte)list[0].Key);
+                        BufferStream headerStream = new BufferStream(_bufferManager);
+                        headerStream.WriteByte((byte)list[0].Key);
 
-                    using (var dataStream = new JoinStream(headerStream, list[0].Value))
-                    {
-                        _connection.Send(dataStream, timeout);
+                        using (var dataStream = new UniteStream(headerStream, list[0].Value))
+                        {
+                            _connection.Send(dataStream, timeout);
+                        }
                     }
-                }
-                catch (ConnectionException ex)
-                {
-                    throw ex;
-                }
-                catch (Exception e)
-                {
-                    throw new ConnectionException(e.Message, e);
+                    catch (ConnectionException ex)
+                    {
+                        throw ex;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ConnectionException(e.Message, e);
+                    }
                 }
             }
         }

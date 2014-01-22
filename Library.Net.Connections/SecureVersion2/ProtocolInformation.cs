@@ -32,7 +32,7 @@ namespace Library.Net.Connections.SecureVersion2
 
         public static readonly int MaxSessionIdLength = 64;
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -87,7 +87,7 @@ namespace Library.Net.Connections.SecureVersion2
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -181,7 +181,7 @@ namespace Library.Net.Connections.SecureVersion2
                     streams.Add(bufferStream);
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
         }
 
@@ -204,7 +204,6 @@ namespace Library.Net.Connections.SecureVersion2
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.KeyExchangeAlgorithm != other.KeyExchangeAlgorithm
                 || this.KeyDerivationFunctionAlgorithm != other.KeyDerivationFunctionAlgorithm

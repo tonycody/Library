@@ -146,28 +146,28 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_JoinStream()
+        public void Test_UniteStream()
         {
             using (MemoryStream memoryStream1 = new MemoryStream(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7 }))
             using (MemoryStream memoryStream2 = new MemoryStream(new byte[] { 8, 9, 10, 11, 12, 13, 14 }))
             {
-                using (JoinStream addStream = new JoinStream(new RangeStream(memoryStream1, 2, 4), new RangeStream(memoryStream2, 2, 4)))
+                using (UniteStream addStream = new UniteStream(new RangeStream(memoryStream1, 2, 4), new RangeStream(memoryStream2, 2, 4)))
                 {
                     byte[] buffer1 = new byte[2];
                     addStream.Read(buffer1, 0, buffer1.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 2, 3 }, buffer1), "JoinStream #1");
+                    Assert.IsTrue(Collection.Equals(new byte[] { 2, 3 }, buffer1), "UniteStream #1");
 
                     byte[] buffer2 = new byte[2];
                     addStream.Read(buffer2, 0, buffer2.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 4, 5 }, buffer2), "JoinStream #2");
+                    Assert.IsTrue(Collection.Equals(new byte[] { 4, 5 }, buffer2), "UniteStream #2");
 
                     byte[] buffer3 = new byte[2];
                     addStream.Read(buffer3, 0, buffer3.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 10, 11 }, buffer3), "JoinStream #3");
+                    Assert.IsTrue(Collection.Equals(new byte[] { 10, 11 }, buffer3), "UniteStream #3");
 
                     byte[] buffer4 = new byte[2];
                     addStream.Read(buffer4, 0, buffer4.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 12, 13 }, buffer4), "JoinStream #4");
+                    Assert.IsTrue(Collection.Equals(new byte[] { 12, 13 }, buffer4), "UniteStream #4");
                 }
             }
         }

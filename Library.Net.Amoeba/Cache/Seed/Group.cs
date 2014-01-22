@@ -35,7 +35,7 @@ namespace Library.Net.Amoeba
 
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -94,7 +94,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -110,7 +110,7 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
                 // CorrectionAlgorithm
@@ -163,7 +163,7 @@ namespace Library.Net.Amoeba
                     streams.Add(bufferStream);
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
         }
 
@@ -187,7 +187,6 @@ namespace Library.Net.Amoeba
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if ((this.Keys == null) != (other.Keys == null)
 

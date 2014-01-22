@@ -453,7 +453,6 @@ namespace Library.Net.Amoeba
                     {
                         stream.WriteByte((byte)SerializeId.Ping);
                         stream.Write(value, 0, value.Length);
-
                         stream.Flush();
                         stream.Seek(0, SeekOrigin.Begin);
 
@@ -486,7 +485,6 @@ namespace Library.Net.Amoeba
                     {
                         stream.WriteByte((byte)SerializeId.Pong);
                         stream.Write(value, 0, value.Length);
-
                         stream.Flush();
                         stream.Seek(0, SeekOrigin.Begin);
 
@@ -604,7 +602,7 @@ namespace Library.Net.Amoeba
 
                     sw.Stop();
 
-                    if (100 > sw.ElapsedMilliseconds) Thread.Sleep(100 - (int)sw.ElapsedMilliseconds);
+                    if (300 > sw.ElapsedMilliseconds) Thread.Sleep(300 - (int)sw.ElapsedMilliseconds);
                 }
             }
 #if DEBUG
@@ -719,7 +717,7 @@ namespace Library.Net.Amoeba
 
                     var message = new NodesMessage(nodes);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -756,7 +754,7 @@ namespace Library.Net.Amoeba
 
                     var message = new BlocksLinkMessage(keys);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -793,7 +791,7 @@ namespace Library.Net.Amoeba
 
                     var message = new BlocksRequestMessage(keys);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -830,7 +828,7 @@ namespace Library.Net.Amoeba
 
                     var message = new BlockMessage(key, value);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -867,7 +865,7 @@ namespace Library.Net.Amoeba
 
                     var message = new SeedsRequestMessage(signatures);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -904,7 +902,7 @@ namespace Library.Net.Amoeba
 
                     var message = new SeedsMessage(seeds);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -973,7 +971,7 @@ namespace Library.Net.Amoeba
                 if (nodes != null) this.ProtectedNodes.AddRange(nodes);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -994,7 +992,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1008,10 +1006,10 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Node);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public NodesMessage Clone()
@@ -1062,7 +1060,7 @@ namespace Library.Net.Amoeba
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1083,7 +1081,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1097,10 +1095,10 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public BlocksLinkMessage Clone()
@@ -1151,7 +1149,7 @@ namespace Library.Net.Amoeba
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1172,7 +1170,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1186,10 +1184,10 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public BlocksRequestMessage Clone()
@@ -1243,7 +1241,7 @@ namespace Library.Net.Amoeba
                 _value = value;
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 try
                 {
@@ -1283,7 +1281,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
 
@@ -1296,7 +1294,7 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // Value
                 if (this.Value.Array != null)
@@ -1309,7 +1307,7 @@ namespace Library.Net.Amoeba
                     streams.Add(bufferStream);
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public BlockMessage Clone()
@@ -1351,7 +1349,7 @@ namespace Library.Net.Amoeba
                 if (signatures != null) this.ProtectedSignatures.AddRange(signatures);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1375,7 +1373,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1400,7 +1398,7 @@ namespace Library.Net.Amoeba
                     streams.Add(bufferStream);
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public SeedsRequestMessage Clone()
@@ -1451,7 +1449,7 @@ namespace Library.Net.Amoeba
                 if (seeds != null) this.ProtectedSeeds.AddRange(seeds);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1472,7 +1470,7 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1486,10 +1484,10 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Seed);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public SeedsMessage Clone()

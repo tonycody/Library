@@ -50,7 +50,7 @@ namespace Library.Net.Lair
             if (chats != null) this.ProtectedChats.AddRange(chats);
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -103,7 +103,7 @@ namespace Library.Net.Lair
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -138,7 +138,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.ExchangePublicKey);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // TrustSignatures
                 foreach (var t in this.TrustSignatures)
@@ -187,7 +187,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Wiki);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // Chats
                 foreach (var c in this.Chats)
@@ -198,10 +198,10 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Chat);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
         }
 
@@ -225,7 +225,6 @@ namespace Library.Net.Lair
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Comment != other.Comment
                 || this.ExchangePublicKey != other.ExchangePublicKey

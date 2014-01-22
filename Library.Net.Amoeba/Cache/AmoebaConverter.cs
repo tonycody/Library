@@ -54,7 +54,15 @@ namespace Library.Net.Amoeba
                     }
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
+
+                    if (deflateBufferStream.Length < stream.Length)
+                    {
+                        list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                    }
+                    else
+                    {
+                        deflateBufferStream.Dispose();
+                    }
                 }
                 catch (Exception)
                 {
@@ -86,10 +94,10 @@ namespace Library.Net.Amoeba
                 BufferStream headerStream = new BufferStream(_bufferManager);
                 headerStream.WriteByte((byte)list[0].Key);
 
-                var dataStream = new JoinStream(headerStream, list[0].Value);
+                var dataStream = new UniteStream(headerStream, list[0].Value);
 
                 MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(dataStream));
-                return new JoinStream(dataStream, crcStream);
+                return new UniteStream(dataStream, crcStream);
             }
             catch (Exception ex)
             {

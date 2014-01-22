@@ -40,7 +40,7 @@ namespace Library.Net.Connections.SecureVersion2
 
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -93,7 +93,7 @@ namespace Library.Net.Connections.SecureVersion2
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -159,10 +159,10 @@ namespace Library.Net.Connections.SecureVersion2
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Certificate);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
         }
 
@@ -185,7 +185,6 @@ namespace Library.Net.Connections.SecureVersion2
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.CreationTime != other.CreationTime
                 || (this.Key == null) != (other.Key == null)

@@ -605,7 +605,7 @@ namespace Library.Net.Lair
 
                     sw.Stop();
 
-                    if (100 > sw.ElapsedMilliseconds) Thread.Sleep(100 - (int)sw.ElapsedMilliseconds);
+                    if (300 > sw.ElapsedMilliseconds) Thread.Sleep(300 - (int)sw.ElapsedMilliseconds);
                 }
             }
 #if DEBUG
@@ -711,7 +711,7 @@ namespace Library.Net.Lair
 
                     var message = new NodesMessage(nodes);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -748,7 +748,7 @@ namespace Library.Net.Lair
 
                     var message = new BlocksLinkMessage(keys);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -785,7 +785,7 @@ namespace Library.Net.Lair
 
                     var message = new BlocksRequestMessage(keys);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -822,7 +822,7 @@ namespace Library.Net.Lair
 
                     var message = new BlockMessage(key, value);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -861,7 +861,7 @@ namespace Library.Net.Lair
 
                     var message = new HeadersRequestMessage(sections, wikis, chats);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -908,7 +908,7 @@ namespace Library.Net.Lair
                         chatTopicHeaders,
                         chatMessageHeaders);
 
-                    stream = new JoinStream(stream, message.Export(_bufferManager));
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
@@ -977,7 +977,7 @@ namespace Library.Net.Lair
                 if (nodes != null) this.ProtectedNodes.AddRange(nodes);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -998,7 +998,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1012,10 +1012,10 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Node);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public NodesMessage Clone()
@@ -1066,7 +1066,7 @@ namespace Library.Net.Lair
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1087,7 +1087,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1101,10 +1101,10 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public BlocksLinkMessage Clone()
@@ -1155,7 +1155,7 @@ namespace Library.Net.Lair
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1176,7 +1176,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1190,10 +1190,10 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public BlocksRequestMessage Clone()
@@ -1247,7 +1247,7 @@ namespace Library.Net.Lair
                 _value = value;
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 try
                 {
@@ -1285,7 +1285,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
 
@@ -1298,7 +1298,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // Value
                 if (this.Value.Array != null)
@@ -1311,7 +1311,7 @@ namespace Library.Net.Lair
                     streams.Add(bufferStream);
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public BlockMessage Clone()
@@ -1361,7 +1361,7 @@ namespace Library.Net.Lair
                 if (chats != null) this.ProtectedChats.AddRange(chats);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1390,7 +1390,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1404,7 +1404,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Section);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // Wikis
                 foreach (var a in this.Wikis)
@@ -1415,7 +1415,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Wiki);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // Chats
                 foreach (var c in this.Chats)
@@ -1426,10 +1426,10 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Chat);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public HeadersRequestMessage Clone()
@@ -1550,7 +1550,7 @@ namespace Library.Net.Lair
                 if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
             }
 
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
@@ -1591,7 +1591,7 @@ namespace Library.Net.Lair
                 }
             }
 
-            public override Stream Export(BufferManager bufferManager)
+            protected override Stream Export(BufferManager bufferManager, int count)
             {
                 List<Stream> streams = new List<Stream>();
                 Encoding encoding = new UTF8Encoding(false);
@@ -1605,7 +1605,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.SectionProfileHeader);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // SectionMessageHeaders
                 foreach (var h in this.SectionMessageHeaders)
@@ -1616,7 +1616,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.SectionMessageHeader);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // WikiPageHeaders
                 foreach (var h in this.WikiPageHeaders)
@@ -1627,7 +1627,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.WikiPageHeader);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // WikiVoteHeaders
                 foreach (var h in this.WikiVoteHeaders)
@@ -1638,7 +1638,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.WikiVoteHeader);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // ChatTopicHeaders
                 foreach (var h in this.ChatTopicHeaders)
@@ -1649,7 +1649,7 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.ChatTopicHeader);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // ChatMessageHeaders
                 foreach (var h in this.ChatMessageHeaders)
@@ -1660,10 +1660,10 @@ namespace Library.Net.Lair
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.ChatMessageHeader);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
 
             public HeadersMessage Clone()

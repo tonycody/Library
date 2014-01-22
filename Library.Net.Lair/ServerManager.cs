@@ -106,7 +106,7 @@ namespace Library.Net.Lair
                                     var cap = new SocketCap(socket);
                                     garbages.Add(cap);
 
-                                    connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                                    connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                                     garbages.Add(connection);
                                 }
                             }
@@ -119,7 +119,7 @@ namespace Library.Net.Lair
 
                         garbages.Add(cap);
 
-                        connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                        connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                         garbages.Add(connection);
                     }
 

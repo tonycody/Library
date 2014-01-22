@@ -18,7 +18,7 @@ namespace Library
         private int _maxBufferSize;
 
         private int[] _sizes;
-        private List<byte[]>[] _buffers;
+        private LinkedList<byte[]>[] _buffers;
         private long[] _callCounts;
 
         private readonly object _thisLock = new object();
@@ -35,12 +35,12 @@ namespace Library
             _maxBufferSize = maxBufferSize;
 
             List<int> sizes = new List<int>();
-            List<List<byte[]>> buffers = new List<List<byte[]>>();
+            List<LinkedList<byte[]>> buffers = new List<LinkedList<byte[]>>();
 
             for (int i = 32; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
-                buffers.Add(new List<byte[]>());
+                buffers.Add(new LinkedList<byte[]>());
             }
 
             _sizes = sizes.ToArray();
@@ -70,8 +70,8 @@ namespace Library
 
                         if (_buffers[i].Count > 0)
                         {
-                            byte[] buffer = _buffers[i][0];
-                            _buffers[i].RemoveAt(0);
+                            byte[] buffer = _buffers[i].First.Value;
+                            _buffers[i].RemoveFirst();
 
                             return buffer;
                         }
@@ -127,7 +127,7 @@ namespace Library
 
                             if (_buffers[index].Count > 0)
                             {
-                                _buffers[index].RemoveAt(0);
+                                _buffers[index].RemoveFirst();
 
                                 break;
                             }
@@ -139,7 +139,7 @@ namespace Library
                 {
                     if (buffer.Length == _sizes[i])
                     {
-                        _buffers[i].Add(buffer);
+                        _buffers[i].AddLast(buffer);
 
                         break;
                     }

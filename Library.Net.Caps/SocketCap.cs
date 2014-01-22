@@ -45,12 +45,22 @@ namespace Library.Net.Caps
                     return i;
                 }
             }
+#if DEBUG
+            catch (Exception e)
+            {
+                _connect = false;
+                Log.Information(e);
+
+                throw new CapException("Receive", e);
+            }
+#else
             catch (Exception e)
             {
                 _connect = false;
 
                 throw new CapException("Receive", e);
             }
+#endif
         }
 
         public override int Send(byte[] buffer, int offset, int size, TimeSpan timeout)
@@ -67,12 +77,22 @@ namespace Library.Net.Caps
                     return _socket.Send(buffer, offset, size, SocketFlags.None);
                 }
             }
+#if DEBUG
+            catch (Exception e)
+            {
+                _connect = false;
+                Log.Information(e);
+
+                throw new CapException("Send", e);
+            }
+#else
             catch (Exception e)
             {
                 _connect = false;
 
                 throw new CapException("Send", e);
             }
+#endif
         }
 
         protected override void Dispose(bool disposing)

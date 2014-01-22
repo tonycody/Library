@@ -234,7 +234,7 @@ namespace Library.Net.Lair
 
                     garbages.Add(cap);
 
-                    connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                    connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                     garbages.Add(connection);
 
                 End: ;
@@ -359,7 +359,7 @@ namespace Library.Net.Lair
                         var cap = new SocketCap(socket);
                         garbages.Add(cap);
 
-                        connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                        connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                         garbages.Add(connection);
                     }
                     else
@@ -438,7 +438,7 @@ namespace Library.Net.Lair
                             var cap = new SocketCap(proxy.Create(new TimeSpan(0, 0, 30)));
                             garbages.Add(cap);
 
-                            connection = new CapConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
+                            connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                             garbages.Add(connection);
                         }
                     }

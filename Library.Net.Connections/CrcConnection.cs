@@ -150,21 +150,24 @@ namespace Library.Net.Connections
 
             lock (_sendLock)
             {
-                try
+                using (RangeStream targetStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position, true))
                 {
-                    using (MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(stream)))
-                    using (Stream stream2 = new JoinStream(new WrapperStream(stream, true), crcStream))
+                    try
                     {
-                        _connection.Send(stream2, timeout);
+                        using (MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(targetStream)))
+                        using (Stream dataStream = new UniteStream(new WrapperStream(targetStream, true), crcStream))
+                        {
+                            _connection.Send(dataStream, timeout);
+                        }
                     }
-                }
-                catch (ConnectionException ex)
-                {
-                    throw ex;
-                }
-                catch (Exception e)
-                {
-                    throw new ConnectionException(e.Message, e);
+                    catch (ConnectionException ex)
+                    {
+                        throw ex;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ConnectionException(e.Message, e);
+                    }
                 }
             }
         }

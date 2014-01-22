@@ -100,7 +100,6 @@ namespace Library.Net.Connections
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.In != other.In
                 || this.Out != other.Out)

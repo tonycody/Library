@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace Library.Net.Lair
 {
     [DataContract(Name = "HypertextFormatType", Namespace = "http://Library/Net/Lair")]
-    public enum HypertextFormatType
+    public enum HypertextFormatType : byte
     {
         [EnumMember(Value = "MiniWiki")]
         MiniWiki = 0,

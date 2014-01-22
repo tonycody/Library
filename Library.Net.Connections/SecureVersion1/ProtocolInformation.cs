@@ -24,7 +24,7 @@ namespace Library.Net.Connections.SecureVersion1
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -65,7 +65,7 @@ namespace Library.Net.Connections.SecureVersion1
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -129,7 +129,7 @@ namespace Library.Net.Connections.SecureVersion1
                     streams.Add(bufferStream);
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
         }
 
@@ -152,7 +152,6 @@ namespace Library.Net.Connections.SecureVersion1
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.KeyExchangeAlgorithm != other.KeyExchangeAlgorithm
                 || this.CryptoAlgorithm != other.CryptoAlgorithm

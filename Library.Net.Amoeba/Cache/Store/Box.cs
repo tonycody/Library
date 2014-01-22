@@ -45,24 +45,7 @@ namespace Library.Net.Amoeba
 
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
-        {
-            this.ProtectedImport(stream, bufferManager, 0);
-        }
-
-        public override Stream Export(BufferManager bufferManager)
-        {
-            return this.Export(bufferManager, 0);
-        }
-
-        private static Box Import(Stream stream, BufferManager bufferManager, int count)
-        {
-            var item = (Box)FormatterServices.GetUninitializedObject(typeof(Box));
-            item.ProtectedImport(stream, bufferManager, count);
-            return item;
-        }
-
-        private void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             if (count > 256) throw new ArgumentException();
 
@@ -118,7 +101,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private Stream Export(BufferManager bufferManager, int count)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             if (count > 256) throw new ArgumentException();
 
@@ -193,7 +176,7 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Seed);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
                 // Boxes
                 foreach (var b in this.Boxes)
@@ -204,7 +187,7 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Box);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
                 // Certificate
@@ -216,10 +199,10 @@ namespace Library.Net.Amoeba
                     bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Certificate);
 
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    streams.Add(new UniteStream(bufferStream, exportStream));
                 }
 
-                return new JoinStream(streams);
+                return new UniteStream(streams);
             }
         }
 
@@ -242,7 +225,6 @@ namespace Library.Net.Amoeba
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Name != other.Name
                 || this.CreationTime != other.CreationTime

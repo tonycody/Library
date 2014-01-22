@@ -16,13 +16,10 @@ namespace Library.Security
             PublicKey = 1,
         }
 
-        private ExchangeAlgorithm _exchangeAlgorithm = 0;
-        private byte[] _publicKey;
+        private volatile ExchangeAlgorithm _exchangeAlgorithm = 0;
+        private volatile byte[] _publicKey;
 
-        private int _hashCode;
-
-        private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
+        private volatile int _hashCode;
 
         public static readonly int MaxPublickeyLength = 1024 * 8;
 
@@ -32,87 +29,78 @@ namespace Library.Security
             this.PublicKey = exchange.PublicKey;
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            lock (this.ThisLock)
+            Encoding encoding = new UTF8Encoding(false);
+            byte[] lengthBuffer = new byte[4];
+
+            for (; ; )
             {
-                Encoding encoding = new UTF8Encoding(false);
-                byte[] lengthBuffer = new byte[4];
+                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                int length = NetworkConverter.ToInt32(lengthBuffer);
+                byte id = (byte)stream.ReadByte();
 
-                for (; ; )
+                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
-
-                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    if (id == (byte)SerializeId.ExchangeAlgorithm)
                     {
-                        if (id == (byte)SerializeId.ExchangeAlgorithm)
+                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
-                            }
+                            this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
                         }
-                        else if (id == (byte)SerializeId.PublicKey)
-                        {
-                            byte[] buffer = new byte[(int)rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
+                    }
+                    else if (id == (byte)SerializeId.PublicKey)
+                    {
+                        byte[] buffer = new byte[(int)rangeStream.Length];
+                        rangeStream.Read(buffer, 0, buffer.Length);
 
-                            this.PublicKey = buffer;
-                        }
+                        this.PublicKey = buffer;
                     }
                 }
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
-            lock (this.ThisLock)
+            List<Stream> streams = new List<Stream>();
+            Encoding encoding = new UTF8Encoding(false);
+
+            // ExchangeAlgorithm
+            if (this.ExchangeAlgorithm != 0)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.SetLength(5);
+                bufferStream.Seek(5, SeekOrigin.Begin);
 
-                // ExchangeAlgorithm
-                if (this.ExchangeAlgorithm != 0)
+                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
+                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.ExchangeAlgorithm.ToString());
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
-
-                    streams.Add(bufferStream);
-                }
-                // PublicKey
-                if (this.PublicKey != null)
-                {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.PublicKey);
-                    bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
-
-                    streams.Add(bufferStream);
+                    writer.Write(this.ExchangeAlgorithm.ToString());
                 }
 
-                return new JoinStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
+
+                streams.Add(bufferStream);
             }
+            // PublicKey
+            if (this.PublicKey != null)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
+                bufferStream.WriteByte((byte)SerializeId.PublicKey);
+                bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
+
+                streams.Add(bufferStream);
+            }
+
+            return new UniteStream(streams);
         }
 
         public override int GetHashCode()
         {
-            lock (this.ThisLock)
-            {
-                return _hashCode;
-            }
+            return _hashCode;
         }
 
         public override bool Equals(object obj)
@@ -126,7 +114,6 @@ namespace Library.Security
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.ExchangeAlgorithm != other.ExchangeAlgorithm
                 || ((this.PublicKey == null) != (other.PublicKey == null)))
@@ -142,47 +129,22 @@ namespace Library.Security
             return true;
         }
 
-        private object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
-            }
-        }
-
         [DataMember(Name = "ExchangeAlgorithm")]
         public ExchangeAlgorithm ExchangeAlgorithm
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _exchangeAlgorithm;
-                }
+                return _exchangeAlgorithm;
             }
             private set
             {
-                lock (this.ThisLock)
+                if (!Enum.IsDefined(typeof(ExchangeAlgorithm), value))
                 {
-                    if (!Enum.IsDefined(typeof(ExchangeAlgorithm), value))
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _exchangeAlgorithm = value;
-                    }
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _exchangeAlgorithm = value;
                 }
             }
         }
@@ -192,32 +154,26 @@ namespace Library.Security
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _publicKey;
-                }
+                return _publicKey;
             }
             private set
             {
-                lock (this.ThisLock)
+                if (value != null && (value.Length > Exchange.MaxPublickeyLength))
                 {
-                    if (value != null && (value.Length > Exchange.MaxPublickeyLength))
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _publicKey = value;
-                    }
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _publicKey = value;
+                }
 
-                    if (value != null && value.Length != 0)
-                    {
-                        _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
-                    }
-                    else
-                    {
-                        _hashCode = 0;
-                    }
+                if (value != null && value.Length != 0)
+                {
+                    _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
+                }
+                else
+                {
+                    _hashCode = 0;
                 }
             }
         }
