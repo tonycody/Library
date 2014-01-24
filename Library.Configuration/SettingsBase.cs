@@ -7,6 +7,8 @@ using System.Text;
 using System.Xml;
 using Library.Io;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using Library.Collections;
 
 namespace Library.Configuration
 {
@@ -91,20 +93,20 @@ namespace Library.Configuration
 
             if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
 
-            HashSet<string> successNames = new HashSet<string>();
+            LockedHashSet<string> successNames = new LockedHashSet<string>();
 
             // DataContractSerializerのBinaryバージョン
             foreach (var extension in new string[] { ".v2", ".v2.bak" })
             {
-                foreach (var configPath in Directory.GetFiles(directoryPath))
+                Parallel.ForEach(Directory.GetFiles(directoryPath), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, configPath =>
                 {
-                    if (!configPath.EndsWith(extension)) continue;
+                    if (!configPath.EndsWith(extension)) return;
 
                     var name = Path.GetFileName(configPath.Substring(0, configPath.Length - extension.Length));
-                    if (successNames.Contains(name)) continue;
+                    if (successNames.Contains(name)) return;
 
                     Content content = null;
-                    if (!_dic.TryGetValue(name, out content)) continue;
+                    if (!_dic.TryGetValue(name, out content)) return;
 
                     try
                     {
@@ -126,7 +128,7 @@ namespace Library.Configuration
                     {
                         Log.Warning(e);
                     }
-                }
+                });
             }
 
             // DataContractSerializerのTextバージョン
@@ -176,7 +178,7 @@ namespace Library.Configuration
 
             if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
 
-            foreach (var item in _dic)
+            Parallel.ForEach(_dic, new ParallelOptions() { MaxDegreeOfParallelism = 8 }, item =>
             {
                 try
                 {
@@ -239,7 +241,7 @@ namespace Library.Configuration
                 {
                     Log.Warning(e);
                 }
-            }
+            });
 
             sw.Stop();
             Debug.WriteLine("Settings Save {0} {1}", Path.GetFileName(directoryPath), sw.ElapsedMilliseconds);

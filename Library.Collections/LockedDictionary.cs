@@ -526,7 +526,10 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CopyTo(array.OfType<TKey>().ToArray(), arrayIndex);
+                    foreach (var item in _collection)
+                    {
+                        array.SetValue(item, arrayIndex++);
+                    }
                 }
             }
 
@@ -669,7 +672,10 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CopyTo(array.OfType<TValue>().ToArray(), arrayIndex);
+                    foreach (var item in _collection)
+                    {
+                        array.SetValue(item, arrayIndex++);
+                    }
                 }
             }
 

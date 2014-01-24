@@ -18,7 +18,7 @@ namespace Library.Net.Lair
 
         private Settings _settings;
 
-        private HashSet<long> _spaceClusters;
+        private SortedSet<long> _spaceClusters;
         private bool _spaceClustersInitialized;
 
         private volatile AutoResetEvent _resetEvent = new AutoResetEvent(false);
@@ -43,7 +43,7 @@ namespace Library.Net.Lair
 
             _settings = new Settings(this.ThisLock);
 
-            _spaceClusters = new HashSet<long>();
+            _spaceClusters = new SortedSet<long>();
 
             _watchThread = new Thread(this.Watch);
             _watchThread.Priority = ThreadPriority.Lowest;
@@ -159,8 +159,6 @@ namespace Library.Net.Lair
                         }
                     }
 
-                    _spaceClusters.TrimExcess();
-
                     _spaceClustersInitialized = true;
                 }
 
@@ -174,6 +172,8 @@ namespace Library.Net.Lair
                         _spaceClusters.Add(cluster++);
                     }
                 }
+
+                _spaceClusters.TrimExcess();
             }
         }
 

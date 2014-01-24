@@ -89,6 +89,37 @@ namespace Library.Tool
                 }
                 else if (args.Length >= 3 && args[0] == "increment")
                 {
+                    {
+                        var path = args[1];
+                        bool flag = false;
+
+                        using (var stream = new FileStream(path, FileMode.Open))
+                        {
+                            byte[] b = new byte[3];
+                            stream.Read(b, 0, b.Length);
+
+                            flag = Collection.Equals(b, new byte[] { 0xEF, 0xBB, 0xBF });
+                        }
+
+                        if (!flag) goto End;
+
+                        string newPath;
+
+                        using (var reader = new StreamReader(path))
+                        using (var newStream = Program.GetUniqueFileStream(path))
+                        using (var writer = new StreamWriter(newStream, new UTF8Encoding(false)))
+                        {
+                            newPath = newStream.Name;
+
+                            writer.Write(reader.ReadToEnd());
+                        }
+
+                        File.Delete(path);
+                        File.Move(newPath, path);
+
+                    End: ;
+                    }
+
                     string baseDirectory = Path.GetDirectoryName(args[1]);
                     List<string> filePaths = new List<string>();
 
@@ -131,7 +162,7 @@ namespace Library.Tool
                     bool rewrite = false;
 
                     using (var readerStream = new StreamReader(args[2]))
-                    using (var writerStream = new StreamWriter(args[2] + "~", false, new UTF8Encoding(true)))
+                    using (var writerStream = new StreamWriter(args[2] + "~", false, new UTF8Encoding(false)))
                     {
                         for (; ; )
                         {
@@ -267,7 +298,7 @@ namespace Library.Tool
                     using (FileStream inStream = new FileStream(settingsPath, FileMode.Open))
                     using (StreamReader reader = new StreamReader(inStream))
                     using (FileStream outStream = new FileStream(settingsPath + ".tmp", FileMode.Create))
-                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
+                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(false)))
                     {
                         bool isRegion = false;
                         bool isRewrite = false;
@@ -356,7 +387,7 @@ namespace Library.Tool
                     using (FileStream inStream = new FileStream(languageManagerPath, FileMode.Open))
                     using (StreamReader reader = new StreamReader(inStream))
                     using (FileStream outStream = new FileStream(languageManagerPath + ".tmp", FileMode.Create))
-                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
+                    using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(false)))
                     {
                         bool isRegion = false;
                         bool isRewrite = false;
@@ -524,7 +555,7 @@ namespace Library.Tool
                         using (FileStream inStream = new FileStream(sourcePath, FileMode.Open))
                         using (StreamReader reader = new StreamReader(inStream))
                         using (FileStream outStream = new FileStream(targetPath, FileMode.Create))
-                        using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
+                        using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(false)))
                         {
                             StringBuilder sb = new StringBuilder(reader.ReadToEnd());
 
@@ -678,7 +709,7 @@ namespace Library.Tool
             }
 
             using (FileStream outStream = new FileStream(path + ".tmp", FileMode.Create))
-            using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(true)))
+            using (StreamWriter writer = new StreamWriter(outStream, new UTF8Encoding(false)))
             {
                 if (items.Count != 0)
                 {
@@ -780,7 +811,7 @@ namespace Library.Tool
                 }
 
                 using (FileStream stream = new FileStream(path, FileMode.Create))
-                using (StreamWriter writer = new StreamWriter(stream))
+                using (StreamWriter writer = new StreamWriter(stream, new UTF8Encoding(false)))
                 {
                     writer.WriteLine("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>");
                     writer.WriteLine("<Configuration>");
@@ -800,6 +831,52 @@ namespace Library.Tool
                 }
 
                 path = path + "~";
+            }
+        }
+
+        private static FileStream GetUniqueFileStream(string path)
+        {
+            if (!File.Exists(path))
+            {
+                try
+                {
+                    FileStream fs = new FileStream(path, FileMode.CreateNew);
+                    return fs;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    throw;
+                }
+                catch (IOException)
+                {
+                    throw;
+                }
+            }
+
+            for (int index = 1; ; index++)
+            {
+                string text = string.Format(@"{0}\{1} ({2}){3}",
+                    Path.GetDirectoryName(path),
+                    Path.GetFileNameWithoutExtension(path),
+                    index,
+                    Path.GetExtension(path));
+
+                if (!File.Exists(text))
+                {
+                    try
+                    {
+                        FileStream fs = new FileStream(text, FileMode.CreateNew);
+                        return fs;
+                    }
+                    catch (DirectoryNotFoundException)
+                    {
+                        throw;
+                    }
+                    catch (IOException)
+                    {
+                        if (index > 1024) throw;
+                    }
+                }
             }
         }
 

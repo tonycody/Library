@@ -1943,13 +1943,10 @@ namespace Library.Net.Amoeba
 
                 _cacheManager[e.Key] = e.Value;
 
-                Debug.WriteLine(string.Format("ConnectionManager: Pull Block ({0})", NetworkConverter.ToBase64UrlString(e.Key.Hash)));
-                _pullBlockCount++;
-
-                if (messageManager.PushBlocksRequest.Contains(e.Key))
+                if (messageManager.PushBlocksRequest.Remove(e.Key))
                 {
-                    messageManager.PushBlocksRequest.Remove(e.Key);
-                    messageManager.StockBlocks.Add(e.Key);
+                    Debug.WriteLine(string.Format("ConnectionManager: Pull Block (Upload) ({0})", NetworkConverter.ToBase64UrlString(e.Key.Hash)));
+
                     messageManager.LastPullTime = DateTime.UtcNow;
                     messageManager.Priority++;
 
@@ -1960,8 +1957,13 @@ namespace Library.Net.Amoeba
                 }
                 else
                 {
+                    Debug.WriteLine(string.Format("ConnectionManager: Pull Block (Diffusion) ({0})", NetworkConverter.ToBase64UrlString(e.Key.Hash)));
+                    
                     _settings.DiffusionBlocksRequest.Add(e.Key);
                 }
+
+                messageManager.StockBlocks.Add(e.Key);
+                _pullBlockCount++;
             }
             finally
             {

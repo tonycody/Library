@@ -27,7 +27,7 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private HashSet<long> _spaceClusters;
+        private SortedSet<long> _spaceClusters;
         private bool _spaceClustersInitialized;
         private Dictionary<int, string> _ids = new Dictionary<int, string>();
         private volatile Dictionary<Key, string> _shareIndexLink;
@@ -60,7 +60,7 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings(this.ThisLock);
 
-            _spaceClusters = new HashSet<long>();
+            _spaceClusters = new SortedSet<long>();
 
             _watchThread = new Thread(this.Watch);
             _watchThread.Priority = ThreadPriority.Lowest;
@@ -355,8 +355,6 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    _spaceClusters.TrimExcess();
-
                     _spaceClustersInitialized = true;
                 }
 
@@ -370,6 +368,8 @@ namespace Library.Net.Amoeba
                         _spaceClusters.Add(cluster++);
                     }
                 }
+
+                // _spaceClusters.TrimExcess();
             }
         }
 

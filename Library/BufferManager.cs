@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Library
 {
@@ -53,6 +54,26 @@ namespace Library
             get
             {
                 return _instance;
+            }
+        }
+
+        public long Size
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (_thisLock)
+                {
+                    long size = 0;
+
+                    foreach (var buffer in _buffers.SelectMany(n => n))
+                    {
+                        size += buffer.Length;
+                    }
+
+                    return size;
+                }
             }
         }
 
@@ -143,6 +164,24 @@ namespace Library
 
                         break;
                     }
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (_thisLock)
+            {
+                for (int i = 0; i < _buffers.Length; i++)
+                {
+                    _buffers[i].Clear();
+                }
+
+                for (int i = 0; i < _callCounts.Length; i++)
+                {
+                    _callCounts[i] = 0;
                 }
             }
         }

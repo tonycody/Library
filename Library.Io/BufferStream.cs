@@ -105,15 +105,7 @@ namespace Library.Io
             while (_buffers.Sum(n => (long)n.Length) < value)
             {
                 _buffers.Add(_bufferManager.TakeBuffer(_bufferSize));
-
-                if (_bufferSize < 1024 * 32)
-                {
-                    _bufferSize *= 2;
-                }
-                else
-                {
-                    _bufferSize += 1024 * 32;
-                }
+                if (_bufferSize < 1024 * 32) _bufferSize *= 2;
             }
 
             _length = value;

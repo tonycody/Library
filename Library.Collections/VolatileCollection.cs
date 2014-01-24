@@ -7,8 +7,7 @@ namespace Library.Collections
 {
     public class VolatileCollection<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
-        private HashSet<T> _hashSet;
-        private Dictionary<T, DateTime> _volatileDictionary;
+        private Dictionary<T, DateTime> _dic;
 
         private DateTime _lastCheckTime = DateTime.MinValue;
         private readonly TimeSpan _survivalTime;
@@ -17,15 +16,13 @@ namespace Library.Collections
 
         public VolatileCollection(TimeSpan survivalTime)
         {
-            _hashSet = new HashSet<T>();
-            _volatileDictionary = new Dictionary<T, DateTime>();
+            _dic = new Dictionary<T, DateTime>();
             _survivalTime = survivalTime;
         }
 
         public VolatileCollection(TimeSpan survivalTime, IEqualityComparer<T> comparer)
         {
-            _hashSet = new HashSet<T>(comparer);
-            _volatileDictionary = new Dictionary<T, DateTime>(comparer);
+            _dic = new Dictionary<T, DateTime>(comparer);
             _survivalTime = survivalTime;
         }
 
@@ -43,7 +40,7 @@ namespace Library.Collections
             {
                 this.CheckLifeTime();
 
-                return _hashSet.ToArray();
+                return _dic.Keys.ToArray();
             }
         }
 
@@ -51,7 +48,7 @@ namespace Library.Collections
         {
             this.CheckLifeTime();
 
-            _volatileDictionary[item] = DateTime.UtcNow;
+            _dic[item] = DateTime.UtcNow;
         }
 
         private void CheckLifeTime()
@@ -62,19 +59,14 @@ namespace Library.Collections
 
                 if ((now - _lastCheckTime).TotalSeconds >= 10)
                 {
-                    foreach (var item in _hashSet.ToArray())
+                    foreach (var pair in _dic.ToArray())
                     {
-                        if ((now - _volatileDictionary[item]) > _survivalTime)
-                        {
-                            _hashSet.Remove(item);
-                        }
-                    }
+                        var key = pair.Key;
+                        var value = pair.Value;
 
-                    foreach (var item in _volatileDictionary.Keys.ToArray())
-                    {
-                        if (!_hashSet.Contains(item))
+                        if ((now - value) > _survivalTime)
                         {
-                            _volatileDictionary.Remove(item);
+                            _dic.Remove(key);
                         }
                     }
 
@@ -89,7 +81,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return _hashSet.Comparer;
+                    return _dic.Comparer;
                 }
             }
         }
@@ -102,7 +94,7 @@ namespace Library.Collections
                 {
                     this.CheckLifeTime();
 
-                    return _hashSet.Count;
+                    return _dic.Count;
                 }
             }
         }
@@ -115,8 +107,7 @@ namespace Library.Collections
 
                 foreach (var item in collection)
                 {
-                    _volatileDictionary[item] = DateTime.UtcNow;
-                    _hashSet.Add(item);
+                    _dic[item] = DateTime.UtcNow;
                 }
             }
         }
@@ -127,8 +118,10 @@ namespace Library.Collections
             {
                 this.CheckLifeTime();
 
-                _volatileDictionary[item] = DateTime.UtcNow;
-                return _hashSet.Add(item);
+                int count = _dic.Count;
+                _dic[item] = DateTime.UtcNow;
+
+                return (count != _dic.Count);
             }
         }
 
@@ -136,8 +129,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                _volatileDictionary.Clear();
-                _hashSet.Clear();
+                _dic.Clear();
             }
         }
 
@@ -147,7 +139,7 @@ namespace Library.Collections
             {
                 this.CheckLifeTime();
 
-                return _hashSet.Contains(item);
+                return _dic.ContainsKey(item);
             }
         }
 
@@ -157,7 +149,7 @@ namespace Library.Collections
             {
                 this.CheckLifeTime();
 
-                _hashSet.CopyTo(array, arrayIndex);
+                _dic.Keys.CopyTo(array, arrayIndex);
             }
         }
 
@@ -167,7 +159,7 @@ namespace Library.Collections
             {
                 this.CheckLifeTime();
 
-                return _hashSet.Remove(item);
+                return _dic.Remove(item);
             }
         }
 
@@ -231,7 +223,7 @@ namespace Library.Collections
             {
                 this.CheckLifeTime();
 
-                foreach (var item in _hashSet)
+                foreach (var item in _dic.Keys)
                 {
                     yield return item;
                 }
