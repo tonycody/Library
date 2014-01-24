@@ -89,36 +89,36 @@ namespace Library.Tool
                 }
                 else if (args.Length >= 3 && args[0] == "increment")
                 {
-                    {
-                        var path = args[1];
-                        bool flag = false;
+                    //{
+                    //    var path = args[1];
+                    //    bool flag = false;
 
-                        using (var stream = new FileStream(path, FileMode.Open))
-                        {
-                            byte[] b = new byte[3];
-                            stream.Read(b, 0, b.Length);
+                    //    using (var stream = new FileStream(path, FileMode.Open))
+                    //    {
+                    //        byte[] b = new byte[3];
+                    //        stream.Read(b, 0, b.Length);
 
-                            flag = Collection.Equals(b, new byte[] { 0xEF, 0xBB, 0xBF });
-                        }
+                    //        flag = Collection.Equals(b, new byte[] { 0xEF, 0xBB, 0xBF });
+                    //    }
 
-                        if (!flag) goto End;
+                    //    if (!flag) goto End;
 
-                        string newPath;
+                    //    string newPath;
 
-                        using (var reader = new StreamReader(path))
-                        using (var newStream = Program.GetUniqueFileStream(path))
-                        using (var writer = new StreamWriter(newStream, new UTF8Encoding(false)))
-                        {
-                            newPath = newStream.Name;
+                    //    using (var reader = new StreamReader(path))
+                    //    using (var newStream = Program.GetUniqueFileStream(path))
+                    //    using (var writer = new StreamWriter(newStream, new UTF8Encoding(false)))
+                    //    {
+                    //        newPath = newStream.Name;
 
-                            writer.Write(reader.ReadToEnd());
-                        }
+                    //        writer.Write(reader.ReadToEnd());
+                    //    }
 
-                        File.Delete(path);
-                        File.Move(newPath, path);
+                    //    File.Delete(path);
+                    //    File.Move(newPath, path);
 
-                    End: ;
-                    }
+                    //End: ;
+                    //}
 
                     string baseDirectory = Path.GetDirectoryName(args[1]);
                     List<string> filePaths = new List<string>();
