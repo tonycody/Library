@@ -65,12 +65,25 @@ namespace Library.Collections
 
                 if ((now - _lastCheckTime).TotalSeconds >= 10)
                 {
-                    foreach (var pair in _dic.ToArray())
+                    List<TKey> list = null;
+
+                    foreach (var pair in _dic)
                     {
                         var key = pair.Key;
                         var info = pair.Value;
 
                         if ((now - info.UpdateTime) > _survivalTime)
+                        {
+                            if (list == null)
+                                list = new List<TKey>();
+
+                            list.Add(key);
+                        }
+                    }
+
+                    if (list != null)
+                    {
+                        foreach (var key in list)
                         {
                             _dic.Remove(key);
                         }

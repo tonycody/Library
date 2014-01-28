@@ -20,7 +20,7 @@ namespace Library.Net.Upnp
     {
         private string _services;
         private Uri _location;
-        private readonly static Regex _deviceTypeRegex = new Regex(@"(\s*)<deviceType>(\s*)urn:schemas-upnp-org:device:InternetGatewayDevice:1(\s*)</deviceType>(\s*)");
+        private readonly static Regex _deviceTypeRegex = new Regex(@"<deviceType>(\s*)urn:schemas-upnp-org:device:InternetGatewayDevice:1(\s*)</deviceType>");
         private readonly static Regex _controlUrlRegex = new Regex(@"<controlURL>(\s*)(?<url>.*?)(\s*)</controlURL>");
 
         private readonly object _thisLock = new object();
@@ -162,7 +162,7 @@ namespace Library.Net.Upnp
             {
                 try
                 {
-                    var regexLocation = Regex.Match(queryResponse.ToLower(), "^location.*?:(.*)", RegexOptions.Multiline).Groups[1].Value;
+                    var regexLocation = Regex.Match(queryResponse, "^location.*?:(.*)", RegexOptions.Multiline | RegexOptions.IgnoreCase).Groups[1].Value;
                     if (string.IsNullOrWhiteSpace(regexLocation)) continue;
 
                     Uri tempLocation = new Uri(regexLocation);

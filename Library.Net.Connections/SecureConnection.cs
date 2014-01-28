@@ -345,16 +345,16 @@ namespace Library.Net.Connections
                         byte[] myHmacKey;
                         byte[] otherHmacKey;
 
-                        byte[] myHash = null;
-                        byte[] otherHash = null;
+                        byte[] myProtocolHash = null;
+                        byte[] otherProtocolHash = null;
 
                         if (hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
                         {
-                            using (var myHashStream = myProtocol2.Export(_bufferManager))
-                            using (var otherHashStream = otherProtocol2.Export(_bufferManager))
+                            using (var myProtocolHashStream = myProtocol2.Export(_bufferManager))
+                            using (var otherProtocolHashStream = otherProtocol2.Export(_bufferManager))
                             {
-                                myHash = Sha512.ComputeHash(myHashStream);
-                                otherHash = Sha512.ComputeHash(otherHashStream);
+                                myProtocolHash = Sha512.ComputeHash(myProtocolHashStream);
+                                otherProtocolHash = Sha512.ComputeHash(otherProtocolHashStream);
                             }
                         }
 
@@ -367,13 +367,13 @@ namespace Library.Net.Connections
 
                             {
                                 SecureVersion2.ConnectionSignature connectionSignature = new SecureVersion2.ConnectionSignature();
-                                connectionSignature.Key = publicKey;
+                                connectionSignature.ExchangeKey = publicKey;
 
                                 if (_digitalSignature != null)
                                 {
                                     connectionSignature.CreationTime = DateTime.UtcNow;
-                                    connectionSignature.MyHash = myHash;
-                                    connectionSignature.OtherHash = otherHash;
+                                    connectionSignature.MyProtocolHash = myProtocolHash;
+                                    connectionSignature.OtherProtocolHash = otherProtocolHash;
                                     connectionSignature.CreateCertificate(_digitalSignature);
                                 }
 
@@ -397,12 +397,12 @@ namespace Library.Net.Connections
                                         TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
 
-                                        if (!Collection.Equals(connectionSignature.OtherHash, myHash)) throw new ConnectionException();
-                                        if (!Collection.Equals(connectionSignature.MyHash, otherHash)) throw new ConnectionException();
+                                        if (!Collection.Equals(connectionSignature.OtherProtocolHash, myProtocolHash)) throw new ConnectionException();
+                                        if (!Collection.Equals(connectionSignature.MyProtocolHash, otherProtocolHash)) throw new ConnectionException();
                                     }
 
                                     _certificate = connectionSignature.Certificate;
-                                    otherPublicKey = connectionSignature.Key;
+                                    otherPublicKey = connectionSignature.ExchangeKey;
                                 }
                                 else
                                 {
@@ -420,13 +420,13 @@ namespace Library.Net.Connections
 
                             {
                                 SecureVersion2.ConnectionSignature connectionSignature = new SecureVersion2.ConnectionSignature();
-                                connectionSignature.Key = publicKey;
+                                connectionSignature.ExchangeKey = publicKey;
 
                                 if (_digitalSignature != null)
                                 {
                                     connectionSignature.CreationTime = DateTime.UtcNow;
-                                    connectionSignature.MyHash = myHash;
-                                    connectionSignature.OtherHash = otherHash;
+                                    connectionSignature.MyProtocolHash = myProtocolHash;
+                                    connectionSignature.OtherProtocolHash = otherProtocolHash;
                                     connectionSignature.CreateCertificate(_digitalSignature);
                                 }
 
@@ -450,12 +450,12 @@ namespace Library.Net.Connections
                                         TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
 
-                                        if (!Collection.Equals(connectionSignature.OtherHash, myHash)) throw new ConnectionException();
-                                        if (!Collection.Equals(connectionSignature.MyHash, otherHash)) throw new ConnectionException();
+                                        if (!Collection.Equals(connectionSignature.OtherProtocolHash, myProtocolHash)) throw new ConnectionException();
+                                        if (!Collection.Equals(connectionSignature.MyProtocolHash, otherProtocolHash)) throw new ConnectionException();
                                     }
 
                                     _certificate = connectionSignature.Certificate;
-                                    otherPublicKey = connectionSignature.Key;
+                                    otherPublicKey = connectionSignature.ExchangeKey;
                                 }
                                 else
                                 {

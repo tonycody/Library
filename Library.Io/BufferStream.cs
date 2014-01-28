@@ -102,10 +102,22 @@ namespace Library.Io
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            while (_buffers.Sum(n => (long)n.Length) < value)
             {
-                _buffers.Add(_bufferManager.TakeBuffer(_bufferSize));
-                if (_bufferSize < 1024 * 32) _bufferSize *= 2;
+                long sum = 0;
+
+                for (int i = 0; i < _buffers.Count; i++)
+                {
+                    sum += _buffers[i].Length;
+                }
+
+                while (sum < value)
+                {
+                    var buffer = _bufferManager.TakeBuffer(_bufferSize);
+                    if (_bufferSize < 1024 * 32) _bufferSize *= 2;
+
+                    _buffers.Add(buffer);
+                    sum += buffer.Length;
+                }
             }
 
             _length = value;

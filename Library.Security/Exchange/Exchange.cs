@@ -81,50 +81,50 @@ namespace Library.Security
 
         protected override Stream Export(BufferManager bufferManager, int count)
         {
-            List<Stream> streams = new List<Stream>();
+            BufferStream bufferStream = new BufferStream(bufferManager);
             Encoding encoding = new UTF8Encoding(false);
 
             // ExchangeAlgorithm
             if (this.ExchangeAlgorithm != 0)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                byte[] buffer = null;
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                try
                 {
-                    writer.Write(this.ExchangeAlgorithm.ToString());
+                    var value = this.ExchangeAlgorithm.ToString();
+
+                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
+                    bufferStream.Write(buffer, 0, length);
                 }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
-
-                streams.Add(bufferStream);
+                finally
+                {
+                    if (buffer != null)
+                    {
+                        bufferManager.ReturnBuffer(buffer);
+                    }
+                }
             }
             // PublicKey
             if (this.PublicKey != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.PublicKey);
                 bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
-
-                streams.Add(bufferStream);
             }
             // PrivateKey
             if (this.PrivateKey != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)this.PrivateKey.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.PrivateKey);
                 bufferStream.Write(this.PrivateKey, 0, this.PrivateKey.Length);
-
-                streams.Add(bufferStream);
             }
 
-            return new UniteStream(streams);
+            bufferStream.Seek(0, SeekOrigin.Begin);
+            return bufferStream;
         }
 
         public override int GetHashCode()

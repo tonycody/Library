@@ -52,21 +52,36 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Boxes
-                foreach (var b in this.Boxes)
+                foreach (var value in this.Boxes)
                 {
-                    Stream exportStream = b.Export(bufferManager);
+                    using (Stream exportStream = value.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Box);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Box);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
         }
 
@@ -91,14 +106,9 @@ namespace Library.Net.Amoeba
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if ((this.Boxes == null) != (other.Boxes == null))
+            if (!Collection.Equals(this.Boxes, other.Boxes))
             {
                 return false;
-            }
-
-            if (this.Boxes != null && other.Boxes != null)
-            {
-                if (!Collection.Equals(this.Boxes, other.Boxes)) return false;
             }
 
             return true;

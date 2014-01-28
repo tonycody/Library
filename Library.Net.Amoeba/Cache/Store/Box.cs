@@ -107,102 +107,160 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
                 Encoding encoding = new UTF8Encoding(false);
 
                 // Name
                 if (this.Name != null)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
+                    byte[] buffer = null;
 
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    try
                     {
-                        writer.Write(this.Name);
+                        var value = this.Name.ToString();
+
+                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Name);
+                        bufferStream.Write(buffer, 0, length);
                     }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Name);
-
-                    streams.Add(bufferStream);
+                    finally
+                    {
+                        if (buffer != null)
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
+                    byte[] buffer = null;
 
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    try
                     {
-                        writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                        var value = this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+
+                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.CreationTime);
+                        bufferStream.Write(buffer, 0, length);
                     }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CreationTime);
-
-                    streams.Add(bufferStream);
+                    finally
+                    {
+                        if (buffer != null)
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
                 // Comment
                 if (this.Comment != null)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
+                    byte[] buffer = null;
 
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    try
                     {
-                        writer.Write(this.Comment);
+                        var value = this.Comment.ToString();
+
+                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Comment);
+                        bufferStream.Write(buffer, 0, length);
                     }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Comment);
-
-                    streams.Add(bufferStream);
+                    finally
+                    {
+                        if (buffer != null)
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
                 // Seeds
-                foreach (var s in this.Seeds)
+                foreach (var value in this.Seeds)
                 {
-                    Stream exportStream = s.Export(bufferManager);
+                    using (Stream exportStream = value.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Seed);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Seed);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
                 // Boxes
-                foreach (var b in this.Boxes)
+                foreach (var value in this.Boxes)
                 {
-                    Stream exportStream = b.Export(bufferManager, count + 1);
+                    using (Stream exportStream = value.Export(bufferManager, count + 1))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Box);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Box);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
                 // Certificate
                 if (this.Certificate != null)
                 {
-                    Stream exportStream = this.Certificate.Export(bufferManager);
+                    using (Stream exportStream = this.Certificate.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Certificate);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Certificate);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
         }
 
@@ -232,20 +290,10 @@ namespace Library.Net.Amoeba
 
                 || this.Certificate != other.Certificate
 
-                || (this.Seeds == null) != (other.Seeds == null)
-                || (this.Boxes == null) != (other.Boxes == null))
+                || !Collection.Equals(this.Seeds, other.Seeds)
+                || !Collection.Equals(this.Boxes, other.Boxes))
             {
                 return false;
-            }
-
-            if (this.Seeds != null && other.Seeds != null)
-            {
-                if (!Collection.Equals(this.Seeds, other.Seeds)) return false;
-            }
-
-            if (this.Boxes != null && other.Boxes != null)
-            {
-                if (!Collection.Equals(this.Boxes, other.Boxes)) return false;
             }
 
             return true;

@@ -102,68 +102,74 @@ namespace Library.Security
 
         protected override Stream Export(BufferManager bufferManager, int count)
         {
-            List<Stream> streams = new List<Stream>();
+            BufferStream bufferStream = new BufferStream(bufferManager);
             Encoding encoding = new UTF8Encoding(false);
 
+            // Nickname
             if (this.Nickname != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                byte[] buffer = null;
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                try
                 {
-                    writer.Write(this.Nickname);
+                    var value = this.Nickname;
+
+                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Nickname);
+                    bufferStream.Write(buffer, 0, length);
                 }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Nickname);
-
-                streams.Add(bufferStream);
+                finally
+                {
+                    if (buffer != null)
+                    {
+                        bufferManager.ReturnBuffer(buffer);
+                    }
+                }
             }
-
+            // DigitalSignatureAlgorithm
             if (this.DigitalSignatureAlgorithm != 0)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                byte[] buffer = null;
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                try
                 {
-                    writer.Write(this.DigitalSignatureAlgorithm.ToString());
+                    var value = this.DigitalSignatureAlgorithm.ToString();
+
+                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.DigitalSignatureAlgorithm);
+                    bufferStream.Write(buffer, 0, length);
                 }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.DigitalSignatureAlgorithm);
-
-                streams.Add(bufferStream);
+                finally
+                {
+                    if (buffer != null)
+                    {
+                        bufferManager.ReturnBuffer(buffer);
+                    }
+                }
             }
-
+            // PublicKey
             if (this.PublicKey != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.PublicKey);
                 bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
-
-                streams.Add(bufferStream);
             }
-
+            // Signature
             if (this.Signature != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)this.Signature.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Signature);
                 bufferStream.Write(this.Signature, 0, this.Signature.Length);
-
-                streams.Add(bufferStream);
             }
 
-            return new UniteStream(streams);
+            bufferStream.Seek(0, SeekOrigin.Begin);
+            return bufferStream;
         }
 
         public override int GetHashCode()

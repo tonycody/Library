@@ -11,7 +11,14 @@ namespace Library
             throw new NotImplementedException();
         }
 
-        public static IEnumerable<T> Merge<T>(params IEnumerable<T>[] items)
+        public static IEnumerable<T> Unite<T>(params IEnumerable<T>[] items)
+        {
+            if (items == null) throw new ArgumentNullException("items");
+
+            return items.SelectMany(list => list);
+        }
+
+        public static IEnumerable<T> Unite<T>(IEnumerable<IEnumerable<T>> items)
         {
             if (items == null) throw new ArgumentNullException("items");
 

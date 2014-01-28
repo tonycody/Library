@@ -77,52 +77,69 @@ namespace Library.Net.Connections.SecureVersion1
         {
             lock (this.ThisLock)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
                 Encoding encoding = new UTF8Encoding(false);
 
                 // Key
                 if (this.Key != null)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)this.Key.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Key);
                     bufferStream.Write(this.Key, 0, this.Key.Length);
-
-                    streams.Add(bufferStream);
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
+                    byte[] buffer = null;
 
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    try
                     {
-                        writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                        var value = this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
+
+                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.CreationTime);
+                        bufferStream.Write(buffer, 0, length);
                     }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CreationTime);
-
-                    streams.Add(bufferStream);
+                    finally
+                    {
+                        if (buffer != null)
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
                 // Certificate
                 if (this.Certificate != null)
                 {
-                    Stream exportStream = this.Certificate.Export(bufferManager);
+                    using (Stream exportStream = this.Certificate.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Certificate);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Certificate);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
         }
 

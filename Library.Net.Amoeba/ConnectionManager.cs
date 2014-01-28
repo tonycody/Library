@@ -994,22 +994,37 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
                 Encoding encoding = new UTF8Encoding(false);
 
-                // Nodes
-                foreach (var n in this.Nodes)
+                // Keys
+                foreach (var value in this.Nodes)
                 {
-                    Stream exportStream = n.Export(bufferManager);
+                    using (Stream exportStream = value.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Node);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Node);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public NodesMessage Clone()
@@ -1083,22 +1098,37 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
                 Encoding encoding = new UTF8Encoding(false);
 
                 // Keys
-                foreach (var k in this.Keys)
+                foreach (var value in this.Keys)
                 {
-                    Stream exportStream = k.Export(bufferManager);
+                    using (Stream exportStream = value.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlocksLinkMessage Clone()
@@ -1172,22 +1202,37 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
                 Encoding encoding = new UTF8Encoding(false);
 
                 // Keys
-                foreach (var k in this.Keys)
+                foreach (var value in this.Keys)
                 {
-                    Stream exportStream = k.Export(bufferManager);
+                    using (Stream exportStream = value.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlocksRequestMessage Clone()
@@ -1243,71 +1288,90 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                try
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Key)
                         {
-                            if (id == (byte)SerializeId.Key)
-                            {
-                                _key = Key.Import(rangeStream, bufferManager);
-                            }
-                            else if (id == (byte)SerializeId.Value)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
-
-                                _value = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
-                            }
+                            _key = Key.Import(rangeStream, bufferManager);
                         }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine(e);
+                        else if (id == (byte)SerializeId.Value)
+                        {
+                            if (_value.Array != null)
+                            {
+                                bufferManager.ReturnBuffer(_value.Array);
+                            }
 
-                    if (_value.Array != null)
-                    {
-                        bufferManager.ReturnBuffer(_value.Array);
+                            byte[] buffer = null;
+
+                            try
+                            {
+                                buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
+                                rangeStream.Read(buffer, 0, (int)rangeStream.Length);
+                            }
+                            catch (Exception e)
+                            {
+                                if (buffer != null)
+                                {
+                                    bufferManager.ReturnBuffer(buffer);
+                                }
+
+                                throw e;
+                            }
+
+                            _value = new ArraySegment<byte>(buffer, 0, (int)rangeStream.Length);
+                        }
                     }
                 }
             }
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
+                Encoding encoding = new UTF8Encoding(false);
 
                 // Key
                 if (this.Key != null)
                 {
-                    Stream exportStream = this.Key.Export(bufferManager);
+                    using (Stream exportStream = this.Key.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Key);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
                 // Value
                 if (this.Value.Array != null)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
                     bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Value);
                     bufferStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
-
-                    streams.Add(bufferStream);
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlockMessage Clone()
@@ -1375,30 +1439,34 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
                 Encoding encoding = new UTF8Encoding(false);
 
                 // Signatures
-                foreach (var s in this.Signatures)
+                foreach (var value in this.Signatures)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
+                    byte[] buffer = null;
 
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                    try
                     {
-                        writer.Write(s);
+                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Signature);
+                        bufferStream.Write(buffer, 0, length);
                     }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Signature);
-
-                    streams.Add(bufferStream);
+                    finally
+                    {
+                        if (buffer != null)
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public SeedsRequestMessage Clone()
@@ -1472,22 +1540,37 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
+                BufferStream bufferStream = new BufferStream(bufferManager);
                 Encoding encoding = new UTF8Encoding(false);
 
                 // Seeds
-                foreach (var s in this.Seeds)
+                foreach (var value in this.Seeds)
                 {
-                    Stream exportStream = s.Export(bufferManager);
+                    using (Stream exportStream = value.Export(bufferManager))
+                    {
+                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+                        bufferStream.WriteByte((byte)SerializeId.Seed);
 
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Seed);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                        try
+                        {
+                            int length = 0;
+
+                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                bufferStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public SeedsMessage Clone()

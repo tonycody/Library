@@ -1,3 +1,5 @@
+//#define MONITOR
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -19,7 +21,7 @@ namespace Library
         private int _maxBufferSize;
 
         private int[] _sizes;
-        private LinkedList<byte[]>[] _buffers;
+        private LinkedList<WeakReference>[] _buffers;
         private long[] _callCounts;
 
         private readonly object _thisLock = new object();
@@ -36,12 +38,12 @@ namespace Library
             _maxBufferSize = maxBufferSize;
 
             List<int> sizes = new List<int>();
-            List<LinkedList<byte[]>> buffers = new List<LinkedList<byte[]>>();
+            List<LinkedList<WeakReference>> buffers = new List<LinkedList<WeakReference>>();
 
             for (int i = 32; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
-                buffers.Add(new LinkedList<byte[]>());
+                buffers.Add(new LinkedList<WeakReference>());
             }
 
             _sizes = sizes.ToArray();
@@ -67,8 +69,11 @@ namespace Library
                 {
                     long size = 0;
 
-                    foreach (var buffer in _buffers.SelectMany(n => n))
+                    foreach (var weakReference in Collection.Unite(_buffers))
                     {
+                        var buffer = weakReference.Target as byte[];
+                        if (buffer == null) continue;
+
                         size += buffer.Length;
                     }
 
@@ -89,17 +94,16 @@ namespace Library
                     {
                         _callCounts[i]++;
 
-                        if (_buffers[i].Count > 0)
+                        while (_buffers[i].Count > 0)
                         {
-                            byte[] buffer = _buffers[i].First.Value;
+                            var weakReference = _buffers[i].First.Value;
+                            byte[] buffer = weakReference.Target as byte[];
                             _buffers[i].RemoveFirst();
 
-                            return buffer;
+                            if (buffer != null) return buffer;
                         }
-                        else
-                        {
-                            return new byte[_sizes[i]];
-                        }
+
+                        return new byte[_sizes[i]];
                     }
                 }
 
@@ -160,7 +164,7 @@ namespace Library
                 {
                     if (buffer.Length == _sizes[i])
                     {
-                        _buffers[i].AddLast(buffer);
+                        _buffers[i].AddFirst(new WeakReference(buffer));
 
                         break;
                     }
@@ -220,6 +224,14 @@ namespace Library
             get
             {
                 return _instance;
+            }
+        }
+
+        public long Size
+        {
+            get
+            {
+                return 0;
             }
         }
 

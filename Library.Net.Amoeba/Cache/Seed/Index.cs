@@ -179,7 +179,7 @@ namespace Library.Net.Amoeba
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if ((this.Groups == null) != (other.Groups == null)
+            if (!Collection.Equals(this.Groups, other.Groups)
 
                 || this.CompressionAlgorithm != other.CompressionAlgorithm
 
@@ -187,11 +187,6 @@ namespace Library.Net.Amoeba
                 || (this.CryptoKey == null) != (other.CryptoKey == null))
             {
                 return false;
-            }
-
-            if (this.Groups != null && other.Groups != null)
-            {
-                if (!Collection.Equals(this.Groups, other.Groups)) return false;
             }
 
             if (this.CryptoKey != null && other.CryptoKey != null)

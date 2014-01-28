@@ -356,8 +356,21 @@ namespace Library
             if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt32(NetworkConverter.Reverse(value, offset, 4), 0);
-            else return System.BitConverter.ToInt32(value, offset);
+            if (System.BitConverter.IsLittleEndian)
+            {
+                int result = 0;
+
+                result = ((int)value[offset]) << (8 * 3);
+                result |= ((int)value[offset + 1]) << (8 * 2);
+                result |= ((int)value[offset + 2]) << (8 * 1);
+                result |= ((int)value[offset + 3]);
+
+                return result;
+            }
+            else
+            {
+                return System.BitConverter.ToInt32(value, offset);
+            }
         }
 
         public static long ToInt64(byte[] value)
@@ -371,8 +384,25 @@ namespace Library
             if (value.Length < 8) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 8) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt64(NetworkConverter.Reverse(value, offset, 8), 0);
-            else return System.BitConverter.ToInt64(value, offset);
+            if (System.BitConverter.IsLittleEndian)
+            {
+                long result = 0;
+
+                result = ((long)value[offset]) << (8 * 7);
+                result |= ((long)value[offset + 1]) << (8 * 6);
+                result |= ((long)value[offset + 2]) << (8 * 5);
+                result |= ((long)value[offset + 3]) << (8 * 4);
+                result |= ((long)value[offset + 4]) << (8 * 3);
+                result |= ((long)value[offset + 5]) << (8 * 2);
+                result |= ((long)value[offset + 6]) << (8 * 1);
+                result |= ((long)value[offset + 7]);
+
+                return result;
+            }
+            else
+            {
+                return System.BitConverter.ToInt64(value, offset);
+            }
         }
 
         public static ushort ToUInt16(byte[] value)
@@ -401,8 +431,21 @@ namespace Library
             if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt32(NetworkConverter.Reverse(value, offset, 4), 0);
-            else return System.BitConverter.ToUInt32(value, offset);
+            if (System.BitConverter.IsLittleEndian)
+            {
+                uint result = 0;
+
+                result = ((uint)value[offset]) << (8 * 3);
+                result |= ((uint)value[offset + 1]) << (8 * 2);
+                result |= ((uint)value[offset + 2]) << (8 * 1);
+                result |= ((uint)value[offset + 3]);
+
+                return result;
+            }
+            else
+            {
+                return System.BitConverter.ToUInt32(value, offset);
+            }
         }
 
         public static ulong ToUInt64(byte[] value)
@@ -416,8 +459,25 @@ namespace Library
             if (value.Length < 8) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 8) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt64(NetworkConverter.Reverse(value, offset, 8), 0);
-            else return System.BitConverter.ToUInt64(value, offset);
+            if (System.BitConverter.IsLittleEndian)
+            {
+                ulong result = 0;
+
+                result = ((ulong)value[offset]) << (8 * 7);
+                result |= ((ulong)value[offset + 1]) << (8 * 6);
+                result |= ((ulong)value[offset + 2]) << (8 * 5);
+                result |= ((ulong)value[offset + 3]) << (8 * 4);
+                result |= ((ulong)value[offset + 4]) << (8 * 3);
+                result |= ((ulong)value[offset + 5]) << (8 * 2);
+                result |= ((ulong)value[offset + 6]) << (8 * 1);
+                result |= ((ulong)value[offset + 7]);
+
+                return result;
+            }
+            else
+            {
+                return System.BitConverter.ToUInt64(value, offset);
+            }
         }
 
         public static byte[] GetBytes(bool value)
