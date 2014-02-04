@@ -173,7 +173,7 @@ namespace Library.Net.Lair
                     }
                 }
 
-                _spaceClusters.TrimExcess();
+                // _spaceClusters.TrimExcess();
             }
         }
 
@@ -289,6 +289,34 @@ namespace Library.Net.Lair
                 }
 
                 return false;
+            }
+        }
+
+        public IEnumerable<Key> IntersectFrom(IEnumerable<Key> keys)
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var key in keys)
+                {
+                    if (_settings.ClustersIndex.ContainsKey(key))
+                    {
+                        yield return key;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<Key> ExceptFrom(IEnumerable<Key> keys)
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var key in keys)
+                {
+                    if (!(_settings.ClustersIndex.ContainsKey(key)))
+                    {
+                        yield return key;
+                    }
+                }
             }
         }
 

@@ -106,10 +106,10 @@ namespace Library.Net.Amoeba
         private ConnectionManagerType _type;
 
         private DateTime _sendUpdateTime;
-        private DateTime _pingTime = DateTime.UtcNow;
-        private byte[] _pingHash;
-        private TimeSpan _responseTime = TimeSpan.MaxValue;
         private bool _onClose;
+
+        private byte[] _pingHash;
+        private Stopwatch _responseStopwatch = new Stopwatch();
 
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 12, 0);
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 12, 0);
@@ -243,7 +243,7 @@ namespace Library.Net.Amoeba
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _responseTime;
+                return _responseStopwatch.Elapsed;
             }
         }
 
@@ -333,13 +333,13 @@ namespace Library.Net.Amoeba
 
                         _sendUpdateTime = DateTime.UtcNow;
 
-                        ThreadPool.QueueUserWorkItem(this.Pull);
-                        _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 60, 1000 * 60);
-
-                        _pingTime = DateTime.UtcNow;
                         _pingHash = new byte[64];
                         (new System.Security.Cryptography.RNGCryptoServiceProvider()).GetBytes(_pingHash);
+                        _responseStopwatch.Start();
                         this.Ping(_pingHash);
+
+                        ThreadPool.QueueUserWorkItem(this.Pull);
+                        _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 10, 1000 * 10);
                     }
                     else
                     {
@@ -555,7 +555,7 @@ namespace Library.Net.Amoeba
 
                                     if (!Collection.Equals(buffer, _pingHash)) throw new ConnectionManagerException();
 
-                                    _responseTime = DateTime.UtcNow - _pingTime;
+                                    _responseStopwatch.Stop();
                                 }
                                 else if (type == (byte)SerializeId.Nodes)
                                 {

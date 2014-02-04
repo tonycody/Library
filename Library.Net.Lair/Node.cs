@@ -68,41 +68,42 @@ namespace Library.Net.Lair
 
         protected override Stream Export(BufferManager bufferManager, int count)
         {
-            List<Stream> streams = new List<Stream>();
+            BufferStream bufferStream = new BufferStream(bufferManager);
             Encoding encoding = new UTF8Encoding(false);
 
             // Id
             if (this.Id != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
                 bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
                 bufferStream.WriteByte((byte)SerializeId.Id);
                 bufferStream.Write(this.Id, 0, this.Id.Length);
-
-                streams.Add(bufferStream);
             }
 
             // Uris
-            foreach (var u in this.Uris)
+            foreach (var value in this.Uris)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
+                byte[] buffer = null;
 
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
+                try
                 {
-                    writer.Write(u);
+                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
+
+                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Uri);
+                    bufferStream.Write(buffer, 0, length);
                 }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Uri);
-
-                streams.Add(bufferStream);
+                finally
+                {
+                    if (buffer != null)
+                    {
+                        bufferManager.ReturnBuffer(buffer);
+                    }
+                }
             }
 
-            return new UniteStream(streams);
+            bufferStream.Seek(0, SeekOrigin.Begin);
+            return bufferStream;
         }
 
         public override int GetHashCode()

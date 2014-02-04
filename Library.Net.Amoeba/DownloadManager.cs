@@ -564,6 +564,9 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
+                                        item.DecodingBytes = 0;
+                                        item.DecodeBytes = 0;
+                                        
                                         item.Index = index;
 
                                         foreach (var group in item.Index.Groups)
@@ -660,6 +663,9 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
+                                        item.DecodingBytes = 0;
+                                        item.DecodeBytes = 0;
+
                                         _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
                                         _settings.DownloadedSeeds.Add(item.Seed.Clone());
 
@@ -779,6 +785,9 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
+                                        item.DecodingBytes = 0;
+                                        item.DecodeBytes = 0;
+                                        
                                         item.Index = index;
 
                                         foreach (var group in item.Index.Groups)
@@ -874,6 +883,9 @@ namespace Library.Net.Amoeba
 
                                     lock (this.ThisLock)
                                     {
+                                        item.DecodingBytes = 0;
+                                        item.DecodeBytes = 0;
+                                        
                                         _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
                                         _settings.DownloadedSeeds.Add(item.Seed.Clone());
 

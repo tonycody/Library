@@ -564,6 +564,38 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public IEnumerable<Key> IntersectFrom(IEnumerable<Key> keys)
+        {
+            lock (this.ThisLock)
+            {
+                _shareIndexLinkUpdate();
+
+                foreach (var key in keys)
+                {
+                    if (_settings.ClustersIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key))
+                    {
+                        yield return key;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<Key> ExceptFrom(IEnumerable<Key> keys)
+        {
+            lock (this.ThisLock)
+            {
+                _shareIndexLinkUpdate();
+
+                foreach (var key in keys)
+                {
+                    if (!(_settings.ClustersIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key)))
+                    {
+                        yield return key;
+                    }
+                }
+            }
+        }
+
         public void Remove(Key key)
         {
             lock (this.ThisLock)

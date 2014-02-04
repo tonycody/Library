@@ -255,7 +255,7 @@ namespace Library.Net.Connections
                     {
                         List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
 
-                        if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
+                        if (targetStream.Length < 1024 * 32 && _otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
                         {
                             try
                             {
