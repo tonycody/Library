@@ -731,6 +731,8 @@ namespace Library.Net.Amoeba
                         {
                             foreach (var key in group.Keys)
                             {
+                                if (this.State == ManagerState.Stop) return;
+
                                 if (!_cacheManager.Contains(key)) continue;
 
                                 ArraySegment<byte> buffer = new ArraySegment<byte>();
@@ -757,8 +759,6 @@ namespace Library.Net.Amoeba
                     item.State = BackgroundDownloadState.Error;
 
                     Log.Error(e);
-
-                    this.Remove(item);
                 }
             }
         }
@@ -780,6 +780,13 @@ namespace Library.Net.Amoeba
 
                         lock (this.ThisLock)
                         {
+                            foreach (var item in _settings.BackgroundDownloadItems.ToArray())
+                            {
+                                if (item.State != BackgroundDownloadState.Error) continue;
+
+                                this.Remove(item);
+                            }
+
                             foreach (var item in _settings.BackgroundDownloadItems.ToArray())
                             {
                                 if (this.SearchSignatures.Contains(item.Seed.Certificate.ToString())) continue;

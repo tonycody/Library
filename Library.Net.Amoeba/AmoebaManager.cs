@@ -843,6 +843,8 @@ namespace Library.Net.Amoeba
                 _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
                 _backgroundDownloadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundDownloadManager"));
                 _backgroundUploadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"));
+
+                _cacheManager.Rewatch();
             }
         }
 

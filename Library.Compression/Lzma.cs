@@ -86,7 +86,7 @@ namespace Library.Compression
                 using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
                 using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
                 {
-                    encoder.Code(cis, new LzmaStreamWriter(cos), -1, -1, null);
+                    encoder.Code(cis, new LzmaStreamWrapper(cos), -1, -1, null);
                 }
             }
         }
@@ -125,7 +125,7 @@ namespace Library.Compression
                 using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
                 using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
                 {
-                    decoder.Code(cis, new LzmaStreamWriter(cos), -1, outSize, null);
+                    decoder.Code(cis, new LzmaStreamWrapper(cos), -1, outSize, null);
                 }
             }
         }

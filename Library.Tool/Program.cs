@@ -887,14 +887,14 @@ namespace Library.Tool
                 foreach (var path in filePaths)
                 {
                     using (var rstream = new FileStream(path, FileMode.Open, FileAccess.Read))
-                    using (var sha512 = SHA512Managed.Create())
+                    using (var sha512 = SHA512.Create())
                     {
                         var buffer = sha512.ComputeHash(rstream);
                         memoryStream.Write(buffer, 0, buffer.Length);
                     }
                 }
 
-                using (var sha512 = SHA512Managed.Create())
+                using (var sha512 = SHA512.Create())
                 {
                     return sha512.ComputeHash(memoryStream.ToArray());
                 }

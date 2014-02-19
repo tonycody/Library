@@ -943,6 +943,8 @@ namespace Library.Net.Amoeba
                         {
                             foreach (var key in group.Keys)
                             {
+                                if (this.State == ManagerState.Stop) return;
+
                                 if (!_cacheManager.Contains(key)) continue;
 
                                 ArraySegment<byte> buffer = new ArraySegment<byte>();

@@ -10,6 +10,9 @@ namespace Library.Net.Amoeba
 
         [EnumMember(Value = "Lzma")]
         Lzma = 1,
+
+        [EnumMember(Value = "Xz")]
+        Xz = 2,
     }
 
     public interface ICompressionAlgorithm

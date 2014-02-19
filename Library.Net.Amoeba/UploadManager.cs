@@ -797,7 +797,7 @@ namespace Library.Net.Amoeba
                 item.Type = UploadType.Upload;
                 item.Rank = 1;
                 item.FilePath = filePath;
-                item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                item.CompressionAlgorithm = CompressionAlgorithm.Xz;
                 item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
                 item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
                 item.HashAlgorithm = HashAlgorithm.Sha512;
@@ -832,7 +832,7 @@ namespace Library.Net.Amoeba
                 item.Type = UploadType.Share;
                 item.Rank = 1;
                 item.FilePath = filePath;
-                item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                item.CompressionAlgorithm = CompressionAlgorithm.Xz;
                 item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
                 item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
                 item.HashAlgorithm = HashAlgorithm.Sha512;

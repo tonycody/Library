@@ -107,8 +107,8 @@ namespace Library.Net.Amoeba
         private const int _downloadingConnectionCountLowerLimit = 0;
         private const int _uploadingConnectionCountLowerLimit = 0;
 #else
-        private const int _downloadingConnectionCountLowerLimit = 3;
-        private const int _uploadingConnectionCountLowerLimit = 3;
+        private const int _downloadingConnectionCountLowerLimit = 20;
+        private const int _uploadingConnectionCountLowerLimit = 20;
 #endif
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
@@ -795,7 +795,7 @@ namespace Library.Net.Amoeba
 
                 lock (this.ThisLock)
                 {
-                    connectionCount = _connectionManagers.Count(n => n.Type == ConnectionManagerType.Client);
+                    connectionCount = _connectionManagers.Count;
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
@@ -1474,7 +1474,7 @@ namespace Library.Net.Amoeba
 
                     lock (this.ThisLock)
                     {
-                        connectionCount = _connectionManagers.Count(n => n.Type == ConnectionManagerType.Client);
+                        connectionCount = _connectionManagers.Count;
                     }
 
                     // Check

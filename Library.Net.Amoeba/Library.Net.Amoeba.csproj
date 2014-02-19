@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -62,18 +62,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BackgroundItemType.cs" />
-    <Compile Include="Cache\AmoebaConverter.cs" />
+    <Compile Include="AmoebaConverter.cs" />
     <Compile Include="AmoebaManager.cs" />
-    <Compile Include="Cache\Store\Box.cs" />
-    <Compile Include="Cache\Store\BoxCollection.cs" />
-    <Compile Include="Cache\Link\Link.cs" />
-    <Compile Include="Cache\Link\LinkCollection.cs" />
-    <Compile Include="Cache\Store\Store.cs" />
-    <Compile Include="Cache\Store\StoreCollection.cs" />
-    <Compile Include="Cache\_Interface\Link\ILink.cs" />
+    <Compile Include="Information\Store\Box.cs" />
+    <Compile Include="Information\Store\BoxCollection.cs" />
+    <Compile Include="Information\Link\Link.cs" />
+    <Compile Include="Information\Link\LinkCollection.cs" />
+    <Compile Include="Information\Store\Store.cs" />
+    <Compile Include="Information\Store\StoreCollection.cs" />
+    <Compile Include="Information\_Interface\Link\ILink.cs" />
     <Compile Include="Cache\_Interface\Seed\IKeywords.cs" />
-    <Compile Include="Cache\_Interface\Store\IStore.cs" />
-    <Compile Include="Cache\_Interface\Store\IBox.cs" />
+    <Compile Include="Information\_Interface\Store\IStore.cs" />
+    <Compile Include="Information\_Interface\Store\IBox.cs" />
     <Compile Include="BackgroundDownloadItem.cs" />
     <Compile Include="BackgroundDownloadManager.cs" />
     <Compile Include="BackgroundUploadItem.cs" />

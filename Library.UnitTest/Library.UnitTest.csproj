@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -65,6 +65,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Test_Library.Compression.cs" />
     <Compile Include="Dummy_Box.cs" />
     <Compile Include="Test_Library.Net.cs" />
     <Compile Include="Test_Library.Io.cs" />
@@ -84,6 +85,10 @@
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
       <Project>{197C654F-2461-446A-B531-4A789F14BE19}</Project>
       <Name>Library.Collections</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Compression\Library.Compression.csproj">
+      <Project>{51eccc57-56cb-44a0-9a43-db596f982fc8}</Project>
+      <Name>Library.Compression</Name>
     </ProjectReference>
     <ProjectReference Include="..\Library.Io\Library.Io.csproj">
       <Project>{74597E45-7F3C-4958-8B6A-B16DE8DE47B9}</Project>

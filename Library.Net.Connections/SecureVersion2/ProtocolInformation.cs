@@ -51,28 +51,28 @@ namespace Library.Net.Connections.SecureVersion2
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.KeyExchangeAlgorithm = (KeyExchangeAlgorithm)Enum.Parse(typeof(KeyExchangeAlgorithm), reader.ReadToEnd());
+                                this.KeyExchangeAlgorithm = EnumEx<KeyExchangeAlgorithm>.Parse(reader.ReadToEnd());
                             }
                         }
                         else if (id == (byte)SerializeId.KeyDerivationFunctionAlgorithm)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.KeyDerivationFunctionAlgorithm = (KeyDerivationFunctionAlgorithm)Enum.Parse(typeof(KeyDerivationFunctionAlgorithm), reader.ReadToEnd());
+                                this.KeyDerivationFunctionAlgorithm = EnumEx<KeyDerivationFunctionAlgorithm>.Parse(reader.ReadToEnd());
                             }
                         }
                         else if (id == (byte)SerializeId.CryptoAlgorithm)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), reader.ReadToEnd());
+                                this.CryptoAlgorithm = EnumEx<CryptoAlgorithm>.Parse(reader.ReadToEnd());
                             }
                         }
                         else if (id == (byte)SerializeId.HashAlgorithm)
                         {
                             using (StreamReader reader = new StreamReader(rangeStream, encoding))
                             {
-                                this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
+                                this.HashAlgorithm = EnumEx<HashAlgorithm>.Parse(reader.ReadToEnd());
                             }
                         }
                         else if (id == (byte)SerializeId.SessionId)

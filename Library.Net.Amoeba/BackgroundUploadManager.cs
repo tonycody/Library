@@ -433,7 +433,7 @@ namespace Library.Net.Amoeba
                     item.Type = BackgroundItemType.Link;
                     item.State = BackgroundUploadState.Encoding;
                     item.Rank = 1;
-                    item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                    item.CompressionAlgorithm = CompressionAlgorithm.Xz;
                     item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
                     item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
                     item.HashAlgorithm = HashAlgorithm.Sha512;
@@ -471,7 +471,7 @@ namespace Library.Net.Amoeba
                     item.Type = BackgroundItemType.Store;
                     item.State = BackgroundUploadState.Encoding;
                     item.Rank = 1;
-                    item.CompressionAlgorithm = CompressionAlgorithm.Lzma;
+                    item.CompressionAlgorithm = CompressionAlgorithm.Xz;
                     item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
                     item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
                     item.HashAlgorithm = HashAlgorithm.Sha512;

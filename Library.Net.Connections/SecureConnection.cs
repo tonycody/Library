@@ -171,6 +171,7 @@ namespace Library.Net.Connections
                                 KeyExchangeAlgorithm = SecureVersion2.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512 | SecureVersion2.KeyExchangeAlgorithm.Rsa2048,
                                 KeyDerivationFunctionAlgorithm = SecureVersion2.KeyDerivationFunctionAlgorithm.ANSI_X963,
                                 CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256,
+                                //CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256 | SecureVersion2.CryptoAlgorithm.Aes256,
                                 HashAlgorithm = SecureVersion2.HashAlgorithm.Sha512,
                                 SessionId = sessionId,
                             };
@@ -192,6 +193,7 @@ namespace Library.Net.Connections
                                 KeyExchangeAlgorithm = SecureVersion2.KeyExchangeAlgorithm.Rsa2048,
                                 KeyDerivationFunctionAlgorithm = SecureVersion2.KeyDerivationFunctionAlgorithm.ANSI_X963,
                                 CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256,
+                                //CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256 | SecureVersion2.CryptoAlgorithm.Aes256,
                                 HashAlgorithm = SecureVersion2.HashAlgorithm.Sha512,
                                 SessionId = sessionId,
                             };
@@ -506,13 +508,44 @@ namespace Library.Net.Connections
 
                                 if (hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
                                 {
-                                    hashFunction = new SHA512Managed();
+                                    hashFunction = SHA512.Create();
                                 }
 
                                 kdf = new ANSI_X963_KDF(hashFunction);
                             }
 
-                            if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                            if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256)
+                                && hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
+                            {
+                                myCryptoKey = new byte[32];
+                                otherCryptoKey = new byte[32];
+                                myHmacKey = new byte[64];
+                                otherHmacKey = new byte[64];
+
+                                using (MemoryStream stream = new MemoryStream(kdf.Calculate(seedStream.ToArray(), (32 + 64) * 2)))
+                                {
+                                    if (_type == SecureConnectionType.Client)
+                                    {
+                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
+                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
+                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
+                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
+                                    }
+                                    else if (_type == SecureConnectionType.Server)
+                                    {
+                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
+                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
+                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
+                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
+                                    }
+                                    else
+                                    {
+                                        throw new ConnectionException();
+                                    }
+                                }
+                            }
+                            else if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256)
+                                && hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
                             {
                                 myCryptoKey = new byte[32];
                                 otherCryptoKey = new byte[32];
@@ -620,7 +653,7 @@ namespace Library.Net.Connections
 
                             if (cryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
                             {
-                                ANSI_X963_KDF kdf = new ANSI_X963_KDF(new SHA512Managed());
+                                ANSI_X963_KDF kdf = new ANSI_X963_KDF(SHA512.Create());
 
                                 myCryptoKey = new byte[32 + 32];
                                 otherCryptoKey = new byte[32 + 32];
@@ -847,7 +880,40 @@ namespace Library.Net.Connections
 
                             BufferStream bufferStream = new BufferStream(_bufferManager);
 
-                            if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                            if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256))
+                            {
+                                byte[] iv = new byte[16];
+                                stream.Read(iv, 0, iv.Length);
+
+                                byte[] receiveBuffer = null;
+
+                                try
+                                {
+                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
+
+                                    using (var aes = Aes.Create())
+                                    {
+                                        aes.KeySize = 256;
+                                        aes.Mode = CipherMode.CBC;
+                                        aes.Padding = PaddingMode.PKCS7;
+
+                                        using (CryptoStream cs = new CryptoStream(stream, aes.CreateDecryptor(_informationVersion2.OtherCryptoKey, iv), CryptoStreamMode.Read))
+                                        {
+                                            int i = -1;
+
+                                            while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
+                                            {
+                                                bufferStream.Write(receiveBuffer, 0, i);
+                                            }
+                                        }
+                                    }
+                                }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(receiveBuffer);
+                                }
+                            }
+                            else if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
                             {
                                 byte[] iv = new byte[32];
                                 stream.Read(iv, 0, iv.Length);
@@ -858,14 +924,21 @@ namespace Library.Net.Connections
                                 {
                                     receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                    using (CryptoStream cs = new CryptoStream(stream, rijndael.CreateDecryptor(_informationVersion2.OtherCryptoKey, iv), CryptoStreamMode.Read))
+                                    using (var rijndael = Rijndael.Create())
                                     {
-                                        int i = -1;
+                                        rijndael.KeySize = 256;
+                                        rijndael.BlockSize = 256;
+                                        rijndael.Mode = CipherMode.CBC;
+                                        rijndael.Padding = PaddingMode.PKCS7;
 
-                                        while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
+                                        using (CryptoStream cs = new CryptoStream(stream, rijndael.CreateDecryptor(_informationVersion2.OtherCryptoKey, iv), CryptoStreamMode.Read))
                                         {
-                                            bufferStream.Write(receiveBuffer, 0, i);
+                                            int i = -1;
+
+                                            while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
+                                            {
+                                                bufferStream.Write(receiveBuffer, 0, i);
+                                            }
                                         }
                                     }
                                 }
@@ -929,15 +1002,22 @@ namespace Library.Net.Connections
                                 {
                                     receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                    using (CryptoStream cs = new CryptoStream(stream,
-                                        rijndael.CreateDecryptor(_informationVersion1.OtherCryptoKey.Take(32).ToArray(), _informationVersion1.OtherCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                                    using (var rijndael = Rijndael.Create())
                                     {
-                                        int i = -1;
+                                        rijndael.KeySize = 256;
+                                        rijndael.BlockSize = 256;
+                                        rijndael.Mode = CipherMode.CBC;
+                                        rijndael.Padding = PaddingMode.PKCS7;
 
-                                        while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
+                                        using (CryptoStream cs = new CryptoStream(stream,
+                                            rijndael.CreateDecryptor(_informationVersion1.OtherCryptoKey.Take(32).ToArray(), _informationVersion1.OtherCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                                         {
-                                            bufferStream.Write(receiveBuffer, 0, i);
+                                            int i = -1;
+
+                                            while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
+                                            {
+                                                bufferStream.Write(receiveBuffer, 0, i);
+                                            }
                                         }
                                     }
                                 }
@@ -991,7 +1071,41 @@ namespace Library.Net.Connections
                                 bufferStream.SetLength(8);
                                 bufferStream.Seek(8, SeekOrigin.Begin);
 
-                                if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                                if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256))
+                                {
+                                    byte[] iv = new byte[16];
+                                    _random.GetBytes(iv);
+                                    bufferStream.Write(iv, 0, iv.Length);
+
+                                    byte[] sendBuffer = null;
+
+                                    try
+                                    {
+                                        sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
+
+                                        using (var aes = Aes.Create())
+                                        {
+                                            aes.KeySize = 256;
+                                            aes.Mode = CipherMode.CBC;
+                                            aes.Padding = PaddingMode.PKCS7;
+
+                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true), aes.CreateEncryptor(_informationVersion2.MyCryptoKey, iv), CryptoStreamMode.Read))
+                                            {
+                                                int i = -1;
+
+                                                while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                                {
+                                                    bufferStream.Write(sendBuffer, 0, i);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        _bufferManager.ReturnBuffer(sendBuffer);
+                                    }
+                                }
+                                else if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
                                 {
                                     byte[] iv = new byte[32];
                                     _random.GetBytes(iv);
@@ -1003,14 +1117,21 @@ namespace Library.Net.Connections
                                     {
                                         sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true), rijndael.CreateEncryptor(_informationVersion2.MyCryptoKey, iv), CryptoStreamMode.Read))
+                                        using (var rijndael = Rijndael.Create())
                                         {
-                                            int i = -1;
+                                            rijndael.KeySize = 256;
+                                            rijndael.BlockSize = 256;
+                                            rijndael.Mode = CipherMode.CBC;
+                                            rijndael.Padding = PaddingMode.PKCS7;
 
-                                            while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true), rijndael.CreateEncryptor(_informationVersion2.MyCryptoKey, iv), CryptoStreamMode.Read))
                                             {
-                                                bufferStream.Write(sendBuffer, 0, i);
+                                                int i = -1;
+
+                                                while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                                {
+                                                    bufferStream.Write(sendBuffer, 0, i);
+                                                }
                                             }
                                         }
                                     }
@@ -1069,15 +1190,22 @@ namespace Library.Net.Connections
                                     {
                                         sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                        using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true),
-                                            rijndael.CreateEncryptor(_informationVersion1.MyCryptoKey.Take(32).ToArray(), _informationVersion1.MyCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                                        using (var rijndael = Rijndael.Create())
                                         {
-                                            int i = -1;
+                                            rijndael.KeySize = 256;
+                                            rijndael.BlockSize = 256;
+                                            rijndael.Mode = CipherMode.CBC;
+                                            rijndael.Padding = PaddingMode.PKCS7;
 
-                                            while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true),
+                                                rijndael.CreateEncryptor(_informationVersion1.MyCryptoKey.Take(32).ToArray(), _informationVersion1.MyCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                                             {
-                                                bufferStream.Write(sendBuffer, 0, i);
+                                                int i = -1;
+
+                                                while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
+                                                {
+                                                    bufferStream.Write(sendBuffer, 0, i);
+                                                }
                                             }
                                         }
                                     }

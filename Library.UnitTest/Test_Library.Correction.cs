@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Library.Correction;
 using NUnit.Framework;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Library.UnitTest
 {
@@ -13,106 +16,193 @@ namespace Library.UnitTest
         private Random _random = new Random();
 
         [Test]
-        public void Test_ReedSolomon()
+        public void Test_ReedSolomon8()
         {
             {
-                for (int j = 0; j < 3; j++)
+                ReedSolomon8 pc = new ReedSolomon8(128, 256);
+
+                byte[][] buffList = new byte[128][];
+                for (int i = 0; i < 128; i++)
                 {
-                    ReedSolomon pc = new ReedSolomon(8, 128, 256, 1, _bufferManager);
+                    var buffer = new byte[1024 * 32];
+                    _random.NextBytes(buffer);
 
-                    IList<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();
-                    for (int i = 0; i < 128; i++)
+                    buffList[i] = buffer;
+                }
+
+                byte[][] buffList2 = new byte[256][];
+                for (int i = 0; i < 256; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+
+                    buffList2[i] = buffer;
+                }
+
+                int[] intList = new int[256];
+                for (int i = 0; i < 256; i++)
+                {
+                    intList[i] = i;
+                }
+
+                pc.Encode(buffList, buffList2, intList, 1024 * 32);
+
+                byte[][] buffList3 = new byte[128][];
+                int buffList3Count = 0;
+
+                for (int i = 0; i < 64; i++)
+                {
+                    buffList3[buffList3Count++] = buffList2[i];
+                }
+
+                for (int i = 0; i < 64; i++)
+                {
+                    buffList3[buffList3Count++] = buffList2[128 + i];
+                }
+
+                int[] intList2 = new int[128];
+                int intList2Count = 0;
+
+                for (int i = 0; i < 64; i++)
+                {
+                    intList2[intList2Count++] = i;
+                }
+
+                for (int i = 0; i < 64; i++)
+                {
+                    intList2[intList2Count++] = 128 + i;
+                }
+
+                {
+                    int n = buffList3.Length;
+
+                    while (n > 1)
                     {
-                        var buffer = _bufferManager.TakeBuffer(1024 * 32);
-                        _random.NextBytes(buffer);
+                        int k = _random.Next(n--);
 
-                        buffList.Add(new ArraySegment<byte>(buffer, 0, 1024 * 32));
-                    }
+                        var temp = buffList3[n];
+                        buffList3[n] = buffList3[k];
+                        buffList3[k] = temp;
 
-                    IList<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
-                    for (int i = 0; i < 256; i++)
-                    {
-                        var buffer = _bufferManager.TakeBuffer(1024 * 32);
-                        Array.Clear(buffer, 0, 1024 * 32);
-
-                        buffList2.Add(new ArraySegment<byte>(buffer, 0, 1024 * 32));
-                    }
-
-                    List<int> intList = new List<int>();
-                    for (int i = 0; i < 256; i++)
-                    {
-                        intList.Add(i);
-                    }
-
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-
-                    pc.Encode(buffList, buffList2, intList.ToArray());
-
-                    sw.Stop();
-                    Debug.WriteLine(sw.Elapsed.ToString());
-
-                    foreach (var buffer in buffList)
-                    {
-                        _bufferManager.ReturnBuffer(buffer.Array);
-                    }
-
-                    foreach (var buffer in buffList2)
-                    {
-                        _bufferManager.ReturnBuffer(buffer.Array);
+                        var temp2 = intList2[n];
+                        intList2[n] = intList2[k];
+                        intList2[k] = temp2;
                     }
                 }
 
-                Debug.WriteLine("");
+                pc.Decode(buffList3, intList2, 1024 * 32);
 
-                for (int j = 0; j < 3; j++)
+                for (int i = 0; i < buffList.Length; i++)
                 {
-                    ReedSolomon pc = new ReedSolomon(8, 128, 256, 4, _bufferManager);
-
-                    IList<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();
-                    for (int i = 0; i < 128; i++)
-                    {
-                        var buffer = _bufferManager.TakeBuffer(1024 * 32);
-                        _random.NextBytes(buffer);
-
-                        buffList.Add(new ArraySegment<byte>(buffer, 0, 1024 * 32));
-                    }
-
-                    IList<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
-                    for (int i = 0; i < 256; i++)
-                    {
-                        var buffer = _bufferManager.TakeBuffer(1024 * 32);
-                        Array.Clear(buffer, 0, 1024 * 32);
-
-                        buffList2.Add(new ArraySegment<byte>(buffer, 0, 1024 * 32));
-                    }
-
-                    List<int> intList = new List<int>();
-                    for (int i = 0; i < 256; i++)
-                    {
-                        intList.Add(i);
-                    }
-
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-
-                    pc.Encode(buffList, buffList2, intList.ToArray());
-
-                    sw.Stop();
-                    Debug.WriteLine(sw.Elapsed.ToString());
-
-                    foreach (var buffer in buffList)
-                    {
-                        _bufferManager.ReturnBuffer(buffer.Array);
-                    }
-
-                    foreach (var buffer in buffList2)
-                    {
-                        _bufferManager.ReturnBuffer(buffer.Array);
-                    }
+                    Assert.IsTrue(Collection.Equals(buffList[i], 0, buffList3[i], 0, 1024 * 32), "ReedSolomon");
                 }
             }
 
+            {
+                ReedSolomon8 pc = new ReedSolomon8(128, 256);
+
+                byte[][] buffList = new byte[128][];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 1024];
+                    _random.NextBytes(buffer);
+
+                    buffList[i] = buffer;
+                }
+
+                byte[][] buffList2 = new byte[128][];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 1024];
+
+                    buffList2[i] = buffer;
+                }
+
+                int[] intList = new int[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    intList[i] = i + 128;
+                }
+
+                {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
+
+                    var task1 = Task.Factory.StartNew(() =>
+                    {
+                        pc.Encode(buffList.ToArray(), buffList2.ToArray(), intList.ToArray(), 1024 * 1024);
+                    });
+
+                    Thread.Sleep(1000 * 5);
+
+                    var task2 = Task.Factory.StartNew(() =>
+                    {
+                        pc.Cancel();
+                    });
+
+                    Task.WaitAll(task1, task2);
+
+                    sw.Stop();
+
+                    Assert.IsTrue(sw.Elapsed.TotalSeconds < 10);
+                }
+            }
+
+            {
+                ReedSolomon8 pc = new ReedSolomon8(128, 256);
+
+                byte[][] buffList = new byte[128][];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 1024];
+                    _random.NextBytes(buffer);
+
+                    buffList[i] = buffer;
+                }
+
+                byte[][] buffList2 = new byte[128][];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 1024];
+
+                    buffList2[i] = buffer;
+                }
+
+                int[] intList = new int[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    intList[i] = i + 128;
+                }
+
+                pc.Encode(buffList.ToArray(), buffList2.ToArray(), intList.ToArray(), 1024 * 1024);
+
+                {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
+
+                    var task1 = Task.Factory.StartNew(() =>
+                    {
+                        pc.Decode(buffList2.ToArray(), intList.ToArray(), 1024 * 1024);
+                    });
+
+                    Thread.Sleep(1000 * 5);
+
+                    var task2 = Task.Factory.StartNew(() =>
+                    {
+                        pc.Cancel();
+                    });
+
+                    Task.WaitAll(task1, task2);
+
+                    sw.Stop();
+
+                    Assert.IsTrue(sw.Elapsed.TotalSeconds < 10);
+                }
+            }
+        }
+
+        [Test]
+        public void Test_ReedSolomon()
+        {
             {
                 ReedSolomon pc = new ReedSolomon(8, 128, 256, 1, _bufferManager);
 
@@ -190,6 +280,78 @@ namespace Library.UnitTest
                 {
                     Assert.IsTrue(Collection.Equals(buffList[i].Array, buffList[i].Offset, buffList3[i].Array, buffList3[i].Offset, 4), "ReedSolomon");
                 }
+            }
+
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                ReedSolomon pc = new ReedSolomon(8, 128, 256, 4, _bufferManager);
+
+                IList<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+                    _random.NextBytes(buffer);
+
+                    buffList.Add(new ArraySegment<byte>(buffer, 0, buffer.Length));
+                }
+
+                IList<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
+                for (int i = 128; i < 256; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+
+                    buffList2.Add(new ArraySegment<byte>(buffer, 0, buffer.Length));
+                }
+
+                List<int> intList = new List<int>();
+                for (int i = 128; i < 256; i++)
+                {
+                    intList.Add(i);
+                }
+
+                pc.Encode(buffList, buffList2, intList.ToArray());
+                pc.Decode(ref buffList2, intList.ToArray());
+
+                sw.Stop();
+                Debug.WriteLine("Managed ReedSolomon: " + sw.Elapsed.ToString());
+            }
+
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                ReedSolomon8 pc = new ReedSolomon8(128, 256);
+
+                byte[][] buffList = new byte[128][];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+                    _random.NextBytes(buffer);
+
+                    buffList[i] = buffer;
+                }
+
+                byte[][] buffList2 = new byte[128][];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+
+                    buffList2[i] = buffer;
+                }
+
+                int[] intList = new int[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    intList[i] = i + 128;
+                }
+
+                pc.Encode(buffList, buffList2, intList.ToArray(), 1024 * 32);
+                pc.Decode(buffList2, intList.ToArray(), 1024 * 32);
+
+                sw.Stop();
+                Debug.WriteLine("Unmanaged ReedSolomon: " + sw.Elapsed.ToString());
             }
         }
     }

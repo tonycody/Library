@@ -25,7 +25,7 @@ namespace Library.Security
                 RSAPKCS1SignatureFormatter rsaFormatter = new RSAPKCS1SignatureFormatter(rsa);
                 rsaFormatter.SetHashAlgorithm("SHA512");
 
-                using (var sha512 = new SHA512Managed())
+                using (var sha512 = SHA512.Create())
                 {
                     return rsaFormatter.CreateSignature(sha512.ComputeHash(stream));
                 }
@@ -43,7 +43,7 @@ namespace Library.Security
                     RSAPKCS1SignatureDeformatter rsaDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
                     rsaDeformatter.SetHashAlgorithm("SHA512");
 
-                    using (var sha512 = new SHA512Managed())
+                    using (var sha512 = SHA512.Create())
                     {
                         return rsaDeformatter.VerifySignature(sha512.ComputeHash(stream), signature);
                     }

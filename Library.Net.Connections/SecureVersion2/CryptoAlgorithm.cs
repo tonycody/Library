@@ -9,5 +9,8 @@ namespace Library.Net.Connections.SecureVersion2
     {
         [EnumMember(Value = "Rijndael256")]
         Rijndael256 = 0x01,
+
+        [EnumMember(Value = "Aes256")]
+        Aes256 = 0x02,
     }
 }
