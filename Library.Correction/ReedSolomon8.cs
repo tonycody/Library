@@ -10,25 +10,36 @@ namespace Library.Correction
     public class ReedSolomon8 : ManagerBase
     {
         private static Assembly _asm;
+        private static object _lockObject = new object();
         private dynamic _instance = null;
 
         private volatile bool _disposed;
 
         static ReedSolomon8()
         {
-            if (System.Environment.Is64BitProcess)
+            try
             {
-                _asm = Assembly.LoadFrom("Assembly/ReedSolomon_x64.dll");
+                if (System.Environment.Is64BitProcess)
+                {
+                    _asm = Assembly.LoadFrom("Assembly/ReedSolomon_x64.dll");
+                }
+                else
+                {
+                    _asm = Assembly.LoadFrom("Assembly/ReedSolomon_x86.dll");
+                }
             }
-            else
+            catch (Exception e)
             {
-                _asm = Assembly.LoadFrom("Assembly/ReedSolomon_x86.dll");
+                Log.Warning(e);
             }
         }
 
         public ReedSolomon8(int k, int n)
         {
-            _instance = Activator.CreateInstance(_asm.GetType("ReedSolomon.FEC"), k, n);
+            lock (_lockObject)
+            {
+                _instance = Activator.CreateInstance(_asm.GetType("ReedSolomon.FEC"), k, n);
+            }
         }
 
         public void Encode(byte[][] src, byte[][] repair, int[] index, int size)
