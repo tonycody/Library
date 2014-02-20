@@ -13,6 +13,8 @@ namespace Library.Correction
         private volatile int _threadCount;
         private volatile BufferManager _bufferManager;
 
+        private volatile bool _cancel;
+
         private volatile byte[] _encMatrix;
 
         private readonly object _thisLock = new object();
@@ -30,6 +32,8 @@ namespace Library.Correction
 
         public void Encode(IList<ArraySegment<byte>> src, IList<ArraySegment<byte>> repair, int[] index)
         {
+            _cancel = false;
+
             lock (this.ThisLock)
             {
                 byte[][] srcBufs = new byte[src.Count][];
@@ -57,6 +61,8 @@ namespace Library.Correction
         {
             Parallel.For(0, repair.Length, new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, row =>
             {
+                if (_cancel) return;
+
                 Thread.CurrentThread.IsBackground = true;
                 Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
@@ -74,17 +80,21 @@ namespace Library.Correction
 
                     for (int col = 0; col < _k; col++)
                     {
+                        if (_cancel) return;
+
                         _fecMath.AddMul(repair[row], repairOff[row], src[col], srcOff[col], (byte)_encMatrix[pos + col], packetLength);
                     }
                 }
             });
         }
 
-        public void Decode(ref IList<ArraySegment<byte>> pkts, int[] index)
+        public void Decode(IList<ArraySegment<byte>> pkts, int[] index)
         {
+            _cancel = false;
+
             lock (this.ThisLock)
             {
-                ReedSolomon.Shuffle(ref pkts, index, _k);
+                ReedSolomon.Shuffle(pkts, index, _k);
 
                 byte[][] bufs = new byte[pkts.Count][];
                 int[] offs = new int[pkts.Count];
@@ -108,6 +118,8 @@ namespace Library.Correction
 
             Parallel.For(0, _k, new ParallelOptions() { MaxDegreeOfParallelism = _threadCount }, row =>
             {
+                if (_cancel) return;
+
                 Thread.CurrentThread.IsBackground = true;
                 Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
@@ -118,10 +130,14 @@ namespace Library.Correction
 
                     for (int col = 0; col < _k; col++)
                     {
+                        if (_cancel) return;
+
                         _fecMath.AddMul(tmpPkts[row], 0, pkts[col], pktsOff[col], (byte)decMatrix[row * _k + col], packetLength);
                     }
                 }
             });
+
+            if (_cancel) return;
 
             // move pkts to their final destination
             for (int row = 0; row < _k; row++)
@@ -136,7 +152,7 @@ namespace Library.Correction
             }
         }
 
-        private static void Shuffle(ref IList<ArraySegment<byte>> pkts, int[] index, int k)
+        private static void Shuffle(IList<ArraySegment<byte>> pkts, int[] index, int k)
         {
             for (int i = 0; i < k; )
             {
@@ -204,6 +220,11 @@ namespace Library.Correction
         //        }
         //    }
         //}
+
+        public void Cancel()
+        {
+            _cancel = true;
+        }
 
         #region IThisLock
 

@@ -1463,7 +1463,6 @@ namespace Library.Net.Amoeba
                             if (watchEvent(this))
                             {
                                 reedSolomon.Cancel();
-                                thread.Abort();
                                 thread.Join();
 
                                 throw new StopException();
@@ -1619,7 +1618,6 @@ namespace Library.Net.Amoeba
                             if (watchEvent(this))
                             {
                                 reedSolomon.Cancel();
-                                thread.Abort();
                                 thread.Join();
 
                                 throw new StopException();

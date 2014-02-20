@@ -107,7 +107,7 @@ End:;
 
             for(int i = 0; i < pkts->Length; i++)
 			{
-                for (int j = 0; j < pkts->Length; j++)
+                for (int j = pkts->Length - 1; j >= 0 ; j--)
                 {
                     if(tpkts[i] == &pkts[j][0])
                     {
