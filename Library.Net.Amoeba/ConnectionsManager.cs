@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using Library.Collections;
 using Library.Net.Connections;
@@ -107,8 +108,8 @@ namespace Library.Net.Amoeba
         private const int _downloadingConnectionCountLowerLimit = 0;
         private const int _uploadingConnectionCountLowerLimit = 0;
 #else
-        private const int _downloadingConnectionCountLowerLimit = 20;
-        private const int _uploadingConnectionCountLowerLimit = 20;
+        private const int _downloadingConnectionCountLowerLimit = 12;
+        private const int _uploadingConnectionCountLowerLimit = 12;
 #endif
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
@@ -380,7 +381,7 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 _mySessionId = new byte[64];
-                (new System.Security.Cryptography.RNGCryptoServiceProvider()).GetBytes(_mySessionId);
+                RandomNumberGenerator.Create().GetBytes(_mySessionId);
             }
         }
 

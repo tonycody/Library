@@ -237,8 +237,10 @@ namespace Library.Security
             return new Certificate(digitalSignature, stream);
         }
 
-        public static Certificate CreateFileCertificate(DigitalSignature digitalSignature, FileStream stream, BufferManager bufferManager)
+        public static Certificate CreateFileCertificate(DigitalSignature digitalSignature, string name, Stream stream)
         {
+            BufferManager bufferManager = BufferManager.Instance;
+
             List<Stream> streams = new List<Stream>();
             Encoding encoding = new UTF8Encoding(false);
 
@@ -250,7 +252,7 @@ namespace Library.Security
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(Path.GetFileName(stream.Name));
+                    writer.Write(Path.GetFileName(name));
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -281,7 +283,7 @@ namespace Library.Security
             return certificate.Verify(stream);
         }
 
-        public static bool VerifyFileCertificate(Certificate certificate, FileStream stream)
+        public static bool VerifyFileCertificate(Certificate certificate, string name, Stream stream)
         {
             BufferManager bufferManager = BufferManager.Instance;
             List<Stream> streams = new List<Stream>();
@@ -296,7 +298,7 @@ namespace Library.Security
                 using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
                 using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
                 {
-                    writer.Write(Path.GetFileName(stream.Name));
+                    writer.Write(Path.GetFileName(name));
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);

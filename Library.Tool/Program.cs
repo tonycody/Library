@@ -33,9 +33,9 @@ namespace Library.Tool
                     using (FileStream inStream = new FileStream(path, FileMode.Open))
                     using (FileStream outStream = new FileStream(path + ".certificate", FileMode.Create))
                     {
-                        var certificate = DigitalSignature.CreateFileCertificate(digitalSignature, inStream, BufferManager.Instance);
+                        var certificate = DigitalSignature.CreateFileCertificate(digitalSignature, inStream.Name, inStream);
 
-                        using (var certificateStream = DigitalSignatureConverter.ToCertificateStream(certificate))
+                        using (var certificateStream = CertificateConverter.ToCertificateStream(certificate))
                         {
                             var buffer = new byte[1024];
                             int i = -1;
@@ -56,12 +56,12 @@ namespace Library.Tool
 
                     using (FileStream inStream = new FileStream(signPath, FileMode.Open))
                     {
-                        certificate = DigitalSignatureConverter.FromCertificateStream(inStream);
+                        certificate = CertificateConverter.FromCertificateStream(inStream);
                     }
 
                     using (FileStream inStream = new FileStream(path, FileMode.Open))
                     {
-                        MessageBox.Show(DigitalSignature.VerifyFileCertificate(certificate, inStream).ToString());
+                        MessageBox.Show(DigitalSignature.VerifyFileCertificate(certificate, inStream.Name, inStream).ToString());
                     }
                 }
                 else if (args.Length >= 4 && args[0] == "define")

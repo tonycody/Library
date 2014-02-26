@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.Serialization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Xml;
@@ -334,7 +335,7 @@ namespace Library.Net.Amoeba
                         _sendUpdateTime = DateTime.UtcNow;
 
                         _pingHash = new byte[64];
-                        (new System.Security.Cryptography.RNGCryptoServiceProvider()).GetBytes(_pingHash);
+                        RandomNumberGenerator.Create().GetBytes(_pingHash);
                         _responseStopwatch.Start();
                         this.Ping(_pingHash);
 

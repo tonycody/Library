@@ -9,7 +9,7 @@ namespace Library.Security
     {
         public static void CreateKeys(out byte[] publicKey, out byte[] privateKey)
         {
-            using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(2048))
+            using (var rsa = new RSACryptoServiceProvider(2048))
             {
                 publicKey = Encoding.ASCII.GetBytes(rsa.ToXmlString(false));
                 privateKey = Encoding.ASCII.GetBytes(rsa.ToXmlString(true));
@@ -18,7 +18,7 @@ namespace Library.Security
 
         public static byte[] Sign(byte[] privateKey, Stream stream)
         {
-            using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+            using (var rsa = new RSACryptoServiceProvider())
             {
                 rsa.FromXmlString(Encoding.ASCII.GetString(privateKey));
 
@@ -36,7 +36,7 @@ namespace Library.Security
         {
             try
             {
-                using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+                using (var rsa = new RSACryptoServiceProvider())
                 {
                     rsa.FromXmlString(Encoding.ASCII.GetString(publicKey));
 

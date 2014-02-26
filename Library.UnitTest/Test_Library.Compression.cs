@@ -19,8 +19,8 @@ namespace Library.UnitTest
         public void Test_Xz()
         {
             using (MemoryStream stream1 = new MemoryStream())
-            using (FileStream stream2 = new FileStream("ssss.xz", FileMode.Create))
-            //using (MemoryStream stream2 = new MemoryStream())
+            //using (FileStream stream2 = new FileStream("ssss.xz", FileMode.Create))
+            using (MemoryStream stream2 = new MemoryStream())
             using (MemoryStream stream3 = new MemoryStream())
             {
                 for (int i = 0; i < 4; i++)

@@ -138,7 +138,7 @@ namespace Library.Net.Connections
                     }
                 }
 
-                _outResetEvent.WaitOne(3000);
+                _outResetEvent.WaitOne();
 
                 lock (_connectionsLockObject)
                 {
@@ -175,7 +175,7 @@ namespace Library.Net.Connections
                     }
                 }
 
-                _inResetEvent.WaitOne(3000);
+                _inResetEvent.WaitOne();
 
                 lock (_connectionsLockObject)
                 {

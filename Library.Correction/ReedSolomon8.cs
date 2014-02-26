@@ -55,18 +55,20 @@ namespace Library.Correction
             }
         }
 
-        public ReedSolomon8(int k, int n, bool nativeFlag)
-            : this(k, n)
+        internal ReedSolomon8(int k, int n, bool nativeFlag)
         {
-            if (nativeFlag)
+            lock (_lockObject)
             {
-                _native = Activator.CreateInstance(_asm.GetType("ReedSolomon.FEC"), k, n);
-                _nativeFlag = true;
-            }
-            else
-            {
-                var threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
-                _managed = new ReedSolomon(8, k, n, threadCount, BufferManager.Instance);
+                if (nativeFlag)
+                {
+                    _native = Activator.CreateInstance(_asm.GetType("ReedSolomon.FEC"), k, n);
+                    _nativeFlag = true;
+                }
+                else
+                {
+                    var threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
+                    _managed = new ReedSolomon(8, k, n, threadCount, BufferManager.Instance);
+                }
             }
         }
 

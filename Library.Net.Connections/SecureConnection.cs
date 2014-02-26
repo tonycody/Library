@@ -18,7 +18,7 @@ namespace Library.Net.Connections
         private DigitalSignature _digitalSignature;
         private BufferManager _bufferManager;
 
-        private RNGCryptoServiceProvider _random = new RNGCryptoServiceProvider();
+        private RandomNumberGenerator _random = RandomNumberGenerator.Create();
 
         private SecureConnectionVersion _version;
         private SecureConnectionVersion _myVersion;
@@ -510,73 +510,70 @@ namespace Library.Net.Connections
                                 {
                                     hashFunction = SHA512.Create();
                                 }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
 
                                 kdf = new ANSI_X963_KDF(hashFunction);
-                            }
-
-                            if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256)
-                                && hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
-                            {
-                                myCryptoKey = new byte[32];
-                                otherCryptoKey = new byte[32];
-                                myHmacKey = new byte[64];
-                                otherHmacKey = new byte[64];
-
-                                using (MemoryStream stream = new MemoryStream(kdf.Calculate(seedStream.ToArray(), (32 + 64) * 2)))
-                                {
-                                    if (_type == SecureConnectionType.Client)
-                                    {
-                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
-                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
-                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
-                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
-                                    }
-                                    else if (_type == SecureConnectionType.Server)
-                                    {
-                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
-                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
-                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
-                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
-                                    }
-                                    else
-                                    {
-                                        throw new ConnectionException();
-                                    }
-                                }
-                            }
-                            else if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256)
-                                && hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
-                            {
-                                myCryptoKey = new byte[32];
-                                otherCryptoKey = new byte[32];
-                                myHmacKey = new byte[64];
-                                otherHmacKey = new byte[64];
-
-                                using (MemoryStream stream = new MemoryStream(kdf.Calculate(seedStream.ToArray(), (32 + 64) * 2)))
-                                {
-                                    if (_type == SecureConnectionType.Client)
-                                    {
-                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
-                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
-                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
-                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
-                                    }
-                                    else if (_type == SecureConnectionType.Server)
-                                    {
-                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
-                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
-                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
-                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
-                                    }
-                                    else
-                                    {
-                                        throw new ConnectionException();
-                                    }
-                                }
                             }
                             else
                             {
                                 throw new ConnectionException();
+                            }
+
+                            {
+                                int cryptoKeyLength;
+                                int hmacKeyLength;
+
+                                if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256))
+                                {
+                                    cryptoKeyLength = 32;
+                                }
+                                else if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                                {
+                                    cryptoKeyLength = 32;
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+
+                                if (hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
+                                {
+                                    hmacKeyLength = 64;
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+
+                                myCryptoKey = new byte[cryptoKeyLength];
+                                otherCryptoKey = new byte[cryptoKeyLength];
+                                myHmacKey = new byte[hmacKeyLength];
+                                otherHmacKey = new byte[hmacKeyLength];
+
+                                using (MemoryStream stream = new MemoryStream(kdf.Calculate(seedStream.ToArray(), (cryptoKeyLength + hmacKeyLength) * 2)))
+                                {
+                                    if (_type == SecureConnectionType.Client)
+                                    {
+                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
+                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
+                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
+                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
+                                    }
+                                    else if (_type == SecureConnectionType.Server)
+                                    {
+                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
+                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
+                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
+                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
+                                    }
+                                    else
+                                    {
+                                        throw new ConnectionException();
+                                    }
+                                }
                             }
                         }
 
