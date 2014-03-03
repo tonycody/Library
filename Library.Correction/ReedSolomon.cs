@@ -30,16 +30,16 @@ namespace Library.Correction
             _encMatrix = _fecMath.CreateEncodeMatrix(k, n);
         }
 
-        public void Encode(IList<ArraySegment<byte>> src, IList<ArraySegment<byte>> repair, int[] index)
+        public void Encode(ArraySegment<byte>[] src, ArraySegment<byte>[] repair, int[] index, int size)
         {
             _cancel = false;
 
             lock (this.ThisLock)
             {
-                byte[][] srcBufs = new byte[src.Count][];
-                int[] srcOffs = new int[src.Count];
-                byte[][] repairBufs = new byte[repair.Count][];
-                int[] repairOffs = new int[repair.Count];
+                byte[][] srcBufs = new byte[src.Length][];
+                int[] srcOffs = new int[src.Length];
+                byte[][] repairBufs = new byte[repair.Length][];
+                int[] repairOffs = new int[repair.Length];
 
                 for (int i = 0; i < srcBufs.Length; i++)
                 {
@@ -53,7 +53,7 @@ namespace Library.Correction
                     repairOffs[i] = repair[i].Offset;
                 }
 
-                this.Encode(srcBufs, srcOffs, repairBufs, repairOffs, index, src[0].Count);
+                this.Encode(srcBufs, srcOffs, repairBufs, repairOffs, index, size);
             }
         }
 
@@ -88,7 +88,7 @@ namespace Library.Correction
             });
         }
 
-        public void Decode(IList<ArraySegment<byte>> pkts, int[] index)
+        public void Decode(ArraySegment<byte>[] pkts, int[] index, int size)
         {
             _cancel = false;
 
@@ -96,8 +96,8 @@ namespace Library.Correction
             {
                 ReedSolomon.Shuffle(pkts, index, _k);
 
-                byte[][] bufs = new byte[pkts.Count][];
-                int[] offs = new int[pkts.Count];
+                byte[][] bufs = new byte[pkts.Length][];
+                int[] offs = new int[pkts.Length];
 
                 for (int i = 0; i < bufs.Length; i++)
                 {
@@ -105,7 +105,7 @@ namespace Library.Correction
                     offs[i] = pkts[i].Offset;
                 }
 
-                this.Decode(bufs, offs, index, pkts[0].Count);
+                this.Decode(bufs, offs, index, size);
             }
         }
 

@@ -207,58 +207,63 @@ namespace Library.UnitTest
         public void Test_ReedSolomon()
         {
             {
-                ReedSolomon pc = new ReedSolomon(8, 128, 256, 1, _bufferManager);
+                ReedSolomon pc = new ReedSolomon(8, 128, 256, 4, _bufferManager);
 
-                IList<ArraySegment<byte>> buffList = new List<ArraySegment<byte>>();
+                var buffList = new ArraySegment<byte>[128];
                 for (int i = 0; i < 128; i++)
                 {
                     var buffer = new byte[1024 * 32];
                     _random.NextBytes(buffer);
 
-                    buffList.Add(new ArraySegment<byte>(buffer, 0, buffer.Length));
+                    buffList[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
                 }
 
-                IList<ArraySegment<byte>> buffList2 = new List<ArraySegment<byte>>();
+                var buffList2 = new ArraySegment<byte>[256];
                 for (int i = 0; i < 256; i++)
                 {
                     var buffer = new byte[1024 * 32];
 
-                    buffList2.Add(new ArraySegment<byte>(buffer, 0, buffer.Length));
+                    buffList2[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
                 }
 
-                List<int> intList = new List<int>();
+                var intList = new int[256];
                 for (int i = 0; i < 256; i++)
                 {
-                    intList.Add(i);
+                    intList[i] = i;
                 }
 
-                pc.Encode(buffList, buffList2, intList.ToArray());
+                pc.Encode(buffList, buffList2, intList, 1024 * 32);
 
-                IList<ArraySegment<byte>> buffList3 = new List<ArraySegment<byte>>();
-
-                for (int i = 0; i < 64; i++)
+                var buffList3 = new ArraySegment<byte>[128];
                 {
-                    buffList3.Add(buffList2[i]);
+                    int i = 0;
+
+                    for (int j = 0; i < 64; i++, j++)
+                    {
+                        buffList3[i] = buffList2[i];
+                    }
+                    for (int j = 0; i < 128; i++, j++)
+                    {
+                        buffList3[i] = buffList2[128 + j];
+                    }
                 }
 
-                for (int i = 0; i < 64; i++)
+                var intList2 = new int[128];
                 {
-                    buffList3.Add(buffList2[128 + i]);
+                    int i = 0;
+
+                    for (int j = 0; i < 64; i++, j++)
+                    {
+                        intList2[i] = i;
+                    }
+                    for (int j = 0; i < 128; i++, j++)
+                    {
+                        intList2[i] = 128 + j;
+                    }
                 }
 
-                List<int> intList2 = new List<int>();
-                for (int i = 0; i < 64; i++)
                 {
-                    intList2.Add(i);
-                }
-
-                for (int i = 0; i < 64; i++)
-                {
-                    intList2.Add(128 + i);
-                }
-
-                {
-                    int n = buffList3.Count;
+                    int n = buffList3.Length;
 
                     while (n > 1)
                     {
@@ -277,9 +282,9 @@ namespace Library.UnitTest
                 // これだと(参照が)ToArrayで切り離され、Decode内部からIListをシャッフルしている意味が無くなるため、正常にデコードできない
                 //pc.Decode(buffList3.ToArray(), intList2.ToArray());          
 
-                pc.Decode(buffList3, intList2.ToArray());
+                pc.Decode(buffList3, intList2, 1024 * 32);
 
-                for (int i = 0; i < buffList.Count; i++)
+                for (int i = 0; i < buffList.Length; i++)
                 {
                     Assert.IsTrue(Collection.Equals(buffList[i].Array, buffList[i].Offset, buffList3[i].Array, buffList3[i].Offset, 4), "ReedSolomon");
                 }

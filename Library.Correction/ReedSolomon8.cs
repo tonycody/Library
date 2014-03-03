@@ -80,20 +80,30 @@ namespace Library.Correction
             }
             else
             {
-                IList<ArraySegment<byte>> srcList = new List<ArraySegment<byte>>();
-                IList<ArraySegment<byte>> repairList = new List<ArraySegment<byte>>();
+                var srcList = new ArraySegment<byte>[src.Length];
+                var repairList = new ArraySegment<byte>[repair.Length];
 
-                foreach (var value in src)
+                for (int i = 0; i < srcList.Length; i++)
                 {
-                    srcList.Add(new ArraySegment<byte>(value, 0, size));
+                    srcList[i] = new ArraySegment<byte>(src[i], 0, size);
                 }
 
-                foreach (var value in repair)
+                for (int i = 0; i < repairList.Length; i++)
                 {
-                    repairList.Add(new ArraySegment<byte>(value, 0, size));
+                    repairList[i] = new ArraySegment<byte>(repair[i], 0, size);
                 }
 
-                _managed.Encode(srcList, repairList, index);
+                _managed.Encode(srcList, repairList, index, size);
+
+                for (int i = 0; i < src.Length; i++)
+                {
+                    src[i] = srcList[i].Array;
+                }
+
+                for (int i = 0; i < repair.Length; i++)
+                {
+                    repair[i] = repairList[i].Array;
+                }
             }
         }
 
@@ -105,14 +115,14 @@ namespace Library.Correction
             }
             else
             {
-                IList<ArraySegment<byte>> pktsList = new List<ArraySegment<byte>>();
+                var pktsList = new ArraySegment<byte>[pkts.Length];
 
-                foreach (var value in pkts)
+                for (int i = 0; i < pktsList.Length; i++)
                 {
-                    pktsList.Add(new ArraySegment<byte>(value, 0, size));
+                    pktsList[i] = new ArraySegment<byte>(pkts[i], 0, size);
                 }
 
-                _managed.Decode(pktsList, index);
+                _managed.Decode(pktsList, index, size);
 
                 for (int i = 0; i < pkts.Length; i++)
                 {

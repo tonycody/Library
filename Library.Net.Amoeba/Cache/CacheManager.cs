@@ -1058,292 +1058,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        /*
-        public Group ParityEncoding(KeyCollection keys, HashAlgorithm hashAlgorithm, int blockLength, CorrectionAlgorithm correctionAlgorithm, WatchEventHandler watchEvent)
-        {
-            if (correctionAlgorithm == CorrectionAlgorithm.None)
-            {
-                Group group = new Group();
-                group.CorrectionAlgorithm = correctionAlgorithm;
-                group.InformationLength = keys.Count;
-                group.BlockLength = blockLength;
-                group.Length = keys.Sum(n => (long)this.GetLength(n));
-                group.Keys.AddRange(keys);
-
-                return group;
-            }
-            else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
-            {
-#if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-#endif
-
-                if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
-
-                List<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
-                List<ArraySegment<byte>> parityBufferList = new List<ArraySegment<byte>>();
-                int sumLength = 0;
-
-                try
-                {
-                    KeyCollection parityHeaders = new KeyCollection();
-
-                    for (int i = 0; i < keys.Count; i++)
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = this[keys[i]];
-                            int bufferLength = buffer.Count;
-
-                            sumLength += bufferLength;
-
-                            if (bufferLength > blockLength)
-                            {
-                                throw new ArgumentOutOfRangeException("blockLength");
-                            }
-                            else if (bufferLength < blockLength)
-                            {
-                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                                Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                                buffer = tbuffer;
-                            }
-
-                            bufferList.Add(buffer);
-                        }
-                        catch (Exception)
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-
-                            throw;
-                        }
-                    }
-
-                    for (int i = 0; i < keys.Count; i++)
-                    {
-                        parityBufferList.Add(new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength));
-                    }
-
-                    ReedSolomon reedSolomon = new ReedSolomon(8, bufferList.Count, bufferList.Count + parityBufferList.Count, _threadCount, _bufferManager);
-                    List<int> intList = new List<int>();
-
-                    for (int i = keys.Count, length = bufferList.Count + parityBufferList.Count; i < length; i++)
-                    {
-                        intList.Add(i);
-                    }
-
-                    Exception exception = null;
-
-                    Thread thread = new Thread(() =>
-                    {
-                        try
-                        {
-                            reedSolomon.Encode(bufferList, parityBufferList, intList.ToArray());
-                        }
-                        catch (Exception e)
-                        {
-                            exception = e;
-                        }
-                    });
-                    thread.Name = "CacheManager_ReedSolomon.Encode";
-                    thread.Start();
-
-                    while (thread.IsAlive)
-                    {
-                        Thread.Sleep(1000);
-
-                        if (watchEvent(this))
-                        {
-                            thread.Abort();
-                            thread.Join();
-
-                            throw new StopException();
-                        }
-                    }
-
-                    if (exception != null) throw exception;
-
-                    for (int i = 0; i < parityBufferList.Count; i++)
-                    {
-                        if (hashAlgorithm == HashAlgorithm.Sha512)
-                        {
-                            var key = new Key(Sha512.ComputeHash(parityBufferList[i]), hashAlgorithm);
-
-                            lock (this.ThisLock)
-                            {
-                                this.Lock(key);
-                                this[key] = parityBufferList[i];
-                            }
-
-                            parityHeaders.Add(key);
-                        }
-                        else
-                        {
-                            throw new NotSupportedException();
-                        }
-                    }
-
-                    Group group = new Group();
-                    group.CorrectionAlgorithm = correctionAlgorithm;
-                    group.InformationLength = bufferList.Count;
-                    group.BlockLength = blockLength;
-                    group.Length = sumLength;
-                    group.Keys.AddRange(keys);
-                    group.Keys.AddRange(parityHeaders);
-
-#if DEBUG
-                    Debug.WriteLine(string.Format("CacheManager_ParityEncoding {0}:", sw.Elapsed.ToString()));
-#endif
-
-                    return group;
-                }
-                finally
-                {
-                    for (int i = 0; i < bufferList.Count; i++)
-                    {
-                        _bufferManager.ReturnBuffer(bufferList[i].Array);
-                    }
-
-                    for (int i = 0; i < parityBufferList.Count; i++)
-                    {
-                        _bufferManager.ReturnBuffer(parityBufferList[i].Array);
-                    }
-                }
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        public KeyCollection ParityDecoding(Group group, WatchEventHandler watchEvent)
-        {
-            if (group.BlockLength > 1024 * 1024 * 4) throw new ArgumentOutOfRangeException();
-
-            if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
-            {
-                return new KeyCollection(group.Keys);
-            }
-            else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
-            {
-                IList<ArraySegment<byte>> bufferList = new List<ArraySegment<byte>>();
-
-                try
-                {
-                    ReedSolomon reedSolomon = new ReedSolomon(8, group.InformationLength, group.Keys.Count, _threadCount, _bufferManager);
-                    List<int> intList = new List<int>();
-
-                    for (int i = 0; i < group.Keys.Count; i++)
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = this[group.Keys[i]];
-                            int bufferLength = buffer.Count;
-
-                            if (bufferLength > group.BlockLength)
-                            {
-                                throw new ArgumentOutOfRangeException("group.BlockLength");
-                            }
-                            else if (bufferLength < group.BlockLength)
-                            {
-                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
-                                Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                                buffer = tbuffer;
-                            }
-
-                            intList.Add(i);
-                            bufferList.Add(buffer);
-                        }
-                        catch (BlockNotFoundException)
-                        {
-
-                        }
-                        catch (Exception)
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-
-                            throw;
-                        }
-                    }
-
-                    if (bufferList.Count < group.InformationLength) throw new BlockNotFoundException();
-
-                    Exception exception = null;
-
-                    Thread thread = new Thread(() =>
-                    {
-                        try
-                        {
-                            reedSolomon.Decode(ref bufferList, intList.ToArray());
-                        }
-                        catch (Exception e)
-                        {
-                            exception = e;
-                        }
-                    });
-                    thread.Name = "CacheManager_ReedSolomon.Decode";
-                    thread.Start();
-
-                    while (thread.IsAlive)
-                    {
-                        Thread.Sleep(1000);
-
-                        if (watchEvent(this))
-                        {
-                            thread.Abort();
-                            thread.Join();
-
-                            throw new StopException();
-                        }
-                    }
-
-                    if (exception != null) throw exception;
-
-                    long length = group.Length;
-
-                    for (int i = 0; i < group.InformationLength; length -= bufferList[i].Count, i++)
-                    {
-                        this[group.Keys[i]] = new ArraySegment<byte>(bufferList[i].Array, bufferList[i].Offset, (int)Math.Min(bufferList[i].Count, length));
-                    }
-                }
-                finally
-                {
-                    for (int i = 0; i < bufferList.Count; i++)
-                    {
-                        _bufferManager.ReturnBuffer(bufferList[i].Array);
-                    }
-                }
-
-                KeyCollection keys = new KeyCollection();
-
-                for (int i = 0; i < group.InformationLength; i++)
-                {
-                    keys.Add(group.Keys[i]);
-                }
-
-                return new KeyCollection(keys);
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
-        }
-        */
-
         public Group ParityEncoding(KeyCollection keys, HashAlgorithm hashAlgorithm, int blockLength, CorrectionAlgorithm correctionAlgorithm, WatchEventHandler watchEvent)
         {
             if (correctionAlgorithm == CorrectionAlgorithm.None)
@@ -1429,23 +1143,13 @@ namespace Library.Net.Amoeba
                                 reedSolomon.Encode(tempBufferList, tempParityBufferList, tempIntList, blockLength);
 
                                 bufferList.Clear();
+                                bufferList.AddRange(tempBufferList);
+
                                 parityBufferList.Clear();
+                                parityBufferList.AddRange(tempParityBufferList);
+
                                 intList.Clear();
-
-                                foreach (var buffer in tempBufferList)
-                                {
-                                    bufferList.Add(buffer);
-                                }
-
-                                foreach (var buffer in tempParityBufferList)
-                                {
-                                    parityBufferList.Add(buffer);
-                                }
-
-                                foreach (var index in tempIntList)
-                                {
-                                    intList.Add(index);
-                                }
+                                intList.AddRange(tempIntList);
                             }
                             catch (Exception e)
                             {
@@ -1535,7 +1239,7 @@ namespace Library.Net.Amoeba
             }
             else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
-                IList<byte[]> bufferList = new List<byte[]>();
+                List<byte[]> bufferList = new List<byte[]>();
 
                 try
                 {
@@ -1590,17 +1294,10 @@ namespace Library.Net.Amoeba
                                 reedSolomon.Decode(tempBufferList, tempIntList, group.BlockLength);
 
                                 bufferList.Clear();
+                                bufferList.AddRange(tempBufferList);
+
                                 intList.Clear();
-
-                                foreach (var buffer in tempBufferList)
-                                {
-                                    bufferList.Add(buffer);
-                                }
-
-                                foreach (var index in tempIntList)
-                                {
-                                    intList.Add(index);
-                                }
+                                intList.AddRange(tempIntList);
                             }
                             catch (Exception e)
                             {

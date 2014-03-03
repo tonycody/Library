@@ -32,7 +32,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.UnitTest", "Library
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.Caps", "Library.Net.Caps\Library.Net.Caps.csproj", "{364FD425-45B7-41D5-A180-1CE912C7BA31}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.I2p", "Library.I2p\Library.I2p.csproj", "{24DC1835-CC3D-4D29-B922-199027EC551F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.I2p", "Library.Net.I2p\Library.Net.I2p.csproj", "{24DC1835-CC3D-4D29-B922-199027EC551F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

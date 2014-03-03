@@ -26,7 +26,7 @@ namespace Library.Compression
             info.UseShellExecute = false;
             info.RedirectStandardInput = true;
             info.RedirectStandardOutput = true;
-            info.Arguments = "-z --format=xz -4 --threads=1 -c";
+            info.Arguments = "-z --format=xz -6 --threads=1 -c";
 
             using (Process process = Process.Start(info))
             {
