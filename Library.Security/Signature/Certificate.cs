@@ -36,9 +36,9 @@ namespace Library.Security
 
             byte[] signature;
 
-            if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
+            if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha512)
             {
-                signature = ECDsaP521_Sha512.Sign(digitalSignature.PrivateKey, stream);
+                signature = EcDsaP521_Sha512.Sign(digitalSignature.PrivateKey, stream);
             }
             else if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
             {
@@ -228,9 +228,9 @@ namespace Library.Security
 
         internal bool Verify(Stream stream)
         {
-            if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
+            if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha512)
             {
-                return ECDsaP521_Sha512.Verify(this.PublicKey, this.Signature, stream);
+                return EcDsaP521_Sha512.Verify(this.PublicKey, this.Signature, stream);
             }
             else if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
             {

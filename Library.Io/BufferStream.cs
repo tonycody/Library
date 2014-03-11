@@ -29,7 +29,7 @@ namespace Library.Io
             }
         }
 
-        public override bool CanSeek
+        public override bool CanWrite
         {
             get
             {
@@ -39,7 +39,7 @@ namespace Library.Io
             }
         }
 
-        public override bool CanWrite
+        public override bool CanSeek
         {
             get
             {

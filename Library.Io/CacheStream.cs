@@ -9,8 +9,9 @@ namespace Library.Io
         private long _position;
         private int _bufferSize;
         private bool _leaveInnerStreamOpen;
-        private bool _isReadMode = true;
         private BufferManager _bufferManager;
+
+        private StreamMode _mode = StreamMode.None;
 
         private byte[] _readerBuffer;
         private int _readerBufferPosition;
@@ -189,12 +190,12 @@ namespace Library.Io
                 _readerBuffer = _bufferManager.TakeBuffer(_bufferSize);
             }
 
-            if (!_isReadMode)
+            if (_mode == StreamMode.Write)
             {
                 this.Flush();
-
-                _isReadMode = true;
             }
+
+            _mode = StreamMode.Read;
 
             int readSumLength = 0;
 
@@ -265,7 +266,7 @@ namespace Library.Io
                 _writerBlockBuffer = _bufferManager.TakeBuffer(_bufferSize);
             }
 
-            if (_isReadMode)
+            if (_mode == StreamMode.Read)
             {
                 _readerBufferLength = 0;
                 _readerBufferPosition = 0;
@@ -278,9 +279,9 @@ namespace Library.Io
                 {
 
                 }
-
-                _isReadMode = false;
             }
+
+            _mode = StreamMode.Write;
 
             int writeSumLength = 0;
 

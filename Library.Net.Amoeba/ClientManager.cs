@@ -446,7 +446,7 @@ namespace Library.Net.Amoeba
 
                 if (connection == null) return null;
 
-                var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2, connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3, connection, null, _bufferManager);
                 garbages.Add(secureConnection);
 
                 secureConnection.Connect(new TimeSpan(0, 0, 30));

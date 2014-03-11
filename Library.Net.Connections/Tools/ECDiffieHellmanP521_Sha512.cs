@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Library.Net.Connections
 {
-    class ECDiffieHellmanP521_Sha512
+    class EcDiffieHellmanP521
     {
         /// <summary>
         /// 公開鍵と秘密鍵を作成して返す
@@ -29,13 +29,13 @@ namespace Library.Net.Connections
 #endif
         }
 
-        public static byte[] DeriveKeyMaterial(byte[] privateKey, byte[] otherPublicKey)
+        public static byte[] DeriveKeyMaterial(byte[] privateKey, byte[] otherPublicKey, CngAlgorithm hashAlgorithm)
         {
 #if !MONO
             using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
             using (ECDiffieHellmanCng ecdh = new ECDiffieHellmanCng(ck))
             {
-                ecdh.HashAlgorithm = CngAlgorithm.Sha512;
+                ecdh.HashAlgorithm = hashAlgorithm;
                 return ecdh.DeriveKeyMaterial(ECDiffieHellmanCngPublicKey.FromXmlString(Encoding.ASCII.GetString(otherPublicKey)));
             }
 #else

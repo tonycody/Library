@@ -73,6 +73,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BandwidthLimit.cs" />
+    <Compile Include="SecureVersion3\ConnectionSignature.cs" />
+    <Compile Include="SecureVersion3\CryptoAlgorithm.cs" />
+    <Compile Include="SecureVersion3\HashAlgorithm.cs" />
+    <Compile Include="SecureVersion3\KeyDerivationAlgorithm.cs" />
+    <Compile Include="SecureVersion3\KeyExchangeAlgorithm.cs" />
+    <Compile Include="SecureVersion3\ProtocolInformation.cs" />
     <Compile Include="Tools\EnumEx.cs" />
     <Compile Include="Tools\Sha512.cs" />
     <Compile Include="SecureConnectionType.cs" />
@@ -88,16 +94,11 @@
     <Compile Include="CompressConnection.cs" />
     <Compile Include="ConnectionBase.cs" />
     <Compile Include="CrcConnection.cs" />
-    <Compile Include="Tools\ECDiffieHellmanP521_Sha512.cs" />
+    <Compile Include="Tools\EcDiffieHellmanP521_Sha512.cs" />
     <Compile Include="Tools\KeyDerivationFunction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecureConnectionVersion.cs" />
     <Compile Include="SecureConnection.cs" />
-    <Compile Include="SecureVersion1\CryptoAlgorithm.cs" />
-    <Compile Include="SecureVersion1\HashAlgorithm.cs" />
-    <Compile Include="SecureVersion1\ConnectionSignature.cs" />
-    <Compile Include="SecureVersion1\KeyExchangeAlgorithm.cs" />
-    <Compile Include="SecureVersion1\ProtocolInformation.cs" />
     <Compile Include="BaseConnection.cs" />
   </ItemGroup>
   <ItemGroup>

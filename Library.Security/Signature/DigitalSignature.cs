@@ -41,11 +41,11 @@ namespace Library.Security
             this.Nickname = nickname;
             this.DigitalSignatureAlgorithm = digitalSignatureAlgorithm;
 
-            if (digitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512)
+            if (digitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha512)
             {
                 byte[] publicKey, privateKey;
 
-                ECDsaP521_Sha512.CreateKeys(out publicKey, out privateKey);
+                EcDsaP521_Sha512.CreateKeys(out publicKey, out privateKey);
 
                 this.PublicKey = publicKey;
                 this.PrivateKey = privateKey;

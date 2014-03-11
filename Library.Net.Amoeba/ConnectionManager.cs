@@ -40,12 +40,6 @@ namespace Library.Net.Amoeba
         public IEnumerable<string> Signatures { get; set; }
     }
 
-    [Obsolete]
-    class PullSeedEventArgs : EventArgs
-    {
-        public Seed Seed { get; set; }
-    }
-
     class PullSeedsEventArgs : EventArgs
     {
         public IEnumerable<Seed> Seeds { get; set; }
@@ -58,8 +52,6 @@ namespace Library.Net.Amoeba
     delegate void PullBlockEventHandler(object sender, PullBlockEventArgs e);
 
     delegate void PullSeedsRequestEventHandler(object sender, PullSeedsRequestEventArgs e);
-    [Obsolete]
-    delegate void PullSeedEventHandler(object sender, PullSeedEventArgs e);
     delegate void PullSeedsEventHandler(object sender, PullSeedsEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
@@ -89,8 +81,6 @@ namespace Library.Net.Amoeba
             Block = 7,
 
             SeedsRequest = 8,
-            [Obsolete]
-            Seed = 9,
             Seeds = 10,
         }
 
@@ -134,8 +124,6 @@ namespace Library.Net.Amoeba
         public event PullBlockEventHandler PullBlockEvent;
 
         public event PullSeedsRequestEventHandler PullSeedsRequestEvent;
-        [Obsolete]
-        public event PullSeedEventHandler PullSeedEvent;
         public event PullSeedsEventHandler PullSeedsEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
@@ -530,68 +518,70 @@ namespace Library.Net.Amoeba
 
                             using (Stream stream2 = new RangeStream(stream, 1, stream.Length - 1, true))
                             {
-                                if (type == (byte)SerializeId.Alive)
+                                try
+                                {
+                                    if (type == (byte)SerializeId.Alive)
+                                    {
+
+                                    }
+                                    else if (type == (byte)SerializeId.Cancel)
+                                    {
+                                        this.OnPullCancel(new EventArgs());
+                                    }
+                                    else if (type == (byte)SerializeId.Ping)
+                                    {
+                                        if (stream2.Length > 64) continue;
+
+                                        var buffer = new byte[stream2.Length];
+                                        stream2.Read(buffer, 0, buffer.Length);
+
+                                        this.Pong(buffer);
+                                    }
+                                    else if (type == (byte)SerializeId.Pong)
+                                    {
+                                        if (stream2.Length > 64) continue;
+
+                                        var buffer = new byte[stream2.Length];
+                                        stream2.Read(buffer, 0, buffer.Length);
+
+                                        if (!Collection.Equals(buffer, _pingHash)) continue;
+
+                                        _responseStopwatch.Stop();
+                                    }
+                                    else if (type == (byte)SerializeId.Nodes)
+                                    {
+                                        var message = NodesMessage.Import(stream2, _bufferManager);
+                                        this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
+                                    }
+                                    else if (type == (byte)SerializeId.BlocksLink)
+                                    {
+                                        var message = BlocksLinkMessage.Import(stream2, _bufferManager);
+                                        this.OnPullBlocksLink(new PullBlocksLinkEventArgs() { Keys = message.Keys });
+                                    }
+                                    else if (type == (byte)SerializeId.BlocksRequest)
+                                    {
+                                        var message = BlocksRequestMessage.Import(stream2, _bufferManager);
+                                        this.OnPullBlocksRequest(new PullBlocksRequestEventArgs() { Keys = message.Keys });
+                                    }
+                                    else if (type == (byte)SerializeId.Block)
+                                    {
+                                        var message = BlockMessage.Import(stream2, _bufferManager);
+                                        this.OnPullBlock(new PullBlockEventArgs() { Key = message.Key, Value = message.Value });
+                                    }
+                                    else if (type == (byte)SerializeId.SeedsRequest)
+                                    {
+                                        var message = SeedsRequestMessage.Import(stream2, _bufferManager);
+                                        this.OnPullSeedsRequest(new PullSeedsRequestEventArgs() { Signatures = message.Signatures });
+                                    }
+                                    else if (type == (byte)SerializeId.Seeds)
+                                    {
+                                        var message = SeedsMessage.Import(stream2, _bufferManager);
+                                        this.OnPullSeeds(new PullSeedsEventArgs() { Seeds = message.Seeds });
+                                    }
+                                }
+                                catch (Exception)
                                 {
 
-                                }
-                                else if (type == (byte)SerializeId.Cancel)
-                                {
-                                    this.OnPullCancel(new EventArgs());
-                                }
-                                else if (type == (byte)SerializeId.Ping)
-                                {
-                                    if (stream2.Length > 64) throw new ConnectionManagerException();
-
-                                    var buffer = new byte[stream2.Length];
-                                    stream2.Read(buffer, 0, buffer.Length);
-
-                                    this.Pong(buffer);
-                                }
-                                else if (type == (byte)SerializeId.Pong)
-                                {
-                                    if (stream2.Length > 64) throw new ConnectionManagerException();
-
-                                    var buffer = new byte[stream2.Length];
-                                    stream2.Read(buffer, 0, buffer.Length);
-
-                                    if (!Collection.Equals(buffer, _pingHash)) throw new ConnectionManagerException();
-
-                                    _responseStopwatch.Stop();
-                                }
-                                else if (type == (byte)SerializeId.Nodes)
-                                {
-                                    var message = NodesMessage.Import(stream2, _bufferManager);
-                                    this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
-                                }
-                                else if (type == (byte)SerializeId.BlocksLink)
-                                {
-                                    var message = BlocksLinkMessage.Import(stream2, _bufferManager);
-                                    this.OnPullBlocksLink(new PullBlocksLinkEventArgs() { Keys = message.Keys });
-                                }
-                                else if (type == (byte)SerializeId.BlocksRequest)
-                                {
-                                    var message = BlocksRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullBlocksRequest(new PullBlocksRequestEventArgs() { Keys = message.Keys });
-                                }
-                                else if (type == (byte)SerializeId.Block)
-                                {
-                                    var message = BlockMessage.Import(stream2, _bufferManager);
-                                    this.OnPullBlock(new PullBlockEventArgs() { Key = message.Key, Value = message.Value });
-                                }
-                                else if (type == (byte)SerializeId.SeedsRequest)
-                                {
-                                    var message = SeedsRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSeedsRequest(new PullSeedsRequestEventArgs() { Signatures = message.Signatures });
-                                }
-                                else if (type == (byte)SerializeId.Seed)
-                                {
-                                    var seed = Seed.Import(stream2, _bufferManager);
-                                    this.OnPullSeed(new PullSeedEventArgs() { Seed = seed });
-                                }
-                                else if (type == (byte)SerializeId.Seeds)
-                                {
-                                    var message = SeedsMessage.Import(stream2, _bufferManager);
-                                    this.OnPullSeeds(new PullSeedsEventArgs() { Seeds = message.Seeds });
                                 }
                             }
                         }
@@ -664,15 +654,6 @@ namespace Library.Net.Amoeba
             if (this.PullSeedsRequestEvent != null)
             {
                 this.PullSeedsRequestEvent(this, e);
-            }
-        }
-
-        [Obsolete]
-        protected virtual void OnPullSeed(PullSeedEventArgs e)
-        {
-            if (this.PullSeedEvent != null)
-            {
-                this.PullSeedEvent(this, e);
             }
         }
 

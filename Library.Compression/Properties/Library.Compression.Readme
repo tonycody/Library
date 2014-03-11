@@ -3,3 +3,6 @@ License: New BSD License
 
 Url: http://www.7-zip.org/sdk.html
 License: public domain
+
+Url: http://tukaani.org/xz/
+License: public domain (command line tools)

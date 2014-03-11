@@ -74,6 +74,7 @@
     <Compile Include="ManagerBase.cs" />
     <Compile Include="NetworkConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="InternPool.cs" />
     <Compile Include="StateManagerBase.cs" />
     <Compile Include="Unsafe.cs" />
   </ItemGroup>

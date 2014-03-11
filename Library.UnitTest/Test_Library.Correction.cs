@@ -290,6 +290,7 @@ namespace Library.UnitTest
                 }
             }
 
+            // Benchmark
             foreach (var nativeFlag in new bool[] { false, true })
             {
                 Stopwatch sw = new Stopwatch();
@@ -320,8 +321,8 @@ namespace Library.UnitTest
                     intList[i] = i + 128;
                 }
 
-                pc.Encode(buffList, buffList2, intList.ToArray(), 1024 * 32);
-                pc.Decode(buffList2, intList.ToArray(), 1024 * 32);
+                pc.Encode(buffList, buffList2, intList, 1024 * 32);
+                pc.Decode(buffList2, intList, 1024 * 32);
 
                 sw.Stop();
 

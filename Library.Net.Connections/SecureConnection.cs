@@ -24,8 +24,8 @@ namespace Library.Net.Connections
         private SecureConnectionVersion _myVersion;
         private SecureConnectionVersion _otherVersion;
 
-        private InformationVersion1 _informationVersion1;
         private InformationVersion2 _informationVersion2;
+        private InformationVersion3 _informationVersion3;
 
         private Certificate _certificate;
 
@@ -145,58 +145,74 @@ namespace Library.Net.Connections
             {
                 try
                 {
-                    SecureVersion1.ProtocolInformation myProtocol1;
-                    SecureVersion1.ProtocolInformation otherProtocol1;
-
                     SecureVersion2.ProtocolInformation myProtocol2;
                     SecureVersion2.ProtocolInformation otherProtocol2;
+
+                    SecureVersion3.ProtocolInformation myProtocol3;
+                    SecureVersion3.ProtocolInformation otherProtocol3;
 
                     {
                         OperatingSystem osInfo = Environment.OSVersion;
 
                         if (osInfo.Platform == PlatformID.Win32NT && osInfo.Version.Major >= 6)
                         {
-                            myProtocol1 = new SecureVersion1.ProtocolInformation()
                             {
-                                KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512 | SecureVersion1.KeyExchangeAlgorithm.Rsa2048,
-                                CryptoAlgorithm = SecureVersion1.CryptoAlgorithm.Rijndael256,
-                                HashAlgorithm = SecureVersion1.HashAlgorithm.Sha512
-                            };
+                                byte[] sessionId = new byte[64];
+                                _random.GetBytes(sessionId);
 
-                            byte[] sessionId = new byte[64];
-                            _random.GetBytes(sessionId);
+                                myProtocol2 = new SecureVersion2.ProtocolInformation()
+                                {
+                                    KeyExchangeAlgorithm = SecureVersion2.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512 | SecureVersion2.KeyExchangeAlgorithm.Rsa2048,
+                                    KeyDerivationFunctionAlgorithm = SecureVersion2.KeyDerivationFunctionAlgorithm.ANSI_X963,
+                                    CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256,
+                                    HashAlgorithm = SecureVersion2.HashAlgorithm.Sha512,
+                                    SessionId = sessionId,
+                                };
+                            }
 
-                            myProtocol2 = new SecureVersion2.ProtocolInformation()
                             {
-                                KeyExchangeAlgorithm = SecureVersion2.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512 | SecureVersion2.KeyExchangeAlgorithm.Rsa2048,
-                                KeyDerivationFunctionAlgorithm = SecureVersion2.KeyDerivationFunctionAlgorithm.ANSI_X963,
-                                CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256,
-                                //CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256 | SecureVersion2.CryptoAlgorithm.Aes256,
-                                HashAlgorithm = SecureVersion2.HashAlgorithm.Sha512,
-                                SessionId = sessionId,
-                            };
+                                byte[] sessionId = new byte[64];
+                                _random.GetBytes(sessionId);
+
+                                myProtocol3 = new SecureVersion3.ProtocolInformation()
+                                {
+                                    KeyExchangeAlgorithm = SecureVersion3.KeyExchangeAlgorithm.EcDiffieHellmanP521 | SecureVersion3.KeyExchangeAlgorithm.Rsa2048,
+                                    KeyDerivationAlgorithm = SecureVersion3.KeyDerivationAlgorithm.Pbkdf2,
+                                    CryptoAlgorithm = SecureVersion3.CryptoAlgorithm.Aes256,
+                                    HashAlgorithm = SecureVersion3.HashAlgorithm.Sha512,
+                                    SessionId = sessionId,
+                                };
+                            }
                         }
                         else
                         {
-                            myProtocol1 = new SecureVersion1.ProtocolInformation()
                             {
-                                KeyExchangeAlgorithm = SecureVersion1.KeyExchangeAlgorithm.Rsa2048,
-                                CryptoAlgorithm = SecureVersion1.CryptoAlgorithm.Rijndael256,
-                                HashAlgorithm = SecureVersion1.HashAlgorithm.Sha512
-                            };
+                                byte[] sessionId = new byte[64];
+                                _random.GetBytes(sessionId);
 
-                            byte[] sessionId = new byte[64];
-                            _random.GetBytes(sessionId);
+                                myProtocol2 = new SecureVersion2.ProtocolInformation()
+                                {
+                                    KeyExchangeAlgorithm = SecureVersion2.KeyExchangeAlgorithm.Rsa2048,
+                                    KeyDerivationFunctionAlgorithm = SecureVersion2.KeyDerivationFunctionAlgorithm.ANSI_X963,
+                                    CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256,
+                                    HashAlgorithm = SecureVersion2.HashAlgorithm.Sha512,
+                                    SessionId = sessionId,
+                                };
+                            }
 
-                            myProtocol2 = new SecureVersion2.ProtocolInformation()
                             {
-                                KeyExchangeAlgorithm = SecureVersion2.KeyExchangeAlgorithm.Rsa2048,
-                                KeyDerivationFunctionAlgorithm = SecureVersion2.KeyDerivationFunctionAlgorithm.ANSI_X963,
-                                CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256,
-                                //CryptoAlgorithm = SecureVersion2.CryptoAlgorithm.Rijndael256 | SecureVersion2.CryptoAlgorithm.Aes256,
-                                HashAlgorithm = SecureVersion2.HashAlgorithm.Sha512,
-                                SessionId = sessionId,
-                            };
+                                byte[] sessionId = new byte[64];
+                                _random.GetBytes(sessionId);
+
+                                myProtocol3 = new SecureVersion3.ProtocolInformation()
+                                {
+                                    KeyExchangeAlgorithm = SecureVersion3.KeyExchangeAlgorithm.Rsa2048,
+                                    KeyDerivationAlgorithm = SecureVersion3.KeyDerivationAlgorithm.Pbkdf2,
+                                    CryptoAlgorithm = SecureVersion3.CryptoAlgorithm.Aes256,
+                                    HashAlgorithm = SecureVersion3.HashAlgorithm.Sha512,
+                                    SessionId = sessionId,
+                                };
+                            }
                         }
                     }
 
@@ -210,22 +226,17 @@ namespace Library.Net.Connections
 
                         xml.WriteStartElement("Protocol");
 
-                        if (_myVersion.HasFlag(SecureConnectionVersion.Version1))
-                        {
-                            xml.WriteStartElement("SecureConnection");
-                            xml.WriteAttributeString("Version", "1");
-
-                            xml.WriteElementString("KeyExchangeAlgorithm", myProtocol1.KeyExchangeAlgorithm.ToString());
-                            xml.WriteElementString("CryptoAlgorithm", myProtocol1.CryptoAlgorithm.ToString());
-                            xml.WriteElementString("HashAlgorithm", myProtocol1.HashAlgorithm.ToString());
-
-                            xml.WriteEndElement(); //Protocol
-                        }
-
                         if (_myVersion.HasFlag(SecureConnectionVersion.Version2))
                         {
                             xml.WriteStartElement("SecureConnection");
                             xml.WriteAttributeString("Version", "2");
+                            xml.WriteEndElement(); //Protocol
+                        }
+
+                        if (_myVersion.HasFlag(SecureConnectionVersion.Version3))
+                        {
+                            xml.WriteStartElement("SecureConnection");
+                            xml.WriteAttributeString("Version", "3");
                             xml.WriteEndElement(); //Protocol
                         }
 
@@ -239,8 +250,8 @@ namespace Library.Net.Connections
                         _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
                     }
 
-                    otherProtocol1 = new SecureVersion1.ProtocolInformation();
                     otherProtocol2 = new SecureVersion2.ProtocolInformation();
+                    otherProtocol3 = new SecureVersion3.ProtocolInformation();
 
                     using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
                     using (XmlTextReader xml = new XmlTextReader(stream))
@@ -251,71 +262,13 @@ namespace Library.Net.Connections
                             {
                                 if (xml.LocalName == "SecureConnection")
                                 {
-                                    if (xml.GetAttribute("Version") == "1")
-                                    {
-                                        _otherVersion |= SecureConnectionVersion.Version1;
-
-                                        using (var xmlReader = xml.ReadSubtree())
-                                        {
-                                            while (xmlReader.Read())
-                                            {
-                                                if (xmlReader.NodeType == XmlNodeType.Element)
-                                                {
-                                                    if (xmlReader.LocalName == "KeyExchangeAlgorithm")
-                                                    {
-                                                        try
-                                                        {
-                                                            string text = xmlReader.ReadString();
-
-                                                            foreach (var item in text.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries))
-                                                            {
-                                                                otherProtocol1.KeyExchangeAlgorithm |= (SecureVersion1.KeyExchangeAlgorithm)Enum.Parse(typeof(SecureVersion1.KeyExchangeAlgorithm), item);
-                                                            }
-                                                        }
-                                                        catch (Exception)
-                                                        {
-
-                                                        }
-                                                    }
-                                                    else if (xmlReader.LocalName == "CryptoAlgorithm")
-                                                    {
-                                                        try
-                                                        {
-                                                            string text = xmlReader.ReadString();
-
-                                                            foreach (var item in text.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries))
-                                                            {
-                                                                otherProtocol1.CryptoAlgorithm |= (SecureVersion1.CryptoAlgorithm)Enum.Parse(typeof(SecureVersion1.CryptoAlgorithm), item);
-                                                            }
-                                                        }
-                                                        catch (Exception)
-                                                        {
-
-                                                        }
-                                                    }
-                                                    else if (xmlReader.LocalName == "HashAlgorithm")
-                                                    {
-                                                        try
-                                                        {
-                                                            string text = xmlReader.ReadString();
-
-                                                            foreach (var item in text.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries))
-                                                            {
-                                                                otherProtocol1.HashAlgorithm |= (SecureVersion1.HashAlgorithm)Enum.Parse(typeof(SecureVersion1.HashAlgorithm), item);
-                                                            }
-                                                        }
-                                                        catch (Exception)
-                                                        {
-
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else if (xml.GetAttribute("Version") == "2")
+                                    if (xml.GetAttribute("Version") == "2")
                                     {
                                         _otherVersion |= SecureConnectionVersion.Version2;
+                                    }
+                                    else if (xml.GetAttribute("Version") == "3")
+                                    {
+                                        _otherVersion |= SecureConnectionVersion.Version3;
                                     }
                                 }
                             }
@@ -324,8 +277,256 @@ namespace Library.Net.Connections
 
                     _version = _myVersion & _otherVersion;
 
+                    // Version3
+                    if (_version.HasFlag(SecureConnectionVersion.Version3))
+                    {
+                        using (Stream stream = myProtocol3.Export(_bufferManager))
+                        {
+                            _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
+                        }
+
+                        using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
+                        {
+                            otherProtocol3 = SecureVersion3.ProtocolInformation.Import(stream, _bufferManager);
+                        }
+
+                        var keyExchangeAlgorithm = myProtocol3.KeyExchangeAlgorithm & otherProtocol3.KeyExchangeAlgorithm;
+                        var keyDerivationFunctionAlgorithm = myProtocol3.KeyDerivationAlgorithm & otherProtocol3.KeyDerivationAlgorithm;
+                        var cryptoAlgorithm = myProtocol3.CryptoAlgorithm & otherProtocol3.CryptoAlgorithm;
+                        var hashAlgorithm = myProtocol3.HashAlgorithm & otherProtocol3.HashAlgorithm;
+
+                        byte[] myCryptoKey;
+                        byte[] otherCryptoKey;
+                        byte[] myHmacKey;
+                        byte[] otherHmacKey;
+
+                        byte[] myProtocolHash = null;
+                        byte[] otherProtocolHash = null;
+
+                        if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                        {
+                            using (var myProtocolHashStream = myProtocol3.Export(_bufferManager))
+                            using (var otherProtocolHashStream = otherProtocol3.Export(_bufferManager))
+                            {
+                                myProtocolHash = Sha512.ComputeHash(myProtocolHashStream);
+                                otherProtocolHash = Sha512.ComputeHash(otherProtocolHashStream);
+                            }
+                        }
+
+                        byte[] seed = null;
+
+                        if (keyExchangeAlgorithm.HasFlag(SecureVersion3.KeyExchangeAlgorithm.EcDiffieHellmanP521))
+                        {
+                            byte[] publicKey, privateKey;
+                            EcDiffieHellmanP521.CreateKeys(out publicKey, out privateKey);
+
+                            {
+                                SecureVersion3.ConnectionSignature connectionSignature = new SecureVersion3.ConnectionSignature();
+                                connectionSignature.ExchangeKey = publicKey;
+
+                                if (_digitalSignature != null)
+                                {
+                                    connectionSignature.CreationTime = DateTime.UtcNow;
+                                    connectionSignature.ProtocolHash = myProtocolHash;
+                                    connectionSignature.CreateCertificate(_digitalSignature);
+                                }
+
+                                using (Stream stream = connectionSignature.Export(_bufferManager))
+                                {
+                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
+                                }
+                            }
+
+                            byte[] otherPublicKey = null;
+
+                            using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
+                            {
+                                SecureVersion3.ConnectionSignature connectionSignature = SecureVersion3.ConnectionSignature.Import(stream, _bufferManager);
+
+                                if (connectionSignature.VerifyCertificate())
+                                {
+                                    if (connectionSignature.Certificate != null)
+                                    {
+                                        DateTime now = DateTime.UtcNow;
+                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
+                                        if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
+
+                                        if (!Collection.Equals(connectionSignature.ProtocolHash, otherProtocolHash)) throw new ConnectionException();
+                                    }
+
+                                    _certificate = connectionSignature.Certificate;
+                                    otherPublicKey = connectionSignature.ExchangeKey;
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+                            }
+
+                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            {
+                                seed = EcDiffieHellmanP521.DeriveKeyMaterial(privateKey, otherPublicKey, CngAlgorithm.Sha512);
+                            }
+
+                            if (seed == null) throw new ConnectionException();
+                        }
+                        else if (keyExchangeAlgorithm.HasFlag(SecureVersion3.KeyExchangeAlgorithm.Rsa2048))
+                        {
+                            byte[] publicKey, privateKey;
+                            Rsa2048.CreateKeys(out publicKey, out privateKey);
+
+                            {
+                                SecureVersion3.ConnectionSignature connectionSignature = new SecureVersion3.ConnectionSignature();
+                                connectionSignature.ExchangeKey = publicKey;
+
+                                if (_digitalSignature != null)
+                                {
+                                    connectionSignature.CreationTime = DateTime.UtcNow;
+                                    connectionSignature.ProtocolHash = myProtocolHash;
+                                    connectionSignature.CreateCertificate(_digitalSignature);
+                                }
+
+                                using (Stream stream = connectionSignature.Export(_bufferManager))
+                                {
+                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
+                                }
+                            }
+
+                            byte[] otherPublicKey;
+
+                            using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
+                            {
+                                SecureVersion3.ConnectionSignature connectionSignature = SecureVersion3.ConnectionSignature.Import(stream, _bufferManager);
+
+                                if (connectionSignature.VerifyCertificate())
+                                {
+                                    if (connectionSignature.Certificate != null)
+                                    {
+                                        DateTime now = DateTime.UtcNow;
+                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
+                                        if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
+
+                                        if (!Collection.Equals(connectionSignature.ProtocolHash, otherProtocolHash)) throw new ConnectionException();
+                                    }
+
+                                    _certificate = connectionSignature.Certificate;
+                                    otherPublicKey = connectionSignature.ExchangeKey;
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+                            }
+
+                            byte[] mySeed = new byte[128];
+                            _random.GetBytes(mySeed);
+
+                            using (MemoryStream stream = new MemoryStream(Rsa2048.Encrypt(otherPublicKey, mySeed)))
+                            {
+                                _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
+                            }
+
+                            byte[] otherSeed;
+
+                            using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
+                            {
+                                var buffer = new byte[stream.Length];
+                                stream.Read(buffer, 0, buffer.Length);
+
+                                otherSeed = Rsa2048.Decrypt(privateKey, buffer);
+                            }
+
+                            if (otherSeed == null) throw new ConnectionException();
+
+                            seed = SecureConnection.Xor(mySeed, otherSeed);
+                            if (seed == null) throw new ConnectionException();
+                        }
+                        else
+                        {
+                            throw new ConnectionException();
+                        }
+
+                        if (keyDerivationFunctionAlgorithm.HasFlag(SecureVersion3.KeyDerivationAlgorithm.Pbkdf2))
+                        {
+                            byte[] xorSessionId = SecureConnection.Xor(myProtocol3.SessionId, otherProtocol3.SessionId);
+
+                            HMAC hmac = null;
+
+                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            {
+                                hmac = new HMACSHA512();
+                            }
+                            else
+                            {
+                                throw new ConnectionException();
+                            }
+
+                            Pbkdf2 pbkdf2 = new Pbkdf2(hmac, seed, xorSessionId, 1024);
+
+                            int cryptoKeyLength;
+                            int hmacKeyLength;
+
+                            if (cryptoAlgorithm.HasFlag(SecureVersion3.CryptoAlgorithm.Aes256))
+                            {
+                                cryptoKeyLength = 32;
+                            }
+                            else
+                            {
+                                throw new ConnectionException();
+                            }
+
+                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            {
+                                hmacKeyLength = 64;
+                            }
+                            else
+                            {
+                                throw new ConnectionException();
+                            }
+
+                            myCryptoKey = new byte[cryptoKeyLength];
+                            otherCryptoKey = new byte[cryptoKeyLength];
+                            myHmacKey = new byte[hmacKeyLength];
+                            otherHmacKey = new byte[hmacKeyLength];
+
+                            using (MemoryStream stream = new MemoryStream(pbkdf2.GetBytes((cryptoKeyLength + hmacKeyLength) * 2)))
+                            {
+                                if (_type == SecureConnectionType.Client)
+                                {
+                                    stream.Read(myCryptoKey, 0, myCryptoKey.Length);
+                                    stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
+                                    stream.Read(myHmacKey, 0, myHmacKey.Length);
+                                    stream.Read(otherHmacKey, 0, otherHmacKey.Length);
+                                }
+                                else if (_type == SecureConnectionType.Server)
+                                {
+                                    stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
+                                    stream.Read(myCryptoKey, 0, myCryptoKey.Length);
+                                    stream.Read(otherHmacKey, 0, otherHmacKey.Length);
+                                    stream.Read(myHmacKey, 0, myHmacKey.Length);
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            throw new ConnectionException();
+                        }
+
+                        _informationVersion3 = new InformationVersion3();
+                        _informationVersion3.CryptoAlgorithm = cryptoAlgorithm;
+                        _informationVersion3.HashAlgorithm = hashAlgorithm;
+                        _informationVersion3.MyCryptoKey = myCryptoKey;
+                        _informationVersion3.OtherCryptoKey = otherCryptoKey;
+                        _informationVersion3.MyHmacKey = myHmacKey;
+                        _informationVersion3.OtherHmacKey = otherHmacKey;
+                    }
+
                     // Version2
-                    if (_version.HasFlag(SecureConnectionVersion.Version2))
+                    else if (_version.HasFlag(SecureConnectionVersion.Version2))
                     {
                         using (Stream stream = myProtocol2.Export(_bufferManager))
                         {
@@ -360,12 +561,12 @@ namespace Library.Net.Connections
                             }
                         }
 
-                        byte[] seed;
+                        byte[] seed = null;
 
                         if (keyExchangeAlgorithm.HasFlag(SecureVersion2.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512))
                         {
                             byte[] publicKey, privateKey;
-                            ECDiffieHellmanP521_Sha512.CreateKeys(out publicKey, out privateKey);
+                            EcDiffieHellmanP521.CreateKeys(out publicKey, out privateKey);
 
                             {
                                 SecureVersion2.ConnectionSignature connectionSignature = new SecureVersion2.ConnectionSignature();
@@ -412,7 +613,11 @@ namespace Library.Net.Connections
                                 }
                             }
 
-                            seed = ECDiffieHellmanP521_Sha512.DeriveKeyMaterial(privateKey, otherPublicKey);
+                            if (hashAlgorithm.HasFlag(SecureVersion2.HashAlgorithm.Sha512))
+                            {
+                                seed = EcDiffieHellmanP521.DeriveKeyMaterial(privateKey, otherPublicKey, CngAlgorithm.Sha512);
+                            }
+
                             if (seed == null) throw new ConnectionException();
                         }
                         else if (keyExchangeAlgorithm.HasFlag(SecureVersion2.KeyExchangeAlgorithm.Rsa2048))
@@ -526,11 +731,7 @@ namespace Library.Net.Connections
                                 int cryptoKeyLength;
                                 int hmacKeyLength;
 
-                                if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256))
-                                {
-                                    cryptoKeyLength = 32;
-                                }
-                                else if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                                if (cryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
                                 {
                                     cryptoKeyLength = 32;
                                 }
@@ -585,208 +786,6 @@ namespace Library.Net.Connections
                         _informationVersion2.MyHmacKey = myHmacKey;
                         _informationVersion2.OtherHmacKey = otherHmacKey;
                     }
-
-                    // Version1
-                    else if (_version.HasFlag(SecureConnectionVersion.Version1))
-                    {
-                        var keyExchangeAlgorithm = myProtocol1.KeyExchangeAlgorithm & otherProtocol1.KeyExchangeAlgorithm;
-                        var cryptoAlgorithm = myProtocol1.CryptoAlgorithm & otherProtocol1.CryptoAlgorithm;
-                        var hashAlgorithm = myProtocol1.HashAlgorithm & otherProtocol1.HashAlgorithm;
-
-                        byte[] myCryptoKey;
-                        byte[] otherCryptoKey;
-                        byte[] myHmacKey;
-                        byte[] otherHmacKey;
-
-                        if (keyExchangeAlgorithm.HasFlag(SecureVersion1.KeyExchangeAlgorithm.ECDiffieHellmanP521_Sha512))
-                        {
-                            byte[] publicKey, privateKey;
-                            ECDiffieHellmanP521_Sha512.CreateKeys(out publicKey, out privateKey);
-
-                            {
-                                SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
-                                connectionSignature.Key = publicKey;
-
-                                if (_digitalSignature != null)
-                                {
-                                    connectionSignature.CreationTime = DateTime.UtcNow;
-                                    connectionSignature.CreateCertificate(_digitalSignature);
-                                }
-
-                                using (Stream stream = connectionSignature.Export(_bufferManager))
-                                {
-                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
-                                }
-                            }
-
-                            byte[] otherPublicKey = null;
-
-                            using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
-                            {
-                                SecureVersion1.ConnectionSignature connectionSignature = SecureVersion1.ConnectionSignature.Import(stream, _bufferManager);
-
-                                if (connectionSignature.VerifyCertificate())
-                                {
-                                    if (connectionSignature.Certificate != null)
-                                    {
-                                        DateTime now = DateTime.UtcNow;
-                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
-
-                                        if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
-                                    }
-
-                                    _certificate = connectionSignature.Certificate;
-                                    otherPublicKey = connectionSignature.Key;
-                                }
-                                else
-                                {
-                                    throw new ConnectionException();
-                                }
-                            }
-
-                            byte[] seed = ECDiffieHellmanP521_Sha512.DeriveKeyMaterial(privateKey, otherPublicKey);
-
-                            if (seed == null) throw new ConnectionException();
-
-                            if (cryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
-                            {
-                                ANSI_X963_KDF kdf = new ANSI_X963_KDF(SHA512.Create());
-
-                                myCryptoKey = new byte[32 + 32];
-                                otherCryptoKey = new byte[32 + 32];
-                                myHmacKey = new byte[64];
-                                otherHmacKey = new byte[64];
-
-                                using (MemoryStream stream = new MemoryStream(kdf.Calculate(seed, (32 + 32 + 64) * 2)))
-                                {
-                                    if (_type == SecureConnectionType.Client)
-                                    {
-                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
-                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
-                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
-                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
-                                    }
-                                    else if (_type == SecureConnectionType.Server)
-                                    {
-                                        stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
-                                        stream.Read(myCryptoKey, 0, myCryptoKey.Length);
-                                        stream.Read(otherHmacKey, 0, otherHmacKey.Length);
-                                        stream.Read(myHmacKey, 0, myHmacKey.Length);
-                                    }
-                                    else
-                                    {
-                                        throw new ConnectionException();
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
-                        }
-                        else if (keyExchangeAlgorithm.HasFlag(SecureVersion1.KeyExchangeAlgorithm.Rsa2048))
-                        {
-                            byte[] publicKey, privateKey;
-                            Rsa2048.CreateKeys(out publicKey, out privateKey);
-
-                            {
-                                SecureVersion1.ConnectionSignature connectionSignature = new SecureVersion1.ConnectionSignature();
-                                connectionSignature.Key = publicKey;
-
-                                if (_digitalSignature != null)
-                                {
-                                    connectionSignature.CreationTime = DateTime.UtcNow;
-                                    connectionSignature.CreateCertificate(_digitalSignature);
-                                }
-
-                                using (Stream stream = connectionSignature.Export(_bufferManager))
-                                {
-                                    _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
-                                }
-                            }
-
-                            byte[] otherPublicKey;
-
-                            using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
-                            {
-                                SecureVersion1.ConnectionSignature connectionSignature = SecureVersion1.ConnectionSignature.Import(stream, _bufferManager);
-
-                                if (connectionSignature.VerifyCertificate())
-                                {
-                                    if (connectionSignature.Certificate != null)
-                                    {
-                                        DateTime now = DateTime.UtcNow;
-                                        TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
-
-                                        if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
-                                    }
-
-                                    _certificate = connectionSignature.Certificate;
-                                    otherPublicKey = connectionSignature.Key;
-                                }
-                                else
-                                {
-                                    throw new ConnectionException();
-                                }
-                            }
-
-                            byte[] mySeed = new byte[128];
-                            _random.GetBytes(mySeed);
-
-                            using (MemoryStream stream = new MemoryStream(Rsa2048.Encrypt(otherPublicKey, mySeed)))
-                            {
-                                _connection.Send(stream, CheckTimeout(stopwatch.Elapsed, timeout));
-                            }
-
-                            byte[] otherSeed;
-
-                            using (Stream stream = _connection.Receive(CheckTimeout(stopwatch.Elapsed, timeout)))
-                            {
-                                var buffer = new byte[stream.Length];
-                                stream.Read(buffer, 0, buffer.Length);
-
-                                otherSeed = Rsa2048.Decrypt(privateKey, buffer);
-                            }
-
-                            if (otherSeed == null) throw new ConnectionException();
-
-                            if (cryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
-                            {
-                                myCryptoKey = new byte[32 + 32];
-                                otherCryptoKey = new byte[32 + 32];
-                                myHmacKey = new byte[64];
-                                otherHmacKey = new byte[64];
-
-                                using (MemoryStream stream = new MemoryStream(mySeed))
-                                {
-                                    stream.Read(myCryptoKey, 0, myCryptoKey.Length);
-                                    stream.Read(myHmacKey, 0, myHmacKey.Length);
-                                }
-
-                                using (MemoryStream stream = new MemoryStream(otherSeed))
-                                {
-                                    stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
-                                    stream.Read(otherHmacKey, 0, otherHmacKey.Length);
-                                }
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
-                        }
-                        else
-                        {
-                            throw new ConnectionException();
-                        }
-
-                        _informationVersion1 = new InformationVersion1();
-                        _informationVersion1.CryptoAlgorithm = cryptoAlgorithm;
-                        _informationVersion1.HashAlgorithm = hashAlgorithm;
-                        _informationVersion1.MyCryptoKey = myCryptoKey;
-                        _informationVersion1.OtherCryptoKey = otherCryptoKey;
-                        _informationVersion1.MyHmacKey = myHmacKey;
-                        _informationVersion1.OtherHmacKey = otherHmacKey;
-                    }
                     else
                     {
                         throw new ConnectionException();
@@ -839,7 +838,88 @@ namespace Library.Net.Connections
             {
                 try
                 {
-                    if (_version.HasFlag(SecureConnectionVersion.Version2))
+                    if (_version.HasFlag(SecureConnectionVersion.Version3))
+                    {
+                        using (Stream stream = _connection.Receive(timeout))
+                        {
+                            byte[] totalReceiveSizeBuff = new byte[8];
+                            if (stream.Read(totalReceiveSizeBuff, 0, totalReceiveSizeBuff.Length) != totalReceiveSizeBuff.Length) throw new ConnectionException();
+                            long totalReceiveSize = NetworkConverter.ToInt64(totalReceiveSizeBuff);
+
+                            if (_informationVersion3.HashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            {
+                                _totalReceiveSize += (stream.Length - (8 + 64));
+
+                                if (totalReceiveSize != _totalReceiveSize) throw new ConnectionException();
+
+                                byte[] otherHmacBuff = new byte[64];
+                                byte[] myHmacBuff = new byte[64];
+
+                                stream.Seek(-64, SeekOrigin.End);
+                                if (stream.Read(otherHmacBuff, 0, otherHmacBuff.Length) != otherHmacBuff.Length) throw new ConnectionException();
+                                stream.SetLength(stream.Length - 64);
+                                stream.Seek(0, SeekOrigin.Begin);
+
+                                using (var hmacSha512 = new HMACSHA512(_informationVersion3.OtherHmacKey))
+                                {
+                                    myHmacBuff = hmacSha512.ComputeHash(stream);
+                                }
+
+                                if (!Collection.Equals(otherHmacBuff, myHmacBuff)) throw new ConnectionException();
+
+                                stream.Seek(8, SeekOrigin.Begin);
+                            }
+                            else
+                            {
+                                throw new ConnectionException();
+                            }
+
+                            BufferStream bufferStream = new BufferStream(_bufferManager);
+
+                            if (_informationVersion3.CryptoAlgorithm.HasFlag(SecureVersion3.CryptoAlgorithm.Aes256))
+                            {
+                                byte[] iv = new byte[16];
+                                stream.Read(iv, 0, iv.Length);
+
+                                byte[] receiveBuffer = null;
+
+                                try
+                                {
+                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
+
+                                    //using (var aes = new AesCryptoServiceProvider())
+                                    using (var aes = Aes.Create())
+                                    {
+                                        aes.KeySize = 256;
+                                        aes.Mode = CipherMode.CBC;
+                                        aes.Padding = PaddingMode.PKCS7;
+
+                                        using (CryptoStream cs = new CryptoStream(stream, aes.CreateDecryptor(_informationVersion3.OtherCryptoKey, iv), CryptoStreamMode.Read))
+                                        {
+                                            int i = -1;
+
+                                            while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
+                                            {
+                                                bufferStream.Write(receiveBuffer, 0, i);
+                                            }
+                                        }
+                                    }
+                                }
+                                finally
+                                {
+                                    _bufferManager.ReturnBuffer(receiveBuffer);
+                                }
+                            }
+                            else
+                            {
+                                throw new ConnectionException();
+                            }
+
+                            bufferStream.Seek(0, SeekOrigin.Begin);
+                            return bufferStream;
+                        }
+                    }
+                    else if (_version.HasFlag(SecureConnectionVersion.Version2))
                     {
                         using (Stream stream = _connection.Receive(timeout))
                         {
@@ -877,40 +957,7 @@ namespace Library.Net.Connections
 
                             BufferStream bufferStream = new BufferStream(_bufferManager);
 
-                            if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256))
-                            {
-                                byte[] iv = new byte[16];
-                                stream.Read(iv, 0, iv.Length);
-
-                                byte[] receiveBuffer = null;
-
-                                try
-                                {
-                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                                    using (var aes = Aes.Create())
-                                    {
-                                        aes.KeySize = 256;
-                                        aes.Mode = CipherMode.CBC;
-                                        aes.Padding = PaddingMode.PKCS7;
-
-                                        using (CryptoStream cs = new CryptoStream(stream, aes.CreateDecryptor(_informationVersion2.OtherCryptoKey, iv), CryptoStreamMode.Read))
-                                        {
-                                            int i = -1;
-
-                                            while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
-                                            {
-                                                bufferStream.Write(receiveBuffer, 0, i);
-                                            }
-                                        }
-                                    }
-                                }
-                                finally
-                                {
-                                    _bufferManager.ReturnBuffer(receiveBuffer);
-                                }
-                            }
-                            else if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                            if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
                             {
                                 byte[] iv = new byte[32];
                                 stream.Read(iv, 0, iv.Length);
@@ -929,85 +976,6 @@ namespace Library.Net.Connections
                                         rijndael.Padding = PaddingMode.PKCS7;
 
                                         using (CryptoStream cs = new CryptoStream(stream, rijndael.CreateDecryptor(_informationVersion2.OtherCryptoKey, iv), CryptoStreamMode.Read))
-                                        {
-                                            int i = -1;
-
-                                            while ((i = cs.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
-                                            {
-                                                bufferStream.Write(receiveBuffer, 0, i);
-                                            }
-                                        }
-                                    }
-                                }
-                                finally
-                                {
-                                    _bufferManager.ReturnBuffer(receiveBuffer);
-                                }
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
-
-                            bufferStream.Seek(0, SeekOrigin.Begin);
-                            return bufferStream;
-                        }
-                    }
-                    else if (_version.HasFlag(SecureConnectionVersion.Version1))
-                    {
-                        using (Stream stream = _connection.Receive(timeout))
-                        {
-                            byte[] totalReceiveSizeBuff = new byte[8];
-                            if (stream.Read(totalReceiveSizeBuff, 0, totalReceiveSizeBuff.Length) != totalReceiveSizeBuff.Length) throw new ConnectionException();
-                            long totalReceiveSize = NetworkConverter.ToInt64(totalReceiveSizeBuff);
-
-                            if (_informationVersion1.HashAlgorithm.HasFlag(SecureVersion1.HashAlgorithm.Sha512))
-                            {
-                                _totalReceiveSize += (stream.Length - (8 + 64));
-
-                                if (totalReceiveSize != _totalReceiveSize) throw new ConnectionException();
-
-                                byte[] otherHmacBuff = new byte[64];
-                                byte[] myHmacBuff = new byte[64];
-
-                                stream.Seek(-64, SeekOrigin.End);
-                                if (stream.Read(otherHmacBuff, 0, otherHmacBuff.Length) != otherHmacBuff.Length) throw new ConnectionException();
-                                stream.SetLength(stream.Length - 64);
-                                stream.Seek(0, SeekOrigin.Begin);
-
-                                using (var hmacSha512 = new HMACSHA512(_informationVersion1.OtherHmacKey))
-                                {
-                                    myHmacBuff = hmacSha512.ComputeHash(stream);
-                                }
-
-                                if (!Collection.Equals(otherHmacBuff, myHmacBuff)) throw new ConnectionException();
-
-                                stream.Seek(8, SeekOrigin.Begin);
-                            }
-                            else
-                            {
-                                throw new ConnectionException();
-                            }
-
-                            BufferStream bufferStream = new BufferStream(_bufferManager);
-
-                            if (_informationVersion1.CryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
-                            {
-                                byte[] receiveBuffer = null;
-
-                                try
-                                {
-                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                                    using (var rijndael = Rijndael.Create())
-                                    {
-                                        rijndael.KeySize = 256;
-                                        rijndael.BlockSize = 256;
-                                        rijndael.Mode = CipherMode.CBC;
-                                        rijndael.Padding = PaddingMode.PKCS7;
-
-                                        using (CryptoStream cs = new CryptoStream(stream,
-                                            rijndael.CreateDecryptor(_informationVersion1.OtherCryptoKey.Take(32).ToArray(), _informationVersion1.OtherCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                                         {
                                             int i = -1;
 
@@ -1061,14 +1029,14 @@ namespace Library.Net.Connections
                 {
                     using (RangeStream targetStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position, true))
                     {
-                        if (_version.HasFlag(SecureConnectionVersion.Version2))
+                        if (_version.HasFlag(SecureConnectionVersion.Version3))
                         {
                             using (BufferStream bufferStream = new BufferStream(_bufferManager))
                             {
                                 bufferStream.SetLength(8);
                                 bufferStream.Seek(8, SeekOrigin.Begin);
 
-                                if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Aes256))
+                                if (_informationVersion3.CryptoAlgorithm.HasFlag(SecureVersion3.CryptoAlgorithm.Aes256))
                                 {
                                     byte[] iv = new byte[16];
                                     _random.GetBytes(iv);
@@ -1080,13 +1048,14 @@ namespace Library.Net.Connections
                                     {
                                         sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
+                                        //using (var aes = new AesCryptoServiceProvider())
                                         using (var aes = Aes.Create())
                                         {
                                             aes.KeySize = 256;
                                             aes.Mode = CipherMode.CBC;
                                             aes.Padding = PaddingMode.PKCS7;
 
-                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true), aes.CreateEncryptor(_informationVersion2.MyCryptoKey, iv), CryptoStreamMode.Read))
+                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true), aes.CreateEncryptor(_informationVersion3.MyCryptoKey, iv), CryptoStreamMode.Read))
                                             {
                                                 int i = -1;
 
@@ -1102,7 +1071,49 @@ namespace Library.Net.Connections
                                         _bufferManager.ReturnBuffer(sendBuffer);
                                     }
                                 }
-                                else if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+
+                                _totalSendSize += (bufferStream.Length - 8);
+
+                                bufferStream.Seek(0, SeekOrigin.Begin);
+
+                                byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
+                                bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
+
+                                if (_informationVersion3.HashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                                {
+                                    bufferStream.Seek(0, SeekOrigin.Begin);
+                                    byte[] hmacBuff;
+
+                                    using (var hmacSha512 = new HMACSHA512(_informationVersion3.MyHmacKey))
+                                    {
+                                        hmacBuff = hmacSha512.ComputeHash(bufferStream);
+                                    }
+
+                                    bufferStream.Seek(0, SeekOrigin.End);
+                                    bufferStream.Write(hmacBuff, 0, hmacBuff.Length);
+                                }
+                                else
+                                {
+                                    throw new ConnectionException();
+                                }
+
+                                bufferStream.Seek(0, SeekOrigin.Begin);
+
+                                _connection.Send(bufferStream, timeout);
+                            }
+                        }
+                        else if (_version.HasFlag(SecureConnectionVersion.Version2))
+                        {
+                            using (BufferStream bufferStream = new BufferStream(_bufferManager))
+                            {
+                                bufferStream.SetLength(8);
+                                bufferStream.Seek(8, SeekOrigin.Begin);
+
+                                if (_informationVersion2.CryptoAlgorithm.HasFlag(SecureVersion2.CryptoAlgorithm.Rijndael256))
                                 {
                                     byte[] iv = new byte[32];
                                     _random.GetBytes(iv);
@@ -1172,80 +1183,6 @@ namespace Library.Net.Connections
                                 _connection.Send(bufferStream, timeout);
                             }
                         }
-                        else if (_version.HasFlag(SecureConnectionVersion.Version1))
-                        {
-                            using (BufferStream bufferStream = new BufferStream(_bufferManager))
-                            {
-                                bufferStream.SetLength(8);
-                                bufferStream.Seek(8, SeekOrigin.Begin);
-
-                                if (_informationVersion1.CryptoAlgorithm.HasFlag(SecureVersion1.CryptoAlgorithm.Rijndael256))
-                                {
-                                    byte[] sendBuffer = null;
-
-                                    try
-                                    {
-                                        sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                                        using (var rijndael = Rijndael.Create())
-                                        {
-                                            rijndael.KeySize = 256;
-                                            rijndael.BlockSize = 256;
-                                            rijndael.Mode = CipherMode.CBC;
-                                            rijndael.Padding = PaddingMode.PKCS7;
-
-                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(targetStream, true),
-                                                rijndael.CreateEncryptor(_informationVersion1.MyCryptoKey.Take(32).ToArray(), _informationVersion1.MyCryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                                            {
-                                                int i = -1;
-
-                                                while ((i = cs.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
-                                                {
-                                                    bufferStream.Write(sendBuffer, 0, i);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        _bufferManager.ReturnBuffer(sendBuffer);
-                                    }
-                                }
-                                else
-                                {
-                                    throw new ConnectionException();
-                                }
-
-                                _totalSendSize += (bufferStream.Length - 8);
-
-                                bufferStream.Seek(0, SeekOrigin.Begin);
-
-                                byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
-                                bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
-
-                                if (_informationVersion1.HashAlgorithm.HasFlag(SecureVersion1.HashAlgorithm.Sha512))
-                                {
-                                    bufferStream.Seek(0, SeekOrigin.Begin);
-                                    byte[] hmacBuff;
-
-                                    using (var hmacSha512 = new HMACSHA512(_informationVersion1.MyHmacKey))
-                                    {
-                                        hmacBuff = hmacSha512.ComputeHash(bufferStream);
-                                    }
-
-                                    bufferStream.Seek(0, SeekOrigin.End);
-                                    bufferStream.Write(hmacBuff, 0, hmacBuff.Length);
-                                }
-                                else
-                                {
-                                    throw new ConnectionException();
-                                }
-
-                                bufferStream.Seek(0, SeekOrigin.Begin);
-
-                                _connection.Send(bufferStream, timeout);
-                            }
-                        }
                         else
                         {
                             throw new ConnectionException();
@@ -1263,10 +1200,10 @@ namespace Library.Net.Connections
             }
         }
 
-        class InformationVersion1
+        class InformationVersion2
         {
-            public SecureVersion1.CryptoAlgorithm CryptoAlgorithm { get; set; }
-            public SecureVersion1.HashAlgorithm HashAlgorithm { get; set; }
+            public SecureVersion2.CryptoAlgorithm CryptoAlgorithm { get; set; }
+            public SecureVersion2.HashAlgorithm HashAlgorithm { get; set; }
 
             public byte[] MyCryptoKey { get; set; }
             public byte[] OtherCryptoKey { get; set; }
@@ -1275,10 +1212,10 @@ namespace Library.Net.Connections
             public byte[] OtherHmacKey { get; set; }
         }
 
-        class InformationVersion2
+        class InformationVersion3
         {
-            public SecureVersion2.CryptoAlgorithm CryptoAlgorithm { get; set; }
-            public SecureVersion2.HashAlgorithm HashAlgorithm { get; set; }
+            public SecureVersion3.CryptoAlgorithm CryptoAlgorithm { get; set; }
+            public SecureVersion3.HashAlgorithm HashAlgorithm { get; set; }
 
             public byte[] MyCryptoKey { get; set; }
             public byte[] OtherCryptoKey { get; set; }

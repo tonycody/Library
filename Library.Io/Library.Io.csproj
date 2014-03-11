@@ -53,6 +53,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Tools\StreamMode.cs" />
     <Compile Include="WrapperStream.cs" />
     <Compile Include="UniteStream.cs" />
     <Compile Include="BufferStream.cs" />
@@ -62,6 +63,10 @@
     <Compile Include="RangeStream.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
+      <Project>{197c654f-2461-446a-b531-4a789f14be19}</Project>
+      <Name>Library.Collections</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Library\Library.csproj">
       <Project>{63EADC1F-9A8A-4945-A562-DA666D0BCB7B}</Project>
       <Name>Library</Name>

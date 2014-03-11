@@ -28,27 +28,59 @@ namespace Library.Compression
             info.RedirectStandardOutput = true;
             info.Arguments = "-z --format=xz -6 --threads=1 -c";
 
-            using (Process process = Process.Start(info))
+            using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
+            using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
             {
-                process.PriorityClass = ProcessPriorityClass.Idle;
-
-                Exception threadException = null;
-
-                var thread = new Thread(new ThreadStart(() =>
+                using (Process process = Process.Start(info))
                 {
+                    process.PriorityClass = ProcessPriorityClass.Idle;
+
+                    Exception threadException = null;
+
+                    var thread = new Thread(new ThreadStart(() =>
+                    {
+                        try
+                        {
+                            byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+
+                            try
+                            {
+                                using (var standardOutputStream = process.StandardOutput.BaseStream)
+                                {
+                                    int length = 0;
+
+                                    while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                    {
+                                        outCacheStream.Write(buffer, 0, length);
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                bufferManager.ReturnBuffer(buffer);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            threadException = e;
+                        }
+                    }));
+                    thread.IsBackground = true;
+                    thread.Start();
+
                     try
                     {
                         byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
 
                         try
                         {
-                            using (var standardOutputStream = process.StandardOutput.BaseStream)
+                            using (var standardInputStream = process.StandardInput.BaseStream)
                             {
                                 int length = 0;
 
-                                while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                while (0 != (length = inCacheStream.Read(buffer, 0, buffer.Length)))
                                 {
-                                    outStream.Write(buffer, 0, length);
+                                    standardInputStream.Write(buffer, 0, length);
                                 }
                             }
                         }
@@ -57,44 +89,16 @@ namespace Library.Compression
                             bufferManager.ReturnBuffer(buffer);
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        threadException = e;
+                        throw;
                     }
-                }));
-                thread.IsBackground = true;
-                thread.Start();
 
-                try
-                {
-                    byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+                    thread.Join();
+                    if (threadException != null) throw threadException;
 
-                    try
-                    {
-                        using (var standardInputStream = process.StandardInput.BaseStream)
-                        {
-                            int length = 0;
-
-                            while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                standardInputStream.Write(buffer, 0, length);
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        bufferManager.ReturnBuffer(buffer);
-                    }
+                    process.WaitForExit();
                 }
-                catch (Exception)
-                {
-                    throw;
-                }
-
-                thread.Join();
-                if (threadException != null) throw threadException;
-
-                process.WaitForExit();
             }
         }
 
@@ -117,27 +121,59 @@ namespace Library.Compression
             info.RedirectStandardOutput = true;
             info.Arguments = "-d --memlimit-decompress=256MiB";
 
-            using (Process process = Process.Start(info))
+            using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
+            using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
             {
-                process.PriorityClass = ProcessPriorityClass.Idle;
-
-                Exception threadException = null;
-
-                var thread = new Thread(new ThreadStart(() =>
+                using (Process process = Process.Start(info))
                 {
+                    process.PriorityClass = ProcessPriorityClass.Idle;
+
+                    Exception threadException = null;
+
+                    var thread = new Thread(new ThreadStart(() =>
+                    {
+                        try
+                        {
+                            byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+
+                            try
+                            {
+                                using (var standardOutputStream = process.StandardOutput.BaseStream)
+                                {
+                                    int length = 0;
+
+                                    while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                    {
+                                        outCacheStream.Write(buffer, 0, length);
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                bufferManager.ReturnBuffer(buffer);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            threadException = e;
+                        }
+                    }));
+                    thread.IsBackground = true;
+                    thread.Start();
+
                     try
                     {
                         byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
 
                         try
                         {
-                            using (var standardOutputStream = process.StandardOutput.BaseStream)
+                            using (var standardInputStream = process.StandardInput.BaseStream)
                             {
                                 int length = 0;
 
-                                while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                while (0 != (length = inCacheStream.Read(buffer, 0, buffer.Length)))
                                 {
-                                    outStream.Write(buffer, 0, length);
+                                    standardInputStream.Write(buffer, 0, length);
                                 }
                             }
                         }
@@ -146,44 +182,16 @@ namespace Library.Compression
                             bufferManager.ReturnBuffer(buffer);
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        threadException = e;
+                        throw;
                     }
-                }));
-                thread.IsBackground = true;
-                thread.Start();
 
-                try
-                {
-                    byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+                    thread.Join();
+                    if (threadException != null) throw threadException;
 
-                    try
-                    {
-                        using (var standardInputStream = process.StandardInput.BaseStream)
-                        {
-                            int length = 0;
-
-                            while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                standardInputStream.Write(buffer, 0, length);
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        bufferManager.ReturnBuffer(buffer);
-                    }
+                    process.WaitForExit();
                 }
-                catch (Exception)
-                {
-                    throw;
-                }
-
-                thread.Join();
-                if (threadException != null) throw threadException;
-
-                process.WaitForExit();
             }
         }
     }

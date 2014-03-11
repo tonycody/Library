@@ -1,7 +1,7 @@
 namespace: Library.Correction
 License: New BSD License
 
-File: ReedSolomon.cs
+File: ReedSolomon.cs, Assembly/ReedSolomon_x86.dll, Assembly/ReedSolomon_x64.dll
 Url: http://sourceforge.jp/projects/freshmeat_javafec/
 License: BSD Original
 

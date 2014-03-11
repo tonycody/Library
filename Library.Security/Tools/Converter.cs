@@ -77,7 +77,7 @@ namespace Library.Security
 #if DEBUG
                 if (list[0].Value.Length != stream.Length)
                 {
-                    Debug.WriteLine("LairConverter ToStream : {0}→{1} {2}",
+                    Debug.WriteLine("OutoposConverter ToStream : {0}→{1} {2}",
                         NetworkConverter.ToSizeString(stream.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
@@ -160,7 +160,7 @@ namespace Library.Security
                             }
 
 #if DEBUG
-                            Debug.WriteLine("LairConverter FromStream : {0}→{1} {2}",
+                            Debug.WriteLine("OutoposConverter FromStream : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));

@@ -78,7 +78,7 @@ namespace Library.UnitTest
             box.Boxes.Add(new Box() { Name = "Box" });
             box.Seeds.Add(new Seed() { Name = "Seed" });
 
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
             box.CreateCertificate(digitalSignature);
 
             Box box2;
@@ -139,7 +139,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_Seed()
         {
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.ECDsaP521_Sha512 })
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
             {
                 var seed = new Seed();
                 seed.Name = "aaaa.zip";
@@ -191,7 +191,7 @@ namespace Library.UnitTest
             box.Seeds.Add(new Seed() { Name = "Seed" });
             box.Boxes.Add(new Box() { Name = "Box" });
 
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
             box.CreateCertificate(digitalSignature);
 
             var box2 = box.Clone();

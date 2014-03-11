@@ -54,6 +54,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Derivation\Pbkdf2.cs" />
+    <Compile Include="EqualityComparer.cs" />
     <Compile Include="Exchange\ExchangePrivateKey.cs" />
     <Compile Include="Exchange\ExchangePublicKey.cs" />
     <Compile Include="Exchange\Exchange.cs" />
@@ -73,7 +75,7 @@
     <Compile Include="Signature\DigitalSignature.cs" />
     <Compile Include="Signature\DigitalSignatureAlgorithm.cs" />
     <Compile Include="Signature\SignatureCollection.cs" />
-    <Compile Include="Tools\ECDsaP521_Sha512.cs" />
+    <Compile Include="Tools\EcDsaP521_Sha512.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tools\Rsa2048_Sha512.cs" />
   </ItemGroup>

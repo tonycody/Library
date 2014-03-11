@@ -906,11 +906,18 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                    using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                    using (var rijndael = Rijndael.Create())
                     {
-                        Xz.Compress(inStream, cs, _bufferManager);
+                        rijndael.KeySize = 256;
+                        rijndael.BlockSize = 256;
+                        rijndael.Mode = CipherMode.CBC;
+                        rijndael.Padding = PaddingMode.PKCS7;
+
+                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                        {
+                            Xz.Compress(inStream, cs, _bufferManager);
+                        }
                     }
                 }
                 catch (Exception)
@@ -940,11 +947,18 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                    using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                    using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                    using (var rijndael = Rijndael.Create())
                     {
-                        _lzma.Compress(inStream, cs, _bufferManager);
+                        rijndael.KeySize = 256;
+                        rijndael.BlockSize = 256;
+                        rijndael.Mode = CipherMode.CBC;
+                        rijndael.Padding = PaddingMode.PKCS7;
+
+                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                        {
+                            _lzma.Compress(inStream, cs, _bufferManager);
+                        }
                     }
                 }
                 catch (Exception)
@@ -1015,20 +1029,34 @@ namespace Library.Net.Amoeba
 
             if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
-                using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                using (var rijndael = Rijndael.Create())
                 {
-                    Xz.Decompress(cs, outStream, _bufferManager);
+                    rijndael.KeySize = 256;
+                    rijndael.BlockSize = 256;
+                    rijndael.Mode = CipherMode.CBC;
+                    rijndael.Padding = PaddingMode.PKCS7;
+
+                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                    {
+                        Xz.Decompress(cs, outStream, _bufferManager);
+                    }
                 }
             }
             else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
             {
-                using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                using (var rijndael = new RijndaelManaged() { KeySize = 256, BlockSize = 256, Mode = CipherMode.CBC, Padding = PaddingMode.PKCS7 })
-                using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                using (var rijndael = Rijndael.Create())
                 {
-                    _lzma.Decompress(cs, outStream, _bufferManager);
+                    rijndael.KeySize = 256;
+                    rijndael.BlockSize = 256;
+                    rijndael.Mode = CipherMode.CBC;
+                    rijndael.Padding = PaddingMode.PKCS7;
+
+                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                    {
+                        _lzma.Decompress(cs, outStream, _bufferManager);
+                    }
                 }
             }
             else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Library.Security
 {
-    internal static class ECDsaP521_Sha512
+    internal static class EcDsaP521_Sha512
     {
         /// <summary>
         /// 公開鍵と秘密鍵を作成して返す

@@ -1,7 +1,7 @@
 namespace: Library.Net.Connections
 License: New BSD License
 
-Files: KeyDerivation/ANSI_X963_KDF.cs, KeyDerivation/KeyDerivationFunction.cs
+Files: Tools/ANSI_X963_KDF.cs, Tools/KeyDerivationFunction.cs
 Url: http://trac.panicode.com/crypto
 License: MIT
 

@@ -41,16 +41,6 @@ namespace Library.Io
             }
         }
 
-        public override bool CanSeek
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                return _stream.CanSeek;
-            }
-        }
-
         public override bool CanWrite
         {
             get
@@ -58,6 +48,16 @@ namespace Library.Io
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
                 return _stream.CanWrite;
+            }
+        }
+
+        public override bool CanSeek
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                return _stream.CanSeek;
             }
         }
 

@@ -11,22 +11,12 @@ namespace Library.Net
     public class Kademlia<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
         where T : INode
     {
-        /// <summary>
-        /// ノードリストの行数
-        /// </summary>
         private int _row;
-
-        /// <summary>
-        /// ノードリストの列数
-        /// </summary>
         private int _column;
-
-        /// <summary>
-        /// ノードリスト(k-buckets)
-        /// </summary>
-        private List<T>[] _nodesList;
-
         private T _baseNode;
+
+        private LinkedList<T>[] _nodesList;
+
         private static byte[] _distanceHashtable = new byte[256];
 
         private readonly object _thisLock = new object();
@@ -48,22 +38,22 @@ namespace Library.Net
         }
 
         /// <summary>
-        /// RouteTableクラスの新しいインスタンスを初期化します
+        /// Kademliaクラスの新しいインスタンスを初期化します
         /// </summary>
         /// <param name="row">ノードリストの行数</param>
         /// <param name="column">ノードリストの列数</param>
         public Kademlia(int row, int column)
         {
-            if (row < 1) throw new ArgumentOutOfRangeException("row");
-            if (column < 1) throw new ArgumentOutOfRangeException("column");
+            if (row <= 0) throw new ArgumentOutOfRangeException("row");
+            if (column <= 0) throw new ArgumentOutOfRangeException("column");
 
             _row = row;
             _column = column;
-            _nodesList = new List<T>[row];
+            _nodesList = new LinkedList<T>[row];
         }
 
         /// <summary>
-        /// 検索するハッシュを取得または設定します
+        /// ベースとなるNodeを取得または設定します
         /// </summary>
         public T BaseNode
         {
@@ -78,25 +68,14 @@ namespace Library.Net
             {
                 lock (this.ThisLock)
                 {
-                    if (value.Equals(default(T)))
+                    var tempList = this.ToList();
+                    this.Clear();
+
+                    _baseNode = value;
+
+                    foreach (var item in tempList)
                     {
-                        _baseNode = default(T);
-
-                        this.Clear();
-                    }
-                    else
-                    {
-                        List<T> tempList = new List<T>();
-                        tempList.AddRange(this.ToArray());
-
-                        this.Clear();
-
-                        _baseNode = value;
-
-                        foreach (var item in tempList)
-                        {
-                            this.Add(item);
-                        }
+                        this.Add(item);
                     }
                 }
             }
@@ -108,7 +87,8 @@ namespace Library.Net
             {
                 lock (this.ThisLock)
                 {
-                    return _nodesList.Where(n => n != null)
+                    return _nodesList
+                        .Where(n => n != null)
                         .Sum(m => m.Count);
                 }
             }
@@ -195,48 +175,124 @@ namespace Library.Net
 
         private unsafe static byte[] Xor(byte[] x, byte[] y)
         {
-            fixed (byte* px = x, py = y)
+            if (x.Length != y.Length)
             {
-                if (x.Length != y.Length)
+                if (x.Length < y.Length)
                 {
-                    byte[] buffer = new byte[Math.Max(x.Length, y.Length)];
-                    int length = Math.Min(x.Length, y.Length);
-
-                    fixed (byte* pbuffer = buffer)
+                    fixed (byte* p_x = x, p_y = y)
                     {
-                        for (int i = 0; i < length; i++)
+                        byte* t_x = p_x, t_y = p_y;
+
+                        byte[] buffer = new byte[y.Length];
+                        int length = x.Length;
+
+                        fixed (byte* p_buffer = buffer)
                         {
-                            pbuffer[i] = (byte)(px[i] ^ py[i]);
+                            byte* t_buffer = p_buffer;
+
+                            for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
+                            {
+                                *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
+                            }
+
+                            if ((length & 4) != 0)
+                            {
+                                *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
+                                t_x += 4; t_y += 4; t_buffer += 4;
+                            }
+
+                            if ((length & 2) != 0)
+                            {
+                                *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
+                                t_x += 2; t_y += 2; t_buffer += 2;
+                            }
+
+                            if ((length & 1) != 0)
+                            {
+                                *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
+                            }
                         }
 
-                        if (x.Length > y.Length)
-                        {
-                            for (int i = x.Length - y.Length; i < buffer.Length; i++)
-                            {
-                                pbuffer[i] = px[i];
-                            }
-                        }
-                        else
-                        {
-                            for (int i = y.Length - x.Length; i < buffer.Length; i++)
-                            {
-                                pbuffer[i] = py[i];
-                            }
-                        }
+                        Array.Copy(y, x.Length, buffer, x.Length, y.Length - x.Length);
+
+                        return buffer;
                     }
-
-                    return buffer;
                 }
                 else
                 {
+                    fixed (byte* p_x = x, p_y = y)
+                    {
+                        byte* t_x = p_x, t_y = p_y;
+
+                        byte[] buffer = new byte[x.Length];
+                        int length = y.Length;
+
+                        fixed (byte* p_buffer = buffer)
+                        {
+                            byte* t_buffer = p_buffer;
+
+                            for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
+                            {
+                                *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
+                            }
+
+                            if ((length & 4) != 0)
+                            {
+                                *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
+                                t_x += 4; t_y += 4; t_buffer += 4;
+                            }
+
+                            if ((length & 2) != 0)
+                            {
+                                *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
+                                t_x += 2; t_y += 2; t_buffer += 2;
+                            }
+
+                            if ((length & 1) != 0)
+                            {
+                                *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
+                            }
+                        }
+
+                        Array.Copy(x, y.Length, buffer, y.Length, x.Length - y.Length);
+
+                        return buffer;
+                    }
+                }
+            }
+            else
+            {
+                fixed (byte* p_x = x, p_y = y)
+                {
+                    byte* t_x = p_x, t_y = p_y;
+
                     byte[] buffer = new byte[x.Length];
                     int length = x.Length;
 
-                    fixed (byte* pbuffer = buffer)
+                    fixed (byte* p_buffer = buffer)
                     {
-                        for (int i = 0; i < length; i++)
+                        byte* t_buffer = p_buffer;
+
+                        for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
                         {
-                            pbuffer[i] = (byte)(px[i] ^ py[i]);
+                            *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
+                        }
+
+                        if ((length & 4) != 0)
+                        {
+                            *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
+                            t_x += 4; t_y += 4; t_buffer += 4;
+                        }
+
+                        if ((length & 2) != 0)
+                        {
+                            *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
+                            t_x += 2; t_y += 2; t_buffer += 2;
+                        }
+
+                        if ((length & 1) != 0)
+                        {
+                            *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
                         }
                     }
 
@@ -292,31 +348,31 @@ namespace Library.Net
                 int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
                 if (i == 0) return;
 
-                if (_nodesList[i - 1] != null)
+                var targetList = _nodesList[i - 1];
+
+                // 生存率の高いNodeはFirstに、そうでないNodeはLastに
+                if (targetList != null)
                 {
-                    // 追加するnodeがNodeListに入っている場合
-                    if (_nodesList[i - 1].Contains(item))
+                    if (targetList.Contains(item))
                     {
-                        // そのノードをNodeListの末尾に移す
-                        _nodesList[i - 1].Remove(item);
-                        _nodesList[i - 1].Add(item);
+                        targetList.Remove(item);
+                        targetList.AddFirst(item);
                     }
                     else
                     {
-                        // 列に空きがない場合、先頭のノード削除
-                        if (_nodesList[i - 1].Count == _column)
+                        if (targetList.Count == _column)
                         {
-                            _nodesList[i - 1].RemoveAt(0);
+                            targetList.RemoveLast();
                         }
 
-                        // そのノードを末尾に追加する
-                        _nodesList[i - 1].Add(item);
+                        targetList.AddFirst(item);
                     }
                 }
                 else
                 {
-                    _nodesList[i - 1] = new List<T>();
-                    _nodesList[i - 1].Add(item);
+                    targetList = new LinkedList<T>();
+                    targetList.AddLast(item);
+                    _nodesList[i - 1] = targetList;
                 }
             }
         }
@@ -333,23 +389,24 @@ namespace Library.Net
                 int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
                 if (i == 0) return;
 
-                if (_nodesList[i - 1] != null)
+                var targetList = _nodesList[i - 1];
+
+                if (targetList != null)
                 {
-                    // 追加するnodeがNodeListに入っていない場合
-                    if (!_nodesList[i - 1].Contains(item))
+                    // 生存率の高いNodeはFirstに、そうでないNodeはLastに
+                    if (!targetList.Contains(item))
                     {
-                        // 列に空きがある場合
-                        if (_nodesList[i - 1].Count < _column)
+                        if (targetList.Count < _column)
                         {
-                            // そのノードを先頭に追加する
-                            _nodesList[i - 1].Insert(0, item);
+                            targetList.AddLast(item);
                         }
                     }
                 }
                 else
                 {
-                    _nodesList[i - 1] = new List<T>();
-                    _nodesList[i - 1].Add(item);
+                    targetList = new LinkedList<T>();
+                    targetList.AddLast(item);
+                    _nodesList[i - 1] = targetList;
                 }
             }
         }
@@ -378,7 +435,7 @@ namespace Library.Net
                     {
                         if (_nodesList[i].Count == _column)
                         {
-                            return _nodesList[i][0];
+                            return _nodesList[i].Last.Value;
                         }
                     }
                 }
@@ -423,11 +480,11 @@ namespace Library.Net
             {
                 List<T> tempList = new List<T>();
 
-                for (int i = _nodesList.Length - 1; i >= 0; i--)
+                for (int i = 0; i < _nodesList.Length; i++)
                 {
                     if (_nodesList[i] != null)
                     {
-                        tempList.AddRange(_nodesList[i].ToArray().Reverse());
+                        tempList.AddRange(_nodesList[i].ToArray());
                     }
                 }
 
@@ -445,9 +502,11 @@ namespace Library.Net
                 int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
                 if (i == 0) return false;
 
-                if (_nodesList[i - 1] != null)
+                var targetList = _nodesList[i - 1];
+
+                if (targetList != null)
                 {
-                    return _nodesList[i - 1].Remove(item);
+                    return targetList.Remove(item);
                 }
 
                 return false;
@@ -458,11 +517,11 @@ namespace Library.Net
         {
             lock (this.ThisLock)
             {
-                for (int i = _nodesList.Length - 1; i >= 0; i--)
+                for (int i = 0; i < _nodesList.Length; i++)
                 {
                     if (_nodesList[i] != null)
                     {
-                        foreach (var node in _nodesList[i].ToArray().Reverse())
+                        foreach (var node in _nodesList[i].ToArray())
                         {
                             yield return node;
                         }

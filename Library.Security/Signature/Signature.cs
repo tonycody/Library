@@ -8,6 +8,8 @@ namespace Library.Security
 {
     public static class Signature
     {
+        private static InternPool<string> _signatureCache = new InternPool<string>();
+        
         private static BufferManager _bufferManager = BufferManager.Instance;
         private static Regex _signatureRegex = new Regex(@"^(.*)@([a-zA-Z0-9\-_]*)$", RegexOptions.Compiled | RegexOptions.Singleline);
 
@@ -17,7 +19,7 @@ namespace Library.Security
 
             try
             {
-                if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512
+                if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha512
                     || digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
                 {
                     using (BufferStream bufferStream = new BufferStream(_bufferManager))
@@ -28,7 +30,8 @@ namespace Library.Security
                         bufferStream.Write(digitalSignature.PublicKey, 0, digitalSignature.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
-                        return digitalSignature.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
+                        var signature = digitalSignature.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
+                        return _signatureCache.GetValue(signature, digitalSignature);
                     }
                 }
             }
@@ -46,7 +49,7 @@ namespace Library.Security
 
             try
             {
-                if (certificate.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.ECDsaP521_Sha512
+                if (certificate.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha512
                     || certificate.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
                 {
                     using (BufferStream bufferStream = new BufferStream(_bufferManager))
@@ -57,7 +60,8 @@ namespace Library.Security
                         bufferStream.Write(certificate.PublicKey, 0, certificate.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
-                        return certificate.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
+                        var signature = certificate.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
+                        return _signatureCache.GetValue(signature, certificate);
                     }
                 }
             }

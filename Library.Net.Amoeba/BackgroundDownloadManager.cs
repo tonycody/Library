@@ -260,9 +260,22 @@ namespace Library.Net.Amoeba
                             {
                                 item.State = BackgroundDownloadState.Downloading;
 
-                                //int limitCount = (int)(1024 * (Math.Pow(item.Priority, 3) / Math.Pow(6, 3)));
-                                int limitCount = (int)32;
-                                int downloadingCount = 0;
+                                int limitCount = 256;
+
+                                foreach (var group in item.Index.Groups.ToArray().Randomize())
+                                {
+                                    if (_countCache.GetCount(group) >= group.InformationLength) continue;
+
+                                    foreach (var key in _countCache.GetKeys(group, false))
+                                    {
+                                        if (_connectionsManager.IsDownloadWaiting(key))
+                                        {
+                                            limitCount--;
+
+                                            if (limitCount <= 0) goto End;
+                                        }
+                                    }
+                                }
 
                                 List<Key> keyList = new List<Key>();
 
@@ -270,40 +283,34 @@ namespace Library.Net.Amoeba
                                 {
                                     if (_countCache.GetCount(group) >= group.InformationLength) continue;
 
-                                    List<Key> keys = new List<Key>();
+                                    int downloadCount = 0;
+                                    List<Key> tempKeys = new List<Key>();
 
                                     foreach (var key in _countCache.GetKeys(group, false))
                                     {
                                         if (_connectionsManager.IsDownloadWaiting(key))
                                         {
-                                            downloadingCount++;
+                                            downloadCount++;
                                         }
                                         else
                                         {
-                                            keys.Add(key);
+                                            tempKeys.Add(key);
                                         }
                                     }
 
-                                    if (downloadingCount > limitCount) goto End;
-
-                                    int length = group.InformationLength - (group.Keys.Count - keys.Count);
+                                    int length = Math.Max(group.InformationLength / 2, 32) - downloadCount;
                                     if (length <= 0) continue;
 
-                                    length = Math.Max(length, 6);
-
-                                    foreach (var key in keys
-                                        .OrderBy(n => random.Next())
+                                    foreach (var key in tempKeys
+                                        .Randomize()
                                         .Take(length))
                                     {
-                                        keyList.Add(key);
-                                    }
-                                }
+                                        _connectionsManager.Download(key);
 
-                                foreach (var key in keyList
-                                    .OrderBy(n => random.Next())
-                                    .Take(limitCount - downloadingCount))
-                                {
-                                    _connectionsManager.Download(key);
+                                        limitCount--;
+                                    }
+
+                                    if (limitCount <= 0) goto End;
                                 }
 
                             End: ;

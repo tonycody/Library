@@ -236,12 +236,12 @@ namespace Library.UnitTest
 
                 if (_random.Next(0, 100) < 50)
                 {
-                    clientDigitalSignature = new DigitalSignature("NickName1", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+                    clientDigitalSignature = new DigitalSignature("NickName1", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
                 }
 
                 if (_random.Next(0, 100) < 50)
                 {
-                    serverDigitalSignature = new DigitalSignature("NickName2", DigitalSignatureAlgorithm.ECDsaP521_Sha512);
+                    serverDigitalSignature = new DigitalSignature("NickName2", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
                 }
 
                 SecureConnectionVersion clientVersion = 0;
@@ -252,26 +252,26 @@ namespace Library.UnitTest
                     switch (_random.Next(0, 3))
                     {
                         case 0:
-                            clientVersion = SecureConnectionVersion.Version1;
-                            break;
-                        case 1:
                             clientVersion = SecureConnectionVersion.Version2;
                             break;
+                        case 1:
+                            clientVersion = SecureConnectionVersion.Version3;
+                            break;
                         case 2:
-                            clientVersion = SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2;
+                            clientVersion = SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3;
                             break;
                     }
 
                     switch (_random.Next(0, 3))
                     {
                         case 0:
-                            serverVersion = SecureConnectionVersion.Version1;
-                            break;
-                        case 1:
                             serverVersion = SecureConnectionVersion.Version2;
                             break;
+                        case 1:
+                            serverVersion = SecureConnectionVersion.Version3;
+                            break;
                         case 2:
-                            serverVersion = SecureConnectionVersion.Version1 | SecureConnectionVersion.Version2;
+                            serverVersion = SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3;
                             break;
                     }
 

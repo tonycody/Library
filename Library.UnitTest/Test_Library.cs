@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using NUnit.Framework;
@@ -40,7 +41,7 @@ namespace Library.UnitTest
                 Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, 2, new byte[] { 0, 0, 10 }, 2, 1) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0, 0, 0 }, 0, new byte[] { 10 }, 0, 1) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 10 }, 0, 3) > 0, "Compare");
-                Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 0, 10 }, 0, 4) > 0, "Compare"); 
+                Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 0, 10 }, 0, 4) > 0, "Compare");
 
                 Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 0 }, new ByteComparer()) == 0, "Compare");
                 Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0 }, new byte[] { 0, 0, 0 }, new ByteComparer()) > 0, "Compare");
@@ -53,7 +54,7 @@ namespace Library.UnitTest
                 Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0 }, 2, new byte[] { 0, 0, 10 }, 2, 1, new ByteComparer()) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare(new byte[] { 0, 0, 0, 0, 0 }, 0, new byte[] { 10 }, 0, 1, new ByteComparer()) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 10 }, 0, 3, new ByteComparer()) > 0, "Compare");
-                Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 0, 10 }, 0, 4, new ByteComparer()) > 0, "Compare"); 
+                Assert.IsTrue(Collection.Compare(new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 0, 10 }, 0, 4, new ByteComparer()) > 0, "Compare");
             }
 
             {
@@ -62,20 +63,20 @@ namespace Library.UnitTest
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 10 }) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0, 0, 0 }, new byte[] { 10 }) > 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 1, 0, 0, 0 }, new byte[] { 0, 0, 0, 10 }) > 0, "Compare");
-                                                 
+
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0 }, 1, new byte[] { 0, 0, 0 }, 1, 2) == 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 1, 0, 0 }, 0, new byte[] { 0, 0, 0 }, 0, 1) > 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0 }, 2, new byte[] { 0, 0, 10 }, 2, 1) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0, 0, 0 }, 0, new byte[] { 10 }, 0, 1) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 10 }, 0, 3) > 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 1, 0, 0, 0 }, 0, new byte[] { 0, 0, 0, 10 }, 0, 4) > 0, "Compare");
-                                                 
+
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 0 }, new ByteComparer()) == 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 1, 0, 0 }, new byte[] { 0, 0, 0 }, new ByteComparer()) > 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0 }, new byte[] { 0, 0, 10 }, new ByteComparer()) < 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0, 0, 0 }, new byte[] { 10 }, new ByteComparer()) > 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 1, 0, 0, 0 }, new byte[] { 0, 0, 0, 10 }, new ByteComparer()) > 0, "Compare");
-                                                 
+
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0 }, 1, new byte[] { 0, 0, 0 }, 1, 2, new ByteComparer()) == 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 1, 0, 0 }, 0, new byte[] { 0, 0, 0 }, 0, 1, new ByteComparer()) > 0, "Compare");
                 Assert.IsTrue(Collection.Compare((IEnumerable<byte>)new byte[] { 0, 0, 0 }, 2, new byte[] { 0, 0, 10 }, 2, 1, new ByteComparer()) < 0, "Compare");
@@ -150,6 +151,40 @@ namespace Library.UnitTest
 
             _bufferManager.ReturnBuffer(buffer1);
             _bufferManager.ReturnBuffer(buffer2);
+        }
+
+        [Test]
+        public void Test_InternPool()
+        {
+            var w = new WeakReference(new object());
+
+            InternPool<object> rt = new InternPool<object>();
+
+            {
+                var value1 = new Uri("http://test");
+                var value2 = new Uri("http://test");
+
+                rt.GetValue(value1, new object()); // Set
+                var target = rt.GetValue(value2, new object());
+
+                Assert.IsTrue(object.ReferenceEquals(value1, target));
+            }
+
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+            System.GC.Collect();
+
+            rt.Refresh();
+            Assert.IsTrue(rt.Count == 0);
+
+            {
+                var value3 = new Uri("http://test");
+
+                rt.GetValue(value3, new object()); // Set
+                var target = rt.GetValue(value3, new object());
+
+                Assert.IsTrue(object.ReferenceEquals(value3, target));
+            }
         }
     }
 }

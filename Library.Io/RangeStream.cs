@@ -6,27 +6,27 @@ namespace Library.Io
     public class RangeStream : Stream
     {
         private Stream _stream;
-        private long _offset;
+        private long _position;
         private long _length;
         private bool _leaveInnerStreamOpen;
 
         private long _orignalLength;
         private bool _disposed;
 
-        public RangeStream(Stream stream, long offset, long length, bool leaveInnerStreamOpen)
+        public RangeStream(Stream stream, long position, long length, bool leaveInnerStreamOpen)
         {
             if (stream == null) throw new ArgumentNullException("stream");
-            if (offset < 0 || stream.Length < offset) throw new ArgumentOutOfRangeException("offset");
-            if (length < 0 || (stream.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
-
+            if (position < 0 || stream.Length < position) throw new ArgumentOutOfRangeException("offset");
+            if (length < 0 || (stream.Length - position) < length) throw new ArgumentOutOfRangeException("length");
+            
             _stream = stream;
-            _offset = offset;
+            _position = position;
             _length = length;
             _leaveInnerStreamOpen = leaveInnerStreamOpen;
             _orignalLength = length;
 
-            if (_stream.Position != _offset)
-                _stream.Seek(_offset, SeekOrigin.Begin);
+            if (_stream.Position != _position)
+                _stream.Seek(_position, SeekOrigin.Begin);
         }
 
         public RangeStream(Stream stream, long offset, long length)
@@ -45,16 +45,6 @@ namespace Library.Io
             }
         }
 
-        public override bool CanSeek
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                return _stream.CanSeek;
-            }
-        }
-
         public override bool CanWrite
         {
             get
@@ -65,13 +55,23 @@ namespace Library.Io
             }
         }
 
+        public override bool CanSeek
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                return _stream.CanSeek;
+            }
+        }
+
         public override long Position
         {
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _stream.Position - _offset;
+                return _stream.Position - _position;
             }
             set
             {
@@ -79,7 +79,7 @@ namespace Library.Io
                 if (value < 0 || this.Length < value) throw new ArgumentOutOfRangeException("Position");
                 if (!_stream.CanSeek) throw new NotSupportedException();
 
-                _stream.Position = value + _offset;
+                _stream.Position = value + _position;
             }
         }
 
