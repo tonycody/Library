@@ -18,8 +18,10 @@ namespace Library.Security
             Signature = 3,
         }
 
+        //private static InternPool<string> _nicknameCache = new InternPool<string>();
         private volatile string _nickname;
         private volatile DigitalSignatureAlgorithm _digitalSignatureAlgorithm = 0;
+        //private static InternPool<byte[]> _publicKeyCache = new InternPool<byte[]>();
         private volatile byte[] _publicKey;
         private volatile byte[] _signature;
 
@@ -257,6 +259,7 @@ namespace Library.Security
                 }
                 else
                 {
+                    //_nickname = _nicknameCache.GetValue(value, this);
                     _nickname = value;
                 }
             }
@@ -297,6 +300,7 @@ namespace Library.Security
                 }
                 else
                 {
+                    //_publicKey = _publicKeyCache.GetValue(value, this);
                     _publicKey = value;
                 }
 

@@ -315,7 +315,7 @@ namespace Library.UnitTest
             }
         }
 
-        #region ID_Box
+        #region D_Box
 
         [DataMember(Name = "Name")]
         public string Name

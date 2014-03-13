@@ -117,8 +117,20 @@ namespace Library
 
         public static bool Equals<T>(IList<T> source, IList<T> destination)
         {
-            var equalityComparer = EqualityComparer<T>.Default;
-            return Collection.Equals(source, destination, equalityComparer);
+            {
+                var x = source as byte[];
+                var y = destination as byte[];
+
+                if (x != null && y != null)
+                {
+                    return Unsafe.Equals(x, y);
+                }
+            }
+
+            {
+                var equalityComparer = EqualityComparer<T>.Default;
+                return Collection.Equals(source, destination, equalityComparer);
+            }
         }
 
         public static bool Equals<T>(IEnumerable<T> source, IEnumerable<T> destination)

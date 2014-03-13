@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
     interface IChatMessageContent<TAnchor>
         where TAnchor : IAnchor

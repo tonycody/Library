@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Library.Collections;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
     public sealed class WikiCollection : FilterList<Wiki>, IEnumerable<Wiki>
     {

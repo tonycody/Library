@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Library.Compression;
 using Library.Correction;
+using Library.Io;
 using NUnit.Framework;
 
 namespace Library.UnitTest
@@ -31,10 +32,10 @@ namespace Library.UnitTest
                 }
 
                 stream1.Seek(0, SeekOrigin.Begin);
-                Xz.Compress(stream1, stream2, _bufferManager);
+                Xz.Compress(new WrapperStream(stream1, true), new WrapperStream(stream2, true), _bufferManager);
 
                 stream2.Seek(0, SeekOrigin.Begin);
-                Xz.Decompress(stream2, stream3, _bufferManager);
+                Xz.Decompress(new WrapperStream(stream2, true), new WrapperStream(stream3, true), _bufferManager);
 
                 stream1.Seek(0, SeekOrigin.Begin);
                 stream3.Seek(0, SeekOrigin.Begin);

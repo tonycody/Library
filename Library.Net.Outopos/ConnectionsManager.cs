@@ -6,7 +6,7 @@ using System.Threading;
 using Library.Collections;
 using Library.Net.Connections;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
     public delegate IEnumerable<Criterion> GetCriteriaEventHandler(object sender);
 

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Library.Io;
@@ -9,9 +10,11 @@ namespace Library.Security
     public static class Signature
     {
         private static InternPool<string> _signatureCache = new InternPool<string>();
-        
+        private static ConditionalWeakTable<string, byte[]> _signatureHashCache = new ConditionalWeakTable<string, byte[]>();
+        private static object _signatureHashCacheLockObject = new object();
+
         private static BufferManager _bufferManager = BufferManager.Instance;
-        private static Regex _signatureRegex = new Regex(@"^(.*)@([a-zA-Z0-9\-_]*)$", RegexOptions.Compiled | RegexOptions.Singleline);
+        private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*)$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         public static string GetSignature(DigitalSignature digitalSignature)
         {
@@ -79,11 +82,15 @@ namespace Library.Security
 
             try
             {
-                var match = _signatureRegex.Match(item);
-                if (!match.Success) return false;
+                var index = item.LastIndexOf('@');
+                if (index == -1) return false;
 
-                if (match.Groups[1].Value.Length > 256) return false;
-                if (match.Groups[2].Value.Length != 86) return false;
+                var nickname = item.Substring(0, index);
+                var hash = item.Substring(index + 1);
+
+                if (nickname.Length > 256) return false;
+                var match = _base64Regex.Match(hash);
+                if (!match.Success) return false;
             }
             catch (Exception)
             {
@@ -99,13 +106,17 @@ namespace Library.Security
 
             try
             {
-                var match = _signatureRegex.Match(item);
-                if (!match.Success) throw new ArgumentNullException("item");
+                var index = item.LastIndexOf('@');
+                if (index == -1) return null;
 
-                if (match.Groups[1].Value.Length > 256) throw new ArgumentNullException("item");
-                if (match.Groups[2].Value.Length != 86) throw new ArgumentNullException("item");
+                var nickname = item.Substring(0, index);
+                var hash = item.Substring(index + 1);
 
-                return match.Groups[1].Value;
+                if (nickname.Length > 256) return null;
+                var match = _base64Regex.Match(hash);
+                if (!match.Success) return null;
+
+                return nickname;
             }
             catch (Exception)
             {
@@ -115,17 +126,32 @@ namespace Library.Security
 
         public static byte[] GetSignatureHash(string item)
         {
-            if (item == null) throw new ArgumentNullException("item");
+            if (item == null) return null;
 
             try
             {
-                var match = _signatureRegex.Match(item);
-                if (!match.Success) throw new ArgumentNullException("item");
+                lock (_signatureHashCacheLockObject)
+                {
+                    byte[] value;
 
-                if (match.Groups[1].Value.Length > 256) throw new ArgumentNullException("item");
-                if (match.Groups[2].Value.Length != 86) throw new ArgumentNullException("item");
+                    if (!_signatureHashCache.TryGetValue(item, out value))
+                    {
+                        var index = item.LastIndexOf('@');
+                        if (index == -1) return null;
 
-                return NetworkConverter.FromBase64UrlString(match.Groups[2].Value);
+                        var nickname = item.Substring(0, index);
+                        var hash = item.Substring(index + 1);
+
+                        if (nickname.Length > 256) return null;
+                        var match = _base64Regex.Match(hash);
+                        if (!match.Success) return null;
+
+                        value = NetworkConverter.FromBase64UrlString(hash);
+                        _signatureHashCache.Add(item, value);
+                    }
+
+                    return value;
+                }
             }
             catch (Exception)
             {

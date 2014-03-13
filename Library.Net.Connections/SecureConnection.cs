@@ -99,8 +99,8 @@ namespace Library.Net.Connections
         {
             if (x.Length != y.Length)
             {
-                int length = Math.Min(x.Length, y.Length);
                 byte[] buffer = new byte[Math.Max(x.Length, y.Length)];
+                int length = Math.Min(x.Length, y.Length);
 
                 for (int i = 0; i < length; i++)
                 {
@@ -109,17 +109,11 @@ namespace Library.Net.Connections
 
                 if (x.Length > y.Length)
                 {
-                    for (int i = x.Length - y.Length; i < buffer.Length; i++)
-                    {
-                        buffer[i] = x[i];
-                    }
+                    Array.Copy(x, y.Length, buffer, y.Length, x.Length - y.Length);
                 }
                 else
                 {
-                    for (int i = y.Length - x.Length; i < buffer.Length; i++)
-                    {
-                        buffer[i] = y[i];
-                    }
+                    Array.Copy(y, x.Length, buffer, x.Length, y.Length - x.Length);
                 }
 
                 return buffer;
@@ -127,8 +121,9 @@ namespace Library.Net.Connections
             else
             {
                 byte[] buffer = new byte[x.Length];
+                int length = x.Length;
 
-                for (int i = 0; i < x.Length; i++)
+                for (int i = 0; i < length; i++)
                 {
                     buffer[i] = (byte)(x[i] ^ y[i]);
                 }

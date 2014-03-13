@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Library.Security;
 using NUnit.Framework;
 
@@ -9,6 +10,34 @@ namespace Library.UnitTest
     {
         private BufferManager _bufferManager = BufferManager.Instance;
         private Random _random = new Random();
+
+        [Test]
+        public void Test_Sigunature()
+        {
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
+            {
+                var signature = Signature.GetSignature(new DigitalSignature("123", a));
+
+                Assert.IsTrue(Signature.HasSignature(signature));
+                Assert.AreEqual(Signature.GetSignatureNickname(signature), "123");
+                Assert.IsTrue(Signature.GetSignatureHash(signature).Length == 64);
+            }
+
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
+            {
+                string signature;
+
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    stream.Write(new byte[1024], 0, 1024);
+                    signature = Signature.GetSignature(DigitalSignature.CreateCertificate(new DigitalSignature("123", a), stream));
+                }
+
+                Assert.IsTrue(Signature.HasSignature(signature));
+                Assert.AreEqual(Signature.GetSignatureNickname(signature), "123");
+                Assert.IsTrue(Signature.GetSignatureHash(signature).Length == 64);
+            }
+        }
 
         [Test]
         public void Test_DigitalSigunature()

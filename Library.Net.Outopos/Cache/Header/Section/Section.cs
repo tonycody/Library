@@ -5,9 +5,9 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Section", Namespace = "http://Library/Net/Lair")]
+    [DataContract(Name = "Section", Namespace = "http://Library/Net/Outopos")]
     public sealed class Section : ItemBase<Section>, ISection
     {
         private enum SerializeId : byte

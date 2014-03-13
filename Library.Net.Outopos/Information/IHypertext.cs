@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
-    [DataContract(Name = "HypertextFormatType", Namespace = "http://Library/Net/Lair")]
+    [DataContract(Name = "HypertextFormatType", Namespace = "http://Library/Net/Outopos")]
     public enum HypertextFormatType : byte
     {
         [EnumMember(Value = "MiniWiki")]

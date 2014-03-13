@@ -5,9 +5,9 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Anchor", Namespace = "http://Library/Net/Lair")]
+    [DataContract(Name = "Anchor", Namespace = "http://Library/Net/Outopos")]
     public sealed class Anchor : ItemBase<Anchor>, IAnchor
     {
         private enum SerializeId : byte

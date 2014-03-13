@@ -5,9 +5,9 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Wiki", Namespace = "http://Library/Net/Lair")]
+    [DataContract(Name = "Wiki", Namespace = "http://Library/Net/Outopos")]
     public sealed class Wiki : ItemBase<Wiki>, IWiki
     {
         private enum SerializeId : byte

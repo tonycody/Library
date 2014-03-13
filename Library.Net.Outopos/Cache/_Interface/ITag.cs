@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
     public interface ITag
     {

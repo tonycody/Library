@@ -1,5 +1,5 @@
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
     interface IWikiPageContent : IHypertext
     {

@@ -6,9 +6,9 @@ using System.Text;
 using Library.Io;
 using Library.Security;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
-    [DataContract(Name = "SectionMessageHeader", Namespace = "http://Library/Net/Lair")]
+    [DataContract(Name = "SectionMessageHeader", Namespace = "http://Library/Net/Outopos")]
     sealed class SectionMessageHeader : ReadOnlyCertificateItemBase<SectionMessageHeader>, ISectionMessageHeader<Section>
     {
         private enum SerializeId : byte

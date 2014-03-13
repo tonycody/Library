@@ -97,10 +97,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\CacheManager.cs" />
-    <Compile Include="Cache\Content\ChatMessageContent.cs" />
-    <Compile Include="Cache\Content\ChatTopicContent.cs" />
-    <Compile Include="Cache\Content\WikiVoteContent.cs" />
-    <Compile Include="Cache\Content\WikiPageContent.cs" />
     <Compile Include="Cache\Anchor.cs" />
     <Compile Include="Cache\AnchorCollection.cs" />
     <Compile Include="Cache\Header\Chat\ChatMessageHeader.cs" />
@@ -115,39 +111,35 @@
     <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
     <Compile Include="Cache\Header\Section\SectionCollection.cs" />
     <Compile Include="Cache\Header\Section\Section.cs" />
-    <Compile Include="Cache\Content\SectionMessageContent.cs" />
-    <Compile Include="Cache\Content\SectionProfileContent.cs" />
     <Compile Include="Cache\Key.cs" />
     <Compile Include="Cache\KeyCollection.cs" />
     <Compile Include="Cache\OutoposConverter.cs" />
-    <Compile Include="Informaiton\Content\ChatMessageContent.cs" />
-    <Compile Include="Informaiton\Content\ChatTopicContent.cs" />
-    <Compile Include="Informaiton\Content\SectionMessageContent.cs" />
-    <Compile Include="Informaiton\Content\SectionProfileContent.cs" />
-    <Compile Include="Informaiton\Content\WikiPageContent.cs" />
-    <Compile Include="Informaiton\Content\WikiVoteContent.cs" />
-    <Compile Include="Informaiton\_Interface\Content\IChatMessageContent.cs">
+    <Compile Include="Cache\_Interface\IComputeHash.cs" />
+    <Compile Include="Information\Content\ChatMessageContent.cs" />
+    <Compile Include="Information\Content\ChatTopicContent.cs" />
+    <Compile Include="Information\Content\SectionMessageContent.cs" />
+    <Compile Include="Information\Content\SectionProfileContent.cs" />
+    <Compile Include="Information\Content\WikiPageContent.cs" />
+    <Compile Include="Information\Content\WikiVoteContent.cs" />
+    <Compile Include="Information\_Interface\Content\IChatMessageContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Informaiton\_Interface\Content\IChatTopicContent.cs">
+    <Compile Include="Information\_Interface\Content\IChatTopicContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Informaiton\_Interface\Content\IWikiPageContent.cs">
+    <Compile Include="Information\_Interface\Content\IWikiPageContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Informaiton\_Interface\Content\IWikiVoteContent.cs">
+    <Compile Include="Information\_Interface\Content\IWikiVoteContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Informaiton\_Interface\Content\ISectionMessageContent.cs">
+    <Compile Include="Information\_Interface\Content\ISectionMessageContent.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Informaiton\_Interface\Content\ISectionProfileContent.cs">
+    <Compile Include="Information\_Interface\Content\ISectionProfileContent.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\IAnchor.cs" />
-    <Compile Include="Cache\_Interface\IComputeHash.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Cache\_Interface\IHashAlgorithm.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -160,15 +152,8 @@
     <Compile Include="Cache\_Interface\ITag.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\IHypertext.cs" />
+    <Compile Include="Information\IHypertext.cs" />
     <Compile Include="ContentConverter.cs" />
-    <Compile Include="Information\ChatMessage.cs" />
-    <Compile Include="Information\ChatTopic.cs" />
-    <Compile Include="Information\_Interface\IMessage.cs" />
-    <Compile Include="Information\SectionMessage.cs" />
-    <Compile Include="Information\SectionProfile.cs" />
-    <Compile Include="Information\WikiPage.cs" />
-    <Compile Include="Information\WikiVote.cs" />
     <Compile Include="OutoposManager.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="DownloadItem.cs" />

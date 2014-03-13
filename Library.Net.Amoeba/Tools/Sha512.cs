@@ -11,11 +11,43 @@ namespace Library.Net.Amoeba
     /// </summary>
     static class Sha512
     {
+        private static SHA512 Create()
+        {
+            try
+            {
+                return new SHA512Cng();
+            }
+            catch (Exception)
+            {
+
+            }
+
+            try
+            {
+                return new SHA512CryptoServiceProvider();
+            }
+            catch (Exception)
+            {
+
+            }
+
+            try
+            {
+                return new SHA512Managed();
+            }
+            catch (Exception)
+            {
+
+            }
+
+            return null;
+        }
+
         public static byte[] ComputeHash(byte[] buffer, int offset, int count)
         {
             if (buffer == null) throw new ArgumentNullException("buffer");
 
-            using (var sha512 = SHA512.Create())
+            using (var sha512 = Sha512.Create())
             {
                 return sha512.ComputeHash(buffer, offset, count);
             }
@@ -54,7 +86,7 @@ namespace Library.Net.Amoeba
         {
             if (inputStream == null) throw new ArgumentNullException("inputStream");
 
-            using (var sha512 = SHA512.Create())
+            using (var sha512 = Sha512.Create())
             {
                 return sha512.ComputeHash(inputStream);
             }
@@ -66,7 +98,7 @@ namespace Library.Net.Amoeba
 
             if (value.Count == 1) return Sha512.ComputeHash(value[0]);
 
-            using (var sha512 = SHA512.Create())
+            using (var sha512 = Sha512.Create())
             {
                 for (int i = 0; i < value.Count; i++)
                 {

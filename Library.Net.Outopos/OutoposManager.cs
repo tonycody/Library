@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Library.Security;
 
-namespace Library.Net.Lair
+namespace Library.Net.Outopos
 {
-    public sealed class LairManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
+    public sealed class OutoposManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private string _cachePath;
         private BufferManager _bufferManager;
@@ -28,7 +28,7 @@ namespace Library.Net.Lair
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
-        public LairManager(string cachePath, BufferManager bufferManager)
+        public OutoposManager(string cachePath, BufferManager bufferManager)
         {
             _cachePath = cachePath;
 
@@ -111,7 +111,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -129,7 +129,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -143,7 +143,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -157,7 +157,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -171,7 +171,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -181,7 +181,7 @@ namespace Library.Net.Lair
             set
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -195,7 +195,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -205,7 +205,7 @@ namespace Library.Net.Lair
             set
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -219,7 +219,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -233,7 +233,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -247,7 +247,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -261,7 +261,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -275,7 +275,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -287,7 +287,7 @@ namespace Library.Net.Lair
         public void SetBaseNode(Node baseNode)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -298,7 +298,7 @@ namespace Library.Net.Lair
         public void SetOtherNodes(IEnumerable<Node> nodes)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -309,7 +309,7 @@ namespace Library.Net.Lair
         public void Resize(long size)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -320,7 +320,7 @@ namespace Library.Net.Lair
         public IEnumerable<SectionProfile> GetSectionProfiles(Section tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -331,7 +331,7 @@ namespace Library.Net.Lair
         public IEnumerable<SectionProfile> GetSectionProfiles(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -342,7 +342,7 @@ namespace Library.Net.Lair
         public IEnumerable<SectionMessage> GetSectionMessages(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -353,7 +353,7 @@ namespace Library.Net.Lair
         public IEnumerable<SectionMessage> GetSectionMessages(Section tag, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -364,7 +364,7 @@ namespace Library.Net.Lair
         public IEnumerable<WikiPage> GetWikiPages(Wiki tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -375,7 +375,7 @@ namespace Library.Net.Lair
         public IEnumerable<WikiPage> GetWikiPages(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -386,7 +386,7 @@ namespace Library.Net.Lair
         public IEnumerable<WikiVote> GetWikiVotes(Wiki tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -397,7 +397,7 @@ namespace Library.Net.Lair
         public IEnumerable<WikiVote> GetWikiVotes(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -408,7 +408,7 @@ namespace Library.Net.Lair
         public IEnumerable<ChatTopic> GetChatTopic(Chat tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -419,7 +419,7 @@ namespace Library.Net.Lair
         public IEnumerable<ChatTopic> GetChatTopic(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -430,7 +430,7 @@ namespace Library.Net.Lair
         public IEnumerable<ChatMessage> GetChatMessage(Chat tag, IEnumerable<string> trustSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -441,7 +441,7 @@ namespace Library.Net.Lair
         public IEnumerable<ChatMessage> GetChatMessage(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -452,7 +452,7 @@ namespace Library.Net.Lair
         public SectionProfile GetSectionProfile(Section tag, string targetSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -463,7 +463,7 @@ namespace Library.Net.Lair
         public WikiVote GetWikiVote(Wiki tag, string targetSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -474,7 +474,7 @@ namespace Library.Net.Lair
         public ChatTopic GetChatTopic(Chat tag, string targetSignatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -487,7 +487,7 @@ namespace Library.Net.Lair
             DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -501,7 +501,7 @@ namespace Library.Net.Lair
             DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -514,7 +514,7 @@ namespace Library.Net.Lair
             DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -527,7 +527,7 @@ namespace Library.Net.Lair
             DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -540,7 +540,7 @@ namespace Library.Net.Lair
             DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -553,7 +553,7 @@ namespace Library.Net.Lair
             DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -566,7 +566,7 @@ namespace Library.Net.Lair
             get
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+                if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
                 lock (this.ThisLock)
                 {
@@ -578,7 +578,7 @@ namespace Library.Net.Lair
         public override void Start()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -594,7 +594,7 @@ namespace Library.Net.Lair
         public override void Stop()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -615,7 +615,7 @@ namespace Library.Net.Lair
 
             lock (this.ThisLock)
             {
-                if (_isLoaded) throw new LairManagerException("LairManager was already loaded.");
+                if (_isLoaded) throw new OutoposManagerException("OutoposManager was already loaded.");
                 _isLoaded = true;
 
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
@@ -629,7 +629,7 @@ namespace Library.Net.Lair
         public void Save(string directoryPath)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new LairManagerException("LairManager is not loaded.");
+            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
             lock (this.ThisLock)
             {
@@ -672,10 +672,10 @@ namespace Library.Net.Lair
     }
 
     [Serializable]
-    class LairManagerException : StateManagerException
+    class OutoposManagerException : StateManagerException
     {
-        public LairManagerException() : base() { }
-        public LairManagerException(string message) : base(message) { }
-        public LairManagerException(string message, Exception innerException) : base(message, innerException) { }
+        public OutoposManagerException() : base() { }
+        public OutoposManagerException(string message) : base(message) { }
+        public OutoposManagerException(string message, Exception innerException) : base(message, innerException) { }
     }
 }
