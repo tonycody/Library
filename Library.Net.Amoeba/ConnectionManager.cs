@@ -81,7 +81,7 @@ namespace Library.Net.Amoeba
             Block = 7,
 
             SeedsRequest = 8,
-            Seeds = 10,
+            Seeds = 9,
         }
 
         private byte[] _mySessionId;

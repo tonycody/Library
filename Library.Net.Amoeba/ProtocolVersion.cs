@@ -9,8 +9,5 @@ namespace Library.Net.Amoeba
     {
         [EnumMember(Value = "Version1")]
         Version1 = 0x01,
-
-        [EnumMember(Value = "Version2")]
-        Version2 = 0x02,
     }
 }
