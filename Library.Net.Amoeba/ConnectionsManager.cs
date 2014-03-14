@@ -104,13 +104,13 @@ namespace Library.Net.Amoeba
         public static readonly string Keyword_Link = "_link_";
         public static readonly string Keyword_Store = "_store_";
 
-//#if DEBUG
-//        private const int _downloadingConnectionCountLowerLimit = 0;
-//        private const int _uploadingConnectionCountLowerLimit = 0;
-//#else
+        //#if DEBUG
+        //        private const int _downloadingConnectionCountLowerLimit = 0;
+        //        private const int _uploadingConnectionCountLowerLimit = 0;
+        //#else
         private const int _downloadingConnectionCountLowerLimit = 3;
         private const int _uploadingConnectionCountLowerLimit = 3;
-//#endif
+        //#endif
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
         {
@@ -867,7 +867,7 @@ namespace Library.Net.Amoeba
                     _cacheManager.CheckSeeds();
                 }
 
-                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 3)
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalSeconds >= 30)
                 {
                     refreshStopwatch.Restart();
 
@@ -881,6 +881,8 @@ namespace Library.Net.Amoeba
                         }
                     }
 
+                    // トラストにより必要なSeedを選択し、不要なSeedを削除する。
+                    //　非トラストなSeedでアクセスが頻繁なSeedを優先して保護する。
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         if (_refreshThreadRunning) return;
@@ -1629,7 +1631,7 @@ namespace Library.Net.Amoeba
                                         _pushSeedsRequestList.Remove(item);
                                     }
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push SeedsRequest {0} ({1})", String.Join(", ", tempList), tempList.Count));
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push SeedsRequest ({0})", tempList.Count));
                                     _pushSeedRequestCount += tempList.Count;
                                 }
                                 catch (Exception e)
@@ -1811,7 +1813,7 @@ namespace Library.Net.Amoeba
                                 {
                                     linkSeeds.Add(tempSeed);
 
-                                    if (linkSeeds.Count >= _maxSeedCount) break;
+                                    if (linkSeeds.Count >= (_maxSeedCount / 2)) break;
                                 }
                             }
 
@@ -1830,7 +1832,7 @@ namespace Library.Net.Amoeba
                                 {
                                     storeSeeds.Add(tempSeed);
 
-                                    if (storeSeeds.Count >= _maxSeedCount) break;
+                                    if (storeSeeds.Count >= (_maxSeedCount / 2)) break;
                                 }
                             }
 
