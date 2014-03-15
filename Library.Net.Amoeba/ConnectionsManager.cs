@@ -107,9 +107,11 @@ namespace Library.Net.Amoeba
         //#if DEBUG
         //        private const int _downloadingConnectionCountLowerLimit = 0;
         //        private const int _uploadingConnectionCountLowerLimit = 0;
+        //        private const int _diffusionConnectionCountLowerLimit = 3;
         //#else
         private const int _downloadingConnectionCountLowerLimit = 3;
         private const int _uploadingConnectionCountLowerLimit = 3;
+        private const int _diffusionConnectionCountLowerLimit = 12;
         //#endif
 
         public ConnectionsManager(ClientManager clientManager, ServerManager serverManager, CacheManager cacheManager, BufferManager bufferManager)
@@ -934,7 +936,8 @@ namespace Library.Net.Amoeba
                     });
                 }
 
-                if (connectionCount > ((this.ConnectionCountLimit / 3) * 2)
+                // 拡散アップロード
+                if (connectionCount > _diffusionConnectionCountLowerLimit
                     && pushBlockDiffusionStopwatch.Elapsed.TotalSeconds >= 60)
                 {
                     pushBlockDiffusionStopwatch.Restart();
@@ -1042,6 +1045,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
+                // アップロード
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
                     && pushBlockUploadStopwatch.Elapsed.TotalSeconds >= 10)
                 {
@@ -1085,6 +1089,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
+                // ダウンロード
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
                     && pushBlockDownloadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
@@ -1294,6 +1299,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
+                // Seedのアップロード
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
                     && pushSeedUploadStopwatch.Elapsed.TotalMinutes >= 3)
                 {
@@ -1337,6 +1343,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
+                // Seedのダウンロード
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
                     && pushSeedDownloadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
