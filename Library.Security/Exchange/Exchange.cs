@@ -43,7 +43,6 @@ namespace Library.Security
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            Encoding encoding = new UTF8Encoding(false);
             byte[] lengthBuffer = new byte[4];
 
             for (; ; )
@@ -56,24 +55,15 @@ namespace Library.Security
                 {
                     if (id == (byte)SerializeId.ExchangeAlgorithm)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
-                        }
+                        this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), ItemUtility.GetString(rangeStream));
                     }
                     else if (id == (byte)SerializeId.PublicKey)
                     {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.PublicKey = buffer;
+                        this.PublicKey = ItemUtility.GetByteArray(rangeStream);
                     }
                     else if (id == (byte)SerializeId.PrivateKey)
                     {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.PrivateKey = buffer;
+                        this.PrivateKey = ItemUtility.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -82,45 +72,21 @@ namespace Library.Security
         protected override Stream Export(BufferManager bufferManager, int count)
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
-            Encoding encoding = new UTF8Encoding(false);
 
             // ExchangeAlgorithm
             if (this.ExchangeAlgorithm != 0)
             {
-                byte[] buffer = null;
-
-                try
-                {
-                    var value = this.ExchangeAlgorithm.ToString();
-
-                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
-                    bufferStream.Write(buffer, 0, length);
-                }
-                finally
-                {
-                    if (buffer != null)
-                    {
-                        bufferManager.ReturnBuffer(buffer);
-                    }
-                }
+                ItemUtility.Write(bufferStream, (byte)SerializeId.ExchangeAlgorithm, this.ExchangeAlgorithm.ToString());
             }
             // PublicKey
             if (this.PublicKey != null)
             {
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.PublicKey);
-                bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
             }
             // PrivateKey
             if (this.PrivateKey != null)
             {
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.PrivateKey.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.PrivateKey);
-                bufferStream.Write(this.PrivateKey, 0, this.PrivateKey.Length);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.PrivateKey, this.PrivateKey);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);

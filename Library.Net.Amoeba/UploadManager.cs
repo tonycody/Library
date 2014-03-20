@@ -176,7 +176,15 @@ namespace Library.Net.Amoeba
                         contexts.Add(new InformationContext("Path", item.Value.FilePath));
 
                         if (item.Value.State == UploadState.Completed || item.Value.State == UploadState.Uploading)
-                            contexts.Add(new InformationContext("Seed", item.Value.Seed));
+                        {
+                            if (item.Value.EditSeed == null)
+                            {
+                                var editSeed = item.Value.Seed.Clone();
+                                item.Value.EditSeed = editSeed;
+                            }
+
+                            contexts.Add(new InformationContext("Seed", item.Value.EditSeed));
+                        }
 
                         if (item.Value.State == UploadState.Uploading)
                         {

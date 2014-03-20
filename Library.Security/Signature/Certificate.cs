@@ -18,10 +18,10 @@ namespace Library.Security
             Signature = 3,
         }
 
-        //private static InternPool<string> _nicknameCache = new InternPool<string>();
+        private static InternPool<byte[], string> _nicknameCache = new InternPool<byte[], string>(new ByteArrayEqualityComparer());
         private volatile string _nickname;
         private volatile DigitalSignatureAlgorithm _digitalSignatureAlgorithm = 0;
-        //private static InternPool<byte[]> _publicKeyCache = new InternPool<byte[]>();
+        private static InternPool<byte[], byte[]> _publicKeyCache = new InternPool<byte[], byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _publicKey;
         private volatile byte[] _signature;
 
@@ -59,7 +59,6 @@ namespace Library.Security
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            Encoding encoding = new UTF8Encoding(false);
             byte[] lengthBuffer = new byte[4];
 
             for (; ; )
@@ -72,31 +71,19 @@ namespace Library.Security
                 {
                     if (id == (byte)SerializeId.Nickname)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.Nickname = reader.ReadToEnd();
-                        }
+                        this.Nickname = ItemUtility.GetString(rangeStream);
                     }
                     else if (id == (byte)SerializeId.DigitalSignatureAlgorithm)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.DigitalSignatureAlgorithm = (DigitalSignatureAlgorithm)Enum.Parse(typeof(DigitalSignatureAlgorithm), reader.ReadToEnd());
-                        }
+                        this.DigitalSignatureAlgorithm = (DigitalSignatureAlgorithm)Enum.Parse(typeof(DigitalSignatureAlgorithm), ItemUtility.GetString(rangeStream));
                     }
                     else if (id == (byte)SerializeId.PublicKey)
                     {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.PublicKey = buffer;
+                        this.PublicKey = ItemUtility.GetByteArray(rangeStream);
                     }
                     else if (id == (byte)SerializeId.Signature)
                     {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.Signature = buffer;
+                        this.Signature = ItemUtility.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -105,69 +92,26 @@ namespace Library.Security
         protected override Stream Export(BufferManager bufferManager, int count)
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
-            Encoding encoding = new UTF8Encoding(false);
 
             // Nickname
             if (this.Nickname != null)
             {
-                byte[] buffer = null;
-
-                try
-                {
-                    var value = this.Nickname;
-
-                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Nickname);
-                    bufferStream.Write(buffer, 0, length);
-                }
-                finally
-                {
-                    if (buffer != null)
-                    {
-                        bufferManager.ReturnBuffer(buffer);
-                    }
-                }
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Nickname, this.Nickname);
             }
             // DigitalSignatureAlgorithm
             if (this.DigitalSignatureAlgorithm != 0)
             {
-                byte[] buffer = null;
-
-                try
-                {
-                    var value = this.DigitalSignatureAlgorithm.ToString();
-
-                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.DigitalSignatureAlgorithm);
-                    bufferStream.Write(buffer, 0, length);
-                }
-                finally
-                {
-                    if (buffer != null)
-                    {
-                        bufferManager.ReturnBuffer(buffer);
-                    }
-                }
+                ItemUtility.Write(bufferStream, (byte)SerializeId.DigitalSignatureAlgorithm, this.DigitalSignatureAlgorithm.ToString());
             }
             // PublicKey
             if (this.PublicKey != null)
             {
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.PublicKey.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.PublicKey);
-                bufferStream.Write(this.PublicKey, 0, this.PublicKey.Length);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
             }
             // Signature
             if (this.Signature != null)
             {
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Signature.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Signature);
-                bufferStream.Write(this.Signature, 0, this.Signature.Length);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -259,8 +203,8 @@ namespace Library.Security
                 }
                 else
                 {
-                    //_nickname = _nicknameCache.GetValue(value, this);
-                    _nickname = value;
+                    _nickname = _nicknameCache.GetValue(Sha512.ComputeHash(value), value, this);
+                    //_nickname = value;
                 }
             }
         }
@@ -300,8 +244,8 @@ namespace Library.Security
                 }
                 else
                 {
-                    //_publicKey = _publicKeyCache.GetValue(value, this);
-                    _publicKey = value;
+                    _publicKey = _publicKeyCache.GetValue(Sha512.ComputeHash(value), value, this);
+                    //_publicKey = value;
                 }
 
                 if (value != null && value.Length != 0)

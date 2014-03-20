@@ -80,6 +80,7 @@
     <Compile Include="SecureVersion3\KeyExchangeAlgorithm.cs" />
     <Compile Include="SecureVersion3\ProtocolInformation.cs" />
     <Compile Include="Tools\EnumEx.cs" />
+    <Compile Include="Tools\ItemUtility.cs" />
     <Compile Include="Tools\Sha512.cs" />
     <Compile Include="SecureConnectionType.cs" />
     <Compile Include="SecureVersion2\ConnectionSignature.cs" />

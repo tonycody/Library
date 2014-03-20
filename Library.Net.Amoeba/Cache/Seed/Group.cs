@@ -39,7 +39,6 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -57,37 +56,19 @@ namespace Library.Net.Amoeba
 
                         else if (id == (byte)SerializeId.CorrectionAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CorrectionAlgorithm = (CorrectionAlgorithm)Enum.Parse(typeof(CorrectionAlgorithm), reader.ReadToEnd());
-                            }
+                            this.CorrectionAlgorithm = (CorrectionAlgorithm)Enum.Parse(typeof(CorrectionAlgorithm), ItemUtility.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.InformationLength)
                         {
-                            byte[] buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
-                            rangeStream.Read(buffer, 0, 4);
-
-                            this.InformationLength = NetworkConverter.ToInt32(buffer);
-
-                            bufferManager.ReturnBuffer(buffer);
+                            this.InformationLength = ItemUtility.GetInt(rangeStream);
                         }
                         else if (id == (byte)SerializeId.BlockLength)
                         {
-                            byte[] buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
-                            rangeStream.Read(buffer, 0, 4);
-
-                            this.BlockLength = NetworkConverter.ToInt32(buffer);
-
-                            bufferManager.ReturnBuffer(buffer);
+                            this.BlockLength = ItemUtility.GetInt(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Length)
                         {
-                            byte[] buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
-                            rangeStream.Read(buffer, 0, 8);
-
-                            this.Length = NetworkConverter.ToInt64(buffer);
-
-                            bufferManager.ReturnBuffer(buffer);
+                            this.Length = ItemUtility.GetLong(rangeStream);
                         }
                     }
                 }
@@ -98,72 +79,40 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Keys
-                foreach (var k in this.Keys)
+                foreach (var value in this.Keys)
                 {
-                    Stream exportStream = k.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Key, stream);
+                    }
                 }
 
                 // CorrectionAlgorithm
                 if (this.CorrectionAlgorithm != 0)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.CorrectionAlgorithm);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CorrectionAlgorithm);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CorrectionAlgorithm, this.CorrectionAlgorithm.ToString());
                 }
                 // InformationLength
                 if (this.InformationLength != 0)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)4), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.InformationLength);
-                    bufferStream.Write(NetworkConverter.GetBytes(this.InformationLength), 0, 4);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.InformationLength, this.InformationLength);
                 }
                 // BlockLength
                 if (this.BlockLength != 0)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)4), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.BlockLength);
-                    bufferStream.Write(NetworkConverter.GetBytes(this.BlockLength), 0, 4);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.BlockLength, this.BlockLength);
                 }
                 // Length
                 if (this.Length != 0)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)8), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Length);
-                    bufferStream.Write(NetworkConverter.GetBytes(this.Length), 0, 8);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.Length, this.Length);
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
         }
 

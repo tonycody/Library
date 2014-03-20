@@ -63,9 +63,11 @@
     <Compile Include="Exchange\IExchangeEncrypt.cs" />
     <Compile Include="Signature\Certificate.cs" />
     <Compile Include="Signature\CertificateConverter.cs" />
-    <Compile Include="Signature\CertificateItemBase.cs" />
+    <Compile Include="Signature\ImmutableCertificateItemBase.cs" />
+    <Compile Include="Signature\MutableCertificateItemBase.cs" />
     <Compile Include="Signature\DigitalSignatureConverter.cs" />
     <Compile Include="Signature\Signature.cs" />
+    <Compile Include="Tools\ItemUtility.cs" />
     <Compile Include="Tools\Rsa2048.cs" />
     <Compile Include="Tools\Converter.cs" />
     <Compile Include="Tools\Crc32_Castagnoli.cs" />

@@ -41,7 +41,6 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -59,25 +58,16 @@ namespace Library.Net.Amoeba
 
                         else if (id == (byte)SerializeId.CompressionAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), reader.ReadToEnd());
-                            }
+                            this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), ItemUtility.GetString(rangeStream));
                         }
 
                         else if (id == (byte)SerializeId.CryptoAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), reader.ReadToEnd());
-                            }
+                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), ItemUtility.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.CryptoKey)
                         {
-                            byte[] buffer = new byte[(int)rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.CryptoKey = buffer;
+                            this.CryptoKey = ItemUtility.GetByteArray(rangeStream);
                         }
                     }
                 }
@@ -88,72 +78,36 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Groups
-                foreach (var g in this.Groups)
+                foreach (var value in this.Groups)
                 {
-                    Stream exportStream = g.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Group);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Group, stream);
+                    }
                 }
 
                 // CompressionAlgorithm
                 if (this.CompressionAlgorithm != 0)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.CompressionAlgorithm);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CompressionAlgorithm);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CompressionAlgorithm, this.CompressionAlgorithm.ToString());
                 }
 
                 // CryptoAlgorithm
                 if (this.CryptoAlgorithm != 0)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.CryptoAlgorithm);
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CryptoAlgorithm);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
                 }
                 // CryptoKey
                 if (this.CryptoKey != null)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.CryptoKey.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CryptoKey);
-                    bufferStream.Write(this.CryptoKey, 0, this.CryptoKey.Length);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoKey, this.CryptoKey);
                 }
 
-                return new UniteStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
         }
 

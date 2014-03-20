@@ -84,11 +84,13 @@
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
-    <Compile Include="CountCache.cs" />
+    <Compile Include="Tools\SortedKeys.cs" />
+    <Compile Include="Tools\CountCache.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="EqualityComparer.cs" />
     <Compile Include="Tools\Crc32_Castagnoli.cs" />
+    <Compile Include="Tools\ItemUtility.cs" />
     <Compile Include="Tools\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

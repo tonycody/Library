@@ -40,6 +40,8 @@ namespace Library.Net.Amoeba
 
         private IndexCollection _indexes;
 
+        private Seed _editSeed;
+
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
@@ -225,6 +227,25 @@ namespace Library.Net.Amoeba
                         _indexes = new IndexCollection();
 
                     return _indexes;
+                }
+            }
+        }
+
+        [DataMember(Name = "EditSeed")]
+        public Seed EditSeed
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _editSeed;
+                }
+            }
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _editSeed = value;
                 }
             }
         }

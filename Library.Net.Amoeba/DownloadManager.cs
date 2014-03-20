@@ -145,7 +145,13 @@ namespace Library.Net.Amoeba
                         if (item.Value.Path != null) contexts.Add(new InformationContext("Path", Path.Combine(item.Value.Path, DownloadManager.GetNormalizedPath(item.Value.Seed.Name ?? ""))));
                         else contexts.Add(new InformationContext("Path", DownloadManager.GetNormalizedPath(item.Value.Seed.Name ?? "")));
 
-                        contexts.Add(new InformationContext("Seed", item.Value.Seed));
+                        if (item.Value.EditSeed == null)
+                        {
+                            var editSeed = item.Value.Seed.Clone();
+                            item.Value.EditSeed = editSeed;
+                        }
+
+                        contexts.Add(new InformationContext("Seed", item.Value.EditSeed));
 
                         if (item.Value.State == DownloadState.Downloading || item.Value.State == DownloadState.Completed || item.Value.State == DownloadState.Error)
                         {
@@ -566,7 +572,7 @@ namespace Library.Net.Amoeba
                                     {
                                         item.DecodingBytes = 0;
                                         item.DecodeBytes = 0;
-                                        
+
                                         item.Index = index;
 
                                         foreach (var group in item.Index.Groups)
@@ -787,7 +793,7 @@ namespace Library.Net.Amoeba
                                     {
                                         item.DecodingBytes = 0;
                                         item.DecodeBytes = 0;
-                                        
+
                                         item.Index = index;
 
                                         foreach (var group in item.Index.Groups)
@@ -885,7 +891,7 @@ namespace Library.Net.Amoeba
                                     {
                                         item.DecodingBytes = 0;
                                         item.DecodeBytes = 0;
-                                        
+
                                         _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
                                         _settings.DownloadedSeeds.Add(item.Seed.Clone());
 

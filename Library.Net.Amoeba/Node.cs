@@ -36,7 +36,6 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            Encoding encoding = new UTF8Encoding(false);
             byte[] lengthBuffer = new byte[4];
 
             for (; ; )
@@ -49,18 +48,12 @@ namespace Library.Net.Amoeba
                 {
                     if (id == (byte)SerializeId.Id)
                     {
-                        byte[] buffer = new byte[rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.Id = buffer;
+                        this.Id = ItemUtility.GetByteArray(rangeStream);
                     }
 
                     else if (id == (byte)SerializeId.Uri)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ProtectedUris.Add(reader.ReadToEnd());
-                        }
+                        this.ProtectedUris.Add(ItemUtility.GetString(rangeStream));
                     }
                 }
             }
@@ -69,37 +62,17 @@ namespace Library.Net.Amoeba
         protected override Stream Export(BufferManager bufferManager, int count)
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
-            Encoding encoding = new UTF8Encoding(false);
 
             // Id
             if (this.Id != null)
             {
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Id.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Id);
-                bufferStream.Write(this.Id, 0, this.Id.Length);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Id, this.Id);
             }
 
             // Uris
             foreach (var value in this.Uris)
             {
-                byte[] buffer = null;
-
-                try
-                {
-                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Uri);
-                    bufferStream.Write(buffer, 0, length);
-                }
-                finally
-                {
-                    if (buffer != null)
-                    {
-                        bufferManager.ReturnBuffer(buffer);
-                    }
-                }
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Uri, value);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);

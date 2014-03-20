@@ -12,7 +12,7 @@ using Library.Collections;
 namespace Library.UnitTest
 {
     [DataContract(Name = "D_Box", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class D_Box : CertificateItemBase<D_Box>, IThisLock
+    public sealed class D_Box : MutableCertificateItemBase<D_Box>, IThisLock
     {
         private enum SerializeId : byte
         {

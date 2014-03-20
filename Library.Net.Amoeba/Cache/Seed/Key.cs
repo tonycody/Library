@@ -34,7 +34,6 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            Encoding encoding = new UTF8Encoding(false);
             byte[] lengthBuffer = new byte[4];
 
             for (; ; )
@@ -47,18 +46,12 @@ namespace Library.Net.Amoeba
                 {
                     if (id == (byte)SerializeId.Hash)
                     {
-                        byte[] buffer = new byte[rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.Hash = buffer;
+                        this.Hash = ItemUtility.GetByteArray(rangeStream);
                     }
 
                     else if (id == (byte)SerializeId.HashAlgorithm)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), reader.ReadToEnd());
-                        }
+                        this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), ItemUtility.GetString(rangeStream));
                     }
                 }
             }
@@ -67,39 +60,17 @@ namespace Library.Net.Amoeba
         protected override Stream Export(BufferManager bufferManager, int count)
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
-            Encoding encoding = new UTF8Encoding(false);
 
             // Hash
             if (this.Hash != null)
             {
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.Hash.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.Hash);
-                bufferStream.Write(this.Hash, 0, this.Hash.Length);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Hash, this.Hash);
             }
 
             // HashAlgorithm
             if (this.HashAlgorithm != 0)
             {
-                byte[] buffer = null;
-
-                try
-                {
-                    var value = this.HashAlgorithm.ToString();
-
-                    buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                    var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                    bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.HashAlgorithm);
-                    bufferStream.Write(buffer, 0, length);
-                }
-                finally
-                {
-                    if (buffer != null)
-                    {
-                        bufferManager.ReturnBuffer(buffer);
-                    }
-                }
+                ItemUtility.Write(bufferStream, (byte)SerializeId.HashAlgorithm, this.HashAlgorithm.ToString());
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);

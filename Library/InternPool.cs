@@ -6,22 +6,22 @@ using System.Threading;
 
 namespace Library
 {
-    public class InternPool<T>
+    public class InternPool<TKey, TValue>
     {
         private System.Threading.Timer _watchTimer;
-        private Dictionary<T, Info<T>> _dic;
+        private Dictionary<TKey, Info<TValue>> _dic;
         private readonly object _thisLock = new object();
 
         public InternPool()
         {
             _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
-            _dic = new Dictionary<T, Info<T>>();
+            _dic = new Dictionary<TKey, Info<TValue>>();
         }
 
-        public InternPool(IEqualityComparer<T> comparer)
+        public InternPool(IEqualityComparer<TKey> comparer)
         {
             _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
-            _dic = new Dictionary<T, Info<T>>(comparer);
+            _dic = new Dictionary<TKey, Info<TValue>>(comparer);
         }
 
         private void WatchTimer(object state)
@@ -41,7 +41,7 @@ namespace Library
         {
             lock (_thisLock)
             {
-                List<T> list = null;
+                List<TKey> list = null;
 
                 foreach (var pair in _dic)
                 {
@@ -51,7 +51,7 @@ namespace Library
                     if (info.Count == 0)
                     {
                         if (list == null)
-                            list = new List<T>();
+                            list = new List<TKey>();
 
                         list.Add(key);
                     }
@@ -67,16 +67,16 @@ namespace Library
             }
         }
 
-        public T GetValue(T target, object holder)
+        public TValue GetValue(TKey key, TValue value, object holder)
         {
             lock (_thisLock)
             {
-                Info<T> info;
+                Info<TValue> info;
 
-                if (!_dic.TryGetValue(target, out info))
+                if (!_dic.TryGetValue(key, out info))
                 {
-                    info = new Info<T>(target);
-                    _dic[target] = info;
+                    info = new Info<TValue>(value);
+                    _dic[key] = info;
                 }
 
                 info.Add(holder);

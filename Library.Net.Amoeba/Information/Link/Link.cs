@@ -31,7 +31,6 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -44,10 +43,7 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.TrustSignature)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.TrustSignatures.Add(reader.ReadToEnd());
-                            }
+                            this.TrustSignatures.Add(ItemUtility.GetString(rangeStream));
                         }
                     }
                 }
@@ -59,29 +55,11 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // TrustSignatures
                 foreach (var value in this.TrustSignatures)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.TrustSignature);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.TrustSignature, value);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);

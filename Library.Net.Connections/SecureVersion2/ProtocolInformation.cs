@@ -36,7 +36,6 @@ namespace Library.Net.Connections.SecureVersion2
         {
             lock (this.ThisLock)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -49,38 +48,23 @@ namespace Library.Net.Connections.SecureVersion2
                     {
                         if (id == (byte)SerializeId.KeyExchangeAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.KeyExchangeAlgorithm = EnumEx<KeyExchangeAlgorithm>.Parse(reader.ReadToEnd());
-                            }
+                            this.KeyExchangeAlgorithm = EnumEx<KeyExchangeAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.KeyDerivationFunctionAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.KeyDerivationFunctionAlgorithm = EnumEx<KeyDerivationFunctionAlgorithm>.Parse(reader.ReadToEnd());
-                            }
+                            this.KeyDerivationFunctionAlgorithm = EnumEx<KeyDerivationFunctionAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.CryptoAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CryptoAlgorithm = EnumEx<CryptoAlgorithm>.Parse(reader.ReadToEnd());
-                            }
+                            this.CryptoAlgorithm = EnumEx<CryptoAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.HashAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.HashAlgorithm = EnumEx<HashAlgorithm>.Parse(reader.ReadToEnd());
-                            }
+                            this.HashAlgorithm = EnumEx<HashAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.SessionId)
                         {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.SessionId = buffer;
+                            this.SessionId = ItemUtility.GetByteArray(rangeStream);
                         }
                     }
                 }
@@ -92,110 +76,31 @@ namespace Library.Net.Connections.SecureVersion2
             lock (this.ThisLock)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // KeyExchangeAlgorithm
                 if (this.KeyExchangeAlgorithm != 0)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.KeyExchangeAlgorithm.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.KeyExchangeAlgorithm);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.KeyExchangeAlgorithm, this.KeyExchangeAlgorithm.ToString());
                 }
                 // KeyDerivationFunctionAlgorithm
                 if (this.KeyDerivationFunctionAlgorithm != 0)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.KeyDerivationFunctionAlgorithm.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.KeyDerivationFunctionAlgorithm);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.KeyDerivationFunctionAlgorithm, this.KeyDerivationFunctionAlgorithm.ToString());
                 }
                 // CryptoAlgorithm
                 if (this.CryptoAlgorithm != 0)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.CryptoAlgorithm.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.CryptoAlgorithm);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
                 }
                 // HashAlgorithm
                 if (this.HashAlgorithm != 0)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.HashAlgorithm.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.HashAlgorithm);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.HashAlgorithm, this.HashAlgorithm.ToString());
                 }
                 // SessionId
                 if (this.SessionId != null)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.SessionId.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.SessionId);
-                    bufferStream.Write(this.SessionId, 0, this.SessionId.Length);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.SessionId, this.SessionId);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);

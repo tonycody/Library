@@ -31,7 +31,6 @@ namespace Library.Security
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            Encoding encoding = new UTF8Encoding(false);
             byte[] lengthBuffer = new byte[4];
 
             for (; ; )
@@ -44,17 +43,11 @@ namespace Library.Security
                 {
                     if (id == (byte)SerializeId.ExchangeAlgorithm)
                     {
-                        using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                        {
-                            this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), reader.ReadToEnd());
-                        }
+                        this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), ItemUtility.GetString(rangeStream));
                     }
                     else if (id == (byte)SerializeId.PrivateKey)
                     {
-                        byte[] buffer = new byte[(int)rangeStream.Length];
-                        rangeStream.Read(buffer, 0, buffer.Length);
-
-                        this.PrivateKey = buffer;
+                        this.PrivateKey = ItemUtility.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -62,40 +55,21 @@ namespace Library.Security
 
         protected override Stream Export(BufferManager bufferManager, int count)
         {
-            List<Stream> streams = new List<Stream>();
-            Encoding encoding = new UTF8Encoding(false);
+            BufferStream bufferStream = new BufferStream(bufferManager);
 
             // ExchangeAlgorithm
             if (this.ExchangeAlgorithm != 0)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.SetLength(5);
-                bufferStream.Seek(5, SeekOrigin.Begin);
-
-                using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                {
-                    writer.Write(this.ExchangeAlgorithm.ToString());
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.ExchangeAlgorithm);
-
-                streams.Add(bufferStream);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.ExchangeAlgorithm, this.ExchangeAlgorithm.ToString());
             }
             // PrivateKey
             if (this.PrivateKey != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-                bufferStream.Write(NetworkConverter.GetBytes((int)this.PrivateKey.Length), 0, 4);
-                bufferStream.WriteByte((byte)SerializeId.PrivateKey);
-                bufferStream.Write(this.PrivateKey, 0, this.PrivateKey.Length);
-
-                streams.Add(bufferStream);
+                ItemUtility.Write(bufferStream, (byte)SerializeId.PrivateKey, this.PrivateKey);
             }
 
-            return new UniteStream(streams);
+            bufferStream.Seek(0, SeekOrigin.Begin);
+            return bufferStream;
         }
 
         public override int GetHashCode()

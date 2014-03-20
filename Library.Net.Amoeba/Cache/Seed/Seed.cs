@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     [DataContract(Name = "Seed", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class Seed : CertificateItemBase<Seed>, ISeed<Key>, ICloneable<Seed>, IThisLock
+    public sealed class Seed : MutableCertificateItemBase<Seed>, ISeed<Key>, ICloneable<Seed>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -67,7 +67,6 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -80,42 +79,23 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Name)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Name = reader.ReadToEnd();
-                            }
+                            this.Name = ItemUtility.GetString(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Length)
                         {
-                            byte[] buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
-                            rangeStream.Read(buffer, 0, 8);
-
-                            this.Length = NetworkConverter.ToInt64(buffer);
-
-                            bufferManager.ReturnBuffer(buffer);
+                            this.Length = ItemUtility.GetLong(rangeStream);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                            }
+                            this.CreationTime = DateTime.ParseExact(ItemUtility.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                         else if (id == (byte)SerializeId.Comment)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Comment = reader.ReadToEnd();
-                            }
+                            this.Comment = ItemUtility.GetString(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Rank)
                         {
-                            byte[] buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
-                            rangeStream.Read(buffer, 0, 4);
-
-                            this.Rank = NetworkConverter.ToInt32(buffer);
-
-                            bufferManager.ReturnBuffer(buffer);
+                            this.Rank = ItemUtility.GetInt(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Key)
                         {
@@ -124,33 +104,21 @@ namespace Library.Net.Amoeba
 
                         else if (id == (byte)SerializeId.Keyword)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.Keywords.Add(reader.ReadToEnd());
-                            }
+                            this.Keywords.Add(ItemUtility.GetString(rangeStream));
                         }
 
                         else if (id == (byte)SerializeId.CompressionAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), reader.ReadToEnd());
-                            }
+                            this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), ItemUtility.GetString(rangeStream));
                         }
 
                         else if (id == (byte)SerializeId.CryptoAlgorithm)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), reader.ReadToEnd());
-                            }
+                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), ItemUtility.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.CryptoKey)
                         {
-                            byte[] buffer = new byte[(int)rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.CryptoKey = buffer;
+                            this.CryptoKey = ItemUtility.GetByteArray(rangeStream);
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -167,223 +135,70 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // Name
                 if (this.Name != null)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.Name.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Name);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.Name, this.Name);
                 }
                 // Length
                 if (this.Length != 0)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)8), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Length);
-                    bufferStream.Write(NetworkConverter.GetBytes(this.Length), 0, 8);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.Length, this.Length);
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.CreationTime);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
                 // Comment
                 if (this.Comment != null)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.Comment.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Comment);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
                 }
                 // Rank
                 if (this.Rank != 0)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)4), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Rank);
-                    bufferStream.Write(NetworkConverter.GetBytes(this.Rank), 0, 4);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.Rank, this.Rank);
                 }
                 // Key
                 if (this.Key != null)
                 {
-                    using (Stream exportStream = this.Key.Export(bufferManager))
+                    using (var stream = this.Key.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Key);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
                 // Keywords
                 foreach (var value in this.Keywords)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Keyword);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.Keyword, value);
                 }
 
                 // CompressionAlgorithm
                 if (this.CompressionAlgorithm != 0)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.CompressionAlgorithm.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.CompressionAlgorithm);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CompressionAlgorithm, this.CompressionAlgorithm.ToString());
                 }
 
                 // CryptoAlgorithm
                 if (this.CryptoAlgorithm != 0)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.CryptoAlgorithm.ToString();
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.CryptoAlgorithm);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
                 }
                 // CryptoKey
                 if (this.CryptoKey != null)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.CryptoKey.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CryptoKey);
-                    bufferStream.Write(this.CryptoKey, 0, this.CryptoKey.Length);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoKey, this.CryptoKey);
                 }
 
                 // Certificate
                 if (this.Certificate != null)
                 {
-                    using (Stream exportStream = this.Certificate.Export(bufferManager))
+                    using (var stream = this.Certificate.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Certificate);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Certificate, stream);
                     }
                 }
 

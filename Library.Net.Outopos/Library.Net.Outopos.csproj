@@ -8,8 +8,8 @@
     <ProjectGuid>{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Library.Net.Lair</RootNamespace>
-    <AssemblyName>Library.Net.Lair</AssemblyName>
+    <RootNamespace>Library.Net.Outopos</RootNamespace>
+    <AssemblyName>Library.Net.Outopos</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -96,71 +96,37 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cache\Content\Anchor.cs" />
+    <Compile Include="Cache\Content\AnchorCollection.cs" />
     <Compile Include="Cache\CacheManager.cs" />
-    <Compile Include="Cache\Anchor.cs" />
-    <Compile Include="Cache\AnchorCollection.cs" />
-    <Compile Include="Cache\Header\Chat\ChatMessageHeader.cs" />
-    <Compile Include="Cache\Header\Section\SectionProfileHeader.cs" />
-    <Compile Include="Cache\Header\Wiki\WikiPageHeader.cs" />
-    <Compile Include="Cache\Header\Chat\Chat.cs" />
-    <Compile Include="Cache\Header\Chat\ChatCollection.cs" />
-    <Compile Include="Cache\Header\Chat\ChatTopicHeader.cs" />
-    <Compile Include="Cache\Header\Wiki\Wiki.cs" />
-    <Compile Include="Cache\Header\Wiki\WikiCollection.cs" />
-    <Compile Include="Cache\Header\Wiki\WikiVoteHeader.cs" />
-    <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
-    <Compile Include="Cache\Header\Section\SectionCollection.cs" />
-    <Compile Include="Cache\Header\Section\Section.cs" />
-    <Compile Include="Cache\Key.cs" />
-    <Compile Include="Cache\KeyCollection.cs" />
+    <Compile Include="Cache\Header\Header.cs" />
+    <Compile Include="Cache\Header\Tag.cs" />
+    <Compile Include="Cache\Header\Key.cs" />
+    <Compile Include="Cache\Header\KeyCollection.cs" />
+    <Compile Include="Cache\Index\Index.cs" />
     <Compile Include="Cache\OutoposConverter.cs" />
+    <Compile Include="Cache\_Interface\Content\IAnchor.cs" />
     <Compile Include="Cache\_Interface\IComputeHash.cs" />
-    <Compile Include="Information\Content\ChatMessageContent.cs" />
-    <Compile Include="Information\Content\ChatTopicContent.cs" />
-    <Compile Include="Information\Content\SectionMessageContent.cs" />
-    <Compile Include="Information\Content\SectionProfileContent.cs" />
-    <Compile Include="Information\Content\WikiPageContent.cs" />
-    <Compile Include="Information\Content\WikiVoteContent.cs" />
-    <Compile Include="Information\_Interface\Content\IChatMessageContent.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Information\_Interface\Content\IChatTopicContent.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Information\_Interface\Content\IWikiPageContent.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Information\_Interface\Content\IWikiVoteContent.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Information\_Interface\Content\ISectionMessageContent.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Information\_Interface\Content\ISectionProfileContent.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Cache\_Interface\IAnchor.cs" />
-    <Compile Include="Cache\_Interface\IHashAlgorithm.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Cache\_Interface\IHeader.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Cache\_Interface\IKey.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Cache\_Interface\ITag.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Information\IHypertext.cs" />
+    <Compile Include="Cache\_Interface\Index\IIndex.cs" />
+    <Compile Include="Cache\_Interface\Index\ITag.cs" />
+    <Compile Include="Cache\_Interface\IHashAlgorithm.cs" />
+    <Compile Include="Cache\_Interface\Header\IHeader.cs" />
+    <Compile Include="Cache\_Interface\Header\IKey.cs" />
     <Compile Include="ContentConverter.cs" />
-    <Compile Include="OutoposManager.cs" />
+    <Compile Include="Information\ChatMessage.cs" />
+    <Compile Include="Information\ChatTopic.cs" />
+    <Compile Include="Information\_Interface\IMessage.cs" />
+    <Compile Include="Information\SectionMessage.cs" />
+    <Compile Include="Information\SectionProfile.cs" />
+    <Compile Include="Information\WikiPage.cs" />
+    <Compile Include="Information\WikiVote.cs" />
+    <Compile Include="LairManager.cs" />
+    <Compile Include="Tools\ItemUtility.cs" />
     <Compile Include="UploadItem.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="EqualityComparer.cs" />
     <Compile Include="CriterionCollection.cs" />
-    <Compile Include="ClientManager.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
@@ -170,7 +136,6 @@
     <Compile Include="Tools\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerManager.cs" />
     <Compile Include="NodeCollection.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="ProtocolVersion.cs" />
@@ -228,9 +193,14 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Properties\Library.Net.Outopos.License" />
-    <None Include="Properties\Library.Net.Outopos.readme" />
+    <Content Include="Properties\Library.Net.Outopos.License">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Properties\Library.Net.Outopos.Readme">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

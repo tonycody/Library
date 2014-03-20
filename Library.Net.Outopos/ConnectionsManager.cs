@@ -4,16 +4,17 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Library.Collections;
+using Library.Net.Caps;
 using Library.Net.Connections;
 
 namespace Library.Net.Outopos
 {
     public delegate IEnumerable<Criterion> GetCriteriaEventHandler(object sender);
+    public delegate CapBase AcceptCapEventHandler(object sender, out string uri);
+    public delegate CapBase CreateCapEventHandler(object sender, string uri);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
-        private ClientManager _clientManager;
-        private ServerManager _serverManager;
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 

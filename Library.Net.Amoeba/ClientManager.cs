@@ -18,6 +18,9 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
+        private Regex _regex = new Regex(@"(.*?):(.*):(\d*)", RegexOptions.Compiled);
+        private Regex _regex2 = new Regex(@"(.*?):(.*)", RegexOptions.Compiled);
+
         private CreateCapEventHandler _createConnectionEvent;
 
         private volatile bool _disposed;
@@ -267,8 +270,7 @@ namespace Library.Net.Amoeba
                     int port = -1;
 
                     {
-                        Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                        var match = regex.Match(uri);
+                        var match = _regex.Match(uri);
 
                         if (match.Success)
                         {
@@ -278,8 +280,7 @@ namespace Library.Net.Amoeba
                         }
                         else
                         {
-                            Regex regex2 = new Regex(@"(.*?):(.*)");
-                            var match2 = regex2.Match(uri);
+                            var match2 = _regex2.Match(uri);
 
                             if (match2.Success)
                             {
@@ -302,56 +303,56 @@ namespace Library.Net.Amoeba
                     if (connectionFilter.ConnectionType == ConnectionType.Tcp)
                     {
 #if !DEBUG
-                    {
-                        Uri url = new Uri(string.Format("{0}://{1}:{2}", scheme, host, port));
-
-                        if (url.HostNameType == UriHostNameType.IPv4)
                         {
-                            var myIpAddress = IPAddress.Parse(url.Host);
+                            Uri url = new Uri(string.Format("{0}://{1}:{2}", scheme, host, port));
 
-                            if (IPAddress.Any.ToString() == myIpAddress.ToString()
-                                || IPAddress.Loopback.ToString() == myIpAddress.ToString()
-                                || IPAddress.Broadcast.ToString() == myIpAddress.ToString())
+                            if (url.HostNameType == UriHostNameType.IPv4)
                             {
-                                return null;
+                                var myIpAddress = IPAddress.Parse(url.Host);
+
+                                if (IPAddress.Any.ToString() == myIpAddress.ToString()
+                                    || IPAddress.Loopback.ToString() == myIpAddress.ToString()
+                                    || IPAddress.Broadcast.ToString() == myIpAddress.ToString())
+                                {
+                                    return null;
+                                }
+                                if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("10.0.0.0").GetAddressBytes()) >= 0
+                                    && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("10.255.255.255").GetAddressBytes()) <= 0)
+                                {
+                                    return null;
+                                }
+                                if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("172.16.0.0").GetAddressBytes()) >= 0
+                                    && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("172.31.255.255").GetAddressBytes()) <= 0)
+                                {
+                                    return null;
+                                }
+                                if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("127.0.0.0").GetAddressBytes()) >= 0
+                                    && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("127.255.255.255").GetAddressBytes()) <= 0)
+                                {
+                                    return null;
+                                }
+                                if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("192.168.0.0").GetAddressBytes()) >= 0
+                                    && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("192.168.255.255").GetAddressBytes()) <= 0)
+                                {
+                                    return null;
+                                }
                             }
-                            if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("10.0.0.0").GetAddressBytes()) >= 0
-                                && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("10.255.255.255").GetAddressBytes()) <= 0)
+                            else if (url.HostNameType == UriHostNameType.IPv6)
                             {
-                                return null;
-                            }
-                            if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("172.16.0.0").GetAddressBytes()) >= 0
-                                && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("172.31.255.255").GetAddressBytes()) <= 0)
-                            {
-                                return null;
-                            }
-                            if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("127.0.0.0").GetAddressBytes()) >= 0
-                                && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("127.255.255.255").GetAddressBytes()) <= 0)
-                            {
-                                return null;
-                            }
-                            if (Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("192.168.0.0").GetAddressBytes()) >= 0
-                                && Collection.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("192.168.255.255").GetAddressBytes()) <= 0)
-                            {
-                                return null;
+                                var myIpAddress = IPAddress.Parse(url.Host);
+
+                                if (IPAddress.IPv6Any.ToString() == myIpAddress.ToString()
+                                    || IPAddress.IPv6Loopback.ToString() == myIpAddress.ToString()
+                                    || IPAddress.IPv6None.ToString() == myIpAddress.ToString())
+                                {
+                                    return null;
+                                }
+                                if (myIpAddress.ToString().ToLower().StartsWith("fe80:"))
+                                {
+                                    return null;
+                                }
                             }
                         }
-                        else if (url.HostNameType == UriHostNameType.IPv6)
-                        {
-                            var myIpAddress = IPAddress.Parse(url.Host);
-
-                            if (IPAddress.IPv6Any.ToString() == myIpAddress.ToString()
-                                || IPAddress.IPv6Loopback.ToString() == myIpAddress.ToString()
-                                || IPAddress.IPv6None.ToString() == myIpAddress.ToString())
-                            {
-                                return null;
-                            }
-                            if (myIpAddress.ToString().ToLower().StartsWith("fe80:"))
-                            {
-                                return null;
-                            }
-                        }
-                    }
 #endif
                         var socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
                         garbages.Add(socket);
@@ -369,8 +370,7 @@ namespace Library.Net.Amoeba
                         int proxyPort = -1;
 
                         {
-                            Regex regex = new Regex(@"(.*?):(.*):(\d*)");
-                            var match = regex.Match(connectionFilter.ProxyUri);
+                            var match = _regex.Match(connectionFilter.ProxyUri);
 
                             if (match.Success)
                             {
@@ -380,8 +380,7 @@ namespace Library.Net.Amoeba
                             }
                             else
                             {
-                                Regex regex2 = new Regex(@"(.*?):(.*)");
-                                var match2 = regex2.Match(connectionFilter.ProxyUri);
+                                var match2 = _regex2.Match(connectionFilter.ProxyUri);
 
                                 if (match2.Success)
                                 {

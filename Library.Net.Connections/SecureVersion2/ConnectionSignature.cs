@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Connections.SecureVersion2
 {
     [DataContract(Name = "ConnectionSignature", Namespace = "http://Library/Net/Connection/SecureVersion2")]
-    sealed class ConnectionSignature : CertificateItemBase<ConnectionSignature>, ICloneable<ConnectionSignature>, IThisLock
+    sealed class ConnectionSignature : MutableCertificateItemBase<ConnectionSignature>, ICloneable<ConnectionSignature>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -44,7 +44,6 @@ namespace Library.Net.Connections.SecureVersion2
         {
             lock (this.ThisLock)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -57,31 +56,19 @@ namespace Library.Net.Connections.SecureVersion2
                     {
                         if (id == (byte)SerializeId.CreationTime)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                            }
+                            this.CreationTime = DateTime.ParseExact(ItemUtility.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                         if (id == (byte)SerializeId.ExchangeKey)
                         {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.ExchangeKey = buffer;
+                            this.ExchangeKey = ItemUtility.GetByteArray(rangeStream);
                         }
                         if (id == (byte)SerializeId.MyProtocolHash)
                         {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.MyProtocolHash = buffer;
+                            this.MyProtocolHash = ItemUtility.GetByteArray(rangeStream);
                         }
                         if (id == (byte)SerializeId.OtherProtocolHash)
                         {
-                            byte[] buffer = new byte[rangeStream.Length];
-                            rangeStream.Read(buffer, 0, buffer.Length);
-
-                            this.OtherProtocolHash = buffer;
+                            this.OtherProtocolHash = ItemUtility.GetByteArray(rangeStream);
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -98,77 +85,34 @@ namespace Library.Net.Connections.SecureVersion2
             lock (this.ThisLock)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        var value = this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.CreationTime);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
                 // ExchangeKey
                 if (this.ExchangeKey != null)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.ExchangeKey.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.ExchangeKey);
-                    bufferStream.Write(this.ExchangeKey, 0, this.ExchangeKey.Length);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.ExchangeKey, this.ExchangeKey);
                 }
                 // MyProtocolHash
                 if (this.MyProtocolHash != null)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.MyProtocolHash.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.MyProtocolHash);
-                    bufferStream.Write(this.MyProtocolHash, 0, this.MyProtocolHash.Length);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.MyProtocolHash, this.MyProtocolHash);
                 }
                 // OtherProtocolHash
                 if (this.OtherProtocolHash != null)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.OtherProtocolHash.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.OtherProtocolHash);
-                    bufferStream.Write(this.OtherProtocolHash, 0, this.OtherProtocolHash.Length);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.OtherProtocolHash, this.OtherProtocolHash);
                 }
 
                 // Certificate
                 if (this.Certificate != null)
                 {
-                    using (Stream exportStream = this.Certificate.Export(bufferManager))
+                    using (var stream = this.Certificate.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Certificate);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Certificate, stream);
                     }
                 }
 

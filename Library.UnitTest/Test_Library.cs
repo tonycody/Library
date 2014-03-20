@@ -156,18 +156,14 @@ namespace Library.UnitTest
         [Test]
         public void Test_InternPool()
         {
-            var w = new WeakReference(new object());
-
-            InternPool<object> rt = new InternPool<object>();
+            //var w = new WeakReference(new object());
+            InternPool<int, object> rt = new InternPool<int, object>();
 
             {
-                var value1 = new Uri("http://test");
-                var value2 = new Uri("http://test");
+                var target1 = rt.GetValue(1, new object(), new object()); // Set
+                var target2 = rt.GetValue(1, new object(), new object());
 
-                rt.GetValue(value1, new object()); // Set
-                var target = rt.GetValue(value2, new object());
-
-                Assert.IsTrue(object.ReferenceEquals(value1, target));
+                Assert.IsTrue(object.ReferenceEquals(target1, target2));
             }
 
             System.GC.Collect();
@@ -176,15 +172,6 @@ namespace Library.UnitTest
 
             rt.Refresh();
             Assert.IsTrue(rt.Count == 0);
-
-            {
-                var value3 = new Uri("http://test");
-
-                rt.GetValue(value3, new object()); // Set
-                var target = rt.GetValue(value3, new object());
-
-                Assert.IsTrue(object.ReferenceEquals(value3, target));
-            }
         }
     }
 }

@@ -80,7 +80,7 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    var cachedkeys = new HashSet<Key>();
+                    var cachedkeys = new SortedKeys();
 
                     {
                         cachedkeys.UnionWith(_settings.ClustersIndex.Keys);
@@ -91,7 +91,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    var usingKeys = new HashSet<Key>();
+                    var usingKeys = new SortedKeys();
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
                     foreach (var info in _settings.SeedInformation)

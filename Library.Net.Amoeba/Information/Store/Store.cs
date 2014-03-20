@@ -57,26 +57,9 @@ namespace Library.Net.Amoeba
                 // Boxes
                 foreach (var value in this.Boxes)
                 {
-                    using (Stream exportStream = value.Export(bufferManager))
+                    using (var stream = value.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Box);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Box, stream);
                     }
                 }
 

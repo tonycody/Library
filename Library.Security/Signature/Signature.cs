@@ -9,7 +9,7 @@ namespace Library.Security
 {
     public static class Signature
     {
-        private static InternPool<string> _signatureCache = new InternPool<string>();
+        private static InternPool<byte[], string> _signatureCache = new InternPool<byte[], string>(new ByteArrayEqualityComparer());
         private static ConditionalWeakTable<string, byte[]> _signatureHashCache = new ConditionalWeakTable<string, byte[]>();
         private static object _signatureHashCacheLockObject = new object();
 
@@ -34,7 +34,7 @@ namespace Library.Security
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
                         var signature = digitalSignature.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
-                        return _signatureCache.GetValue(signature, digitalSignature);
+                        return _signatureCache.GetValue(Sha512.ComputeHash(signature), signature, digitalSignature);
                     }
                 }
             }
@@ -64,7 +64,7 @@ namespace Library.Security
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
                         var signature = certificate.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
-                        return _signatureCache.GetValue(signature, certificate);
+                        return _signatureCache.GetValue(Sha512.ComputeHash(signature), signature, certificate);
                     }
                 }
             }
