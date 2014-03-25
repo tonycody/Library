@@ -31,50 +31,51 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            var tcpClient = new BaseConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-            var tcpServer = new BaseConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-
-            using (MemoryStream stream = new MemoryStream())
+            using (var baseClient = new BaseConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
+            using (var baseServer = new BaseConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager))
             {
-                var buffer = new byte[1024 * 8];
-                _random.NextBytes(buffer);
-
-                stream.Write(buffer, 0, buffer.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-
-                var clientSendTask = tcpClient.SendAsync(stream, new TimeSpan(0, 0, 20));
-                var serverReceiveTask = tcpServer.ReceiveAsync(new TimeSpan(0, 0, 20));
-
-                Task.WaitAll(clientSendTask, serverReceiveTask);
-
-                using (var returnStream = serverReceiveTask.Result)
+                using (MemoryStream stream = new MemoryStream())
                 {
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
+                    var buffer = new byte[1024 * 8];
+                    _random.NextBytes(buffer);
 
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "BaseConnection #1");
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    var clientSendTask = baseClient.SendAsync(stream, new TimeSpan(0, 0, 20));
+                    var serverReceiveTask = baseServer.ReceiveAsync(new TimeSpan(0, 0, 20));
+
+                    Task.WaitAll(clientSendTask, serverReceiveTask);
+
+                    using (var returnStream = serverReceiveTask.Result)
+                    {
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
+
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "BaseConnection #1");
+                    }
                 }
-            }
 
-            using (MemoryStream stream = new MemoryStream())
-            {
-                var buffer = new byte[1024 * 8];
-                _random.NextBytes(buffer);
-
-                stream.Write(buffer, 0, buffer.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-
-                var serverSendTask = tcpServer.SendAsync(stream, new TimeSpan(0, 0, 20));
-                var clientReceiveTask = tcpClient.ReceiveAsync(new TimeSpan(0, 0, 20));
-
-                Task.WaitAll(serverSendTask, clientReceiveTask);
-
-                using (var returnStream = clientReceiveTask.Result)
+                using (MemoryStream stream = new MemoryStream())
                 {
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
+                    var buffer = new byte[1024 * 8];
+                    _random.NextBytes(buffer);
 
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "BaseConnection #2");
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    var serverSendTask = baseServer.SendAsync(stream, new TimeSpan(0, 0, 20));
+                    var clientReceiveTask = baseClient.ReceiveAsync(new TimeSpan(0, 0, 20));
+
+                    Task.WaitAll(serverSendTask, clientReceiveTask);
+
+                    using (var returnStream = clientReceiveTask.Result)
+                    {
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
+
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "BaseConnection #2");
+                    }
                 }
             }
 
@@ -95,50 +96,51 @@ namespace Library.UnitTest
             var server = listener.EndAcceptSocket(listenerAcceptSocket);
             listener.Stop();
 
-            var crcClient = new CrcConnection(new BaseConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
-            var crcServer = new CrcConnection(new BaseConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager);
-
-            using (MemoryStream stream = new MemoryStream())
+            using (var crcClient = new CrcConnection(new BaseConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager))
+            using (var crcServer = new CrcConnection(new BaseConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), _bufferManager))
             {
-                var buffer = new byte[1024 * 8];
-                _random.NextBytes(buffer);
-
-                stream.Write(buffer, 0, buffer.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-
-                var clientSendTask = crcClient.SendAsync(stream, new TimeSpan(0, 0, 20));
-                var serverReceiveTask = crcServer.ReceiveAsync(new TimeSpan(0, 0, 20));
-
-                Task.WaitAll(clientSendTask, serverReceiveTask);
-
-                using (var returnStream = serverReceiveTask.Result)
+                using (MemoryStream stream = new MemoryStream())
                 {
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
+                    var buffer = new byte[1024 * 8];
+                    _random.NextBytes(buffer);
 
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #1");
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    var clientSendTask = crcClient.SendAsync(stream, new TimeSpan(0, 0, 20));
+                    var serverReceiveTask = crcServer.ReceiveAsync(new TimeSpan(0, 0, 20));
+
+                    Task.WaitAll(clientSendTask, serverReceiveTask);
+
+                    using (var returnStream = serverReceiveTask.Result)
+                    {
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
+
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #1");
+                    }
                 }
-            }
 
-            using (MemoryStream stream = new MemoryStream())
-            {
-                var buffer = new byte[1024 * 8];
-                _random.NextBytes(buffer);
-
-                stream.Write(buffer, 0, buffer.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-
-                var serverSendTask = crcServer.SendAsync(stream, new TimeSpan(0, 0, 20));
-                var clientReceiveTask = crcClient.ReceiveAsync(new TimeSpan(0, 0, 20));
-
-                Task.WaitAll(serverSendTask, clientReceiveTask);
-
-                using (var returnStream = clientReceiveTask.Result)
+                using (MemoryStream stream = new MemoryStream())
                 {
-                    var buff2 = new byte[(int)returnStream.Length];
-                    returnStream.Read(buff2, 0, buff2.Length);
+                    var buffer = new byte[1024 * 8];
+                    _random.NextBytes(buffer);
 
-                    Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #2");
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    var serverSendTask = crcServer.SendAsync(stream, new TimeSpan(0, 0, 20));
+                    var clientReceiveTask = crcClient.ReceiveAsync(new TimeSpan(0, 0, 20));
+
+                    Task.WaitAll(serverSendTask, clientReceiveTask);
+
+                    using (var returnStream = clientReceiveTask.Result)
+                    {
+                        var buff2 = new byte[(int)returnStream.Length];
+                        returnStream.Read(buff2, 0, buff2.Length);
+
+                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #2");
+                    }
                 }
             }
 
