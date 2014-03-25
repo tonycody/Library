@@ -162,7 +162,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                foreach (var item in _uris)
+                foreach (var item in this.ProtectedUris)
                 {
                     yield return item;
                 }

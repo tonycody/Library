@@ -1021,7 +1021,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    foreach (var item in _nodes)
+                    foreach (var item in this.ProtectedNodes)
                     {
                         yield return item;
                     }
@@ -1123,7 +1123,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    foreach (var item in _keys)
+                    foreach (var item in this.ProtectedKeys)
                     {
                         yield return item;
                     }
@@ -1225,7 +1225,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    foreach (var item in _keys)
+                    foreach (var item in this.ProtectedKeys)
                     {
                         yield return item;
                     }
@@ -1457,7 +1457,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    foreach (var item in _signatures)
+                    foreach (var item in this.ProtectedSignatures)
                     {
                         yield return item;
                     }
@@ -1559,7 +1559,7 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    foreach (var item in _seeds)
+                    foreach (var item in this.ProtectedSeeds)
                     {
                         yield return item;
                     }

@@ -160,8 +160,8 @@ namespace Library.UnitTest
             InternPool<int, object> rt = new InternPool<int, object>();
 
             {
-                var target1 = rt.GetValue(1, new object(), new object()); // Set
-                var target2 = rt.GetValue(1, new object(), new object());
+                var target1 = rt.GetOrCreateValue(1, new object(), new object()); // Set
+                var target2 = rt.GetOrCreateValue(1, new object(), new object());
 
                 Assert.IsTrue(object.ReferenceEquals(target1, target2));
             }
