@@ -1,8 +1,9 @@
 
+using System.Collections.Generic;
 namespace Library.Net.Amoeba
 {
-   public interface IStore
+    public interface IStore
     {
-        BoxCollection Boxes { get; }
+        ICollection<Box> Boxes { get; }
     }
 }

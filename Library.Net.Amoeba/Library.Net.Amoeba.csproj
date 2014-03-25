@@ -84,7 +84,11 @@
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
-    <Compile Include="Tools\SortedKeys.cs" />
+    <Compile Include="Tools\LockedSortedKeyDictionary.cs" />
+    <Compile Include="Tools\LockedSortedStringDictionary.cs" />
+    <Compile Include="Tools\KeyComparer.cs" />
+    <Compile Include="Tools\LockedSortedStringSet.cs" />
+    <Compile Include="Tools\LockedSortedKeySet.cs" />
     <Compile Include="Tools\CountCache.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />

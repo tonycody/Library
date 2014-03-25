@@ -458,7 +458,7 @@ namespace Library.Net.Amoeba
 
         #region IKeywords
 
-        IList<string> IKeywords.Keywords
+        ICollection<string> IKeywords.Keywords
         {
             get
             {

@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public sealed class UriCollection : FilterList<string>, IEnumerable<string>
+    public sealed class UriCollection : LockedList<string>
     {
         public UriCollection() : base() { }
         public UriCollection(int capacity) : base(capacity) { }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using System.Windows.Forms;
 using System.Xml;
 using Library.Security;
@@ -134,7 +135,7 @@ namespace Library.Tool
                                 {
                                     var path = xml.GetAttribute("Include");
                                     string dependentUponBaseDirectory = Path.GetDirectoryName(path);
-                                    filePaths.Add(Path.Combine(baseDirectory, path));
+                                    filePaths.Add(HttpUtility.UrlDecode(Path.Combine(baseDirectory, path)));
 
                                     using (var xmlReader = xml.ReadSubtree())
                                     {
@@ -144,7 +145,7 @@ namespace Library.Tool
                                             {
                                                 if (xmlReader.LocalName == "DependentUpon")
                                                 {
-                                                    filePaths.Add(Path.Combine(Path.Combine(baseDirectory, dependentUponBaseDirectory), xml.ReadString()));
+                                                    filePaths.Add(HttpUtility.UrlDecode(Path.Combine(Path.Combine(baseDirectory, dependentUponBaseDirectory), xml.ReadString())));
                                                 }
                                             }
                                         }
@@ -611,7 +612,7 @@ namespace Library.Tool
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message, "Library.Tool Error", MessageBoxButtons.OK);
+                MessageBox.Show(e.StackTrace, "Library.Tool Error", MessageBoxButtons.OK);
             }
         }
 

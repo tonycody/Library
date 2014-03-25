@@ -1017,16 +1017,14 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            private volatile ReadOnlyCollection<Node> _readOnlyNodes;
-
             public IEnumerable<Node> Nodes
             {
                 get
                 {
-                    if (_readOnlyNodes == null)
-                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes);
-
-                    return _readOnlyNodes;
+                    foreach (var item in _nodes)
+                    {
+                        yield return item;
+                    }
                 }
             }
 
@@ -1121,16 +1119,14 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
-
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    if (_readOnlyKeys == null)
-                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
-
-                    return _readOnlyKeys;
+                    foreach (var item in _keys)
+                    {
+                        yield return item;
+                    }
                 }
             }
 
@@ -1225,16 +1221,14 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
-
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    if (_readOnlyKeys == null)
-                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
-
-                    return _readOnlyKeys;
+                    foreach (var item in _keys)
+                    {
+                        yield return item;
+                    }
                 }
             }
 
@@ -1459,16 +1453,14 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            private volatile ReadOnlyCollection<string> _readOnlySignatures;
-
             public IEnumerable<string> Signatures
             {
                 get
                 {
-                    if (_readOnlySignatures == null)
-                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
-
-                    return _readOnlySignatures;
+                    foreach (var item in _signatures)
+                    {
+                        yield return item;
+                    }
                 }
             }
 
@@ -1563,16 +1555,14 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            private volatile ReadOnlyCollection<Seed> _readOnlySeeds;
-
             public IEnumerable<Seed> Seeds
             {
                 get
                 {
-                    if (_readOnlySeeds == null)
-                        _readOnlySeeds = new ReadOnlyCollection<Seed>(this.ProtectedSeeds);
-
-                    return _readOnlySeeds;
+                    foreach (var item in _seeds)
+                    {
+                        yield return item;
+                    }
                 }
             }
 

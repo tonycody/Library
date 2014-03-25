@@ -315,6 +315,17 @@ namespace Library.Net.Amoeba
             }
         }
 
+        ICollection<Seed> IBox.Seeds
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this.Seeds;
+                }
+            }
+        }
+
         [DataMember(Name = "Seeds")]
         public SeedCollection Seeds
         {
@@ -326,6 +337,17 @@ namespace Library.Net.Amoeba
                         _seeds = new SeedCollection(Box.MaxSeedCount);
 
                     return _seeds;
+                }
+            }
+        }
+
+        ICollection<Box> IBox.Boxes
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this.Boxes;
                 }
             }
         }

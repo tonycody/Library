@@ -4,6 +4,6 @@ namespace Library.Net.Amoeba
 {
     public interface IKeywords
     {
-        IList<string> Keywords { get; }
+        ICollection<string> Keywords { get; }
     }
 }

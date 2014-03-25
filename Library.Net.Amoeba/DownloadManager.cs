@@ -22,7 +22,7 @@ namespace Library.Net.Amoeba
         private volatile Thread _decodeManagerThread;
         private string _workDirectory = Path.GetTempPath();
         private CountCache _countCache = new CountCache();
-        private Dictionary<int, DownloadItem> _ids = new Dictionary<int, DownloadItem>();
+        private SortedDictionary<int, DownloadItem> _ids = new SortedDictionary<int, DownloadItem>();
         private int _id;
 
         private ManagerState _state = ManagerState.Stop;

@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Library.Net.Amoeba
 {
@@ -7,15 +10,42 @@ namespace Library.Net.Amoeba
 
     sealed class CountCache
     {
-        private Dictionary<Group, GroupManager> _groupManagers = new Dictionary<Group, GroupManager>();
+        private System.Threading.Timer _watchTimer;
+        private ConditionalWeakTable<Group, GroupManager> _table = new ConditionalWeakTable<Group, GroupManager>();
+        private List<WeakReference> _groupManagers = new List<WeakReference>();
 
         private readonly object _thisLock = new object();
+
+        public CountCache()
+        {
+            _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
+        }
+
+        private void WatchTimer(object state)
+        {
+            this.Refresh();
+        }
+
+        private void Refresh()
+        {
+            lock (_thisLock)
+            {
+                for (int i = 0; i < _groupManagers.Count; )
+                {
+                    if (!_groupManagers[i].IsAlive) _groupManagers.RemoveAt(i);
+                    else i++;
+                }
+            }
+        }
 
         public void SetGroup(Group group)
         {
             lock (this.ThisLock)
             {
-                _groupManagers[group] = new GroupManager(group);
+                var groupManager = new GroupManager(group);
+
+                _table.Add(group, groupManager);
+                _groupManagers.Add(new WeakReference(groupManager));
             }
         }
 
@@ -23,9 +53,12 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                foreach (var m in _groupManagers.Values)
+                foreach (var weakReference in _groupManagers)
                 {
-                    m.SetState(key, state);
+                    var groupManager = weakReference.Target as GroupManager;
+                    if (groupManager == null) continue;
+
+                    groupManager.SetState(key, state);
                 }
             }
         }
@@ -35,13 +68,9 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 GroupManager groupManager;
+                if (!_table.TryGetValue(group, out groupManager)) throw new ArgumentException();
 
-                if (_groupManagers.TryGetValue(group, out groupManager))
-                {
-                    return groupManager.GetKeys(state);
-                }
-
-                return new Key[0];
+                return groupManager.GetKeys(state);
             }
         }
 
@@ -50,13 +79,9 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 GroupManager groupManager;
+                if (!_table.TryGetValue(group, out groupManager)) throw new ArgumentException();
 
-                if (_groupManagers.TryGetValue(group, out groupManager))
-                {
-                    return groupManager.GetCount(true);
-                }
-
-                return 0;
+                return groupManager.GetCount();
             }
         }
 
@@ -64,8 +89,8 @@ namespace Library.Net.Amoeba
         {
             private Group _group;
 
-            //private SortedList<Key, bool> _dic;
-            private Dictionary<Key, bool> _dic;
+            private LockedSortedKeyDictionary<bool> _dic;
+            //private Dictionary<Key, bool> _dic;
 
             private bool _isCached;
             private List<Key> _cacheTrueKeys;
@@ -75,8 +100,8 @@ namespace Library.Net.Amoeba
             {
                 _group = group;
 
-                //_dic = new SortedList<Key, bool>(new KeyComparer());
-                _dic = new Dictionary<Key, bool>();
+                _dic = new LockedSortedKeyDictionary<bool>();
+                //_dic = new Dictionary<Key, bool>();
 
                 foreach (var key in group.Keys)
                 {
@@ -111,7 +136,7 @@ namespace Library.Net.Amoeba
                 else return _cacheFalseKeys;
             }
 
-            public int GetCount(bool state)
+            public int GetCount()
             {
                 if (!_isCached)
                 {
@@ -120,26 +145,8 @@ namespace Library.Net.Amoeba
                     _isCached = true;
                 }
 
-                if (state) return _cacheTrueKeys.Count;
-                else return _cacheFalseKeys.Count;
+                return _cacheTrueKeys.Count;
             }
-
-            //class KeyComparer : IComparer<Key>
-            //{
-            //    public int Compare(Key x, Key y)
-            //    {
-            //        int c = x.HashAlgorithm.CompareTo(y.HashAlgorithm);
-            //        if (c != 0) return c;
-
-            //        // Unsafe
-            //        if (Unsafe.Equals(x.Hash, y.Hash)) return 0;
-
-            //        c = Collection.Compare(x.Hash, y.Hash);
-            //        if (c != 0) return c;
-
-            //        return 0;
-            //    }
-            //}
         }
 
         #region IThisLock

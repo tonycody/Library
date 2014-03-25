@@ -203,7 +203,7 @@ namespace Library.Security
                 }
                 else
                 {
-                    _nickname = _nicknameCache.GetValue(Sha512.ComputeHash(value), value, this);
+                    _nickname = _nicknameCache.GetOrCreateValue(Sha512.ComputeHash(value), value, this);
                     //_nickname = value;
                 }
             }
@@ -244,7 +244,7 @@ namespace Library.Security
                 }
                 else
                 {
-                    _publicKey = _publicKeyCache.GetValue(Sha512.ComputeHash(value), value, this);
+                    _publicKey = _publicKeyCache.GetOrCreateValue(Sha512.ComputeHash(value), value, this);
                     //_publicKey = value;
                 }
 

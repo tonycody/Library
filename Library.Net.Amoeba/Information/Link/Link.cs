@@ -4,6 +4,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 using Library.Security;
+using System.Linq;
 
 namespace Library.Net.Amoeba
 {
@@ -97,6 +98,17 @@ namespace Library.Net.Amoeba
         }
 
         #region ILink
+
+        ICollection<string> ILink.TrustSignatures
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this.TrustSignatures;
+                }
+            }
+        }
 
         [DataMember(Name = "TrustSignatures")]
         public SignatureCollection TrustSignatures

@@ -5,6 +5,6 @@ namespace Library.Net.Amoeba
     public interface IGroup<TKey> : ICorrectionAlgorithm
           where TKey : IKey
     {
-        IList<TKey> Keys { get; }
+        ICollection<TKey> Keys { get; }
     }
 }

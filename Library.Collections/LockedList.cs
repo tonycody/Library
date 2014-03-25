@@ -73,6 +73,11 @@ namespace Library.Collections
             }
         }
 
+        protected virtual bool Filter(T item)
+        {
+            return false;
+        }
+
         public T[] ToArray()
         {
             lock (this.ThisLock)
@@ -136,6 +141,7 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 if (_capacity != null && _list.Count > _capacity.Value) throw new OverflowException();
+                if (this.Filter(item)) return;
 
                 _list.Add(item);
             }
@@ -383,11 +389,11 @@ namespace Library.Collections
             }
         }
 
-        void ICollection.CopyTo(Array array, int arrayIndex)
+        void ICollection.CopyTo(Array array, int index)
         {
             lock (this.ThisLock)
             {
-                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+                ((ICollection)_list).CopyTo(array, index);
             }
         }
 

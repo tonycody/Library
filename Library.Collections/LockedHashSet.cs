@@ -5,8 +5,6 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    //public interface ISet<T> : ICollection<T>, IEnumerable<T>, IEnumerable { }
-
     public class LockedHashSet<T> : ISet<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private HashSet<T> _hashSet;
@@ -267,11 +265,11 @@ namespace Library.Collections
             }
         }
 
-        void ICollection.CopyTo(Array array, int arrayIndex)
+        void ICollection.CopyTo(Array array, int index)
         {
             lock (this.ThisLock)
             {
-                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+                ((ICollection)_hashSet).CopyTo(array, index);
             }
         }
 

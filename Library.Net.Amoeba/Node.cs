@@ -158,16 +158,14 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        private volatile ReadOnlyCollection<string> _readOnlyUris;
-
         public IEnumerable<string> Uris
         {
             get
             {
-                if (_readOnlyUris == null)
-                    _readOnlyUris = new ReadOnlyCollection<string>(this.ProtectedUris);
-
-                return _readOnlyUris;
+                foreach (var item in _uris)
+                {
+                    yield return item;
+                }
             }
         }
 

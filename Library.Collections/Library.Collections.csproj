@@ -58,10 +58,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="VolatileCollection.cs" />
-    <Compile Include="VolatileDictionary.cs" />
-    <Compile Include="FilterList.cs" />
-    <Compile Include="LockedDictionary.cs" />
+    <Compile Include="LockedSortedSet.cs" />
+    <Compile Include="LockedSortedDictionary.cs" />
+    <Compile Include="VolatileHashSet.cs" />
+    <Compile Include="VolatileHashDictionary.cs" />
+    <Compile Include="LockedHashDictionary.cs" />
     <Compile Include="LockedHashSet.cs" />
     <Compile Include="LockedList.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

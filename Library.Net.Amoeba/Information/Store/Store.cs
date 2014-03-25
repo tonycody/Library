@@ -99,6 +99,17 @@ namespace Library.Net.Amoeba
 
         #region IStore
 
+        ICollection<Box> IStore.Boxes
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return this.Boxes;
+                }
+            }
+        }
+
         [DataMember(Name = "Boxes")]
         public BoxCollection Boxes
         {

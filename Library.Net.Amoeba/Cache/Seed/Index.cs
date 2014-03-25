@@ -153,7 +153,7 @@ namespace Library.Net.Amoeba
 
         #region IIndex<Group, Header>
 
-        IList<Group> IIndex<Group, Key>.Groups
+        ICollection<Group> IIndex<Group, Key>.Groups
         {
             get
             {

@@ -6,6 +6,6 @@ namespace Library.Net.Amoeba
         where TGroup : IGroup<TKey>
         where TKey : IKey
     {
-        IList<TGroup> Groups { get; }
+        ICollection<TGroup> Groups { get; }
     }
 }

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class VolatileDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable, IThisLock
+    public class VolatileHashDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable, IThisLock
     {
         private Dictionary<TKey, Info<TValue>> _dic;
 
@@ -14,13 +14,13 @@ namespace Library.Collections
 
         private readonly object _thisLock = new object();
 
-        public VolatileDictionary(TimeSpan survivalTime)
+        public VolatileHashDictionary(TimeSpan survivalTime)
         {
             _dic = new Dictionary<TKey, Info<TValue>>();
             _survivalTime = survivalTime;
         }
 
-        public VolatileDictionary(TimeSpan survivalTime, IEqualityComparer<TKey> comparer)
+        public VolatileHashDictionary(TimeSpan survivalTime, IEqualityComparer<TKey> comparer)
         {
             _dic = new Dictionary<TKey, Info<TValue>>(comparer);
             _survivalTime = survivalTime;
@@ -632,14 +632,11 @@ namespace Library.Collections
                 }
             }
 
-            void ICollection.CopyTo(Array array, int arrayIndex)
+            void ICollection.CopyTo(Array array, int index)
             {
                 lock (this.ThisLock)
                 {
-                    foreach (var item in _collection)
-                    {
-                        array.SetValue(item, arrayIndex++);
-                    }
+                    ((ICollection)_collection).CopyTo(array, index);
                 }
             }
 
@@ -778,14 +775,11 @@ namespace Library.Collections
                 }
             }
 
-            void ICollection.CopyTo(Array array, int arrayIndex)
+            void ICollection.CopyTo(Array array, int index)
             {
                 lock (this.ThisLock)
                 {
-                    foreach (var info in _collection)
-                    {
-                        array.SetValue(info.Value, arrayIndex++);
-                    }
+                    ((ICollection)_collection).CopyTo(array, index);
                 }
             }
 

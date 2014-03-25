@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Security
 {
-    public sealed class SignatureCollection : FilterList<string>, IEnumerable<string>
+    public sealed class SignatureCollection : LockedList<string>
     {
         public SignatureCollection() : base() { }
         public SignatureCollection(int capacity) : base(capacity) { }

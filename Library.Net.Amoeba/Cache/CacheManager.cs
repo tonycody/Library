@@ -29,14 +29,14 @@ namespace Library.Net.Amoeba
 
         private SortedSet<long> _spaceClusters;
         private bool _spaceClustersInitialized;
-        private Dictionary<int, string> _ids = new Dictionary<int, string>();
-        private volatile Dictionary<Key, string> _shareIndexLink;
+        private SortedDictionary<int, string> _ids = new SortedDictionary<int, string>();
+        private volatile LockedSortedKeyDictionary<string> _shareIndexLink;
         private int _id;
 
         private long _lockSpace;
         private long _freeSpace;
 
-        private LockedDictionary<Key, int> _lockedKeys = new LockedDictionary<Key, int>();
+        private LockedSortedKeyDictionary<int> _lockedKeys = new LockedSortedKeyDictionary<int>();
 
         private SetKeyEventHandler _setKeyEvent;
         private RemoveShareEventHandler _removeShareEvent;
@@ -80,7 +80,7 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    var cachedkeys = new SortedKeys();
+                    var cachedkeys = new LockedSortedKeySet();
 
                     {
                         cachedkeys.UnionWith(_settings.ClustersIndex.Keys);
@@ -91,7 +91,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    var usingKeys = new SortedKeys();
+                    var usingKeys = new LockedSortedKeySet();
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
                     foreach (var info in _settings.SeedInformation)
@@ -275,7 +275,7 @@ namespace Library.Net.Amoeba
 
                 Random random = new Random();
 
-                var cachedkeys = new HashSet<Key>();
+                var cachedkeys = new LockedSortedKeySet();
 
                 {
                     cachedkeys.UnionWith(_settings.ClustersIndex.Keys);
@@ -416,7 +416,7 @@ namespace Library.Net.Amoeba
                 this.CheckSpace(clusterCount);
                 if (clusterCount <= _spaceClusters.Count) return;
 
-                var cachedkeys = new HashSet<Key>();
+                var cachedkeys = new LockedSortedKeySet();
 
                 {
                     cachedkeys.UnionWith(_settings.ClustersIndex.Keys);
@@ -427,7 +427,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                var usingKeys = new HashSet<Key>();
+                var usingKeys = new LockedSortedKeySet();
                 usingKeys.UnionWith(_lockedKeys.Keys);
 
                 foreach (var info in _settings.SeedInformation)
@@ -811,7 +811,7 @@ namespace Library.Net.Amoeba
             {
                 if (_shareIndexLink != null) return;
 
-                _shareIndexLink = new Dictionary<Key, string>();
+                _shareIndexLink = new LockedSortedKeyDictionary<string>();
 
                 foreach (var item in _settings.ShareIndex)
                 {
@@ -1709,8 +1709,8 @@ namespace Library.Net.Amoeba
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
-                    new Library.Configuration.SettingContent<LockedDictionary<string, ShareIndex>>() { Name = "ShareIndex", Value = new LockedDictionary<string, ShareIndex>() },
-                    new Library.Configuration.SettingContent<LockedDictionary<Key, Clusters>>() { Name = "ClustersIndex", Value = new LockedDictionary<Key, Clusters>() },
+                    new Library.Configuration.SettingContent<SortedList<string, ShareIndex>>() { Name = "ShareIndex", Value = new SortedList<string, ShareIndex>() },
+                    new Library.Configuration.SettingContent<LockedSortedKeyDictionary<Clusters>>() { Name = "ClustersIndex", Value = new LockedSortedKeyDictionary<Clusters>() },
                     new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
                     new Library.Configuration.SettingContent<LockedList<SeedInformation>>() { Name = "SeedInformation", Value = new LockedList<SeedInformation>() },
                 })
@@ -1734,24 +1734,24 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public LockedDictionary<string, ShareIndex> ShareIndex
+            public SortedList<string, ShareIndex> ShareIndex
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedDictionary<string, ShareIndex>)this["ShareIndex"];
+                        return (SortedList<string, ShareIndex>)this["ShareIndex"];
                     }
                 }
             }
 
-            public LockedDictionary<Key, Clusters> ClustersIndex
+            public LockedSortedKeyDictionary<Clusters> ClustersIndex
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedDictionary<Key, Clusters>)this["ClustersIndex"];
+                        return (LockedSortedKeyDictionary<Clusters>)this["ClustersIndex"];
                     }
                 }
             }
@@ -1967,21 +1967,21 @@ namespace Library.Net.Amoeba
         [DataContract(Name = "ShareIndex", Namespace = "http://Library/Net/Amoeba/CacheManager")]
         private class ShareIndex : IThisLock
         {
-            private LockedDictionary<Key, int> _keyAndCluster;
+            private LockedHashDictionary<Key, int> _keyAndCluster;
             private int _blockLength;
 
             private volatile object _thisLock;
             private static readonly object _initializeLock = new object();
 
             [DataMember(Name = "KeyAndCluster")]
-            public LockedDictionary<Key, int> KeyAndCluster
+            public LockedHashDictionary<Key, int> KeyAndCluster
             {
                 get
                 {
                     lock (this.ThisLock)
                     {
                         if (_keyAndCluster == null)
-                            _keyAndCluster = new LockedDictionary<Key, int>();
+                            _keyAndCluster = new LockedHashDictionary<Key, int>();
 
                         return _keyAndCluster;
                     }

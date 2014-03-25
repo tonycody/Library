@@ -152,7 +152,7 @@ namespace Library.Net.Amoeba
 
         #region IGroup<Key>
 
-        IList<Key> IGroup<Key>.Keys
+        ICollection<Key> IGroup<Key>.Keys
         {
             get
             {

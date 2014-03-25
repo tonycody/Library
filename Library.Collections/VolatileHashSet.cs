@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class VolatileCollection<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
+    public class VolatileHashSet<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private Dictionary<T, DateTime> _dic;
 
@@ -14,13 +14,13 @@ namespace Library.Collections
 
         private readonly object _thisLock = new object();
 
-        public VolatileCollection(TimeSpan survivalTime)
+        public VolatileHashSet(TimeSpan survivalTime)
         {
             _dic = new Dictionary<T, DateTime>();
             _survivalTime = survivalTime;
         }
 
-        public VolatileCollection(TimeSpan survivalTime, IEqualityComparer<T> comparer)
+        public VolatileHashSet(TimeSpan survivalTime, IEqualityComparer<T> comparer)
         {
             _dic = new Dictionary<T, DateTime>(comparer);
             _survivalTime = survivalTime;
@@ -222,11 +222,11 @@ namespace Library.Collections
             }
         }
 
-        void ICollection.CopyTo(Array array, int arrayIndex)
+        void ICollection.CopyTo(Array array, int index)
         {
             lock (this.ThisLock)
             {
-                this.CopyTo(array.OfType<T>().ToArray(), arrayIndex);
+                ((ICollection)_dic.Keys).CopyTo(array, index);
             }
         }
 

@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Amoeba
 {
-    public sealed class BoxCollection : FilterList<Box>, IEnumerable<Box>
+    public sealed class BoxCollection : LockedList<Box>
     {
         public BoxCollection() : base() { }
         public BoxCollection(int capacity) : base(capacity) { }

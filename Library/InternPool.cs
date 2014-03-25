@@ -67,7 +67,7 @@ namespace Library
             }
         }
 
-        public TValue GetValue(TKey key, TValue value, object holder)
+        public TValue GetOrCreateValue(TKey key, TValue value, object holder)
         {
             lock (_thisLock)
             {
@@ -81,6 +81,30 @@ namespace Library
 
                 info.Add(holder);
                 return info.Value;
+            }
+        }
+
+        public TValue GetValue(TKey key)
+        {
+            lock (_thisLock)
+            {
+                return _dic[key].Value;
+            }
+        }
+
+        public void SetValue(TKey key, TValue value, object holder)
+        {
+            lock (_thisLock)
+            {
+                Info<TValue> info;
+
+                if (!_dic.TryGetValue(key, out info))
+                {
+                    info = new Info<TValue>(value);
+                    _dic[key] = info;
+                }
+
+                info.Add(holder);
             }
         }
 

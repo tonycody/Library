@@ -1,13 +1,14 @@
 using System;
+using System.Collections.Generic;
 
 namespace Library.Net.Amoeba
 {
-   public interface IBox
+    public interface IBox
     {
         string Name { get; }
         DateTime CreationTime { get; }
         string Comment { get; }
-        SeedCollection Seeds { get; }
-        BoxCollection Boxes { get; }
+        ICollection<Seed> Seeds { get; }
+        ICollection<Box> Boxes { get; }
     }
 }

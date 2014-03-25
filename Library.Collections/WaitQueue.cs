@@ -365,7 +365,7 @@ namespace Library.Collections
 
             lock (this.ThisLock)
             {
-                ((ICollection)_queue).CopyTo(array.OfType<T>().ToArray(), index);
+                ((ICollection)_queue).CopyTo(array, index);
             }
         }
 

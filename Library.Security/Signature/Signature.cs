@@ -34,7 +34,7 @@ namespace Library.Security
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
                         var signature = digitalSignature.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
-                        return _signatureCache.GetValue(Sha512.ComputeHash(signature), signature, digitalSignature);
+                        return _signatureCache.GetOrCreateValue(Sha512.ComputeHash(signature), signature, digitalSignature);
                     }
                 }
             }
@@ -64,7 +64,7 @@ namespace Library.Security
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
                         var signature = certificate.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
-                        return _signatureCache.GetValue(Sha512.ComputeHash(signature), signature, certificate);
+                        return _signatureCache.GetOrCreateValue(Sha512.ComputeHash(signature), signature, certificate);
                     }
                 }
             }

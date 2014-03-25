@@ -20,8 +20,7 @@ namespace Library.Net.Amoeba
         private Settings _settings;
 
         private volatile Thread _uploadManagerThread;
-        private LockedDictionary<Key, bool> _keyCount = new LockedDictionary<Key, bool>();
-        private Dictionary<int, UploadItem> _ids = new Dictionary<int, UploadItem>();
+        private SortedDictionary<int, UploadItem> _ids = new SortedDictionary<int, UploadItem>();
         private Dictionary<string, List<int>> _shareLink = new Dictionary<string, List<int>>();
         private int _id;
 
