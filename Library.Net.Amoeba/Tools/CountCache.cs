@@ -8,12 +8,13 @@ namespace Library.Net.Amoeba
 {
     // パフォーマンス上の理由から仕方なく、これは高速化にかなり貢献してる
 
-    sealed class CountCache
+    sealed class CountCache : ManagerBase, IThisLock
     {
         private System.Threading.Timer _watchTimer;
         private ConditionalWeakTable<Group, GroupManager> _table = new ConditionalWeakTable<Group, GroupManager>();
         private List<WeakReference> _groupManagers = new List<WeakReference>();
 
+        private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
         public CountCache()
@@ -28,7 +29,7 @@ namespace Library.Net.Amoeba
 
         private void Refresh()
         {
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 for (int i = 0; i < _groupManagers.Count; )
                 {
@@ -89,7 +90,7 @@ namespace Library.Net.Amoeba
         {
             private Group _group;
 
-            private LockedSortedKeyDictionary<bool> _dic;
+            private SortedKeyDictionary<bool> _dic;
             //private Dictionary<Key, bool> _dic;
 
             private bool _isCached;
@@ -100,7 +101,7 @@ namespace Library.Net.Amoeba
             {
                 _group = group;
 
-                _dic = new LockedSortedKeyDictionary<bool>();
+                _dic = new SortedKeyDictionary<bool>();
                 //_dic = new Dictionary<Key, bool>();
 
                 foreach (var key in group.Keys)
@@ -146,6 +147,29 @@ namespace Library.Net.Amoeba
                 }
 
                 return _cacheTrueKeys.Count;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
+            {
+                if (_watchTimer != null)
+                {
+                    try
+                    {
+                        _watchTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _watchTimer = null;
+                }
             }
         }
 

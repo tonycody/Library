@@ -6,10 +6,12 @@ using System.Threading;
 
 namespace Library
 {
-    public class InternPool<TKey, TValue>
+    public class InternPool<TKey, TValue> : ManagerBase, IThisLock
     {
         private System.Threading.Timer _watchTimer;
         private Dictionary<TKey, Info<TValue>> _dic;
+
+        private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
         public InternPool()
@@ -33,13 +35,16 @@ namespace Library
         {
             get
             {
-                return _dic.Count;
+                lock (this.ThisLock)
+                {
+                    return _dic.Count;
+                }
             }
         }
 
         internal void Refresh()
         {
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 List<TKey> list = null;
 
@@ -69,7 +74,7 @@ namespace Library
 
         public TValue GetOrCreateValue(TKey key, TValue value, object holder)
         {
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 Info<TValue> info;
 
@@ -86,7 +91,7 @@ namespace Library
 
         public TValue GetValue(TKey key)
         {
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 return _dic[key].Value;
             }
@@ -94,7 +99,7 @@ namespace Library
 
         public void SetValue(TKey key, TValue value, object holder)
         {
-            lock (_thisLock)
+            lock (this.ThisLock)
             {
                 Info<TValue> info;
 
@@ -108,7 +113,7 @@ namespace Library
             }
         }
 
-        class Info<T>
+        private class Info<T>
         {
             private List<WeakReference> _list = new List<WeakReference>();
             private T _value;
@@ -151,5 +156,40 @@ namespace Library
                 _list.Add(new WeakReference(holder));
             }
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
+            {
+                if (_watchTimer != null)
+                {
+                    try
+                    {
+                        _watchTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _watchTimer = null;
+                }
+            }
+        }
+
+        #region IThisLock
+
+        public object ThisLock
+        {
+            get
+            {
+                return _thisLock;
+            }
+        }
+
+        #endregion
     }
 }

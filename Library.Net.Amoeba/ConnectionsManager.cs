@@ -30,12 +30,12 @@ namespace Library.Net.Amoeba
         private LockedList<ConnectionManager> _connectionManagers;
         private MessagesManager _messagesManager;
 
-        private LockedHashDictionary<Node, LockedSortedKeySet> _pushBlocksLinkDictionary = new LockedHashDictionary<Node, LockedSortedKeySet>();
-        private LockedHashDictionary<Node, LockedSortedKeySet> _pushBlocksRequestDictionary = new LockedHashDictionary<Node, LockedSortedKeySet>();
-        private LockedHashDictionary<Node, LockedSortedStringSet> _pushSeedsRequestDictionary = new LockedHashDictionary<Node, LockedSortedStringSet>();
+        private LockedHashDictionary<Node, SortedKeySet> _pushBlocksLinkDictionary = new LockedHashDictionary<Node, SortedKeySet>();
+        private LockedHashDictionary<Node, SortedKeySet> _pushBlocksRequestDictionary = new LockedHashDictionary<Node, SortedKeySet>();
+        private LockedHashDictionary<Node, SortedStringSet> _pushSeedsRequestDictionary = new LockedHashDictionary<Node, SortedStringSet>();
 
-        private LockedHashDictionary<Node, LockedSortedKeySet> _diffusionBlocksDictionary = new LockedHashDictionary<Node, LockedSortedKeySet>();
-        private LockedHashDictionary<Node, LockedSortedKeySet> _uploadBlocksDictionary = new LockedHashDictionary<Node, LockedSortedKeySet>();
+        private LockedHashDictionary<Node, SortedKeySet> _diffusionBlocksDictionary = new LockedHashDictionary<Node, SortedKeySet>();
+        private LockedHashDictionary<Node, SortedKeySet> _uploadBlocksDictionary = new LockedHashDictionary<Node, SortedKeySet>();
 
         private LockedList<Node> _creatingNodes;
         private VolatileHashSet<Node> _waitingNodes;
@@ -990,7 +990,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, LockedSortedKeySet> diffusionBlocksDictionary = new Dictionary<Node, LockedSortedKeySet>();
+                        Dictionary<Node, SortedKeySet> diffusionBlocksDictionary = new Dictionary<Node, SortedKeySet>();
 
                         foreach (var key in diffusionBlocksList)
                         {
@@ -1016,11 +1016,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
-                                    LockedSortedKeySet collection;
+                                    SortedKeySet collection;
 
                                     if (!diffusionBlocksDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new LockedSortedKeySet();
+                                        collection = new SortedKeySet();
                                         diffusionBlocksDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1067,14 +1067,14 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, LockedSortedKeySet> uploadBlocksDictionary = new Dictionary<Node, LockedSortedKeySet>();
+                        Dictionary<Node, SortedKeySet> uploadBlocksDictionary = new Dictionary<Node, SortedKeySet>();
 
                         foreach (var pair in messageManagers)
                         {
                             var node = pair.Key;
                             var messageManager = pair.Value;
 
-                            uploadBlocksDictionary.Add(node, new LockedSortedKeySet(_cacheManager.IntersectFrom(messageManager.PullBlocksRequest).Take(128)));
+                            uploadBlocksDictionary.Add(node, new SortedKeySet(_cacheManager.IntersectFrom(messageManager.PullBlocksRequest).Take(128)));
                         }
 
                         lock (_uploadBlocksDictionary.ThisLock)
@@ -1110,8 +1110,8 @@ namespace Library.Net.Amoeba
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    LockedSortedKeySet pullBlocksLinkList = new LockedSortedKeySet();
-                    LockedSortedKeySet pullBlocksRequestList = new LockedSortedKeySet();
+                    SortedKeySet pullBlocksLinkList = new SortedKeySet();
+                    SortedKeySet pullBlocksRequestList = new SortedKeySet();
 
                     {
                         {
@@ -1192,7 +1192,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, LockedSortedKeySet> pushBlocksLinkDictionary = new Dictionary<Node, LockedSortedKeySet>();
+                        Dictionary<Node, SortedKeySet> pushBlocksLinkDictionary = new Dictionary<Node, SortedKeySet>();
 
                         foreach (var key in pullBlocksLinkList)
                         {
@@ -1208,11 +1208,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
-                                    LockedSortedKeySet collection;
+                                    SortedKeySet collection;
 
                                     if (!pushBlocksLinkDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new LockedSortedKeySet();
+                                        collection = new SortedKeySet();
                                         pushBlocksLinkDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1237,7 +1237,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, LockedSortedKeySet> pushBlocksRequestDictionary = new Dictionary<Node, LockedSortedKeySet>();
+                        Dictionary<Node, SortedKeySet> pushBlocksRequestDictionary = new Dictionary<Node, SortedKeySet>();
 
                         foreach (var key in pullBlocksRequestList)
                         {
@@ -1270,11 +1270,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
-                                    LockedSortedKeySet collection;
+                                    SortedKeySet collection;
 
                                     if (!pushBlocksRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new LockedSortedKeySet();
+                                        collection = new SortedKeySet();
                                         pushBlocksRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1364,7 +1364,7 @@ namespace Library.Net.Amoeba
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    LockedSortedStringSet pushSeedsRequestList = new LockedSortedStringSet();
+                    SortedStringSet pushSeedsRequestList = new SortedStringSet();
 
                     {
                         {
@@ -1405,7 +1405,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, LockedSortedStringSet> pushSeedsRequestDictionary = new Dictionary<Node, LockedSortedStringSet>();
+                        Dictionary<Node, SortedStringSet> pushSeedsRequestDictionary = new Dictionary<Node, SortedStringSet>();
 
                         foreach (var signature in pushSeedsRequestList)
                         {
@@ -1420,11 +1420,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    LockedSortedStringSet collection;
+                                    SortedStringSet collection;
 
                                     if (!pushSeedsRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new LockedSortedStringSet();
+                                        collection = new SortedStringSet();
                                         pushSeedsRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1538,7 +1538,7 @@ namespace Library.Net.Amoeba
 
                             lock (_pushBlocksLinkDictionary.ThisLock)
                             {
-                                LockedSortedKeySet collection;
+                                SortedKeySet collection;
 
                                 if (_pushBlocksLinkDictionary.TryGetValue(connectionManager.Node, out collection))
                                 {
@@ -1577,7 +1577,7 @@ namespace Library.Net.Amoeba
 
                             lock (_pushBlocksRequestDictionary.ThisLock)
                             {
-                                LockedSortedKeySet collection;
+                                SortedKeySet collection;
 
                                 if (_pushBlocksRequestDictionary.TryGetValue(connectionManager.Node, out collection))
                                 {
@@ -1616,7 +1616,7 @@ namespace Library.Net.Amoeba
 
                             lock (_pushSeedsRequestDictionary.ThisLock)
                             {
-                                LockedSortedStringSet collection;
+                                SortedStringSet collection;
 
                                 if (_pushSeedsRequestDictionary.TryGetValue(connectionManager.Node, out collection))
                                 {
@@ -1665,7 +1665,7 @@ namespace Library.Net.Amoeba
 
                             lock (_diffusionBlocksDictionary.ThisLock)
                             {
-                                LockedSortedKeySet collection;
+                                SortedKeySet collection;
 
                                 if (_diffusionBlocksDictionary.TryGetValue(connectionManager.Node, out collection))
                                 {
@@ -1729,7 +1729,7 @@ namespace Library.Net.Amoeba
 
                             lock (_uploadBlocksDictionary.ThisLock)
                             {
-                                LockedSortedKeySet collection;
+                                SortedKeySet collection;
 
                                 if (_uploadBlocksDictionary.TryGetValue(connectionManager.Node, out collection))
                                 {
