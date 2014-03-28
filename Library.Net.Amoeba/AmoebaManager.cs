@@ -9,13 +9,13 @@ namespace Library.Net.Amoeba
 
     public sealed class AmoebaManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
+        private string _bitmapPath;
         private string _cachePath;
         private BufferManager _bufferManager;
 
-        private Lzma _lzma;
-
         private ClientManager _clientManager;
         private ServerManager _serverManager;
+        private BitmapManager _bitmapManager;
         private CacheManager _cacheManager;
         private ConnectionsManager _connectionsManager;
         private DownloadManager _downloadManager;
@@ -35,16 +35,16 @@ namespace Library.Net.Amoeba
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
-        public AmoebaManager(string cachePath, BufferManager bufferManager)
+        public AmoebaManager(string bitmapPath, string cachePath, BufferManager bufferManager)
         {
+            _bitmapPath = bitmapPath;
             _cachePath = cachePath;
             _bufferManager = bufferManager;
 
-            _lzma = new Lzma(1 << 20, 1 << 20);
-
             _clientManager = new ClientManager(_bufferManager);
             _serverManager = new ServerManager(_bufferManager);
-            _cacheManager = new CacheManager(_cachePath, _bufferManager, _lzma);
+            _bitmapManager = new BitmapManager(_bitmapPath, _bufferManager);
+            _cacheManager = new CacheManager(_cachePath, _bitmapManager, _bufferManager);
             _connectionsManager = new ConnectionsManager(_clientManager, _serverManager, _cacheManager, _bufferManager);
             _downloadManager = new DownloadManager(_connectionsManager, _cacheManager, _bufferManager);
             _uploadManager = new UploadManager(_connectionsManager, _cacheManager, _bufferManager);
@@ -837,6 +837,7 @@ namespace Library.Net.Amoeba
 
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
+                _bitmapManager.Load(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _downloadManager.Load(System.IO.Path.Combine(directoryPath, "DownloadManager"));
@@ -861,6 +862,7 @@ namespace Library.Net.Amoeba
                 _downloadManager.Save(System.IO.Path.Combine(directoryPath, "DownloadManager"));
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
+                _bitmapManager.Save(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
             }
@@ -881,6 +883,7 @@ namespace Library.Net.Amoeba
                 _downloadManager.Dispose();
                 _connectionsManager.Dispose();
                 _cacheManager.Dispose();
+                _bitmapManager.Dispose();
                 _serverManager.Dispose();
                 _clientManager.Dispose();
             }

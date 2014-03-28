@@ -1295,6 +1295,20 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
+                if (_countCache != null)
+                {
+                    try
+                    {
+                        _countCache.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _countCache = null;
+                }
+
                 _setKeys.Dispose();
                 _removeKeys.Dispose();
 

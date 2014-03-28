@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Library.UnitTest")]
-[assembly: AssemblyCopyright("Copyright © Lyrise 2009-2011")]
+[assembly: AssemblyCopyright("Copyright © Lyrise 2009-2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

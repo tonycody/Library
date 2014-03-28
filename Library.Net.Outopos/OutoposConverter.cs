@@ -174,9 +174,11 @@ namespace Library.Net.Outopos
                             return ItemBase<T>.Import(deflateBufferStream, _bufferManager);
                         }
                     }
+                    else
+                    {
+                        throw new ArgumentException("ArgumentException");
+                    }
                 }
-
-                throw new ArgumentException("ArgumentException");
             }
             catch (Exception e)
             {
@@ -235,7 +237,7 @@ namespace Library.Net.Outopos
         public static Node FromNodeString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Node:")) throw new ArgumentException("item");
 
             try
             {
@@ -250,59 +252,15 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static string ToSectionString(Section item, string option)
-        {
-            if (item == null) throw new ArgumentNullException("Section");
-
-            try
-            {
-                if (option != null)
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Section>(item))
-                    {
-                        return "Section:" + OutoposConverter.ToBase64String(stream) + "," + option;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Section>(item))
-                    {
-                        return "Section:" + OutoposConverter.ToBase64String(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
-        public static Section FromSectionString(string item, out string option)
+        public static string ToTagString(Tag item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
-
-            option = null;
 
             try
             {
-                if (item.Contains(","))
+                using (Stream stream = OutoposConverter.ToStream<Tag>(item))
                 {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    option = list[1];
-
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Section:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Section>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Section:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Section>(stream);
-                    }
+                    return "Tag:" + OutoposConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -311,120 +269,16 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static string ToWikiString(Wiki item, string option)
-        {
-            if (item == null) throw new ArgumentNullException("Wiki");
-
-            try
-            {
-                if (option != null)
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Wiki>(item))
-                    {
-                        return "Wiki:" + OutoposConverter.ToBase64String(stream) + "," + option;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Wiki>(item))
-                    {
-                        return "Wiki:" + OutoposConverter.ToBase64String(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
-        public static Wiki FromWikiString(string item, out string option)
+        public static Tag FromTagString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Wiki:") && !item.StartsWith("Wiki@")) throw new ArgumentException("item");
-
-            option = null;
+            if (!item.StartsWith("Tag:")) throw new ArgumentException("item");
 
             try
             {
-                if (item.Contains(","))
+                using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Tag:".Length)))
                 {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    option = list[1];
-
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Wiki:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Wiki>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Wiki:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Wiki>(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
-        public static string ToChatString(Chat item, string option)
-        {
-            if (item == null) throw new ArgumentNullException("Chat");
-
-            try
-            {
-                if (option != null)
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Chat>(item))
-                    {
-                        return "Chat:" + OutoposConverter.ToBase64String(stream) + "," + option;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Chat>(item))
-                    {
-                        return "Chat:" + OutoposConverter.ToBase64String(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
-        public static Chat FromChatString(string item, out string option)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
-
-            option = null;
-
-            try
-            {
-                if (item.Contains(","))
-                {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    option = list[1];
-
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Chat:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Chat>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Chat>(stream);
-                    }
+                    return OutoposConverter.FromStream<Tag>(stream);
                 }
             }
             catch (Exception)

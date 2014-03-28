@@ -6,6 +6,5 @@ namespace Library.Net.Outopos
     {
         string Type { get; }
         byte[] Id { get; }
-        string Name { get; }
     }
 }

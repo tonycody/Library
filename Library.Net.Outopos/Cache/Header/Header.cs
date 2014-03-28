@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
+using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Header", Namespace = "http://Library/Net/Amoeba")]
-    sealed class Header : ImutableCertificateItemBase<Header>, IHeader<Wiki>
+    [DataContract(Name = "Header", Namespace = "http://Library/Net/Outopos")]
+    sealed class Header : ImmutableCertificateItemBase<Header>, IHeader<Tag, Key>
     {
         private enum SerializeId : byte
         {
@@ -19,7 +21,7 @@ namespace Library.Net.Outopos
             Certificate = 3,
         }
 
-        private Wiki _tag;
+        private Tag _tag;
         private DateTime _creationTime;
         private Key _key;
 
@@ -28,7 +30,7 @@ namespace Library.Net.Outopos
         private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
 
-        public Header(Wiki tag, DateTime creationTime, Key key, DigitalSignature digitalSignature)
+        public Header(Tag tag, DateTime creationTime, Key key, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
             this.CreationTime = creationTime;
@@ -37,7 +39,7 @@ namespace Library.Net.Outopos
             this.CreateCertificate(digitalSignature);
         }
 
-        protected override void ProtectedImport(Stream stream, BufferManager bufferManager)
+        protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
@@ -54,14 +56,11 @@ namespace Library.Net.Outopos
                     {
                         if (id == (byte)SerializeId.Tag)
                         {
-                            this.Tag = Wiki.Import(rangeStream, bufferManager);
+                            this.Tag = Tag.Import(rangeStream, bufferManager);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.CreationTime = DateTime.ParseExact(reader.ReadToEnd(), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                            }
+                            this.CreationTime = DateTime.ParseExact(ItemUtility.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                         else if (id == (byte)SerializeId.Key)
                         {
@@ -77,68 +76,45 @@ namespace Library.Net.Outopos
             }
         }
 
-        public override Stream Export(BufferManager bufferManager)
+        public override Stream Export(BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Tag
                 if (this.Tag != null)
                 {
-                    Stream exportStream = this.Tag.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Tag);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    using (var stream = this.Tag.Export(bufferManager))
+                    {
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Tag, stream);
+                    }
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.SetLength(5);
-                    bufferStream.Seek(5, SeekOrigin.Begin);
-
-                    using (WrapperStream wrapperStream = new WrapperStream(bufferStream, true))
-                    using (StreamWriter writer = new StreamWriter(wrapperStream, encoding))
-                    {
-                        writer.Write(this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CreationTime);
-
-                    streams.Add(bufferStream);
+                    ItemUtility.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
                 // Key
                 if (this.Key != null)
                 {
-                    Stream exportStream = this.Key.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    using (var stream = this.Key.Export(bufferManager))
+                    {
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Key, stream);
+                    }
                 }
 
                 // Certificate
                 if (this.Certificate != null)
                 {
-                    Stream exportStream = this.Certificate.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Certificate);
-
-                    streams.Add(new JoinStream(bufferStream, exportStream));
+                    using (var stream = this.Certificate.Export(bufferManager))
+                    {
+                        ItemUtility.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    }
                 }
 
-                return new JoinStream(streams);
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
         }
 
@@ -175,7 +151,7 @@ namespace Library.Net.Outopos
             return true;
         }
 
-        protected override void CreateCertificate(DigitalSignature digitalSignature)
+        public override void CreateCertificate(DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
@@ -246,10 +222,10 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IHeader<Wiki>
+        #region IHeader<Tag, Key>
 
         [DataMember(Name = "Tag")]
-        public Wiki Tag
+        public Tag Tag
         {
             get
             {
@@ -303,41 +279,6 @@ namespace Library.Net.Outopos
                 {
                     _key = value;
                 }
-            }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private byte[] _sha512_hash;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            lock (this.ThisLock)
-            {
-                if (_sha512_hash == null)
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        _sha512_hash = Sha512.ComputeHash(stream);
-                    }
-                }
-
-                if (hashAlgorithm == HashAlgorithm.Sha512)
-                {
-                    return _sha512_hash;
-                }
-
-                return null;
-            }
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            lock (this.ThisLock)
-            {
-                return Collection.Equals(this.GetHash(hashAlgorithm), hash);
             }
         }
 

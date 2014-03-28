@@ -96,19 +96,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cache\Content\Anchor.cs" />
-    <Compile Include="Cache\Content\AnchorCollection.cs" />
     <Compile Include="Cache\CacheManager.cs" />
+    <Compile Include="Cache\Header\HeaderCollection.cs" />
+    <Compile Include="Cache\Header\TagCollection.cs" />
     <Compile Include="Cache\Header\Header.cs" />
     <Compile Include="Cache\Header\Tag.cs" />
     <Compile Include="Cache\Header\Key.cs" />
     <Compile Include="Cache\Header\KeyCollection.cs" />
-    <Compile Include="Cache\Index\Index.cs" />
-    <Compile Include="Cache\OutoposConverter.cs" />
-    <Compile Include="Cache\_Interface\Content\IAnchor.cs" />
-    <Compile Include="Cache\_Interface\IComputeHash.cs" />
-    <Compile Include="Cache\_Interface\Index\IIndex.cs" />
-    <Compile Include="Cache\_Interface\Index\ITag.cs" />
+    <Compile Include="Cache\BitmapManager.cs" />
+    <Compile Include="OutoposConverter.cs" />
+    <Compile Include="Cache\_Interface\Header\ITag.cs" />
     <Compile Include="Cache\_Interface\IHashAlgorithm.cs" />
     <Compile Include="Cache\_Interface\Header\IHeader.cs" />
     <Compile Include="Cache\_Interface\Header\IKey.cs" />

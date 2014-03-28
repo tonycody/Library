@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    sealed class KeyCollection : FilterList<Key>, IEnumerable<Key>
+    sealed class KeyCollection : LockedList<Key>
     {
         public KeyCollection() : base() { }
         public KeyCollection(int capacity) : base(capacity) { }
@@ -15,29 +15,5 @@ namespace Library.Net.Outopos
 
             return false;
         }
-
-        #region IEnumerable<Key>
-
-        IEnumerator<Key> IEnumerable<Key>.GetEnumerator()
-        {
-            lock (base.ThisLock)
-            {
-                return base.GetEnumerator();
-            }
-        }
-
-        #endregion
-
-        #region IEnumerable
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            lock (base.ThisLock)
-            {
-                return this.GetEnumerator();
-            }
-        }
-
-        #endregion
     }
 }

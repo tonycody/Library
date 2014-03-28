@@ -2,9 +2,11 @@ using System;
 
 namespace Library.Net.Outopos
 {
-    interface IHeader<TKey> : IComputeHash
+    interface IHeader<TTag, TKey>
+        where TTag : ITag
         where TKey : IKey
     {
+        TTag Tag { get; }
         DateTime CreationTime { get; }
         TKey Key { get; }
     }

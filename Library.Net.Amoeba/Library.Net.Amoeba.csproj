@@ -65,6 +65,7 @@
     <Compile Include="BackgroundItemType.cs" />
     <Compile Include="AmoebaConverter.cs" />
     <Compile Include="AmoebaManager.cs" />
+    <Compile Include="Cache\BitmapManager.cs" />
     <Compile Include="Information\Store\Box.cs" />
     <Compile Include="Information\Store\BoxCollection.cs" />
     <Compile Include="Information\Link\Link.cs" />
