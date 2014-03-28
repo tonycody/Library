@@ -51,23 +51,29 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                _bitmapStream.SetLength(((length + 8) - 1) / 8);
-
                 {
-                    var buffer = new byte[4096];
+                    var size = ((length + 8) - 1) / 8;
 
-                    for (long i = (length / 4096) - 1, l = length; i >= 0; i--, l -= 4096)
+                    _bitmapStream.SetLength(size);
+
                     {
-                        _bitmapStream.Write(buffer, 0, (int)Math.Min(l, buffer.Length));
-                        _bitmapStream.Flush();
+                        var buffer = new byte[4096];
+
+                        for (long i = (((size + buffer.Length) - 1) / buffer.Length) - 1, remain = size; i >= 0; i--, remain -= buffer.Length)
+                        {
+                            _bitmapStream.Write(buffer, 0, (int)Math.Min(remain, buffer.Length));
+                            _bitmapStream.Flush();
+                        }
                     }
                 }
 
                 _settings.Length = length;
 
-                _cacheChanged = false;
-                _cacheSector = -1;
-                _cacheBufferCount = 0;
+                {
+                    _cacheChanged = false;
+                    _cacheSector = -1;
+                    _cacheBufferCount = 0;
+                }
             }
         }
 
