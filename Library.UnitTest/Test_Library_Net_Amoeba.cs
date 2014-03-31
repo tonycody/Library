@@ -312,6 +312,79 @@ namespace Library.UnitTest
         }
 
         [Test]
+        public void Test_BitmapManager()
+        {
+            using (BitmapManager bitmapManager = new BitmapManager("bitmap", _bufferManager))
+            {
+                bitmapManager.SetLength(1024 * 256);
+
+                Random random_a, random_b;
+
+                {
+                    var seed = _random.Next();
+
+                    random_a = new Random(seed);
+                    random_b = new Random(seed);
+                }
+
+                {
+                    for (int i = 0; i < 1024; i++)
+                    {
+                        var p = random_a.Next(0, 1024 * 256);
+                        bitmapManager.Set(p, true);
+                    }
+
+                    for (int i = 0; i < 1024; i++)
+                    {
+                        var p = random_b.Next(0, 1024 * 256);
+                        Assert.IsTrue(bitmapManager.Get(p));
+                    }
+
+                    {
+                        int count = 0;
+
+                        for (int i = 0; i < 1024 * 256; i++)
+                        {
+                            if (bitmapManager.Get(i)) count++;
+                        }
+
+                        Assert.IsTrue(count <= 1024);
+                    }
+                }
+
+                {
+                    for (int i = 0; i < 1024 * 256; i++)
+                    {
+                        bitmapManager.Set(i, true);
+                    }
+
+                    for (int i = 0; i < 1024; i++)
+                    {
+                        var p = random_a.Next(0, 1024 * 256);
+                        bitmapManager.Set(p, false);
+                    }
+
+                    for (int i = 0; i < 1024; i++)
+                    {
+                        var p = random_b.Next(0, 1024 * 256);
+                        Assert.IsTrue(!bitmapManager.Get(p));
+                    }
+
+                    {
+                        int count = 0;
+
+                        for (int i = 0; i < 1024 * 256; i++)
+                        {
+                            if (!bitmapManager.Get(i)) count++;
+                        }
+
+                        Assert.IsTrue(count <= 1024);
+                    }
+                }
+            }
+        }
+
+        [Test]
         public void Test_ConnectionManager()
         {
             for (int i = 0; i < 4; i++)

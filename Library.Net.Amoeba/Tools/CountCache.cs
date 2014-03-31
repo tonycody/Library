@@ -133,8 +133,8 @@ namespace Library.Net.Amoeba
                     _isCached = true;
                 }
 
-                if (state) return _cacheTrueKeys;
-                else return _cacheFalseKeys;
+                if (state) return _cacheTrueKeys.ToList();
+                else return _cacheFalseKeys.ToList();
             }
 
             public int GetCount()

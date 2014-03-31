@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Threading;
@@ -21,8 +22,8 @@ namespace Library.Net.Amoeba
     class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
     {
         private FileStream _fileStream;
-        private BufferManager _bufferManager;
         private BitmapManager _bitmapManager;
+        private BufferManager _bufferManager;
 
         private Lzma _lzma;
 
@@ -82,17 +83,6 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    var cachedkeys = new SortedKeySet();
-
-                    {
-                        cachedkeys.UnionWith(_settings.ClusterIndex.Keys);
-
-                        foreach (var shareInfo in _settings.ShareIndex.Values)
-                        {
-                            cachedkeys.UnionWith(shareInfo.Indexes.Keys);
-                        }
-                    }
-
                     var usingKeys = new SortedKeySet();
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
@@ -105,7 +95,7 @@ namespace Library.Net.Amoeba
                             foreach (var group in index.Groups)
                             {
                                 usingKeys.UnionWith(group.Keys
-                                    .Where(n => cachedkeys.Contains(n))
+                                    .Where(n => this.Contains(n))
                                     .Reverse()
                                     .Take(group.InformationLength));
                             }
@@ -235,8 +225,8 @@ namespace Library.Net.Amoeba
                         contexts.Add(new InformationContext("Id", item.Key));
                         contexts.Add(new InformationContext("Path", item.Value));
 
-                        var shareIndex = _settings.ShareIndex[item.Value];
-                        contexts.Add(new InformationContext("BlockCount", shareIndex.Indexes.Count));
+                        var shareInfo = _settings.ShareIndex[item.Value];
+                        contexts.Add(new InformationContext("BlockCount", shareInfo.Indexes.Count));
 
                         list.Add(new Information(contexts));
                     }
@@ -275,17 +265,6 @@ namespace Library.Net.Amoeba
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                var cachedkeys = new SortedKeySet();
-
-                {
-                    cachedkeys.UnionWith(_settings.ClusterIndex.Keys);
-
-                    foreach (var shareInfo in _settings.ShareIndex.Values)
-                    {
-                        cachedkeys.UnionWith(shareInfo.Indexes.Keys);
-                    }
-                }
-
                 var pathList = new HashSet<string>();
 
                 pathList.UnionWith(_settings.ShareIndex.Keys);
@@ -300,7 +279,7 @@ namespace Library.Net.Amoeba
                         if (!(flag = pathList.Contains(seedInfo.Path))) goto Break;
                     }
 
-                    if (!(flag = cachedkeys.Contains(seedInfo.Seed.Key))) goto Break;
+                    if (!(flag = this.Contains(seedInfo.Seed.Key))) goto Break;
 
                     foreach (var index in seedInfo.Indexes)
                     {
@@ -310,7 +289,7 @@ namespace Library.Net.Amoeba
 
                             foreach (var key in group.Keys)
                             {
-                                if (!cachedkeys.Contains(key)) continue;
+                                if (!this.Contains(key)) continue;
 
                                 count++;
                                 if (count >= group.InformationLength) goto End;
@@ -343,8 +322,7 @@ namespace Library.Net.Amoeba
             {
                 if (!_spaceSectorsInitialized)
                 {
-                    long count = (this.Size + (long)CacheManager.SectorSize - 1) / (long)CacheManager.SectorSize;
-                    _bitmapManager.SetLength(count);
+                    _bitmapManager.SetLength((this.Size + ((long)CacheManager.SectorSize - 1)) / (long)CacheManager.SectorSize);
 
                     foreach (var clusterInfo in _settings.ClusterIndex.Values)
                     {
@@ -354,19 +332,18 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    _spaceSectors.Clear();
-
                     _spaceSectorsInitialized = true;
                 }
 
-                for (long i = 0, length = _bitmapManager.Length; i < length; i++)
+                if (_spaceSectors.Count < sectorCount)
                 {
-                    if (!_bitmapManager.Get(i))
+                    for (long i = 0, count = _bitmapManager.Length; i < count; i++)
                     {
-                        _bitmapManager.Set(i, true);
-
-                        _spaceSectors.Add(i);
-                        if (_spaceSectors.Count >= sectorCount) break;
+                        if (!_bitmapManager.Get(i))
+                        {
+                            _spaceSectors.Add(i);
+                            if (_spaceSectors.Count >= sectorCount) break;
+                        }
                     }
                 }
             }
@@ -378,17 +355,6 @@ namespace Library.Net.Amoeba
             {
                 this.CheckSpace(sectorCount);
                 if (sectorCount <= _spaceSectors.Count) return;
-
-                var cachedkeys = new SortedKeySet();
-
-                {
-                    cachedkeys.UnionWith(_settings.ClusterIndex.Keys);
-
-                    foreach (var item in _settings.ShareIndex)
-                    {
-                        cachedkeys.UnionWith(item.Value.Indexes.Keys);
-                    }
-                }
 
                 var usingKeys = new SortedKeySet();
                 usingKeys.UnionWith(_lockedKeys.Keys);
@@ -402,7 +368,7 @@ namespace Library.Net.Amoeba
                         foreach (var group in index.Groups)
                         {
                             usingKeys.UnionWith(group.Keys
-                                .Where(n => cachedkeys.Contains(n))
+                                .Where(n => this.Contains(n))
                                 .Reverse()
                                 .Take(group.InformationLength));
                         }
@@ -506,15 +472,8 @@ namespace Library.Net.Amoeba
 
                     if (item.Value.Indexes.TryGetValue(key, out i))
                     {
-                        if (i < item.Value.Indexes.Count - 1)
-                        {
-                            return item.Value.BlockLength;
-                        }
-                        else
-                        {
-                            var fileLength = new FileInfo(item.Key).Length;
-                            return (int)Math.Min(fileLength - ((long)item.Value.BlockLength * i), item.Value.BlockLength);
-                        }
+                        var fileLength = new FileInfo(item.Key).Length;
+                        return (int)Math.Min(fileLength - ((long)item.Value.BlockLength * i), item.Value.BlockLength);
                     }
                 }
 
@@ -599,22 +558,22 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                size = (long)Math.Min(size, NetworkConverter.FromSizeString("16TB"));
+                size = (long)Math.Min(size, NetworkConverter.FromSizeString("256TB"));
 
                 long unit = 256 * 1024 * 1024;
-                size = (long)((size + (unit - 1)) / unit) * unit;
+                size = ((size + (unit - 1)) / unit) * unit;
 
                 foreach (var key in _settings.ClusterIndex.Keys.ToArray()
-                    .Where(n => _settings.ClusterIndex[n].Indexes.Any(o => size < ((o + 1) * CacheManager.SectorSize)))
+                    .Where(n => _settings.ClusterIndex[n].Indexes.Any(point => size < (point * CacheManager.SectorSize) + CacheManager.SectorSize))
                     .ToArray())
                 {
                     this.Remove(key);
                 }
 
-                long count = (size + (long)CacheManager.SectorSize - 1) / (long)CacheManager.SectorSize;
-                _settings.Size = count * CacheManager.SectorSize;
+                _settings.Size = ((size + ((long)CacheManager.SectorSize - 1)) / (long)CacheManager.SectorSize) * CacheManager.SectorSize;
                 _fileStream.SetLength(Math.Min(_settings.Size, _fileStream.Length));
 
+                _spaceSectors.Clear();
                 _spaceSectorsInitialized = false;
             }
         }
@@ -673,103 +632,146 @@ namespace Library.Net.Amoeba
 
         public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
-            List<Key> list = null;
-
+            // 重複するセクタを確保したブロックを検出しRemoveする。
             lock (this.ThisLock)
             {
-                list = new List<Key>(_settings.ClusterIndex.Keys.Randomize());
-            }
+                _bitmapManager.SetLength((this.Size + ((long)CacheManager.SectorSize - 1)) / (long)CacheManager.SectorSize);
 
-            int badBlockCount = 0;
-            int checkedBlockCount = 0;
-            int blockCount = list.Count;
-            bool isStop = false;
+                List<Key> keys = new List<Key>();
 
-            getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-            if (isStop) return;
-
-            foreach (var item in list)
-            {
-                checkedBlockCount++;
-                ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                try
+                foreach (var pair in _settings.ClusterIndex)
                 {
-                    buffer = this[item];
-                }
-                catch (Exception)
-                {
-                    badBlockCount++;
-                }
-                finally
-                {
-                    if (buffer.Array != null)
+                    var key = pair.Key;
+                    var clusterInfo = pair.Value;
+
+                    foreach (var sector in clusterInfo.Indexes)
                     {
-                        _bufferManager.ReturnBuffer(buffer.Array);
+                        if (!_bitmapManager.Get(sector))
+                        {
+                            _bitmapManager.Set(sector, true);
+                        }
+                        else
+                        {
+                            keys.Add(key);
+
+                            break;
+                        }
                     }
                 }
 
-                if (checkedBlockCount % 8 == 0)
-                    getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+                foreach (var key in keys)
+                {
+                    _settings.ClusterIndex.Remove(key);
+                    this.OnRemoveKeyEvent(new Key[] { key });
+                }
 
-                if (isStop) return;
+                _spaceSectors.Clear();
+                _spaceSectorsInitialized = false;
             }
 
-            getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+            // 読めないブロックを検出しRemoveする。
+            {
+                List<Key> list = null;
+
+                lock (this.ThisLock)
+                {
+                    list = new List<Key>(_settings.ClusterIndex.Keys.Randomize());
+                }
+
+                int badBlockCount = 0;
+                int checkedBlockCount = 0;
+                int blockCount = list.Count;
+                bool isStop = false;
+
+                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+
+                if (isStop) return;
+
+                foreach (var item in list)
+                {
+                    checkedBlockCount++;
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = this[item];
+                    }
+                    catch (Exception)
+                    {
+                        badBlockCount++;
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+
+                    if (checkedBlockCount % 8 == 0)
+                        getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+
+                    if (isStop) return;
+                }
+
+                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+            }
         }
 
         public void CheckExternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
-            List<Key> list = null;
-
-            lock (this.ThisLock)
+            // 読めないブロックを検出しRemoveする。
             {
-                list = new List<Key>();
+                List<Key> list = null;
 
-                foreach (var item in _settings.ShareIndex.Randomize())
+                lock (this.ThisLock)
                 {
-                    list.AddRange(item.Value.Indexes.Keys);
-                }
-            }
+                    list = new List<Key>();
 
-            int badBlockCount = 0;
-            int checkedBlockCount = 0;
-            int blockCount = list.Count;
-            bool isStop = false;
-
-            getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-            if (isStop) return;
-
-            foreach (var item in list)
-            {
-                checkedBlockCount++;
-                ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                try
-                {
-                    buffer = this[item];
-                }
-                catch (Exception)
-                {
-                    badBlockCount++;
-                }
-                finally
-                {
-                    if (buffer.Array != null)
+                    foreach (var item in _settings.ShareIndex.Randomize())
                     {
-                        _bufferManager.ReturnBuffer(buffer.Array);
+                        list.AddRange(item.Value.Indexes.Keys);
                     }
                 }
 
-                if (checkedBlockCount % 8 == 0)
-                    getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+                int badBlockCount = 0;
+                int checkedBlockCount = 0;
+                int blockCount = list.Count;
+                bool isStop = false;
+
+                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
 
                 if (isStop) return;
-            }
 
-            getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+                foreach (var item in list)
+                {
+                    checkedBlockCount++;
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = this[item];
+                    }
+                    catch (Exception)
+                    {
+                        badBlockCount++;
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+
+                    if (checkedBlockCount % 8 == 0)
+                        getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+
+                    if (isStop) return;
+                }
+
+                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+            }
         }
 
         private void _shareIndexLinkUpdate()
@@ -1441,19 +1443,19 @@ namespace Library.Net.Amoeba
 
                         if (_shareIndexLink.TryGetValue(key, out path))
                         {
-                            var shareIndex = _settings.ShareIndex[path];
+                            var shareInfo = _settings.ShareIndex[path];
 
-                            byte[] buffer = _bufferManager.TakeBuffer(shareIndex.BlockLength);
+                            byte[] buffer = _bufferManager.TakeBuffer(shareInfo.BlockLength);
 
                             try
                             {
                                 using (Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 {
-                                    int i = shareIndex.Indexes[key];
+                                    int i = shareInfo.Indexes[key];
 
-                                    stream.Seek((long)shareIndex.BlockLength * i, SeekOrigin.Begin);
+                                    stream.Seek((long)shareInfo.BlockLength * i, SeekOrigin.Begin);
 
-                                    int length = (int)Math.Min(stream.Length - stream.Position, shareIndex.BlockLength);
+                                    int length = (int)Math.Min(stream.Length - stream.Position, shareInfo.BlockLength);
                                     stream.Read(buffer, 0, length);
 
                                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
@@ -1510,11 +1512,13 @@ namespace Library.Net.Amoeba
 
                     if (this.Contains(key)) return;
 
-                    List<long> sectorList = new List<long>();
+                    List<long> sectorList = null;
 
                     try
                     {
-                        int count = (value.Count + CacheManager.SectorSize - 1) / CacheManager.SectorSize;
+                        int count = (value.Count + (CacheManager.SectorSize - 1)) / CacheManager.SectorSize;
+
+                        sectorList = new List<long>(count);
 
                         if (_spaceSectors.Count < count)
                         {
@@ -1524,7 +1528,12 @@ namespace Library.Net.Amoeba
                         if (_spaceSectors.Count < count) throw new SpaceNotFoundException();
 
                         sectorList.AddRange(_spaceSectors.Take(count));
-                        _spaceSectors.ExceptWith(sectorList);
+
+                        foreach (var sector in sectorList)
+                        {
+                            _bitmapManager.Set(sector, true);
+                            _spaceSectors.Remove(sector);
+                        }
 
                         for (int i = 0, remain = value.Count; i < sectorList.Count && 0 < remain; i++, remain -= CacheManager.SectorSize)
                         {
@@ -1533,7 +1542,7 @@ namespace Library.Net.Amoeba
                             if ((_fileStream.Length < posision + CacheManager.SectorSize))
                             {
                                 int unit = 1024 * 1024 * 256;// 256MB
-                                long size = (((posision + CacheManager.SectorSize) + unit - 1) / unit) * unit;
+                                long size = (((posision + CacheManager.SectorSize) + (unit - 1)) / unit) * unit;
 
                                 _fileStream.SetLength(Math.Min(size, this.Size));
                             }
@@ -1607,13 +1616,26 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                List<Key> list = new List<Key>();
+                int count = 0;
 
-                list.AddRange(_settings.ClusterIndex.Keys);
-
-                foreach (var item in _settings.ShareIndex)
                 {
-                    list.AddRange(item.Value.Indexes.Keys);
+                    count += _settings.ClusterIndex.Keys.Count;
+
+                    foreach (var shareInfo in _settings.ShareIndex.Values)
+                    {
+                        count += shareInfo.Indexes.Keys.Count;
+                    }
+                }
+
+                var list = new List<Key>(count);
+
+                {
+                    list.AddRange(_settings.ClusterIndex.Keys);
+
+                    foreach (var shareInfo in _settings.ShareIndex.Values)
+                    {
+                        list.AddRange(shareInfo.Indexes.Keys);
+                    }
                 }
 
                 return list.ToArray();

@@ -7,24 +7,24 @@ namespace Library.Collections
 {
     public class LockedSortedDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable<KeyValuePair<TKey, TValue>>, IEnumerable, IThisLock
     {
-        private SortedDictionary<TKey, TValue> _dic;
+        private SortedList<TKey, TValue> _dic;
         private int? _capacity;
         private readonly object _thisLock = new object();
 
         public LockedSortedDictionary()
         {
-            _dic = new SortedDictionary<TKey, TValue>();
+            _dic = new SortedList<TKey, TValue>();
         }
 
         public LockedSortedDictionary(int capacity)
         {
-            _dic = new SortedDictionary<TKey, TValue>();
+            _dic = new SortedList<TKey, TValue>();
             _capacity = capacity;
         }
 
         public LockedSortedDictionary(IDictionary<TKey, TValue> dictionary)
         {
-            _dic = new SortedDictionary<TKey, TValue>();
+            _dic = new SortedList<TKey, TValue>();
 
             foreach (var item in dictionary)
             {
@@ -34,18 +34,18 @@ namespace Library.Collections
 
         public LockedSortedDictionary(IComparer<TKey> comparer)
         {
-            _dic = new SortedDictionary<TKey, TValue>(comparer);
+            _dic = new SortedList<TKey, TValue>(comparer);
         }
 
         public LockedSortedDictionary(int capacity, IComparer<TKey> comparer)
         {
-            _dic = new SortedDictionary<TKey, TValue>(comparer);
+            _dic = new SortedList<TKey, TValue>(comparer);
             _capacity = capacity;
         }
 
         public LockedSortedDictionary(IDictionary<TKey, TValue> dictionary, IComparer<TKey> comparer)
         {
-            _dic = new SortedDictionary<TKey, TValue>(comparer);
+            _dic = new SortedList<TKey, TValue>(comparer);
 
             foreach (var item in dictionary)
             {

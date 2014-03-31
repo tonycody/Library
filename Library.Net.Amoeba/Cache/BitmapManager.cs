@@ -18,6 +18,7 @@ namespace Library.Net.Amoeba
 
         private bool _cacheChanged = false;
         private long _cacheSector = -1;
+
         private byte[] _cacheBuffer;
         private int _cacheBufferCount = 0;
 
@@ -52,14 +53,14 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 {
-                    var size = ((length + 8) - 1) / 8;
+                    var size = (length + (8 - 1)) / 8;
 
                     _bitmapStream.SetLength(size);
 
                     {
                         var buffer = new byte[4096];
 
-                        for (long i = (((size + buffer.Length) - 1) / buffer.Length) - 1, remain = size; i >= 0; i--, remain -= buffer.Length)
+                        for (long i = ((size + (buffer.Length - 1)) / buffer.Length) - 1, remain = size; i >= 0; i--, remain -= buffer.Length)
                         {
                             _bitmapStream.Write(buffer, 0, (int)Math.Min(remain, buffer.Length));
                             _bitmapStream.Flush();
@@ -72,6 +73,7 @@ namespace Library.Net.Amoeba
                 {
                     _cacheChanged = false;
                     _cacheSector = -1;
+
                     _cacheBufferCount = 0;
                 }
             }
@@ -101,9 +103,9 @@ namespace Library.Net.Amoeba
                     this.Flush();
 
                     _bitmapStream.Seek(sector * BitmapManager.SectorSize, SeekOrigin.Begin);
+                    _cacheBufferCount = _bitmapStream.Read(_cacheBuffer, 0, _cacheBuffer.Length);
 
                     _cacheSector = sector;
-                    _cacheBufferCount = _bitmapStream.Read(_cacheBuffer, 0, _cacheBuffer.Length);
                 }
 
                 return new ArraySegment<byte>(_cacheBuffer, 0, _cacheBufferCount);
@@ -121,7 +123,7 @@ namespace Library.Net.Amoeba
                 var bitOffset = (byte)(point % 8);
 
                 var buffer = this.GetBuffer(sectorOffset);
-                return ((byte)(buffer.Array[bufferOffset] << bitOffset) & 0x80) == 0x80;
+                return ((byte)(buffer.Array[buffer.Offset + bufferOffset] << bitOffset) & 0x80) == 0x80;
             }
         }
 
@@ -138,7 +140,7 @@ namespace Library.Net.Amoeba
                     var bitOffset = (byte)(point % 8);
 
                     var buffer = this.GetBuffer(sectorOffset);
-                    buffer.Array[bufferOffset] = (byte)(buffer.Array[bufferOffset] | (byte)(0x80 >> bitOffset));
+                    buffer.Array[buffer.Offset + bufferOffset] = (byte)(buffer.Array[buffer.Offset + bufferOffset] | (byte)(0x80 >> bitOffset));
                 }
                 else
                 {
@@ -147,7 +149,7 @@ namespace Library.Net.Amoeba
                     var bitOffset = (byte)(point % 8);
 
                     var buffer = this.GetBuffer(sectorOffset);
-                    buffer.Array[bufferOffset] = (byte)(buffer.Array[bufferOffset] & ~(byte)(0x80 >> bitOffset));
+                    buffer.Array[buffer.Offset + bufferOffset] = (byte)(buffer.Array[buffer.Offset + bufferOffset] & ~(byte)(0x80 >> bitOffset));
                 }
 
                 _cacheChanged = true;
