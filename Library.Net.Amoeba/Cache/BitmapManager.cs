@@ -56,6 +56,7 @@ namespace Library.Net.Amoeba
                     var size = (length + (8 - 1)) / 8;
 
                     _bitmapStream.SetLength(size);
+                    _bitmapStream.Seek(0, SeekOrigin.Begin);
 
                     {
                         var buffer = new byte[4096];
