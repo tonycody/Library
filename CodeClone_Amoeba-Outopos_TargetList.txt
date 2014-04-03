@@ -1,20 +1,11 @@
-Library.Net.Amoeba\ClientManager.cs
-Library.Net.Outopos\ClientManager.cs
-
-Library.Net.Amoeba\ConnectionFilter.cs
-Library.Net.Outopos\ConnectionFilter.cs
-
-Library.Net.Amoeba\ConnectionFilterCollection.cs
-Library.Net.Outopos\ConnectionFilterCollection.cs
+Library.Net.Amoeba\Cache\BitmapManager.cs
+Library.Net.Outopos\Cache\BitmapManager.cs
 
 Library.Net.Amoeba\Node.cs
 Library.Net.Outopos\Node.cs
 
 Library.Net.Amoeba\NodeCollection.cs
 Library.Net.Outopos\NodeCollection.cs
-
-Library.Net.Amoeba\ServerManager.cs
-Library.Net.Outopos\ServerManager.cs
 
 Library.Net.Amoeba\UriCollection.cs
 Library.Net.Outopos\UriCollection.cs

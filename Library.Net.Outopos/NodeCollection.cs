@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    public sealed class NodeCollection : FilterList<Node>, IEnumerable<Node>
+    public sealed class NodeCollection : LockedList<Node>
     {
         public NodeCollection() : base() { }
         public NodeCollection(int capacity) : base(capacity) { }

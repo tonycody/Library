@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
+using Library;
 using Library.Collections;
 
 namespace Library.Net.Outopos
@@ -17,8 +18,9 @@ namespace Library.Net.Outopos
 
         private bool _cacheChanged = false;
         private long _cacheSector = -1;
+
         private byte[] _cacheBuffer;
-        private int _cacheBufferCount;
+        private int _cacheBufferCount = 0;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -50,100 +52,109 @@ namespace Library.Net.Outopos
         {
             lock (this.ThisLock)
             {
-                _bitmapStream.SetLength(((length + 8) - 1) / 8);
+                {
+                    var size = (length + (8 - 1)) / 8;
+
+                    _bitmapStream.SetLength(size);
+                    _bitmapStream.Seek(0, SeekOrigin.Begin);
+
+                    {
+                        var buffer = new byte[4096];
+
+                        for (long i = ((size + (buffer.Length - 1)) / buffer.Length) - 1, remain = size; i >= 0; i--, remain -= buffer.Length)
+                        {
+                            _bitmapStream.Write(buffer, 0, (int)Math.Min(remain, buffer.Length));
+                            _bitmapStream.Flush();
+                        }
+                    }
+                }
+
                 _settings.Length = length;
+
+                {
+                    _cacheChanged = false;
+                    _cacheSector = -1;
+
+                    _cacheBufferCount = 0;
+                }
             }
         }
 
-        public void Flush()
+        private void Flush()
         {
-            if (_cacheChanged)
+            lock (this.ThisLock)
             {
-                _bitmapStream.Seek(_cacheSector * BitmapManager.SectorSize, SeekOrigin.Begin);
-                _bitmapStream.Write(_cacheBuffer, 0, _cacheBufferCount);
-                _bitmapStream.Flush();
+                if (_cacheChanged)
+                {
+                    _bitmapStream.Seek(_cacheSector * BitmapManager.SectorSize, SeekOrigin.Begin);
+                    _bitmapStream.Write(_cacheBuffer, 0, _cacheBufferCount);
+                    _bitmapStream.Flush();
 
-                _cacheChanged = false;
+                    _cacheChanged = false;
+                }
             }
         }
 
         private ArraySegment<byte> GetBuffer(long sector)
         {
-            if (_cacheSector != sector)
+            lock (this.ThisLock)
             {
-                this.Flush();
+                if (_cacheSector != sector)
+                {
+                    this.Flush();
 
-                _bitmapStream.Seek(sector * BitmapManager.SectorSize, SeekOrigin.Begin);
+                    _bitmapStream.Seek(sector * BitmapManager.SectorSize, SeekOrigin.Begin);
+                    _cacheBufferCount = _bitmapStream.Read(_cacheBuffer, 0, _cacheBuffer.Length);
 
-                _cacheSector = sector;
-                _cacheBufferCount = _bitmapStream.Read(_cacheBuffer, 0, _cacheBuffer.Length);
+                    _cacheSector = sector;
+                }
+
+                return new ArraySegment<byte>(_cacheBuffer, 0, _cacheBufferCount);
             }
-
-            return new ArraySegment<byte>(_cacheBuffer, 0, _cacheBufferCount);
         }
 
         public bool Get(long point)
         {
-            var sectorOffset = (point / 8) / BitmapManager.SectorSize;
-            var bufferOffset = (int)((point / 8) % BitmapManager.SectorSize);
-            var bitOffset = (byte)(point % 8);
+            lock (this.ThisLock)
+            {
+                if (point >= this.Length) throw new ArgumentOutOfRangeException("point");
 
-            var buffer = this.GetBuffer(sectorOffset);
-            return ((byte)(buffer.Array[bufferOffset] << bitOffset) & 0x80) == 0x80;
+                var sectorOffset = (point / 8) / BitmapManager.SectorSize;
+                var bufferOffset = (int)((point / 8) % BitmapManager.SectorSize);
+                var bitOffset = (byte)(point % 8);
+
+                var buffer = this.GetBuffer(sectorOffset);
+                return ((byte)(buffer.Array[buffer.Offset + bufferOffset] << bitOffset) & 0x80) == 0x80;
+            }
         }
 
         public void Set(long point, bool state)
         {
-            if (state)
+            lock (this.ThisLock)
             {
-                var sectorOffset = (point / 8) / BitmapManager.SectorSize;
-                var bufferOffset = (int)((point / 8) % BitmapManager.SectorSize);
-                var bitOffset = (byte)(point % 8);
+                if (point >= this.Length) throw new ArgumentOutOfRangeException("point");
 
-                var buffer = this.GetBuffer(sectorOffset);
-                buffer.Array[bufferOffset] = (byte)(buffer.Array[bufferOffset] | (byte)(0x80 >> bitOffset));
-            }
-            else
-            {
-                var sectorOffset = (point / 8) / BitmapManager.SectorSize;
-                var bufferOffset = (int)((point / 8) % BitmapManager.SectorSize);
-                var bitOffset = (byte)(point % 8);
-
-                var buffer = this.GetBuffer(sectorOffset);
-                buffer.Array[bufferOffset] = (byte)(buffer.Array[bufferOffset] & ~(byte)(0x80 >> bitOffset));
-            }
-
-            _cacheChanged = true;
-        }
-
-        public long[] GetPoints(int count)
-        {
-            var list = new List<long>(count);
-
-            {
-                long max = ((_bitmapStream.Length + BitmapManager.SectorSize) - 1) * BitmapManager.SectorSize;
-
-                for (long i = 0; i < max; i++)
+                if (state)
                 {
-                    var buffer = this.GetBuffer(i);
+                    var sectorOffset = (point / 8) / BitmapManager.SectorSize;
+                    var bufferOffset = (int)((point / 8) % BitmapManager.SectorSize);
+                    var bitOffset = (byte)(point % 8);
 
-                    for (int j = 0, offset = buffer.Offset; j < buffer.Count; j++, offset++)
-                    {
-                        for (int k = 0; k < 8; k++)
-                        {
-                            if (((buffer.Array[offset] << k) & 0x80) == 0x00)
-                            {
-                                list.Add(((i + j) * 8) + k);
-                                if (list.Count >= count) goto End;
-                            }
-                        }
-                    }
+                    var buffer = this.GetBuffer(sectorOffset);
+                    buffer.Array[buffer.Offset + bufferOffset] = (byte)(buffer.Array[buffer.Offset + bufferOffset] | (byte)(0x80 >> bitOffset));
                 }
+                else
+                {
+                    var sectorOffset = (point / 8) / BitmapManager.SectorSize;
+                    var bufferOffset = (int)((point / 8) % BitmapManager.SectorSize);
+                    var bitOffset = (byte)(point % 8);
+
+                    var buffer = this.GetBuffer(sectorOffset);
+                    buffer.Array[buffer.Offset + bufferOffset] = (byte)(buffer.Array[buffer.Offset + bufferOffset] & ~(byte)(0x80 >> bitOffset));
+                }
+
+                _cacheChanged = true;
             }
-
-        End: ;
-
-            return list.ToArray();
         }
 
         #region ISettings
@@ -207,6 +218,8 @@ namespace Library.Net.Outopos
 
         private class Settings : Library.Configuration.SettingsBase
         {
+            private long _length = 0;
+
             private volatile object _thisLock;
 
             public Settings(object lockObject)
@@ -222,6 +235,8 @@ namespace Library.Net.Outopos
                 lock (_thisLock)
                 {
                     base.Load(directoryPath);
+
+                    _length = (long)this["Length"];
                 }
             }
 
@@ -229,6 +244,8 @@ namespace Library.Net.Outopos
             {
                 lock (_thisLock)
                 {
+                    this["Length"] = _length;
+
                     base.Save(directoryPath);
                 }
             }
@@ -239,14 +256,14 @@ namespace Library.Net.Outopos
                 {
                     lock (_thisLock)
                     {
-                        return (long)this["Length"];
+                        return _length;
                     }
                 }
                 set
                 {
                     lock (_thisLock)
                     {
-                        this["Length"] = value;
+                        _length = value;
                     }
                 }
             }

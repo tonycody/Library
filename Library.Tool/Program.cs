@@ -612,6 +612,7 @@ namespace Library.Tool
             }
             catch (Exception e)
             {
+                MessageBox.Show(e.Message, "Library.Tool Error", MessageBoxButtons.OK);
                 MessageBox.Show(e.StackTrace, "Library.Tool Error", MessageBoxButtons.OK);
             }
         }
