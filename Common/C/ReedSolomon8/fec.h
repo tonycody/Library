@@ -85,8 +85,8 @@ struct fec_parms * fec_new(int k, int n);
 void init_fec();
 void fec_encode(struct fec_parms *code, gf *src[], gf *fec, int index, int sz);
 int fec_decode(struct fec_parms *code, gf *pkt[], int index[], int sz);
-void set(int cancel);
-int get();
+void setFlag(int cancel);
+int getFlag();
 
 /* end of file */
 

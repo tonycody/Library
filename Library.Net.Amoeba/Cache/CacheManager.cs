@@ -33,13 +33,15 @@ namespace Library.Net.Amoeba
         private SortedSet<long> _spaceSectors = new SortedSet<long>();
 
         private SortedDictionary<int, string> _ids = new SortedDictionary<int, string>();
-        private volatile LockedHashDictionary<Key, string> _shareIndexLink;
         private int _id;
+
+        private bool _shareIndexLinkInitialized;
+        private Dictionary<Key, string> _shareIndexLink = new Dictionary<Key, string>();
 
         private long _lockSpace;
         private long _freeSpace;
 
-        private LockedSortedKeyDictionary<int> _lockedKeys = new LockedSortedKeyDictionary<int>();
+        private Dictionary<Key, int> _lockedKeys = new Dictionary<Key, int>();
 
         private SetKeyEventHandler _setKeyEvent;
         private RemoveShareEventHandler _removeShareEvent;
@@ -83,7 +85,7 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    var usingKeys = new SortedKeySet();
+                    var usingKeys = new SortedSet<Key>(new KeyComparer());
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
                     foreach (var seedInfo in _settings.SeedsInformation)
@@ -356,7 +358,7 @@ namespace Library.Net.Amoeba
                 this.CheckSpace(sectorCount);
                 if (sectorCount <= _spaceSectors.Count) return;
 
-                var usingKeys = new SortedKeySet();
+                var usingKeys = new SortedSet<Key>(new KeyComparer());
                 usingKeys.UnionWith(_lockedKeys.Keys);
 
                 foreach (var info in _settings.SeedsInformation)
@@ -602,7 +604,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void RemoveCacheSeed(Seed seed)
+        public void RemoveCache(Seed seed)
         {
             lock (this.ThisLock)
             {
@@ -778,19 +780,22 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (_shareIndexLink != null) return;
-
-                _shareIndexLink = new LockedHashDictionary<Key, string>();
-
-                foreach (var pair in _settings.ShareIndex)
+                if (!_shareIndexLinkInitialized)
                 {
-                    var path = pair.Key;
-                    var shareInfo = pair.Value;
+                    _shareIndexLink.Clear();
 
-                    foreach (var key in shareInfo.Indexes.Keys)
+                    foreach (var pair in _settings.ShareIndex)
                     {
-                        _shareIndexLink[key] = path;
+                        var path = pair.Key;
+                        var shareInfo = pair.Value;
+
+                        foreach (var key in shareInfo.Indexes.Keys)
+                        {
+                            _shareIndexLink[key] = path;
+                        }
                     }
+
+                    _shareIndexLinkInitialized = true;
                 }
             }
         }
@@ -825,18 +830,19 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
+                // 既にShareされている場合は、新しいShareInfoで置き換える。
                 if (_settings.ShareIndex.ContainsKey(path))
                 {
                     _settings.ShareIndex[path] = shareInfo;
 
-                    _shareIndexLink = null;
+                    _shareIndexLinkInitialized = false;
                 }
                 else
                 {
                     _settings.ShareIndex.Add(path, shareInfo);
                     _ids.Add(_id++, path);
 
-                    _shareIndexLink = null;
+                    _shareIndexLinkInitialized = false;
                 }
             }
 
@@ -857,7 +863,7 @@ namespace Library.Net.Amoeba
                 _settings.ShareIndex.Remove(path);
                 _ids.Remove(id);
 
-                _shareIndexLink = null;
+                _shareIndexLinkInitialized = false;
 
                 this.OnRemoveShareEvent(path);
                 this.OnRemoveKeyEvent(keys);
@@ -1085,15 +1091,16 @@ namespace Library.Net.Amoeba
 
                 if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
 
-                List<byte[]> bufferList = new List<byte[]>();
-                List<byte[]> parityBufferList = new List<byte[]>();
+                var bufferArray = new byte[keys.Count][];
+                var parityBufferArray = new byte[keys.Count][];
+
                 int sumLength = 0;
 
                 try
                 {
                     KeyCollection parityHeaders = new KeyCollection();
 
-                    for (int i = 0; i < keys.Count; i++)
+                    for (int i = 0; i < bufferArray.Length; i++)
                     {
                         if (watchEvent(this)) throw new StopException();
 
@@ -1110,7 +1117,7 @@ namespace Library.Net.Amoeba
                             Array.Copy(buffer.Array, buffer.Offset, target, 0, buffer.Count);
                             Array.Clear(target, buffer.Count, target.Length - buffer.Count);
 
-                            bufferList.Add(target);
+                            bufferArray[i] = target;
                         }
                         finally
                         {
@@ -1121,19 +1128,19 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    for (int i = 0; i < keys.Count; i++)
+                    for (int i = 0; i < parityBufferArray.Length; i++)
                     {
-                        parityBufferList.Add(_bufferManager.TakeBuffer(blockLength));
+                        parityBufferArray[i] = _bufferManager.TakeBuffer(blockLength);
                     }
 
-                    List<int> intList = new List<int>();
+                    var intArray = new int[parityBufferArray.Length];
 
-                    for (int i = keys.Count, length = bufferList.Count + parityBufferList.Count; i < length; i++)
+                    for (int i = bufferArray.Length; i < parityBufferArray.Length; i++)
                     {
-                        intList.Add(i);
+                        intArray[i] = i;
                     }
 
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(bufferList.Count, bufferList.Count + parityBufferList.Count))
+                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(bufferArray.Length, bufferArray.Length + parityBufferArray.Length))
                     {
                         Exception exception = null;
 
@@ -1141,20 +1148,7 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                var tempBufferList = bufferList.ToArray();
-                                var tempParityBufferList = parityBufferList.ToArray();
-                                var tempIntList = intList.ToArray();
-
-                                reedSolomon.Encode(tempBufferList, tempParityBufferList, tempIntList, blockLength);
-
-                                bufferList.Clear();
-                                bufferList.AddRange(tempBufferList);
-
-                                parityBufferList.Clear();
-                                parityBufferList.AddRange(tempParityBufferList);
-
-                                intList.Clear();
-                                intList.AddRange(tempIntList);
+                                reedSolomon.Encode(bufferArray, parityBufferArray, intArray, blockLength);
                             }
                             catch (Exception e)
                             {
@@ -1181,16 +1175,16 @@ namespace Library.Net.Amoeba
                         if (exception != null) throw new StopException("Stop", exception);
                     }
 
-                    for (int i = 0; i < parityBufferList.Count; i++)
+                    for (int i = 0; i < parityBufferArray.Length; i++)
                     {
                         if (hashAlgorithm == HashAlgorithm.Sha512)
                         {
-                            var key = new Key(Sha512.ComputeHash(parityBufferList[i]), hashAlgorithm);
+                            var key = new Key(Sha512.ComputeHash(parityBufferArray[i]), hashAlgorithm);
 
                             lock (this.ThisLock)
                             {
                                 this.Lock(key);
-                                this[key] = new ArraySegment<byte>(parityBufferList[i], 0, blockLength);
+                                this[key] = new ArraySegment<byte>(parityBufferArray[i], 0, blockLength);
                             }
 
                             parityHeaders.Add(key);
@@ -1203,7 +1197,7 @@ namespace Library.Net.Amoeba
 
                     Group group = new Group();
                     group.CorrectionAlgorithm = correctionAlgorithm;
-                    group.InformationLength = bufferList.Count;
+                    group.InformationLength = bufferArray.Length;
                     group.BlockLength = blockLength;
                     group.Length = sumLength;
                     group.Keys.AddRange(keys);
@@ -1217,14 +1211,14 @@ namespace Library.Net.Amoeba
                 }
                 finally
                 {
-                    for (int i = 0; i < bufferList.Count; i++)
+                    for (int i = 0; i < bufferArray.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(bufferList[i]);
+                        _bufferManager.ReturnBuffer(bufferArray[i]);
                     }
 
-                    for (int i = 0; i < parityBufferList.Count; i++)
+                    for (int i = 0; i < parityBufferArray.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(parityBufferList[i]);
+                        _bufferManager.ReturnBuffer(parityBufferArray[i]);
                     }
                 }
             }
@@ -1244,13 +1238,15 @@ namespace Library.Net.Amoeba
             }
             else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
-                List<byte[]> bufferList = new List<byte[]>();
+                var bufferArray = new byte[group.InformationLength][];
 
                 try
                 {
-                    List<int> intList = new List<int>();
+                    var intArray = new int[group.InformationLength];
 
-                    for (int i = 0; bufferList.Count < group.InformationLength && i < group.Keys.Count; i++)
+                    int count = 0;
+
+                    for (int i = 0; i < group.Keys.Count && count < group.InformationLength; i++)
                     {
                         if (watchEvent(this)) throw new StopException();
 
@@ -1265,8 +1261,10 @@ namespace Library.Net.Amoeba
                             Array.Copy(buffer.Array, buffer.Offset, target, 0, buffer.Count);
                             Array.Clear(target, buffer.Count, target.Length - buffer.Count);
 
-                            intList.Add(i);
-                            bufferList.Add(target);
+                            intArray[count] = i;
+                            bufferArray[count] = target;
+
+                            count++;
                         }
                         catch (BlockNotFoundException)
                         {
@@ -1283,7 +1281,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (bufferList.Count < group.InformationLength) throw new BlockNotFoundException();
+                    if (count < group.InformationLength) throw new BlockNotFoundException();
 
                     using (ReedSolomon8 reedSolomon = new ReedSolomon8(group.InformationLength, group.Keys.Count))
                     {
@@ -1293,16 +1291,7 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                var tempBufferList = bufferList.ToArray();
-                                var tempIntList = intList.ToArray();
-
-                                reedSolomon.Decode(tempBufferList, tempIntList, group.BlockLength);
-
-                                bufferList.Clear();
-                                bufferList.AddRange(tempBufferList);
-
-                                intList.Clear();
-                                intList.AddRange(tempIntList);
+                                reedSolomon.Decode(bufferArray, intArray, group.BlockLength);
                             }
                             catch (Exception e)
                             {
@@ -1333,14 +1322,14 @@ namespace Library.Net.Amoeba
 
                     for (int i = 0; i < group.InformationLength; length -= group.BlockLength, i++)
                     {
-                        this[group.Keys[i]] = new ArraySegment<byte>(bufferList[i], 0, (int)Math.Min(group.BlockLength, length));
+                        this[group.Keys[i]] = new ArraySegment<byte>(bufferArray[i], 0, (int)Math.Min(group.BlockLength, length));
                     }
                 }
                 finally
                 {
-                    for (int i = 0; i < bufferList.Count; i++)
+                    for (int i = 0; i < bufferArray.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(bufferList[i]);
+                        _bufferManager.ReturnBuffer(bufferArray[i]);
                     }
                 }
 
@@ -1598,7 +1587,7 @@ namespace Library.Net.Amoeba
                     _ids.Add(_id++, item.Key);
                 }
 
-                _shareIndexLink = null;
+                _shareIndexLinkInitialized = false;
             }
         }
 
@@ -1685,7 +1674,7 @@ namespace Library.Net.Amoeba
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<LockedHashDictionary<Key, ClusterInfo>>() { Name = "ClustersIndex", Value = new LockedHashDictionary<Key, ClusterInfo>() },
                     new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
-                    new Library.Configuration.SettingContent<LockedHashDictionary<string, ShareInfo>>() { Name = "ShareIndex", Value = new LockedHashDictionary<string, ShareInfo>() },
+                    new Library.Configuration.SettingContent<LockedSortedDictionary<string, ShareInfo>>() { Name = "ShareIndex", Value = new LockedSortedDictionary<string, ShareInfo>() },
                     new Library.Configuration.SettingContent<LockedList<SeedInfo>>() { Name = "SeedInformation", Value = new LockedList<SeedInfo>() },
                 })
             {
@@ -1737,13 +1726,13 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public LockedHashDictionary<string, ShareInfo> ShareIndex
+            public LockedSortedDictionary<string, ShareInfo> ShareIndex
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedHashDictionary<string, ShareInfo>)this["ShareIndex"];
+                        return (LockedSortedDictionary<string, ShareInfo>)this["ShareIndex"];
                     }
                 }
             }
@@ -1761,31 +1750,22 @@ namespace Library.Net.Amoeba
         }
 
         [DataContract(Name = "Clusters", Namespace = "http://Library/Net/Amoeba/CacheManager")]
-        private class ClusterInfo : IThisLock
+        private class ClusterInfo
         {
             private long[] _indexes;
             private int _length;
             private DateTime _updateTime = DateTime.UtcNow;
-
-            private volatile object _thisLock;
-            private static readonly object _initializeLock = new object();
 
             [DataMember(Name = "Indexs")]
             public long[] Indexes
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _indexes;
-                    }
+                    return _indexes;
                 }
                 set
                 {
-                    lock (this.ThisLock)
-                    {
-                        _indexes = value;
-                    }
+                    _indexes = value;
                 }
             }
 
@@ -1794,17 +1774,11 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _length;
-                    }
+                    return _length;
                 }
                 set
                 {
-                    lock (this.ThisLock)
-                    {
-                        _length = value;
-                    }
+                    _length = value;
                 }
             }
 
@@ -1813,65 +1787,30 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _updateTime;
-                    }
+                    return _updateTime;
                 }
                 set
                 {
-                    lock (this.ThisLock)
-                    {
-                        _updateTime = value;
-                    }
+                    _updateTime = value;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    if (_thisLock == null)
-                    {
-                        lock (_initializeLock)
-                        {
-                            if (_thisLock == null)
-                            {
-                                _thisLock = new object();
-                            }
-                        }
-                    }
-
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         [DataContract(Name = "ShareIndex", Namespace = "http://Library/Net/Amoeba/CacheManager")]
-        private class ShareInfo : IThisLock
+        private class ShareInfo
         {
-            private LockedHashDictionary<Key, int> _indexes;
+            private SortedDictionary<Key, int> _indexes;
             private int _blockLength;
 
-            private volatile object _thisLock;
-            private static readonly object _initializeLock = new object();
-
             [DataMember(Name = "KeyAndCluster")]
-            public LockedHashDictionary<Key, int> Indexes
+            public SortedDictionary<Key, int> Indexes
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_indexes == null)
-                            _indexes = new LockedHashDictionary<Key, int>();
+                    if (_indexes == null)
+                        _indexes = new SortedDictionary<Key, int>(new KeyComparer());
 
-                        return _indexes;
-                    }
+                    return _indexes;
                 }
             }
 
@@ -1880,70 +1819,32 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _blockLength;
-                    }
+                    return _blockLength;
                 }
                 set
                 {
-                    lock (this.ThisLock)
-                    {
-                        _blockLength = value;
-                    }
+                    _blockLength = value;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    if (_thisLock == null)
-                    {
-                        lock (_initializeLock)
-                        {
-                            if (_thisLock == null)
-                            {
-                                _thisLock = new object();
-                            }
-                        }
-                    }
-
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         [DataContract(Name = "SeedInformation", Namespace = "http://Library/Net/Amoeba/CacheManager")]
-        private class SeedInfo : IThisLock
+        private class SeedInfo
         {
             private Seed _seed;
             private IndexCollection _indexes;
             private string _path;
-
-            private volatile object _thisLock;
-            private static readonly object _initializeLock = new object();
 
             [DataMember(Name = "Seed")]
             public Seed Seed
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _seed;
-                    }
+                    return _seed;
                 }
                 set
                 {
-                    lock (this.ThisLock)
-                    {
-                        _seed = value;
-                    }
+                    _seed = value;
                 }
             }
 
@@ -1952,13 +1853,10 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        if (_indexes == null)
-                            _indexes = new IndexCollection();
+                    if (_indexes == null)
+                        _indexes = new IndexCollection();
 
-                        return _indexes;
-                    }
+                    return _indexes;
                 }
             }
 
@@ -1967,42 +1865,13 @@ namespace Library.Net.Amoeba
             {
                 get
                 {
-                    lock (this.ThisLock)
-                    {
-                        return _path;
-                    }
+                    return _path;
                 }
                 set
                 {
-                    lock (this.ThisLock)
-                    {
-                        _path = value;
-                    }
+                    _path = value;
                 }
             }
-
-            #region IThisLock
-
-            public object ThisLock
-            {
-                get
-                {
-                    if (_thisLock == null)
-                    {
-                        lock (_initializeLock)
-                        {
-                            if (_thisLock == null)
-                            {
-                                _thisLock = new object();
-                            }
-                        }
-                    }
-
-                    return _thisLock;
-                }
-            }
-
-            #endregion
         }
 
         protected override void Dispose(bool disposing)

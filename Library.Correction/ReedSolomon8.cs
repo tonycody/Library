@@ -15,7 +15,7 @@ namespace Library.Correction
         private static object _lockObject = new object();
         private dynamic _native = null;
 
-        private ReedSolomon _managed;
+        private ManagedReedSolomon8 _managed;
 
         private volatile bool _disposed;
 
@@ -50,7 +50,7 @@ namespace Library.Correction
                 catch (Exception)
                 {
                     var threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
-                    _managed = new ReedSolomon(8, k, n, threadCount, BufferManager.Instance);
+                    _managed = new ManagedReedSolomon8(k, n, threadCount, BufferManager.Instance);
                 }
             }
         }
@@ -67,7 +67,7 @@ namespace Library.Correction
                 else
                 {
                     var threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
-                    _managed = new ReedSolomon(8, k, n, threadCount, BufferManager.Instance);
+                    _managed = new ManagedReedSolomon8(k, n, threadCount, BufferManager.Instance);
                 }
             }
         }

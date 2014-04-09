@@ -145,13 +145,7 @@ namespace Library.Net.Amoeba
                         if (item.Value.Path != null) contexts.Add(new InformationContext("Path", Path.Combine(item.Value.Path, DownloadManager.GetNormalizedPath(item.Value.Seed.Name ?? ""))));
                         else contexts.Add(new InformationContext("Path", DownloadManager.GetNormalizedPath(item.Value.Seed.Name ?? "")));
 
-                        if (item.Value.EditSeed == null)
-                        {
-                            var editSeed = item.Value.Seed.Clone();
-                            item.Value.EditSeed = editSeed;
-                        }
-
-                        contexts.Add(new InformationContext("Seed", item.Value.EditSeed));
+                        contexts.Add(new InformationContext("Seed", item.Value.Seed));
 
                         if (item.Value.State == DownloadState.Downloading || item.Value.State == DownloadState.Completed || item.Value.State == DownloadState.Error)
                         {

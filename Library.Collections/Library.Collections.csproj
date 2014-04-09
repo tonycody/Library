@@ -58,6 +58,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="VolatileSortedDictionary.cs" />
+    <Compile Include="VolatileSortedSet.cs" />
     <Compile Include="LockedSortedSet.cs" />
     <Compile Include="LockedSortedDictionary.cs" />
     <Compile Include="VolatileHashSet.cs" />

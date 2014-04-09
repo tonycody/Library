@@ -90,7 +90,7 @@ namespace Library.Net.Amoeba
         {
             private Group _group;
 
-            private SortedKeyDictionary<bool> _dic;
+            private SortedDictionary<Key, bool> _dic;
             //private Dictionary<Key, bool> _dic;
 
             private bool _isCached;
@@ -101,7 +101,7 @@ namespace Library.Net.Amoeba
             {
                 _group = group;
 
-                _dic = new SortedKeyDictionary<bool>();
+                _dic = new SortedDictionary<Key, bool>(new KeyComparer());
                 //_dic = new Dictionary<Key, bool>();
 
                 foreach (var key in group.Keys)

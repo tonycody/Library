@@ -832,7 +832,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void PushSeedsRequest(SignatureCollection signatures)
+        public void PushSeedsRequest(IEnumerable<string> signatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1017,14 +1017,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Node> _readOnlyNodes;
+
             public IEnumerable<Node> Nodes
             {
                 get
                 {
-                    foreach (var item in this.ProtectedNodes)
-                    {
-                        yield return item;
-                    }
+                    if (_readOnlyNodes == null)
+                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes);
+
+                    return _readOnlyNodes;
                 }
             }
 
@@ -1119,14 +1121,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
+
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    foreach (var item in this.ProtectedKeys)
-                    {
-                        yield return item;
-                    }
+                    if (_readOnlyKeys == null)
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+
+                    return _readOnlyKeys;
                 }
             }
 
@@ -1221,14 +1225,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Key> _readOnlyKeys;
+
             public IEnumerable<Key> Keys
             {
                 get
                 {
-                    foreach (var item in this.ProtectedKeys)
-                    {
-                        yield return item;
-                    }
+                    if (_readOnlyKeys == null)
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+
+                    return _readOnlyKeys;
                 }
             }
 
@@ -1258,8 +1264,8 @@ namespace Library.Net.Amoeba
 
             public BlockMessage(Key key, ArraySegment<byte> value)
             {
-                _key = key;
-                _value = value;
+                this.Key = key;
+                this.Value = value;
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -1276,13 +1282,13 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Key)
                         {
-                            _key = Key.Import(rangeStream, bufferManager);
+                            this.Key = Key.Import(rangeStream, bufferManager);
                         }
                         else if (id == (byte)SerializeId.Value)
                         {
-                            if (_value.Array != null)
+                            if (this.Value.Array != null)
                             {
-                                bufferManager.ReturnBuffer(_value.Array);
+                                bufferManager.ReturnBuffer(this.Value.Array);
                             }
 
                             byte[] buffer = null;
@@ -1302,7 +1308,7 @@ namespace Library.Net.Amoeba
                                 throw e;
                             }
 
-                            _value = new ArraySegment<byte>(buffer, 0, (int)rangeStream.Length);
+                            this.Value = new ArraySegment<byte>(buffer, 0, (int)rangeStream.Length);
                         }
                     }
                 }
@@ -1364,6 +1370,10 @@ namespace Library.Net.Amoeba
                 {
                     return _key;
                 }
+                private set
+                {
+                    _key = value;
+                }
             }
 
             public ArraySegment<byte> Value
@@ -1371,6 +1381,10 @@ namespace Library.Net.Amoeba
                 get
                 {
                     return _value;
+                }
+                private set
+                {
+                    _value = value;
                 }
             }
         }
@@ -1453,14 +1467,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<string> _readOnlySignatures;
+
             public IEnumerable<string> Signatures
             {
                 get
                 {
-                    foreach (var item in this.ProtectedSignatures)
-                    {
-                        yield return item;
-                    }
+                    if (_readOnlySignatures == null)
+                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
+
+                    return _readOnlySignatures;
                 }
             }
 
@@ -1555,14 +1571,16 @@ namespace Library.Net.Amoeba
                 }
             }
 
+            private volatile ReadOnlyCollection<Seed> _readOnlySeeds;
+
             public IEnumerable<Seed> Seeds
             {
                 get
                 {
-                    foreach (var item in this.ProtectedSeeds)
-                    {
-                        yield return item;
-                    }
+                    if (_readOnlySeeds == null)
+                        _readOnlySeeds = new ReadOnlyCollection<Seed>(this.ProtectedSeeds);
+
+                    return _readOnlySeeds;
                 }
             }
 

@@ -580,14 +580,14 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void RemoveCacheSeed(Seed seed)
+        public void RemoveCache(Seed seed)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_isLoaded) throw new AmoebaManagerException("AmoebaManager is not loaded.");
 
             lock (this.ThisLock)
             {
-                _cacheManager.RemoveCacheSeed(seed);
+                _cacheManager.RemoveCache(seed);
             }
         }
 

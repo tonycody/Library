@@ -1,11 +1,8 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
-using System.Windows.Forms;
 using Library.Net;
 using Library.Net.Amoeba;
 using NUnit.Framework;
-using Library;
 
 namespace Library.UnitTest
 {

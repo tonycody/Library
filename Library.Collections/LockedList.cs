@@ -143,6 +143,9 @@ namespace Library.Collections
                 if (_capacity != null && _list.Count > _capacity.Value) throw new OverflowException();
                 if (this.Filter(item)) return;
 
+                // 姑息な、メモリ消費量を減少させる策。
+                if (_list.Count < 16) _list.Capacity = _list.Count + 1;
+
                 _list.Add(item);
             }
         }
@@ -267,6 +270,14 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 _list.RemoveAt(index);
+            }
+        }
+
+        public void RemoveRange(int index, int count)
+        {
+            lock (this.ThisLock)
+            {
+                _list.RemoveRange(index, count);
             }
         }
 

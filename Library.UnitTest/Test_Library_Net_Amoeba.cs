@@ -1,14 +1,14 @@
 using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using Library.Collections;
 using Library.Net.Amoeba;
+using Library.Net.Caps;
+using Library.Net.Connections;
 using Library.Security;
 using NUnit.Framework;
-using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Net;
-using Library.Net.Connections;
-using Library.Collections;
-using System.Threading;
-using Library.Net.Caps;
 
 namespace Library.UnitTest
 {

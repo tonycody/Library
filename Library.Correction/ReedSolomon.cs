@@ -152,7 +152,7 @@ namespace Library.Correction
             }
         }
 
-        private static void Shuffle(IList<ArraySegment<byte>> pkts, int[] index, int k)
+        private static void Shuffle(ArraySegment<byte>[] pkts, int[] index, int k)
         {
             for (int i = 0; i < k; )
             {
@@ -238,7 +238,7 @@ namespace Library.Correction
 
         #endregion
 
-        private class Math
+        private unsafe class Math
         {
             private volatile int _gfBits;
             private volatile int _gfSize;
@@ -248,24 +248,24 @@ namespace Library.Correction
              * and  Lee & Messerschmitt, p. 453.
              */
             private static string[] _prim_polys = {    
-                                      // gfBits         polynomial
-            null,                     // 0              no code
-            null,                     // 1              no code
-            "111",                    // 2              1+x+x^2
-            "1101",	                  // 3              1+x+x^3
-            "11001",       	          // 4              1+x+x^4
-            "101001",      	          // 5              1+x^2+x^5
-            "1100001",     	          // 6              1+x+x^6
-            "10010001",    	          // 7              1+x^3+x^7
-            "101110001",              // 8              1+x^2+x^3+x^4+x^8
-            "1000100001",             // 9              1+x^4+x^9
-            "10010000001",            // 10             1+x^3+x^10
-            "101000000001",           // 11             1+x^2+x^11
-            "1100101000001",          // 12             1+x+x^4+x^6+x^12
-            "11011000000001",         // 13             1+x+x^3+x^4+x^13
-            "110000100010001",        // 14             1+x+x^6+x^10+x^14
-            "1100000000000001",       // 15             1+x+x^15
-            "11010000000010001"       // 16             1+x+x^3+x^12+x^16
+                                          // gfBits         polynomial
+                null,                     // 0              no code
+                null,                     // 1              no code
+                "111",                    // 2              1+x+x^2
+                "1101",	                  // 3              1+x+x^3
+                "11001",       	          // 4              1+x+x^4
+                "101001",      	          // 5              1+x^2+x^5
+                "1100001",     	          // 6              1+x+x^6
+                "10010001",    	          // 7              1+x^3+x^7
+                "101110001",              // 8              1+x^2+x^3+x^4+x^8
+                "1000100001",             // 9              1+x^4+x^9
+                "10010000001",            // 10             1+x^3+x^10
+                "101000000001",           // 11             1+x^2+x^11
+                "1100101000001",          // 12             1+x+x^4+x^6+x^12
+                "11011000000001",         // 13             1+x+x^3+x^4+x^13
+                "110000100010001",        // 14             1+x+x^6+x^10+x^14
+                "1100000000000001",       // 15             1+x+x^15
+                "11010000000010001"       // 16             1+x+x^3+x^12+x^16
             };
 
             /**
@@ -527,57 +527,54 @@ namespace Library.Correction
                     //    }
                     //}
 
-                    unsafe
+                    fixed (byte* p_dst = dst)
+                    fixed (byte* p_gf_mulc = gf_mulc)
+                    fixed (byte* p_src = src)
                     {
-                        fixed (byte* p_dst = dst)
-                        fixed (byte* p_gf_mulc = gf_mulc)
-                        fixed (byte* p_src = src)
+                        // Not sure if loop unrolling has any real benefit in Java, but 
+                        // what the hey.
+                        for (; i < lim && (lim - i) > unroll; i += unroll, j += unroll)
                         {
-                            // Not sure if loop unrolling has any real benefit in Java, but 
-                            // what the hey.
-                            for (; i < lim && (lim - i) > unroll; i += unroll, j += unroll)
-                            {
-                                // dst ^= gf_mulc[x] is equal to mult then add (xor == add)
+                            // dst ^= gf_mulc[x] is equal to mult then add (xor == add)
 
-                                p_dst[i] ^= p_gf_mulc[p_src[j]];
-                                p_dst[i + 1] ^= p_gf_mulc[p_src[j + 1]];
-                                p_dst[i + 2] ^= p_gf_mulc[p_src[j + 2]];
-                                p_dst[i + 3] ^= p_gf_mulc[p_src[j + 3]];
-                                p_dst[i + 4] ^= p_gf_mulc[p_src[j + 4]];
-                                p_dst[i + 5] ^= p_gf_mulc[p_src[j + 5]];
-                                p_dst[i + 6] ^= p_gf_mulc[p_src[j + 6]];
-                                p_dst[i + 7] ^= p_gf_mulc[p_src[j + 7]];
-                                p_dst[i + 8] ^= p_gf_mulc[p_src[j + 8]];
-                                p_dst[i + 9] ^= p_gf_mulc[p_src[j + 9]];
-                                p_dst[i + 10] ^= p_gf_mulc[p_src[j + 10]];
-                                p_dst[i + 11] ^= p_gf_mulc[p_src[j + 11]];
-                                p_dst[i + 12] ^= p_gf_mulc[p_src[j + 12]];
-                                p_dst[i + 13] ^= p_gf_mulc[p_src[j + 13]];
-                                p_dst[i + 14] ^= p_gf_mulc[p_src[j + 14]];
-                                p_dst[i + 15] ^= p_gf_mulc[p_src[j + 15]];
-                                p_dst[i + 16] ^= p_gf_mulc[p_src[j + 16]];
-                                p_dst[i + 17] ^= p_gf_mulc[p_src[j + 17]];
-                                p_dst[i + 18] ^= p_gf_mulc[p_src[j + 18]];
-                                p_dst[i + 19] ^= p_gf_mulc[p_src[j + 19]];
-                                p_dst[i + 20] ^= p_gf_mulc[p_src[j + 20]];
-                                p_dst[i + 21] ^= p_gf_mulc[p_src[j + 21]];
-                                p_dst[i + 22] ^= p_gf_mulc[p_src[j + 22]];
-                                p_dst[i + 23] ^= p_gf_mulc[p_src[j + 23]];
-                                p_dst[i + 24] ^= p_gf_mulc[p_src[j + 24]];
-                                p_dst[i + 25] ^= p_gf_mulc[p_src[j + 25]];
-                                p_dst[i + 26] ^= p_gf_mulc[p_src[j + 26]];
-                                p_dst[i + 27] ^= p_gf_mulc[p_src[j + 27]];
-                                p_dst[i + 28] ^= p_gf_mulc[p_src[j + 28]];
-                                p_dst[i + 29] ^= p_gf_mulc[p_src[j + 29]];
-                                p_dst[i + 30] ^= p_gf_mulc[p_src[j + 30]];
-                                p_dst[i + 31] ^= p_gf_mulc[p_src[j + 31]];
-                            }
+                            p_dst[i] ^= p_gf_mulc[p_src[j]];
+                            p_dst[i + 1] ^= p_gf_mulc[p_src[j + 1]];
+                            p_dst[i + 2] ^= p_gf_mulc[p_src[j + 2]];
+                            p_dst[i + 3] ^= p_gf_mulc[p_src[j + 3]];
+                            p_dst[i + 4] ^= p_gf_mulc[p_src[j + 4]];
+                            p_dst[i + 5] ^= p_gf_mulc[p_src[j + 5]];
+                            p_dst[i + 6] ^= p_gf_mulc[p_src[j + 6]];
+                            p_dst[i + 7] ^= p_gf_mulc[p_src[j + 7]];
+                            p_dst[i + 8] ^= p_gf_mulc[p_src[j + 8]];
+                            p_dst[i + 9] ^= p_gf_mulc[p_src[j + 9]];
+                            p_dst[i + 10] ^= p_gf_mulc[p_src[j + 10]];
+                            p_dst[i + 11] ^= p_gf_mulc[p_src[j + 11]];
+                            p_dst[i + 12] ^= p_gf_mulc[p_src[j + 12]];
+                            p_dst[i + 13] ^= p_gf_mulc[p_src[j + 13]];
+                            p_dst[i + 14] ^= p_gf_mulc[p_src[j + 14]];
+                            p_dst[i + 15] ^= p_gf_mulc[p_src[j + 15]];
+                            p_dst[i + 16] ^= p_gf_mulc[p_src[j + 16]];
+                            p_dst[i + 17] ^= p_gf_mulc[p_src[j + 17]];
+                            p_dst[i + 18] ^= p_gf_mulc[p_src[j + 18]];
+                            p_dst[i + 19] ^= p_gf_mulc[p_src[j + 19]];
+                            p_dst[i + 20] ^= p_gf_mulc[p_src[j + 20]];
+                            p_dst[i + 21] ^= p_gf_mulc[p_src[j + 21]];
+                            p_dst[i + 22] ^= p_gf_mulc[p_src[j + 22]];
+                            p_dst[i + 23] ^= p_gf_mulc[p_src[j + 23]];
+                            p_dst[i + 24] ^= p_gf_mulc[p_src[j + 24]];
+                            p_dst[i + 25] ^= p_gf_mulc[p_src[j + 25]];
+                            p_dst[i + 26] ^= p_gf_mulc[p_src[j + 26]];
+                            p_dst[i + 27] ^= p_gf_mulc[p_src[j + 27]];
+                            p_dst[i + 28] ^= p_gf_mulc[p_src[j + 28]];
+                            p_dst[i + 29] ^= p_gf_mulc[p_src[j + 29]];
+                            p_dst[i + 30] ^= p_gf_mulc[p_src[j + 30]];
+                            p_dst[i + 31] ^= p_gf_mulc[p_src[j + 31]];
+                        }
 
-                            // final components
-                            for (; i < lim; i++, j++)
-                            {
-                                p_dst[i] ^= p_gf_mulc[p_src[j]];
-                            }
+                        // final components
+                        for (; i < lim; i++, j++)
+                        {
+                            p_dst[i] ^= p_gf_mulc[p_src[j]];
                         }
                     }
                 }

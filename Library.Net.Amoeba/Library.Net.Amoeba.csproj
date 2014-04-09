@@ -20,6 +20,8 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <ReleaseVersion>
     </ReleaseVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
@@ -35,6 +37,7 @@
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <BaseAddress>4194304</BaseAddress>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -47,6 +50,7 @@
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
     <BaseAddress>4194304</BaseAddress>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
@@ -85,15 +89,7 @@
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
-    <Compile Include="Tools\Dictionary\SortedKeyDictionary.cs" />
-    <Compile Include="Tools\Set\SortedKeySet.cs" />
-    <Compile Include="Tools\Dictionary\SortedStringDictionary.cs" />
-    <Compile Include="Tools\Set\SortedStringSet.cs" />
-    <Compile Include="Tools\Dictionary\LockedSortedKeyDictionary.cs" />
-    <Compile Include="Tools\Dictionary\LockedSortedStringDictionary.cs" />
     <Compile Include="Tools\KeyComparer.cs" />
-    <Compile Include="Tools\Set\LockedSortedStringSet.cs" />
-    <Compile Include="Tools\Set\LockedSortedKeySet.cs" />
     <Compile Include="Tools\CountCache.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />

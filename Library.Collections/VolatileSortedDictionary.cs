@@ -5,51 +5,32 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class LockedSortedDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable<KeyValuePair<TKey, TValue>>, IEnumerable, IThisLock
+    public class VolatileSortedDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable, IThisLock
     {
-        private SortedDictionary<TKey, TValue> _dic;
-        private int? _capacity;
+        private SortedDictionary<TKey, Info<TValue>> _dic;
+
+        private DateTime _lastCheckTime = DateTime.MinValue;
+        private readonly TimeSpan _survivalTime;
+
         private readonly object _thisLock = new object();
 
-        public LockedSortedDictionary()
+        public VolatileSortedDictionary(TimeSpan survivalTime)
         {
-            _dic = new SortedDictionary<TKey, TValue>();
+            _dic = new SortedDictionary<TKey, Info<TValue>>();
+            _survivalTime = survivalTime;
         }
 
-        public LockedSortedDictionary(int capacity)
+        public VolatileSortedDictionary(TimeSpan survivalTime, IComparer<TKey> comparer)
         {
-            _dic = new SortedDictionary<TKey, TValue>();
-            _capacity = capacity;
+            _dic = new SortedDictionary<TKey, Info<TValue>>(comparer);
+            _survivalTime = survivalTime;
         }
 
-        public LockedSortedDictionary(IDictionary<TKey, TValue> dictionary)
+        public TimeSpan SurvivalTime
         {
-            _dic = new SortedDictionary<TKey, TValue>();
-
-            foreach (var item in dictionary)
+            get
             {
-                this.Add(item.Key, item.Value);
-            }
-        }
-
-        public LockedSortedDictionary(IComparer<TKey> comparer)
-        {
-            _dic = new SortedDictionary<TKey, TValue>(comparer);
-        }
-
-        public LockedSortedDictionary(int capacity, IComparer<TKey> comparer)
-        {
-            _dic = new SortedDictionary<TKey, TValue>(comparer);
-            _capacity = capacity;
-        }
-
-        public LockedSortedDictionary(IDictionary<TKey, TValue> dictionary, IComparer<TKey> comparer)
-        {
-            _dic = new SortedDictionary<TKey, TValue>(comparer);
-
-            foreach (var item in dictionary)
-            {
-                this.Add(item.Key, item.Value);
+                return _survivalTime;
             }
         }
 
@@ -64,42 +45,85 @@ namespace Library.Collections
             }
         }
 
-        public LockedKeyCollection Keys
+        public void Refresh(TKey item)
         {
-            get
+            this.CheckLifeTime();
+
+            Info<TValue> info;
+
+            if (_dic.TryGetValue(item, out info))
             {
-                lock (this.ThisLock)
+                info.UpdateTime = DateTime.UtcNow;
+            }
+        }
+
+        private void CheckLifeTime()
+        {
+            lock (this.ThisLock)
+            {
+                var now = DateTime.UtcNow;
+
+                if ((now - _lastCheckTime).TotalSeconds >= 10)
                 {
-                    return new LockedKeyCollection(_dic.Keys, this.ThisLock);
+                    List<TKey> list = null;
+
+                    foreach (var pair in _dic)
+                    {
+                        var key = pair.Key;
+                        var info = pair.Value;
+
+                        if ((now - info.UpdateTime) > _survivalTime)
+                        {
+                            if (list == null)
+                                list = new List<TKey>();
+
+                            list.Add(key);
+                        }
+                    }
+
+                    if (list != null)
+                    {
+                        foreach (var key in list)
+                        {
+                            _dic.Remove(key);
+                        }
+                    }
+
+                    _lastCheckTime = now;
                 }
             }
         }
 
-        public LockedValueCollection Values
+        public void TrimExcess()
+        {
+            lock (this.ThisLock)
+            {
+                this.CheckLifeTime();
+            }
+        }
+
+        public VolatileKeyCollection Keys
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return new LockedValueCollection(_dic.Values, this.ThisLock);
+                    this.CheckLifeTime();
+
+                    return new VolatileKeyCollection(_dic.Keys, this.ThisLock);
                 }
             }
         }
 
-        public int Capacity
+        public VolatileValueCollection Values
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _capacity ?? 0;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _capacity = value;
+                    this.CheckLifeTime();
+
+                    return new VolatileValueCollection(_dic.Values, this.ThisLock);
                 }
             }
         }
@@ -121,6 +145,8 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
+                    this.CheckLifeTime();
+
                     return _dic.Count;
                 }
             }
@@ -132,14 +158,18 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return _dic[key];
+                    this.CheckLifeTime();
+
+                    return _dic[key].Value;
                 }
             }
             set
             {
                 lock (this.ThisLock)
                 {
-                    _dic[key] = value;
+                    this.CheckLifeTime();
+
+                    _dic[key] = new Info<TValue>() { Value = value, UpdateTime = DateTime.UtcNow };
                 }
             }
         }
@@ -148,10 +178,10 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _dic.Count > _capacity.Value) throw new OverflowException();
+                this.CheckLifeTime();
 
                 int count = _dic.Count;
-                _dic[key] = value;
+                _dic[key] = new Info<TValue>() { Value = value, UpdateTime = DateTime.UtcNow };
 
                 return (count != _dic.Count);
             }
@@ -169,6 +199,8 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
+                this.CheckLifeTime();
+
                 return _dic.ContainsKey(key);
             }
         }
@@ -177,7 +209,9 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return _dic.ContainsValue(value);
+                this.CheckLifeTime();
+
+                return _dic.Values.Select(n => n.Value).Contains(value);
             }
         }
 
@@ -185,6 +219,8 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
+                this.CheckLifeTime();
+
                 return _dic.Remove(key);
             }
         }
@@ -193,7 +229,22 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return _dic.TryGetValue(key, out value);
+                this.CheckLifeTime();
+
+                Info<TValue> info;
+
+                if (_dic.TryGetValue(key, out info))
+                {
+                    value = info.Value;
+
+                    return true;
+                }
+                else
+                {
+                    value = default(TValue);
+
+                    return false;
+                }
             }
         }
 
@@ -341,7 +392,24 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return _dic.Contains(item);
+                this.CheckLifeTime();
+
+                var keyComparer = EqualityComparer<TKey>.Default;
+                var valueComparer = EqualityComparer<TValue>.Default;
+
+                foreach (var pair in _dic)
+                {
+                    var key = pair.Key;
+                    var info = pair.Value;
+
+                    if (keyComparer.Equals(item.Key, key)
+                        && valueComparer.Equals(item.Value, info.Value))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
 
@@ -349,7 +417,15 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                ((IDictionary<TKey, TValue>)_dic).CopyTo(array, arrayIndex);
+                this.CheckLifeTime();
+
+                foreach (var pair in _dic)
+                {
+                    var key = pair.Key;
+                    var info = pair.Value;
+
+                    array.SetValue(new KeyValuePair<TKey, TValue>(key, info.Value), arrayIndex++);
+                }
             }
         }
 
@@ -357,7 +433,28 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                return ((IDictionary<TKey, TValue>)_dic).Remove(keyValuePair);
+                this.CheckLifeTime();
+
+                var keyComparer = EqualityComparer<TKey>.Default;
+                var valueComparer = EqualityComparer<TValue>.Default;
+
+                bool flag = false;
+
+                foreach (var pair in _dic)
+                {
+                    var key = pair.Key;
+                    var info = pair.Value;
+
+                    if (keyComparer.Equals(keyValuePair.Key, key)
+                        && valueComparer.Equals(keyValuePair.Value, info.Value))
+                    {
+                        ((ICollection<KeyValuePair<TKey, Info<TValue>>>)_dic).Remove(pair);
+
+                        flag = true;
+                    }
+                }
+
+                return flag;
             }
         }
 
@@ -384,7 +481,15 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                ((ICollection)_dic).CopyTo(array, index);
+                this.CheckLifeTime();
+
+                foreach (var pair in _dic)
+                {
+                    var key = pair.Key;
+                    var info = pair.Value;
+
+                    array.SetValue(new KeyValuePair<TKey, TValue>(key, info.Value), index++);
+                }
             }
         }
 
@@ -392,9 +497,14 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                foreach (var item in _dic)
+                this.CheckLifeTime();
+
+                foreach (var pair in _dic)
                 {
-                    yield return item;
+                    var key = pair.Key;
+                    var info = pair.Value;
+
+                    yield return new KeyValuePair<TKey, TValue>(key, info.Value);
                 }
             }
         }
@@ -419,12 +529,12 @@ namespace Library.Collections
 
         #endregion
 
-        public sealed class LockedKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
+        public sealed class VolatileKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
         {
             private ICollection<TKey> _collection;
             private readonly object _thisLock;
 
-            internal LockedKeyCollection(ICollection<TKey> collection, object thisLock)
+            internal VolatileKeyCollection(ICollection<TKey> collection, object thisLock)
             {
                 _collection = collection;
                 _thisLock = thisLock;
@@ -562,12 +672,12 @@ namespace Library.Collections
             #endregion
         }
 
-        public sealed class LockedValueCollection : ICollection<TValue>, IEnumerable<TValue>, ICollection, IEnumerable, IThisLock
+        public sealed class VolatileValueCollection : ICollection<TValue>, IEnumerable<TValue>, ICollection, IEnumerable, IThisLock
         {
-            private ICollection<TValue> _collection;
+            private ICollection<Info<TValue>> _collection;
             private readonly object _thisLock;
 
-            internal LockedValueCollection(ICollection<TValue> collection, object thisLock)
+            internal VolatileValueCollection(ICollection<Info<TValue>> collection, object thisLock)
             {
                 _collection = collection;
                 _thisLock = thisLock;
@@ -577,10 +687,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    var array = new TValue[_collection.Count];
-                    _collection.CopyTo(array, 0);
-
-                    return array;
+                    return _collection.Select(n => n.Value).ToArray();
                 }
             }
 
@@ -588,7 +695,10 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    _collection.CopyTo(array, arrayIndex);
+                    foreach (var info in _collection)
+                    {
+                        array[arrayIndex++] = info.Value;
+                    }
                 }
             }
 
@@ -634,7 +744,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    return _collection.Contains(item);
+                    return _collection.Select(n => n.Value).Contains(item);
                 }
             }
 
@@ -677,9 +787,9 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    foreach (var item in _collection)
+                    foreach (var info in _collection)
                     {
-                        yield return item;
+                        yield return info.Value;
                     }
                 }
             }
@@ -703,6 +813,12 @@ namespace Library.Collections
             }
 
             #endregion
+        }
+
+        internal class Info<T>
+        {
+            public T Value { get; set; }
+            public DateTime UpdateTime { get; set; }
         }
     }
 }

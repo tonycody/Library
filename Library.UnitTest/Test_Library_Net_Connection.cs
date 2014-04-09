@@ -2,11 +2,11 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
+using Library.Net.Caps;
 using Library.Net.Connections;
 using Library.Security;
 using NUnit.Framework;
-using System.Threading.Tasks;
-using Library.Net.Caps;
 
 namespace Library.UnitTest
 {

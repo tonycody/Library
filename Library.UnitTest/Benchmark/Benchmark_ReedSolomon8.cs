@@ -1,19 +1,17 @@
 using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Windows.Forms;
-using Library.Net;
-using Library.Net.Amoeba;
-using NUnit.Framework;
-using Library;
-using Library.Correction;
 using System.Text;
+using System.Windows.Forms;
+using Library.Correction;
+using NUnit.Framework;
 
 namespace Library.UnitTest
 {
     [TestFixture, Category("Benchmark")]
     public partial class Benchmark
     {
+        private BufferManager _bufferManager = BufferManager.Instance;
+
         [Test]
         public void ReedSolomon8()
         {
@@ -22,15 +20,12 @@ namespace Library.UnitTest
 
             foreach (var nativeFlag in new bool[] { false, true })
             {
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-
                 ReedSolomon8 pc = new ReedSolomon8(128, 256, nativeFlag);
 
                 byte[][] buffList = new byte[128][];
                 for (int i = 0; i < 128; i++)
                 {
-                    var buffer = new byte[1024 * 32];
+                    var buffer = _bufferManager.TakeBuffer(1024 * 128);
                     random.NextBytes(buffer);
 
                     buffList[i] = buffer;
@@ -39,7 +34,7 @@ namespace Library.UnitTest
                 byte[][] buffList2 = new byte[128][];
                 for (int i = 0; i < 128; i++)
                 {
-                    var buffer = new byte[1024 * 32];
+                    var buffer = _bufferManager.TakeBuffer(1024 * 128);
 
                     buffList2[i] = buffer;
                 }
@@ -50,14 +45,27 @@ namespace Library.UnitTest
                     intList[i] = i + 128;
                 }
 
-                pc.Encode(buffList, buffList2, intList, 1024 * 32);
-                pc.Decode(buffList2, intList, 1024 * 32);
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                pc.Encode(buffList, buffList2, intList, 1024 * 128);
+                pc.Decode(buffList2, intList, 1024 * 128);
 
                 sw.Stop();
 
+                for (int i = 0; i < 128; i++)
+                {
+                    _bufferManager.ReturnBuffer(buffList[i]);
+                }
+
+                for (int i = 0; i < 128; i++)
+                {
+                    _bufferManager.ReturnBuffer(buffList2[i]);
+                }
+
                 if (nativeFlag)
                 {
-                   sb.AppendLine("Native ReedSolomon: " + sw.Elapsed.ToString());
+                    sb.AppendLine("Native ReedSolomon: " + sw.Elapsed.ToString());
                 }
                 else
                 {

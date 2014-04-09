@@ -21,7 +21,7 @@ namespace Library.Net.Amoeba
 
         private volatile Thread _uploadManagerThread;
         private SortedDictionary<int, UploadItem> _ids = new SortedDictionary<int, UploadItem>();
-        private Dictionary<string, List<int>> _shareLink = new Dictionary<string, List<int>>();
+        private SortedDictionary<string, List<int>> _shareLink = new SortedDictionary<string, List<int>>();
         private int _id;
 
         private ManagerState _state = ManagerState.Stop;
@@ -31,7 +31,7 @@ namespace Library.Net.Amoeba
         private Thread _removeShareThread;
 
         private WaitQueue<Key> _uploadedKeys = new WaitQueue<Key>();
-        private WaitQueue<string> _removeShare = new WaitQueue<string>();
+        private WaitQueue<string> _removeSharePaths = new WaitQueue<string>();
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -62,7 +62,7 @@ namespace Library.Net.Amoeba
 
             _cacheManager.RemoveShareEvent += (object sender, string path) =>
             {
-                _removeShare.Enqueue(path);
+                _removeSharePaths.Enqueue(path);
             };
 
             _uploadedThread = new Thread(() =>
@@ -73,7 +73,7 @@ namespace Library.Net.Amoeba
                     {
                         var key = _uploadedKeys.Dequeue();
 
-                        while (_removeShare.Count > 0) Thread.Sleep(1000);
+                        while (_removeSharePaths.Count > 0) Thread.Sleep(1000);
 
                         lock (this.ThisLock)
                         {
@@ -112,7 +112,7 @@ namespace Library.Net.Amoeba
                 {
                     for (; ; )
                     {
-                        var path = _removeShare.Dequeue();
+                        var path = _removeSharePaths.Dequeue();
 
                         lock (this.ThisLock)
                         {
@@ -176,13 +176,7 @@ namespace Library.Net.Amoeba
 
                         if (item.Value.State == UploadState.Completed || item.Value.State == UploadState.Uploading)
                         {
-                            if (item.Value.EditSeed == null)
-                            {
-                                var editSeed = item.Value.Seed.Clone();
-                                item.Value.EditSeed = editSeed;
-                            }
-
-                            contexts.Add(new InformationContext("Seed", item.Value.EditSeed));
+                            contexts.Add(new InformationContext("Seed", item.Value.Seed));
                         }
 
                         if (item.Value.State == UploadState.Uploading)
@@ -885,7 +879,13 @@ namespace Library.Net.Amoeba
 
                 if (item.Type == UploadType.Share)
                 {
-                    _shareLink.Remove(item.FilePath);
+                    List<int> idList = null;
+
+                    if (_shareLink.TryGetValue(item.FilePath, out idList))
+                    {
+                        idList.Remove(id);
+                        if (idList.Count == 0) _shareLink.Remove(item.FilePath);
+                    }
                 }
             }
         }
@@ -1134,7 +1134,7 @@ namespace Library.Net.Amoeba
             if (disposing)
             {
                 _uploadedKeys.Dispose();
-                _removeShare.Dispose();
+                _removeSharePaths.Dispose();
 
                 _uploadedThread.Join();
                 _removeShareThread.Join();

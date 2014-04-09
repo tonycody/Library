@@ -692,39 +692,39 @@ void fec_encode(struct fec_parms *code, gf *src[], gf *fec, int index, int sz)
 /*
 * shuffle move src packets in their position
 */
-static int shuffle(gf *pkt[], int index[], int k)
-{
-    int i;
-
-    for ( i = 0 ; i < k ; ) {
-        if (index[i] >= k || index[i] == i)
-            i++ ;
-        else {
-            /*
-            * put pkt in the right position (first check for conflicts).
-            */
-            int c = index[i] ;
-
-            if (index[c] == c) {
-                DEB(fprintf(stderr, "\nshuffle, error at %d\n", i);)
-                return 1 ;
-            }
-            SWAP(index[i], index[c], int) ;
-            SWAP(pkt[i], pkt[c], gf *) ;
-        }
-    }
-    DEB( /* just test that it works... */
-    for ( i = 0 ; i < k ; i++ ) {
-    if (index[i] < k && index[i] != i) {
-            fprintf(stderr, "shuffle: after\n");
-            for (i=0; i<k ; i++) fprintf(stderr, "%3d ", index[i]);
-            fprintf(stderr, "\n");
-            return 1 ;
-        }
-    }
-    )
-    return 0 ;
-}
+//static int shuffle(gf *pkt[], int index[], int k)
+//{
+//    int i;
+//
+//    for ( i = 0 ; i < k ; ) {
+//        if (index[i] >= k || index[i] == i)
+//            i++ ;
+//        else {
+//            /*
+//            * put pkt in the right position (first check for conflicts).
+//            */
+//            int c = index[i] ;
+//
+//            if (index[c] == c) {
+//                DEB(fprintf(stderr, "\nshuffle, error at %d\n", i);)
+//                return 1 ;
+//            }
+//            SWAP(index[i], index[c], int) ;
+//            SWAP(pkt[i], pkt[c], gf *) ;
+//        }
+//    }
+//    DEB( /* just test that it works... */
+//    for ( i = 0 ; i < k ; i++ ) {
+//    if (index[i] < k && index[i] != i) {
+//            fprintf(stderr, "shuffle: after\n");
+//            for (i=0; i<k ; i++) fprintf(stderr, "%3d ", index[i]);
+//            fprintf(stderr, "\n");
+//            return 1 ;
+//        }
+//    }
+//    )
+//    return 0 ;
+//}
 
 /*
 * build_decode_matrix constructs the encoding matrix given the
@@ -782,8 +782,8 @@ int fec_decode(struct fec_parms *code, gf *pkt[], int index[], int sz)
     if (GF_BITS > 8)
         sz /= 2 ;
 
-    if (shuffle(pkt, index, k))    /* error if true */
-        return 1 ;
+    //if (shuffle(pkt, index, k))    /* error if true */
+    //    return 1 ;
     m_dec = build_decode_matrix(code, pkt, index);
 
     if (m_dec == NULL)
@@ -821,12 +821,12 @@ End:
     return 0;
 }
 
-void set(int cancel)
+void setFlag(int cancel)
 {
     _cancel = cancel;
 }
 
-int get()
+int getFlag()
 {
     return _cancel;
 }

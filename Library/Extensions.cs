@@ -44,16 +44,16 @@ namespace Library
 
     public static class RandomExtensions
     {
-        public static void Shuffle<T>(this Random random, T[] array)
+        public static void Shuffle<T>(this Random random, IList<T> collection)
         {
-            int n = array.Length;
+            int n = collection.Count;
 
             while (n > 1)
             {
                 int k = random.Next(n--);
-                T temp = array[n];
-                array[n] = array[k];
-                array[k] = temp;
+                T temp = collection[n];
+                collection[n] = collection[k];
+                collection[k] = temp;
             }
         }
     }

@@ -20,11 +20,6 @@ namespace Library
             this.ProtectedImport(stream, bufferManager, 0);
         }
 
-        public virtual Stream Export(BufferManager bufferManager)
-        {
-            return this.Export(bufferManager, 0);
-        }
-
         protected static T Import(Stream stream, BufferManager bufferManager, int count)
         {
             var item = (T)FormatterServices.GetUninitializedObject(typeof(T));
@@ -33,6 +28,12 @@ namespace Library
         }
 
         protected abstract void ProtectedImport(Stream stream, BufferManager bufferManager, int count);
+
+        public virtual Stream Export(BufferManager bufferManager)
+        {
+            return this.Export(bufferManager, 0);
+        }
+
         protected abstract Stream Export(BufferManager bufferManager, int count);
 
         public static bool operator ==(ItemBase<T> x, ItemBase<T> y)

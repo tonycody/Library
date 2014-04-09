@@ -21,7 +21,7 @@ namespace Library
         private int _maxBufferSize;
 
         private int[] _sizes;
-        private LinkedList<WeakReference>[] _buffers;
+        private LinkedList<byte[]>[] _buffers;
         private long[] _callCounts;
 
         private readonly object _thisLock = new object();
@@ -38,12 +38,12 @@ namespace Library
             _maxBufferSize = maxBufferSize;
 
             List<int> sizes = new List<int>();
-            List<LinkedList<WeakReference>> buffers = new List<LinkedList<WeakReference>>();
+            List<LinkedList<byte[]>> buffers = new List<LinkedList<byte[]>>();
 
             for (int i = 32; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
-                buffers.Add(new LinkedList<WeakReference>());
+                buffers.Add(new LinkedList<byte[]>());
             }
 
             _sizes = sizes.ToArray();
@@ -69,11 +69,8 @@ namespace Library
                 {
                     long size = 0;
 
-                    foreach (var weakReference in Collection.Unite(_buffers))
+                    foreach (var buffer in Collection.Unite(_buffers))
                     {
-                        var buffer = weakReference.Target as byte[];
-                        if (buffer == null) continue;
-
                         size += buffer.Length;
                     }
 
@@ -96,8 +93,7 @@ namespace Library
 
                         while (_buffers[i].Count > 0)
                         {
-                            var weakReference = _buffers[i].First.Value;
-                            byte[] buffer = weakReference.Target as byte[];
+                            var buffer = _buffers[i].First.Value;
                             _buffers[i].RemoveFirst();
 
                             if (buffer != null) return buffer;
@@ -164,7 +160,7 @@ namespace Library
                 {
                     if (buffer.Length == _sizes[i])
                     {
-                        _buffers[i].AddFirst(new WeakReference(buffer));
+                        _buffers[i].AddFirst(buffer);
 
                         break;
                     }
