@@ -1,11 +1,7 @@
 // This is the main DLL file.
 
 #include "stdafx.h"
-
 #include "ReedSolomon.h"
-#include "fec.h"
-
-#pragma comment(lib,"ReedSolomon8.lib")
 
 #using <mscorlib.dll>
 

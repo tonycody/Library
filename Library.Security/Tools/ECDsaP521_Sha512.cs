@@ -14,7 +14,9 @@ namespace Library.Security
         /// <param name="privateKey">作成された秘密鍵</param>
         public static void CreateKeys(out byte[] publicKey, out byte[] privateKey)
         {
-#if !MONO
+#if Mono
+            throw new NotSupportedException();
+#else
             CngKeyCreationParameters ckcp = new CngKeyCreationParameters();
             ckcp.ExportPolicy = CngExportPolicies.AllowPlaintextExport;
             ckcp.KeyUsage = CngKeyUsages.Signing;
@@ -25,28 +27,28 @@ namespace Library.Security
                 publicKey = Encoding.ASCII.GetBytes(ecdsa.ToXmlString(ECKeyXmlFormat.Rfc4050));
                 privateKey = ecdsa.Key.Export(CngKeyBlobFormat.Pkcs8PrivateBlob);
             }
-#else
-            throw new NotSupportedException();
 #endif
         }
 
         public static byte[] Sign(byte[] privateKey, Stream stream)
         {
-#if !MONO
+#if Mono
+            throw new NotSupportedException();
+#else
             using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
             using (ECDsaCng ecdsa = new ECDsaCng(ck))
             {
                 ecdsa.HashAlgorithm = CngAlgorithm.Sha512;
                 return ecdsa.SignData(stream);
             }
-#else
-            throw new NotSupportedException();
 #endif
         }
 
         public static bool Verify(byte[] publicKey, byte[] signature, Stream stream)
         {
-#if !MONO
+#if Mono
+            throw new NotSupportedException();
+#else
             try
             {
                 using (ECDsaCng ecdsa = new ECDsaCng())
@@ -60,8 +62,6 @@ namespace Library.Security
             {
                 return false;
             }
-#else
-            throw new NotSupportedException();
 #endif
         }
     }

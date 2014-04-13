@@ -25,8 +25,6 @@ namespace Library.Net.Amoeba
         private BitmapManager _bitmapManager;
         private BufferManager _bufferManager;
 
-        private Lzma _lzma;
-
         private Settings _settings;
 
         private bool _spaceSectorsInitialized;
@@ -61,8 +59,6 @@ namespace Library.Net.Amoeba
             _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             _bitmapManager = bitmapManager;
             _bufferManager = bufferManager;
-
-            _lzma = new Lzma(1 << 20, 1 << 20);
 
             _settings = new Settings(this.ThisLock);
 
@@ -940,7 +936,7 @@ namespace Library.Net.Amoeba
                         using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
                         using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
                         {
-                            _lzma.Compress(inStream, cs, _bufferManager);
+                            Lzma.Compress(inStream, cs, _bufferManager);
                         }
                     }
                 }
@@ -1038,7 +1034,7 @@ namespace Library.Net.Amoeba
                     using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
                     using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                     {
-                        _lzma.Decompress(cs, outStream, _bufferManager);
+                        Lzma.Decompress(cs, outStream, _bufferManager);
                     }
                 }
             }
@@ -1091,8 +1087,8 @@ namespace Library.Net.Amoeba
 
                 if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
 
-                var bufferArray = new byte[keys.Count][];
-                var parityBufferArray = new byte[keys.Count][];
+                var bufferArray = new ArraySegment<byte>[keys.Count];
+                var parityBufferArray = new ArraySegment<byte>[keys.Count];
 
                 int sumLength = 0;
 
@@ -1113,24 +1109,35 @@ namespace Library.Net.Amoeba
 
                             sumLength += bufferLength;
 
-                            var target = _bufferManager.TakeBuffer(blockLength);
-                            Array.Copy(buffer.Array, buffer.Offset, target, 0, buffer.Count);
-                            Array.Clear(target, buffer.Count, target.Length - buffer.Count);
+                            if (bufferLength > blockLength)
+                            {
+                                throw new ArgumentOutOfRangeException("blockLength");
+                            }
+                            else if (bufferLength < blockLength)
+                            {
+                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
+                                Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                                buffer = tbuffer;
+                            }
 
-                            bufferArray[i] = target;
+                            bufferArray[i] = buffer;
                         }
-                        finally
+                        catch (Exception)
                         {
                             if (buffer.Array != null)
                             {
                                 _bufferManager.ReturnBuffer(buffer.Array);
                             }
+
+                            throw;
                         }
                     }
 
                     for (int i = 0; i < parityBufferArray.Length; i++)
                     {
-                        parityBufferArray[i] = _bufferManager.TakeBuffer(blockLength);
+                        parityBufferArray[i] = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
                     }
 
                     var intArray = new int[parityBufferArray.Length];
@@ -1140,7 +1147,7 @@ namespace Library.Net.Amoeba
                         intArray[i] = i;
                     }
 
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(bufferArray.Length, bufferArray.Length + parityBufferArray.Length))
+                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(bufferArray.Length, bufferArray.Length + parityBufferArray.Length, _threadCount, _bufferManager))
                     {
                         Exception exception = null;
 
@@ -1184,7 +1191,7 @@ namespace Library.Net.Amoeba
                             lock (this.ThisLock)
                             {
                                 this.Lock(key);
-                                this[key] = new ArraySegment<byte>(parityBufferArray[i], 0, blockLength);
+                                this[key] = parityBufferArray[i];
                             }
 
                             parityHeaders.Add(key);
@@ -1213,12 +1220,12 @@ namespace Library.Net.Amoeba
                 {
                     for (int i = 0; i < bufferArray.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(bufferArray[i]);
+                        _bufferManager.ReturnBuffer(bufferArray[i].Array);
                     }
 
                     for (int i = 0; i < parityBufferArray.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(parityBufferArray[i]);
+                        _bufferManager.ReturnBuffer(parityBufferArray[i].Array);
                     }
                 }
             }
@@ -1238,7 +1245,7 @@ namespace Library.Net.Amoeba
             }
             else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
-                var bufferArray = new byte[group.InformationLength][];
+                var bufferArray = new ArraySegment<byte>[group.InformationLength];
 
                 try
                 {
@@ -1250,6 +1257,8 @@ namespace Library.Net.Amoeba
                     {
                         if (watchEvent(this)) throw new StopException();
 
+                        if (!this.Contains(group.Keys[i])) continue;
+
                         ArraySegment<byte> buffer = new ArraySegment<byte>();
 
                         try
@@ -1257,12 +1266,21 @@ namespace Library.Net.Amoeba
                             buffer = this[group.Keys[i]];
                             int bufferLength = buffer.Count;
 
-                            var target = _bufferManager.TakeBuffer(group.BlockLength);
-                            Array.Copy(buffer.Array, buffer.Offset, target, 0, buffer.Count);
-                            Array.Clear(target, buffer.Count, target.Length - buffer.Count);
+                            if (bufferLength > group.BlockLength)
+                            {
+                                throw new ArgumentOutOfRangeException("group.BlockLength");
+                            }
+                            else if (bufferLength < group.BlockLength)
+                            {
+                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
+                                Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                                buffer = tbuffer;
+                            }
 
                             intArray[count] = i;
-                            bufferArray[count] = target;
+                            bufferArray[count] = buffer;
 
                             count++;
                         }
@@ -1283,7 +1301,7 @@ namespace Library.Net.Amoeba
 
                     if (count < group.InformationLength) throw new BlockNotFoundException();
 
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(group.InformationLength, group.Keys.Count))
+                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(group.InformationLength, group.Keys.Count, _threadCount, _bufferManager))
                     {
                         Exception exception = null;
 
@@ -1322,14 +1340,14 @@ namespace Library.Net.Amoeba
 
                     for (int i = 0; i < group.InformationLength; length -= group.BlockLength, i++)
                     {
-                        this[group.Keys[i]] = new ArraySegment<byte>(bufferArray[i], 0, (int)Math.Min(group.BlockLength, length));
+                        this[group.Keys[i]] = new ArraySegment<byte>(bufferArray[i].Array, bufferArray[i].Offset, (int)Math.Min(bufferArray[i].Count, length));
                     }
                 }
                 finally
                 {
                     for (int i = 0; i < bufferArray.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(bufferArray[i]);
+                        _bufferManager.ReturnBuffer(bufferArray[i].Array);
                     }
                 }
 

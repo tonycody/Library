@@ -217,7 +217,7 @@ namespace Library.Net.Amoeba
                                             keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         continue;
                                     }
@@ -341,7 +341,7 @@ namespace Library.Net.Amoeba
                                     keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                                 }
                             }
-                            catch (StopIOException)
+                            catch (StopIoException)
                             {
                                 continue;
                             }

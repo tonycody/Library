@@ -141,8 +141,25 @@ namespace Library
 
         public static bool Equals<T>(IList<T> source, int sourceIndex, IList<T> destination, int destinationIndex, int length)
         {
-            var equalityComparer = EqualityComparer<T>.Default;
-            return Collection.Equals(source, sourceIndex, destination, destinationIndex, length, equalityComparer);
+            {
+                var x = source as byte[];
+                var y = destination as byte[];
+
+                if (x != null && y != null)
+                {
+                    if (0 > (source.Count - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
+                    if (0 > (destination.Count - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
+                    if (length > (source.Count - sourceIndex)) throw new ArgumentOutOfRangeException("length");
+                    if (length > (destination.Count - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+
+                    return Unsafe.Equals(x, sourceIndex, y, destinationIndex, length);
+                }
+            }
+
+            {
+                var equalityComparer = EqualityComparer<T>.Default;
+                return Collection.Equals(source, sourceIndex, destination, destinationIndex, length, equalityComparer);
+            }
         }
 
         public static bool Equals<T>(IEnumerable<T> source, int sourceIndex, IEnumerable<T> destination, int destinationIndex, int length)

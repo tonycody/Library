@@ -205,7 +205,7 @@ namespace Library.UnitTest
                     }
                 }
             }
-            catch (StopIOException)
+            catch (StopIoException)
             {
                 Assert.AreEqual(count, 2, "ProgressStream");
             }

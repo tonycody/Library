@@ -480,6 +480,7 @@ namespace Library.Net.Amoeba
                                 .Where(n => n.State == DownloadState.Decoding || n.State == DownloadState.ParityDecoding)
                                 .Where(n => n.Priority != 0)
                                 .OrderBy(n => (n.Rank != n.Seed.Rank) ? 0 : 1)
+                                .OrderBy(n => (n.State == DownloadState.Decoding) ? 0 : 1)
                                 .FirstOrDefault();
                         }
                     }
@@ -533,7 +534,7 @@ namespace Library.Net.Amoeba
                                                 new KeyCollection() { item.Seed.Key });
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (File.Exists(fileName))
                                             File.Delete(fileName);
@@ -639,7 +640,7 @@ namespace Library.Net.Amoeba
                                             if (stream.Length != item.Seed.Length) throw new Exception();
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (File.Exists(fileName))
                                             File.Delete(fileName);
@@ -754,7 +755,7 @@ namespace Library.Net.Amoeba
                                                 new KeyCollection(keys));
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (File.Exists(fileName))
                                             File.Delete(fileName);
@@ -859,7 +860,7 @@ namespace Library.Net.Amoeba
                                             if (stream.Length != item.Seed.Length) throw new Exception();
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (File.Exists(fileName))
                                             File.Delete(fileName);
@@ -943,7 +944,7 @@ namespace Library.Net.Amoeba
                         {
                             foreach (var key in group.Keys)
                             {
-                                if (this.State == ManagerState.Stop) return;
+                                if (this.DecodeState == ManagerState.Stop) return;
 
                                 if (!_cacheManager.Contains(key)) continue;
 

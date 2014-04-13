@@ -122,7 +122,7 @@ namespace Library.Io
 
                 if (isStop)
                 {
-                    throw new StopIOException();
+                    throw new StopIoException();
                 }
             }
 
@@ -149,7 +149,7 @@ namespace Library.Io
 
                 if (isStop)
                 {
-                    throw new StopIOException();
+                    throw new StopIoException();
                 }
             }
         }
@@ -201,10 +201,10 @@ namespace Library.Io
     }
 
     [Serializable]
-    public class StopIOException : IOException
+    public class StopIoException : IOException
     {
-        public StopIOException() : base() { }
-        public StopIOException(string message) : base(message) { }
-        public StopIOException(string message, Exception innerException) : base(message, innerException) { }
+        public StopIoException() : base() { }
+        public StopIoException(string message) : base(message) { }
+        public StopIoException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

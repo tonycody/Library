@@ -149,6 +149,7 @@ namespace Library.Net.Connections
                     {
                         OperatingSystem osInfo = Environment.OSVersion;
 
+                        // Windows VistaˆÈãB
                         if (osInfo.Platform == PlatformID.Win32NT && osInfo.Version.Major >= 6)
                         {
                             {

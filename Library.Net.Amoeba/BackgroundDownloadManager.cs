@@ -399,7 +399,7 @@ namespace Library.Net.Amoeba
                                                 new KeyCollection() { item.Seed.Key });
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (File.Exists(fileName))
                                             File.Delete(fileName);
@@ -485,7 +485,7 @@ namespace Library.Net.Amoeba
                                             }
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (largeFlag)
                                         {
@@ -578,7 +578,7 @@ namespace Library.Net.Amoeba
                                                 new KeyCollection(keys));
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (File.Exists(fileName))
                                             File.Delete(fileName);
@@ -666,7 +666,7 @@ namespace Library.Net.Amoeba
                                             }
                                         }
                                     }
-                                    catch (StopIOException)
+                                    catch (StopIoException)
                                     {
                                         if (largeFlag)
                                         {

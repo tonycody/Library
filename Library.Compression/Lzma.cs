@@ -1,131 +1,224 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Library.Io;
 
 namespace Library.Compression
 {
-    public class Lzma
+    public static class Lzma
     {
-        private Lazy<LzmaEncoder> _lzmaEncoder;
-        private Lazy<LzmaDecoder> _lzmaDecoder;
-
-        private readonly int _compressDictionarySize;
-        private readonly int _maxDecompressDictionarySize;
-
-        private object _encodeLockObject = new object();
-        private object _decodeLockObject = new object();
-
-        public Lzma(int compressDictionarySize, int maxDecompressDictionarySize)
+        public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            _compressDictionarySize = compressDictionarySize;
-            _maxDecompressDictionarySize = maxDecompressDictionarySize;
+            ProcessStartInfo info = null;
 
-            _lzmaEncoder = new Lazy<LzmaEncoder>(() =>
             {
-                Int32 dictionary = _compressDictionarySize;
-                Int32 posStateBits = 2;
-                Int32 litContextBits = 3; // for normal files
-                // UInt32 litContextBits = 0; // for 32-bit data
-                Int32 litPosBits = 0;
-                // UInt32 litPosBits = 2; // for 32-bit data
-                Int32 algorithm = 2;
-                Int32 numFastBytes = 128;
+                OperatingSystem osInfo = Environment.OSVersion;
 
-                string mf = "bt4";
-                bool eos = true;
-                //bool stdInMode = false;
-
-                CoderPropID[] propIDs =  {
-                    CoderPropID.DictionarySize,
-                    CoderPropID.PosStateBits,
-                    CoderPropID.LitContextBits,
-                    CoderPropID.LitPosBits,
-                    CoderPropID.Algorithm,
-                    CoderPropID.NumFastBytes,
-                    CoderPropID.MatchFinder,
-                    CoderPropID.EndMarker
-                };
-
-                object[] properties = {
-                    (Int32)(dictionary),
-                    (Int32)(posStateBits),
-                    (Int32)(litContextBits),
-                    (Int32)(litPosBits),
-                    (Int32)(algorithm),
-                    (Int32)(numFastBytes),
-                    mf,
-                    eos
-                };
-
-                var encoder = new LzmaEncoder();
-                encoder.SetCoderProperties(propIDs, properties);
-
-                return encoder;
-            });
-
-            _lzmaDecoder = new Lazy<LzmaDecoder>(() =>
-            {
-                var decoder = new LzmaDecoder();
-
-                return decoder;
-            });
-        }
-
-        public void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
-        {
-            lock (_encodeLockObject)
-            {
-                var encoder = _lzmaEncoder.Value;
-                encoder.WriteCoderProperties(outStream);
-
-                Int64 fileSize = -1;
-
-                for (int i = 0; i < 8; i++)
-                    outStream.WriteByte((Byte)(fileSize >> (8 * i)));
-
-                using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
-                using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
+                if (osInfo.Platform == PlatformID.Win32NT)
                 {
-                    encoder.Code(cis, new LzmaStreamWrapper(cos), -1, -1, null);
+                    if (System.Environment.Is64BitProcess)
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
+                    }
+                    else
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                    }
+                }
+            }
+
+            info.CreateNoWindow = true;
+            info.UseShellExecute = false;
+            info.RedirectStandardInput = true;
+            info.RedirectStandardOutput = true;
+            info.RedirectStandardError = true;
+
+            info.Arguments = "--compress --format=lzma -6 --threads=1 --stdout";
+
+            using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
+            using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
+            {
+                using (Process process = Process.Start(info))
+                {
+                    process.PriorityClass = ProcessPriorityClass.Idle;
+
+                    process.ErrorDataReceived += (object sender, DataReceivedEventArgs e) =>
+                    {
+                        Log.Error(e.Data);
+                    };
+
+                    Exception threadException = null;
+
+                    var thread = new Thread(new ThreadStart(() =>
+                    {
+                        try
+                        {
+                            byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+
+                            try
+                            {
+                                using (var standardOutputStream = process.StandardOutput.BaseStream)
+                                {
+                                    int length = 0;
+
+                                    while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                    {
+                                        outCacheStream.Write(buffer, 0, length);
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                bufferManager.ReturnBuffer(buffer);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            threadException = e;
+                        }
+                    }));
+                    thread.IsBackground = true;
+                    thread.Start();
+
+                    try
+                    {
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+
+                        try
+                        {
+                            using (var standardInputStream = process.StandardInput.BaseStream)
+                            {
+                                int length = 0;
+
+                                while (0 != (length = inCacheStream.Read(buffer, 0, buffer.Length)))
+                                {
+                                    standardInputStream.Write(buffer, 0, length);
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+
+                    thread.Join();
+                    if (threadException != null) throw threadException;
+
+                    process.WaitForExit();
                 }
             }
         }
 
-        public void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
+        public static void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            lock (_decodeLockObject)
+            ProcessStartInfo info = null;
+
             {
-                var decoder = _lzmaDecoder.Value;
+                OperatingSystem osInfo = Environment.OSVersion;
 
-                byte[] properties = new byte[5];
-                if (inStream.Read(properties, 0, 5) != 5)
-                    throw (new Exception("input .lzma is too short"));
-
-                // Check
+                if (osInfo.Platform == PlatformID.Win32NT)
                 {
-                    UInt32 dictionarySize = 0;
-                    for (int i = 0; i < 4; i++)
-                        dictionarySize += ((UInt32)(properties[1 + i])) << (i * 8);
-
-                    if (dictionarySize > _maxDecompressDictionarySize) throw new Exception("dictionarySize is too large.");
+                    if (System.Environment.Is64BitProcess)
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
+                    }
+                    else
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                    }
                 }
+            }
 
-                decoder.SetDecoderProperties(properties);
+            info.CreateNoWindow = true;
+            info.UseShellExecute = false;
+            info.RedirectStandardInput = true;
+            info.RedirectStandardOutput = true;
+            info.RedirectStandardError = true;
 
-                long outSize = 0;
+            info.Arguments = "--decompress --format=lzma --memlimit-decompress=256MiB --stdout";
 
-                for (int i = 0; i < 8; i++)
+            using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
+            using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
+            {
+                using (Process process = Process.Start(info))
                 {
-                    int v = inStream.ReadByte();
-                    if (v < 0) throw (new Exception("Can't Read 1"));
+                    process.PriorityClass = ProcessPriorityClass.Idle;
 
-                    outSize |= ((long)(byte)v) << (8 * i);
-                }
+                    process.ErrorDataReceived += (object sender, DataReceivedEventArgs e) =>
+                    {
+                        Log.Error(e.Data);
+                    };
 
-                using (var cis = new CacheStream(inStream, 1024 * 1024, bufferManager))
-                using (var cos = new CacheStream(outStream, 1024 * 1024, bufferManager))
-                {
-                    decoder.Code(cis, new LzmaStreamWrapper(cos), -1, outSize, null);
+                    Exception threadException = null;
+
+                    var thread = new Thread(new ThreadStart(() =>
+                    {
+                        try
+                        {
+                            byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+
+                            try
+                            {
+                                using (var standardOutputStream = process.StandardOutput.BaseStream)
+                                {
+                                    int length = 0;
+
+                                    while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                    {
+                                        outCacheStream.Write(buffer, 0, length);
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                bufferManager.ReturnBuffer(buffer);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            threadException = e;
+                        }
+                    }));
+                    thread.IsBackground = true;
+                    thread.Start();
+
+                    try
+                    {
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
+
+                        try
+                        {
+                            using (var standardInputStream = process.StandardInput.BaseStream)
+                            {
+                                int length = 0;
+
+                                while (0 != (length = inCacheStream.Read(buffer, 0, buffer.Length)))
+                                {
+                                    standardInputStream.Write(buffer, 0, length);
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            bufferManager.ReturnBuffer(buffer);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+
+                    thread.Join();
+                    if (threadException != null) throw threadException;
+
+                    process.WaitForExit();
                 }
             }
         }

@@ -55,7 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Derivation\Pbkdf2.cs" />
-    <Compile Include="EqualityComparer.cs" />
+    <Compile Include="Tools\EqualityComparer.cs" />
     <Compile Include="Exchange\ExchangePrivateKey.cs" />
     <Compile Include="Exchange\ExchangePublicKey.cs" />
     <Compile Include="Exchange\Exchange.cs" />

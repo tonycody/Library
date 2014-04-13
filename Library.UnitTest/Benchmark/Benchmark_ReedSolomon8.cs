@@ -18,25 +18,25 @@ namespace Library.UnitTest
             StringBuilder sb = new StringBuilder();
             Random random = new Random();
 
-            foreach (var nativeFlag in new bool[] { false, true })
+            for (int c = 1; c <= 4; c++)
             {
-                ReedSolomon8 pc = new ReedSolomon8(128, 256, nativeFlag);
+                ReedSolomon8 pc = new ReedSolomon8(128, 256, c, _bufferManager);
 
-                byte[][] buffList = new byte[128][];
+                ArraySegment<byte>[] buffList = new ArraySegment<byte>[128];
                 for (int i = 0; i < 128; i++)
                 {
-                    var buffer = _bufferManager.TakeBuffer(1024 * 128);
+                    var buffer = _bufferManager.TakeBuffer(1024 * 1024);
                     random.NextBytes(buffer);
 
-                    buffList[i] = buffer;
+                    buffList[i] = new ArraySegment<byte>(buffer);
                 }
 
-                byte[][] buffList2 = new byte[128][];
+                ArraySegment<byte>[] buffList2 = new ArraySegment<byte>[128];
                 for (int i = 0; i < 128; i++)
                 {
-                    var buffer = _bufferManager.TakeBuffer(1024 * 128);
+                    var buffer = _bufferManager.TakeBuffer(1024 * 1024);
 
-                    buffList2[i] = buffer;
+                    buffList2[i] = new ArraySegment<byte>(buffer);
                 }
 
                 int[] intList = new int[128];
@@ -48,32 +48,30 @@ namespace Library.UnitTest
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                pc.Encode(buffList, buffList2, intList, 1024 * 128);
-                pc.Decode(buffList2, intList, 1024 * 128);
+                pc.Encode(buffList, buffList2, intList, 1024 * 1024);
+                pc.Decode(buffList2, intList, 1024 * 1024);
 
                 sw.Stop();
 
-                for (int i = 0; i < 128; i++)
+                for (int i = 0; i < buffList.Length; i++)
                 {
-                    _bufferManager.ReturnBuffer(buffList[i]);
+                    Assert.IsTrue(Collection.Equals(buffList[i].Array, buffList[i].Offset, buffList2[i].Array, buffList2[i].Offset, 1024 * 1024), "ReedSolomon");
                 }
 
                 for (int i = 0; i < 128; i++)
                 {
-                    _bufferManager.ReturnBuffer(buffList2[i]);
+                    _bufferManager.ReturnBuffer(buffList[i].Array);
                 }
 
-                if (nativeFlag)
+                for (int i = 0; i < 128; i++)
                 {
-                    sb.AppendLine("Native ReedSolomon: " + sw.Elapsed.ToString());
+                    _bufferManager.ReturnBuffer(buffList2[i].Array);
                 }
-                else
-                {
-                    sb.AppendLine("Managed ReedSolomon: " + sw.Elapsed.ToString());
-                }
+
+                sb.AppendLine("ReedSolomon: " + sw.Elapsed.ToString());
             }
 
-            MessageBox.Show(sb.ToString());
+            Debug.Write(sb.ToString());
         }
     }
 }

@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 
-namespace Library.Net.Amoeba
+namespace Library.Net.Outopos
 {
-    public interface IIndex<TGroup, TKey> : ICompressionAlgorithm, ICryptoAlgorithm
-        where TGroup : IGroup<TKey>
-        where TKey : IKey
+    public interface IIndex<TKey>
+      where TKey : IKey
     {
-        ICollection<TGroup> Groups { get; }
+        ICollection<TKey> Keys { get; }
     }
 }

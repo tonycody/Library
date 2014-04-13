@@ -97,13 +97,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\CacheManager.cs" />
+    <Compile Include="Cache\Header\Index.cs" />
     <Compile Include="Cache\Header\HeaderCollection.cs" />
+    <Compile Include="Cache\Header\IndexCollection.cs" />
     <Compile Include="Cache\Header\TagCollection.cs" />
     <Compile Include="Cache\Header\Header.cs" />
     <Compile Include="Cache\Header\Tag.cs" />
     <Compile Include="Cache\Header\Key.cs" />
     <Compile Include="Cache\Header\KeyCollection.cs" />
     <Compile Include="Cache\BitmapManager.cs" />
+    <Compile Include="Cache\_Interface\Header\IIndex.cs" />
     <Compile Include="OutoposConverter.cs" />
     <Compile Include="Cache\_Interface\Header\ITag.cs" />
     <Compile Include="Cache\_Interface\IHashAlgorithm.cs" />

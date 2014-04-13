@@ -81,7 +81,7 @@ namespace Library.UnitTest
             sb.AppendLine("Xor3: " + sw3.Elapsed.ToString());
             sb.AppendLine("Xor4: " + sw4.Elapsed.ToString());
 
-            MessageBox.Show(sb.ToString());
+            Debug.Write(sb.ToString());
         }
 
         private static byte[] Xor1(byte[] x, byte[] y)

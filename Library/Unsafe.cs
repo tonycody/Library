@@ -49,5 +49,37 @@ namespace Library
                 return true;
             }
         }
+
+        public static unsafe bool Equals(byte[] x, int xi, byte[] y, int yi, int length)
+        {
+            fixed (byte* p_x = x, p_y = y)
+            {
+                byte* t_x = p_x + xi, t_y = p_y + yi;
+
+                for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8)
+                {
+                    if (*((long*)t_x) != *((long*)t_y)) return false;
+                }
+
+                if ((length & 4) != 0)
+                {
+                    if (*((int*)t_x) != *((int*)t_y)) return false;
+                    t_x += 4; t_y += 4;
+                }
+
+                if ((length & 2) != 0)
+                {
+                    if (*((short*)t_x) != *((short*)t_y)) return false;
+                    t_x += 2; t_y += 2;
+                }
+
+                if ((length & 1) != 0)
+                {
+                    if (*((byte*)t_x) != *((byte*)t_y)) return false;
+                }
+
+                return true;
+            }
+        }
     }
 }

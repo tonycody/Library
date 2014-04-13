@@ -70,7 +70,7 @@
     <Compile Include="Benchmark\Benchmark_Xor.cs" />
     <Compile Include="Benchmark\Benchmark_ReedSolomon8.cs" />
     <Compile Include="Test_Library_Compression.cs" />
-    <Compile Include="Tool\D_Box.cs" />
+    <Compile Include="Tools\D_Box.cs" />
     <Compile Include="Test_Library_Net.cs" />
     <Compile Include="Test_Library_Io.cs" />
     <Compile Include="Test_Library_Net_Amoeba.cs" />
@@ -82,8 +82,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Test_Library_Security.cs.cs" />
     <Compile Include="Test_Library_Collections.cs" />
-    <Compile Include="Tool\RandomString.cs" />
-    <Compile Include="Tool\Sha512.cs" />
+    <Compile Include="Tools\RandomString.cs" />
+    <Compile Include="Tools\Sha512.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">

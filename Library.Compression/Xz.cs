@@ -11,22 +11,31 @@ namespace Library.Compression
     {
         public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            ProcessStartInfo info;
+            ProcessStartInfo info = null;
 
-            if (System.Environment.Is64BitProcess)
             {
-                info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
-            }
-            else
-            {
-                info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                OperatingSystem osInfo = Environment.OSVersion;
+
+                if (osInfo.Platform == PlatformID.Win32NT)
+                {
+                    if (System.Environment.Is64BitProcess)
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
+                    }
+                    else
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                    }
+                }
             }
 
             info.CreateNoWindow = true;
             info.UseShellExecute = false;
             info.RedirectStandardInput = true;
             info.RedirectStandardOutput = true;
-            info.Arguments = "-z --format=xz -6 --threads=1 -c";
+            info.RedirectStandardError = true;
+            
+            info.Arguments = "--compress --format=xz -6 --threads=1 --stdout";
 
             using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
             using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
@@ -34,6 +43,11 @@ namespace Library.Compression
                 using (Process process = Process.Start(info))
                 {
                     process.PriorityClass = ProcessPriorityClass.Idle;
+
+                    process.ErrorDataReceived += (object sender, DataReceivedEventArgs e) =>
+                    {
+                        Log.Error(e.Data);
+                    };
 
                     Exception threadException = null;
 
@@ -104,22 +118,31 @@ namespace Library.Compression
 
         public static void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            ProcessStartInfo info;
+            ProcessStartInfo info = null;
 
-            if (System.Environment.Is64BitProcess)
             {
-                info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
-            }
-            else
-            {
-                info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                OperatingSystem osInfo = Environment.OSVersion;
+
+                if (osInfo.Platform == PlatformID.Win32NT)
+                {
+                    if (System.Environment.Is64BitProcess)
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
+                    }
+                    else
+                    {
+                        info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                    }
+                }
             }
 
             info.CreateNoWindow = true;
             info.UseShellExecute = false;
             info.RedirectStandardInput = true;
             info.RedirectStandardOutput = true;
-            info.Arguments = "-d --memlimit-decompress=256MiB";
+            info.RedirectStandardError = true;
+            
+            info.Arguments = "--decompress --format=xz --memlimit-decompress=256MiB --stdout";
 
             using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
             using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
@@ -127,6 +150,11 @@ namespace Library.Compression
                 using (Process process = Process.Start(info))
                 {
                     process.PriorityClass = ProcessPriorityClass.Idle;
+
+                    process.ErrorDataReceived += (object sender, DataReceivedEventArgs e) =>
+                    {
+                        Log.Error(e.Data);
+                    };
 
                     Exception threadException = null;
 

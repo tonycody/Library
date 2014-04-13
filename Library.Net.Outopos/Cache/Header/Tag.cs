@@ -14,49 +14,51 @@ namespace Library.Net.Outopos
         private enum SerializeId : byte
         {
             Type = 0,
-            Id = 1,
+            Name = 1,
+            Id = 2,
         }
 
-        private string _type;
-        private byte[] _id;
+        private volatile string _type;
+        private volatile string _name;
+        private volatile byte[] _id;
 
-        private int _hashCode;
-
-        private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
+        private volatile int _hashCode;
 
         public static readonly int MaxTypeLength = 256;
+        public static readonly int MaxNameLength = 256;
         public static readonly int MaxIdLength = 64;
 
-        public Tag(string type, byte[] id)
+        public Tag(string type, string name, byte[] id)
         {
             this.Type = type;
+            this.Name = name;
             this.Id = id;
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            lock (this.ThisLock)
+            Encoding encoding = new UTF8Encoding(false);
+            byte[] lengthBuffer = new byte[4];
+
+            for (; ; )
             {
-                Encoding encoding = new UTF8Encoding(false);
-                byte[] lengthBuffer = new byte[4];
+                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                int length = NetworkConverter.ToInt32(lengthBuffer);
+                byte id = (byte)stream.ReadByte();
 
-                for (; ; )
+                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
-
-                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    if (id == (byte)SerializeId.Type)
                     {
-                        if (id == (byte)SerializeId.Type)
-                        {
-                            this.Type = ItemUtility.GetString(rangeStream);
-                        }
-                        else if (id == (byte)SerializeId.Id)
-                        {
-                            this.Id = ItemUtility.GetByteArray(rangeStream);
-                        }
+                        this.Type = ItemUtility.GetString(rangeStream);
+                    }
+                    else if (id == (byte)SerializeId.Name)
+                    {
+                        this.Name = ItemUtility.GetString(rangeStream);
+                    }
+                    else if (id == (byte)SerializeId.Id)
+                    {
+                        this.Id = ItemUtility.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -64,32 +66,31 @@ namespace Library.Net.Outopos
 
         public override Stream Export(BufferManager bufferManager, int count)
         {
-            lock (this.ThisLock)
+            BufferStream bufferStream = new BufferStream(bufferManager);
+
+            // Type
+            if (this.Type != null)
             {
-                BufferStream bufferStream = new BufferStream(bufferManager);
-
-                // Type
-                if (this.Type != null)
-                {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Type, this.Type);
-                }
-                // Id
-                if (this.Id != null)
-                {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Id, this.Id);
-                }
-
-                bufferStream.Seek(0, SeekOrigin.Begin);
-                return bufferStream;
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Type, this.Type);
             }
+            // Name
+            if (this.Name != null)
+            {
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Name, this.Name);
+            }
+            // Id
+            if (this.Id != null)
+            {
+                ItemUtility.Write(bufferStream, (byte)SerializeId.Id, this.Id);
+            }
+
+            bufferStream.Seek(0, SeekOrigin.Begin);
+            return bufferStream;
         }
 
         public override int GetHashCode()
         {
-            lock (this.ThisLock)
-            {
-                return _hashCode;
-            }
+            return _hashCode;
         }
 
         public override bool Equals(object obj)
@@ -106,6 +107,7 @@ namespace Library.Net.Outopos
             if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Type != other.Type
+                || this.Name != other.Name
                 || (this.Id == null) != (other.Id == null))
             {
                 return false;
@@ -119,25 +121,6 @@ namespace Library.Net.Outopos
             return true;
         }
 
-        private object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
-            }
-        }
-
         #region ITag
 
         [DataMember(Name = "Type")]
@@ -145,23 +128,37 @@ namespace Library.Net.Outopos
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _type;
-                }
+                return _type;
             }
             private set
             {
-                lock (this.ThisLock)
+                if (value != null && value.Length > Tag.MaxTypeLength)
                 {
-                    if (value != null && value.Length > Tag.MaxTypeLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _type = value;
-                    }
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _type = value;
+                }
+            }
+        }
+
+        [DataMember(Name = "Name")]
+        public string Name
+        {
+            get
+            {
+                return _name;
+            }
+            private set
+            {
+                if (value != null && value.Length > Tag.MaxNameLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _name = value;
                 }
             }
         }
@@ -171,34 +168,28 @@ namespace Library.Net.Outopos
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _id;
-                }
+                return _id;
             }
             private set
             {
-                lock (this.ThisLock)
+                if (value != null && (value.Length > Tag.MaxIdLength))
                 {
-                    if (value != null && (value.Length > Tag.MaxIdLength))
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _id = value;
-                    }
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _id = value;
+                }
 
-                    if (value != null && value.Length != 0)
-                    {
-                        if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                        else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                        else _hashCode = value[0];
-                    }
-                    else
-                    {
-                        _hashCode = 0;
-                    }
+                if (value != null && value.Length != 0)
+                {
+                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
+                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
+                    else _hashCode = value[0];
+                }
+                else
+                {
+                    _hashCode = 0;
                 }
             }
         }
