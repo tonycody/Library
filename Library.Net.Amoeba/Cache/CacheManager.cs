@@ -1094,7 +1094,7 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    KeyCollection parityHeaders = new KeyCollection();
+                    KeyCollection parityKeys = new KeyCollection();
 
                     for (int i = 0; i < bufferArray.Length; i++)
                     {
@@ -1142,9 +1142,9 @@ namespace Library.Net.Amoeba
 
                     var intArray = new int[parityBufferArray.Length];
 
-                    for (int i = bufferArray.Length; i < parityBufferArray.Length; i++)
+                    for (int i = 0; i < parityBufferArray.Length; i++)
                     {
-                        intArray[i] = i;
+                        intArray[i] = bufferArray.Length + i;
                     }
 
                     using (ReedSolomon8 reedSolomon = new ReedSolomon8(bufferArray.Length, bufferArray.Length + parityBufferArray.Length, _threadCount, _bufferManager))
@@ -1194,7 +1194,7 @@ namespace Library.Net.Amoeba
                                 this[key] = parityBufferArray[i];
                             }
 
-                            parityHeaders.Add(key);
+                            parityKeys.Add(key);
                         }
                         else
                         {
@@ -1208,7 +1208,7 @@ namespace Library.Net.Amoeba
                     group.BlockLength = blockLength;
                     group.Length = sumLength;
                     group.Keys.AddRange(keys);
-                    group.Keys.AddRange(parityHeaders);
+                    group.Keys.AddRange(parityKeys);
 
 #if DEBUG
                     Debug.WriteLine(string.Format("CacheManager_ParityEncoding {0}", sw.Elapsed.ToString()));
