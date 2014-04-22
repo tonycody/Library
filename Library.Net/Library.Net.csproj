@@ -60,9 +60,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="INode.cs" />
+    <Compile Include="Cap\CapBase.cs" />
+    <Compile Include="Table\INode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Kademlia.cs" />
+    <Compile Include="Table\Kademlia.cs" />
+    <Compile Include="Cap\SocketCap.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">

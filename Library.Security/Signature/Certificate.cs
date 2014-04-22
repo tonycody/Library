@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
@@ -18,10 +19,10 @@ namespace Library.Security
             Signature = 3,
         }
 
-        private static InternPool<byte[], string> _nicknameCache = new InternPool<byte[], string>(new ByteArrayEqualityComparer());
+        private static InternPool<string> _nicknameCache = new InternPool<string>();
         private volatile string _nickname;
         private volatile DigitalSignatureAlgorithm _digitalSignatureAlgorithm = 0;
-        private static InternPool<byte[], byte[]> _publicKeyCache = new InternPool<byte[], byte[]>(new ByteArrayEqualityComparer());
+        private static InternPool<byte[]> _publicKeyCache = new InternPool<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _publicKey;
         private volatile byte[] _signature;
 
@@ -57,6 +58,11 @@ namespace Library.Security
             this.Signature = signature;
         }
 
+        protected override void Initialize()
+        {
+
+        }
+
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             byte[] lengthBuffer = new byte[4];
@@ -71,19 +77,19 @@ namespace Library.Security
                 {
                     if (id == (byte)SerializeId.Nickname)
                     {
-                        this.Nickname = ItemUtility.GetString(rangeStream);
+                        this.Nickname = ItemUtilities.GetString(rangeStream);
                     }
                     else if (id == (byte)SerializeId.DigitalSignatureAlgorithm)
                     {
-                        this.DigitalSignatureAlgorithm = (DigitalSignatureAlgorithm)Enum.Parse(typeof(DigitalSignatureAlgorithm), ItemUtility.GetString(rangeStream));
+                        this.DigitalSignatureAlgorithm = (DigitalSignatureAlgorithm)Enum.Parse(typeof(DigitalSignatureAlgorithm), ItemUtilities.GetString(rangeStream));
                     }
                     else if (id == (byte)SerializeId.PublicKey)
                     {
-                        this.PublicKey = ItemUtility.GetByteArray(rangeStream);
+                        this.PublicKey = ItemUtilities.GetByteArray(rangeStream);
                     }
                     else if (id == (byte)SerializeId.Signature)
                     {
-                        this.Signature = ItemUtility.GetByteArray(rangeStream);
+                        this.Signature = ItemUtilities.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -96,22 +102,22 @@ namespace Library.Security
             // Nickname
             if (this.Nickname != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Nickname, this.Nickname);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Nickname, this.Nickname);
             }
             // DigitalSignatureAlgorithm
             if (this.DigitalSignatureAlgorithm != 0)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.DigitalSignatureAlgorithm, this.DigitalSignatureAlgorithm.ToString());
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.DigitalSignatureAlgorithm, this.DigitalSignatureAlgorithm.ToString());
             }
             // PublicKey
             if (this.PublicKey != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
             }
             // Signature
             if (this.Signature != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -135,22 +141,17 @@ namespace Library.Security
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.Nickname != other.Nickname
+            if (!object.ReferenceEquals(this.Nickname, other.Nickname)
                 || this.DigitalSignatureAlgorithm != other.DigitalSignatureAlgorithm
-                || ((this.PublicKey == null) != (other.PublicKey == null))
+                || !object.ReferenceEquals(this.PublicKey, other.PublicKey)
                 || ((this.Signature == null) != (other.Signature == null)))
             {
                 return false;
             }
 
-            if (this.PublicKey != null && other.PublicKey != null)
-            {
-                if (!Unsafe.Equals(this.PublicKey, other.PublicKey)) return false;
-            }
-
             if (this.Signature != null && other.Signature != null)
             {
-                if (!Unsafe.Equals(this.Signature, other.Signature)) return false;
+                if (!Native.Equals(this.Signature, other.Signature)) return false;
             }
 
             return true;
@@ -203,7 +204,7 @@ namespace Library.Security
                 }
                 else
                 {
-                    _nickname = _nicknameCache.GetOrCreateValue(Sha512.ComputeHash(value), value, this);
+                    _nickname = _nicknameCache.GetValue(value, this);
                     //_nickname = value;
                 }
             }
@@ -244,13 +245,13 @@ namespace Library.Security
                 }
                 else
                 {
-                    _publicKey = _publicKeyCache.GetOrCreateValue(Sha512.ComputeHash(value), value, this);
+                    _publicKey = _publicKeyCache.GetValue(value, this);
                     //_publicKey = value;
                 }
 
-                if (value != null && value.Length != 0)
+                if (value != null)
                 {
-                    _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
+                    _hashCode = RuntimeHelpers.GetHashCode(_publicKey);
                 }
                 else
                 {

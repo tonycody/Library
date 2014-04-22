@@ -11,7 +11,7 @@ namespace Library.Io
         private List<byte[]> _buffers = new List<byte[]>();
         private long _position;
         private long _length;
-        private int _bufferSize = 32;
+        private int _bufferSize = 4096;
         private bool _disposed;
 
         public BufferStream(BufferManager bufferManager)
@@ -113,7 +113,7 @@ namespace Library.Io
                 while (sum < value)
                 {
                     var buffer = _bufferManager.TakeBuffer(_bufferSize);
-                    if (_bufferSize < 1024 * 32) _bufferSize *= 2;
+                    _bufferSize *= 2;
 
                     _buffers.Add(buffer);
                     sum += buffer.Length;
@@ -152,7 +152,7 @@ namespace Library.Io
             {
                 int length = Math.Min(_buffers[index].Length - position, count);
 
-                Array.Copy(_buffers[index], position, buffer, offset, length);
+                Native.Copy(_buffers[index], position, buffer, offset, length);
                 position = 0;
 
                 offset += length;
@@ -196,7 +196,7 @@ namespace Library.Io
             {
                 int length = Math.Min(_buffers[index].Length - position, count);
 
-                Array.Copy(buffer, offset, _buffers[index], position, length);
+                Native.Copy(buffer, offset, _buffers[index], position, length);
                 position = 0;
 
                 offset += length;

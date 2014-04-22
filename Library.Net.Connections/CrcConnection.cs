@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Library.Io;
+using Library.Security;
 
 namespace Library.Net.Connections
 {
@@ -66,12 +67,12 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Connect(TimeSpan timeout)
+        public override void Connect(TimeSpan timeout, Information options)
         {
             throw new NotSupportedException();
         }
 
-        public override void Close(TimeSpan timeout)
+        public override void Close(TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -96,7 +97,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override System.IO.Stream Receive(TimeSpan timeout)
+        public override System.IO.Stream Receive(TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -108,7 +109,7 @@ namespace Library.Net.Connections
 
                 try
                 {
-                    stream = _connection.Receive(timeout);
+                    stream = _connection.Receive(timeout, options);
 
                     dataStream = new RangeStream(stream, 0, stream.Length - 4);
                     byte[] verifyCrc = Crc32_Castagnoli.ComputeHash(dataStream);
@@ -119,7 +120,7 @@ namespace Library.Net.Connections
                         crcStream.Read(orignalCrc, 0, orignalCrc.Length);
                     }
 
-                    if (!Collection.Equals(verifyCrc, orignalCrc)) throw new ArgumentException("Crc Error");
+                    if (!Native.Equals(verifyCrc, orignalCrc)) throw new ArgumentException("Crc Error");
 
                     dataStream.Seek(0, SeekOrigin.Begin);
                     return dataStream;
@@ -141,7 +142,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Send(System.IO.Stream stream, TimeSpan timeout)
+        public override void Send(System.IO.Stream stream, TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -157,7 +158,7 @@ namespace Library.Net.Connections
                         using (MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(targetStream)))
                         using (Stream dataStream = new UniteStream(new WrapperStream(targetStream, true), crcStream))
                         {
-                            _connection.Send(dataStream, timeout);
+                            _connection.Send(dataStream, timeout, options);
                         }
                     }
                     catch (ConnectionException ex)

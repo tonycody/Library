@@ -1,0 +1,6 @@
+LIBRARY Library
+
+EXPORTS
+	equals
+	compare
+	xor

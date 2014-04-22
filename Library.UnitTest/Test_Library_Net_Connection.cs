@@ -3,7 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Library.Net.Caps;
+using Library.Net;
 using Library.Net.Connections;
 using Library.Security;
 using NUnit.Framework;
@@ -246,38 +246,48 @@ namespace Library.UnitTest
                     serverDigitalSignature = new DigitalSignature("NickName2", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
                 }
 
-                SecureConnectionVersion clientVersion = 0;
-                SecureConnectionVersion serverVersion = 0;
+                SecureConnectionVersion clientVersion;
+                SecureConnectionVersion serverVersion;
 
-                for (; ; )
                 {
-                    switch (_random.Next(0, 3))
-                    {
-                        case 0:
-                            clientVersion = SecureConnectionVersion.Version2;
-                            break;
-                        case 1:
-                            clientVersion = SecureConnectionVersion.Version3;
-                            break;
-                        case 2:
-                            clientVersion = SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3;
-                            break;
-                    }
+                    clientVersion = SecureConnectionVersion.Version3;
+                    serverVersion = SecureConnectionVersion.Version3;
+                }
 
-                    switch (_random.Next(0, 3))
-                    {
-                        case 0:
-                            serverVersion = SecureConnectionVersion.Version2;
-                            break;
-                        case 1:
-                            serverVersion = SecureConnectionVersion.Version3;
-                            break;
-                        case 2:
-                            serverVersion = SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3;
-                            break;
-                    }
+                {
+                    //SecureConnectionVersion clientVersion = 0;
+                    //SecureConnectionVersion serverVersion = 0;
 
-                    if ((clientVersion & serverVersion) != 0) break;
+                    //for (; ; )
+                    //{
+                    //    switch (_random.Next(0, 3))
+                    //    {
+                    //        case 0:
+                    //            clientVersion = SecureConnectionVersion.Version2;
+                    //            break;
+                    //        case 1:
+                    //            clientVersion = SecureConnectionVersion.Version3;
+                    //            break;
+                    //        case 2:
+                    //            clientVersion = SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3;
+                    //            break;
+                    //    }
+
+                    //    switch (_random.Next(0, 3))
+                    //    {
+                    //        case 0:
+                    //            serverVersion = SecureConnectionVersion.Version2;
+                    //            break;
+                    //        case 1:
+                    //            serverVersion = SecureConnectionVersion.Version3;
+                    //            break;
+                    //        case 2:
+                    //            serverVersion = SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3;
+                    //            break;
+                    //    }
+
+                    //    if ((clientVersion & serverVersion) != 0) break;
+                    //}
                 }
 
                 ////var TcpClient = new BaseConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);

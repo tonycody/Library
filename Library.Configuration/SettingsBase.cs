@@ -193,18 +193,29 @@ namespace Library.Configuration
                     {
                         uniquePath = stream.Name;
 
-                        using (GZipStream compressStream = new GZipStream(cacheStream, CompressionMode.Compress))
-                        //using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateTextWriter(compressStream, new UTF8Encoding(false)))
-                        using (XmlDictionaryWriter xml = XmlDictionaryWriter.CreateBinaryWriter(compressStream))
+#if !true
+                        using (FileStream stream2 = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, name + ".txt")))
+                        using (XmlDictionaryWriter xml = XmlDictionaryWriter.CreateTextWriter(stream2, new UTF8Encoding(false)))
                         {
-                            //var serializer = new DataContractSerializer(type);
-                            //xml.WriteStartDocument();
-                            //serializer.WriteObject(binaryDictionaryWriter, value);
-
                             var serializer = new DataContractSerializer(type);
 
                             serializer.WriteStartObject(xml, value);
-                            xml.WriteAttributeString("xmlns", "z", "http://www.w3.org/2000/xmlns/", "http://schemas.microsoft.com/2003/10/Serialization/");
+                            xml.WriteAttributeString("xmlns", "xa", "http://www.w3.org/2000/xmlns/", "http://schemas.microsoft.com/2003/10/Serialization/");
+                            xml.WriteAttributeString("xmlns", "xc", "http://www.w3.org/2000/xmlns/", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
+                            xml.WriteAttributeString("xmlns", "xb", "http://www.w3.org/2000/xmlns/", "http://www.w3.org/2001/XMLSchema");
+                            serializer.WriteObjectContent(xml, value);
+                            serializer.WriteEndObject(xml);
+                        }
+#endif
+                        using (GZipStream compressStream = new GZipStream(cacheStream, CompressionMode.Compress))
+                        using (XmlDictionaryWriter xml = XmlDictionaryWriter.CreateBinaryWriter(compressStream))
+                        {
+                            var serializer = new DataContractSerializer(type);
+
+                            serializer.WriteStartObject(xml, value);
+                            xml.WriteAttributeString("xmlns", "xa", "http://www.w3.org/2000/xmlns/", "http://schemas.microsoft.com/2003/10/Serialization/");
+                            xml.WriteAttributeString("xmlns", "xc", "http://www.w3.org/2000/xmlns/", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
+                            xml.WriteAttributeString("xmlns", "xb", "http://www.w3.org/2000/xmlns/", "http://www.w3.org/2001/XMLSchema");
                             serializer.WriteObjectContent(xml, value);
                             serializer.WriteEndObject(xml);
                         }

@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Library.Net.Caps;
+using Library.Net;
 using Library.Net.Connections;
 
 namespace Library.Net.Amoeba
@@ -25,9 +25,10 @@ namespace Library.Net.Amoeba
 
         private System.Threading.Timer _watchTimer;
 
-        private ManagerState _state = ManagerState.Stop;
+        private volatile ManagerState _state = ManagerState.Stop;
 
         private AcceptCapEventHandler _acceptConnectionEvent;
+        private CheckUriEventHandler _uriFilterEvent;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -40,7 +41,7 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings(this.ThisLock);
 
-            _watchTimer = new Timer(this.WatchTimer, null, Timeout.Infinite, Timeout.Infinite);
+            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public AcceptCapEventHandler AcceptCapEvent
@@ -50,6 +51,17 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     _acceptConnectionEvent = value;
+                }
+            }
+        }
+
+        public CheckUriEventHandler CheckUriEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _uriFilterEvent = value;
                 }
             }
         }
@@ -77,6 +89,16 @@ namespace Library.Net.Amoeba
             return null;
         }
 
+        protected virtual bool OnCheckUriEvent(string uri)
+        {
+            if (_uriFilterEvent != null)
+            {
+                return _uriFilterEvent(this, uri);
+            }
+
+            return true;
+        }
+
         public ConnectionBase AcceptConnection(out string uri, BandwidthLimit bandwidthLimit)
         {
             uri = null;
@@ -98,10 +120,22 @@ namespace Library.Net.Amoeba
                             {
                                 if (item.Value.Pending())
                                 {
-                                    uri = item.Key;
-
                                     var socket = item.Value.AcceptTcpClient().Client;
                                     garbages.Add(socket);
+
+                                    {
+                                        var remoteEndPoint = (IPEndPoint)socket.RemoteEndPoint;
+                                        var localEndpoint = (IPEndPoint)item.Value.LocalEndpoint;
+
+                                        uri = string.Format("tcp:{0}:{1}", remoteEndPoint.Address, localEndpoint.Port);
+                                    }
+
+                                    if (!this.OnCheckUriEvent(uri))
+                                    {
+                                        Log.Information(string.Format("Blocked: {0}", uri));
+                                       
+                                        continue;
+                                    }
 
                                     var cap = new SocketCap(socket);
                                     garbages.Add(cap);
@@ -119,6 +153,8 @@ namespace Library.Net.Amoeba
 
                         garbages.Add(cap);
 
+                        if (!this.OnCheckUriEvent(uri)) continue;
+
                         connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                         garbages.Add(connection);
                     }
@@ -128,7 +164,7 @@ namespace Library.Net.Amoeba
 
                 if (connection == null) return null;
 
-                var secureConnection = new SecureConnection(SecureConnectionType.Server, SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3, connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionType.Server, SecureConnectionVersion.Version3, connection, null, _bufferManager);
                 garbages.Add(secureConnection);
 
                 secureConnection.Connect(new TimeSpan(0, 0, 30));
@@ -200,10 +236,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
+                return _state;
             }
         }
 

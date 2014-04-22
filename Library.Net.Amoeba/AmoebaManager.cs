@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Library.Compression;
 using Library.Security;
 
 namespace Library.Net.Amoeba
 {
+    public delegate bool CheckUriEventHandler(object sender, string uri);
+
     // 色々力技が必要になり個々のクラスが見苦しので、このクラスで覆う
 
     public sealed class AmoebaManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -23,12 +26,13 @@ namespace Library.Net.Amoeba
         private BackgroundDownloadManager _backgroundDownloadManager;
         private BackgroundUploadManager _backgroundUploadManager;
 
-        private ManagerState _state = ManagerState.Stop;
+        private volatile ManagerState _state = ManagerState.Stop;
         private ManagerState _encodeState = ManagerState.Stop;
         private ManagerState _decodeState = ManagerState.Stop;
 
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
+        private CheckUriEventHandler _uriFilterEvent;
 
         private bool _isLoaded = false;
 
@@ -72,6 +76,26 @@ namespace Library.Net.Amoeba
 
                 return null;
             };
+
+            _clientManager.CheckUriEvent = (object sender, string uri) =>
+            {
+                if (_uriFilterEvent != null)
+                {
+                    return _uriFilterEvent(this, uri);
+                }
+
+                return true;
+            };
+
+            _serverManager.CheckUriEvent = (object sender, string uri) =>
+            {
+                if (_uriFilterEvent != null)
+                {
+                    return _uriFilterEvent(this, uri);
+                }
+
+                return true;
+            };
         }
 
         public CreateCapEventHandler CreateCapEvent
@@ -92,6 +116,17 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     _acceptCapEvent = value;
+                }
+            }
+        }
+
+        public CheckUriEventHandler CheckUriEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _uriFilterEvent = value;
                 }
             }
         }
@@ -697,10 +732,7 @@ namespace Library.Net.Amoeba
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
                 if (!_isLoaded) throw new AmoebaManagerException("AmoebaManager is not loaded.");
 
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
+                return _state;
             }
         }
 
@@ -840,10 +872,15 @@ namespace Library.Net.Amoeba
                 _bitmapManager.Load(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
-                _downloadManager.Load(System.IO.Path.Combine(directoryPath, "DownloadManager"));
-                _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
-                _backgroundDownloadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundDownloadManager"));
-                _backgroundUploadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"));
+
+                List<Task> tasks = new List<Task>();
+
+                tasks.Add(Task.Factory.StartNew(() => _downloadManager.Load(System.IO.Path.Combine(directoryPath, "DownloadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _backgroundDownloadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundDownloadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _backgroundUploadManager.Load(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"))));
+
+                Task.WaitAll(tasks.ToArray());
 
                 _cacheManager.Rewatch();
             }
@@ -856,10 +893,15 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                _backgroundUploadManager.Save(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"));
-                _backgroundDownloadManager.Save(System.IO.Path.Combine(directoryPath, "BackgroundDownloadManager"));
-                _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
-                _downloadManager.Save(System.IO.Path.Combine(directoryPath, "DownloadManager"));
+                List<Task> tasks = new List<Task>();
+
+                tasks.Add(Task.Factory.StartNew(() => _backgroundUploadManager.Save(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _backgroundDownloadManager.Save(System.IO.Path.Combine(directoryPath, "BackgroundDownloadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _downloadManager.Save(System.IO.Path.Combine(directoryPath, "DownloadManager"))));
+
+                Task.WaitAll(tasks.ToArray());
+
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _bitmapManager.Save(System.IO.Path.Combine(directoryPath, "BitmapManager"));

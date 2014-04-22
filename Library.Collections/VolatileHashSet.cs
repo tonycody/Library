@@ -38,16 +38,12 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 return _dic.Keys.ToArray();
             }
         }
 
         public void Refresh(T item)
         {
-            this.CheckLifeTime();
-
             _dic[item] = DateTime.UtcNow;
         }
 
@@ -105,8 +101,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CheckLifeTime();
-
                     return _dic.Count;
                 }
             }
@@ -116,8 +110,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 foreach (var item in collection)
                 {
                     _dic[item] = DateTime.UtcNow;
@@ -129,8 +121,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 int count = _dic.Count;
                 _dic[item] = DateTime.UtcNow;
 
@@ -150,8 +140,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 return _dic.ContainsKey(item);
             }
         }
@@ -160,8 +148,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 _dic.Keys.CopyTo(array, arrayIndex);
             }
         }
@@ -170,8 +156,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 return _dic.Remove(item);
             }
         }
@@ -234,8 +218,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 foreach (var item in _dic.Keys)
                 {
                     yield return item;

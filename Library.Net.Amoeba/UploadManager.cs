@@ -24,8 +24,8 @@ namespace Library.Net.Amoeba
         private SortedDictionary<string, List<int>> _shareLink = new SortedDictionary<string, List<int>>();
         private int _id;
 
-        private ManagerState _state = ManagerState.Stop;
-        private ManagerState _encodeState = ManagerState.Stop;
+        private volatile ManagerState _state = ManagerState.Stop;
+        private volatile ManagerState _encodeState = ManagerState.Stop;
 
         private Thread _uploadedThread;
         private Thread _removeShareThread;
@@ -931,10 +931,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
+                return _state;
             }
         }
 
@@ -942,10 +939,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _encodeState;
-                }
+                return _encodeState;
             }
         }
 

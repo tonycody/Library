@@ -27,7 +27,6 @@ namespace Library.Net.Connections.SecureVersion3
         private Certificate _certificate;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxExchangeKeyLength = 8192;
         public static readonly int MaxProtocolHashLength = 64;
@@ -35,6 +34,11 @@ namespace Library.Net.Connections.SecureVersion3
         public ConnectionSignature()
         {
 
+        }
+
+        protected override void Initialize()
+        {
+            _thisLock = new object();
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -53,15 +57,15 @@ namespace Library.Net.Connections.SecureVersion3
                     {
                         if (id == (byte)SerializeId.CreationTime)
                         {
-                            this.CreationTime = DateTime.ParseExact(ItemUtility.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                            this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                         if (id == (byte)SerializeId.ExchangeKey)
                         {
-                            this.ExchangeKey = ItemUtility.GetByteArray(rangeStream);
+                            this.ExchangeKey = ItemUtilities.GetByteArray(rangeStream);
                         }
                         if (id == (byte)SerializeId.ProtocolHash)
                         {
-                            this.ProtocolHash = ItemUtility.GetByteArray(rangeStream);
+                            this.ProtocolHash = ItemUtilities.GetByteArray(rangeStream);
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -82,17 +86,17 @@ namespace Library.Net.Connections.SecureVersion3
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
                 // ExchangeKey
                 if (this.ExchangeKey != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.ExchangeKey, this.ExchangeKey);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.ExchangeKey, this.ExchangeKey);
                 }
                 // ProtocolHash
                 if (this.ProtocolHash != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.ProtocolHash, this.ProtocolHash);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.ProtocolHash, this.ProtocolHash);
                 }
 
                 // Certificate
@@ -100,7 +104,7 @@ namespace Library.Net.Connections.SecureVersion3
                 {
                     using (var stream = this.Certificate.Export(bufferManager))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
                     }
                 }
 
@@ -140,12 +144,12 @@ namespace Library.Net.Connections.SecureVersion3
 
             if (this.ExchangeKey != null && other.ExchangeKey != null)
             {
-                if (!Unsafe.Equals(this.ExchangeKey, other.ExchangeKey)) return false;
+                if (!Native.Equals(this.ExchangeKey, other.ExchangeKey)) return false;
             }
 
             if (this.ProtocolHash != null && other.ProtocolHash != null)
             {
-                if (!Unsafe.Equals(this.ProtocolHash, other.ProtocolHash)) return false;
+                if (!Native.Equals(this.ProtocolHash, other.ProtocolHash)) return false;
             }
 
             return true;
@@ -296,17 +300,6 @@ namespace Library.Net.Connections.SecureVersion3
         {
             get
             {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
                 return _thisLock;
             }
         }

@@ -72,15 +72,20 @@
     <Compile Include="IThisLock.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="ManagerBase.cs" />
-    <Compile Include="NativeMethods.cs" />
     <Compile Include="NetworkConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="InternPool.cs" />
     <Compile Include="StateManagerBase.cs" />
-    <Compile Include="UnmanagedLibraryManager.cs" />
+    <Compile Include="NativeLibraryManager.cs" />
     <Compile Include="Unsafe.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assembly\Library_x64.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assembly\Library_x86.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Properties\Library.License">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

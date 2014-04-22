@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Library.Security;
 using NUnit.Framework;
@@ -85,6 +86,29 @@ namespace Library.UnitTest
             System.Security.Cryptography.Rfc2898DeriveBytes rfc2898DeriveBytes = new System.Security.Cryptography.Rfc2898DeriveBytes(password, salt, 1024);
 
             Assert.IsTrue(Collection.Equals(pbkdf2.GetBytes(1024), rfc2898DeriveBytes.GetBytes(1024)), "Pbkdf2 #1");
+        }
+
+        [Test]
+        public void Test_Crc32_Castagnoli()
+        {
+            byte[] buffer = new byte[1024 * 32];
+            _random.NextBytes(buffer);
+
+            Assert.IsTrue(Collection.Equals(T_Crc32_Castagnoli.ComputeHash(buffer), Crc32_Castagnoli.ComputeHash(buffer)));
+
+            using (MemoryStream stream1 = new MemoryStream(buffer))
+            using (MemoryStream stream2 = new MemoryStream(buffer))
+            {
+                Assert.IsTrue(Collection.Equals(T_Crc32_Castagnoli.ComputeHash(stream1), Crc32_Castagnoli.ComputeHash(stream2)));
+            }
+
+            var list = new List<ArraySegment<byte>>();
+            list.Add(new ArraySegment<byte>(buffer));
+            list.Add(new ArraySegment<byte>(buffer));
+            list.Add(new ArraySegment<byte>(buffer));
+            list.Add(new ArraySegment<byte>(buffer));
+
+            Assert.IsTrue(Collection.Equals(T_Crc32_Castagnoli.ComputeHash(list), Crc32_Castagnoli.ComputeHash(list)));
         }
     }
 }

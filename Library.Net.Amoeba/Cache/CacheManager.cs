@@ -51,6 +51,7 @@ namespace Library.Net.Amoeba
         private readonly object _thisLock = new object();
 
         public static readonly int SectorSize = 1024 * 32;
+        public static readonly int SpaceSectorCount = 32 * 1024; // 1MB * 1024 = 1024MB
 
         private int _threadCount = 2;
 
@@ -373,19 +374,16 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                var removeKeys = _settings.ClusterIndex.Keys
-                    .Where(n => !usingKeys.Contains(n))
+                var removePairs = _settings.ClusterIndex
+                    .Where(n => !usingKeys.Contains(n.Key))
                     .ToList();
 
-                removeKeys.Sort((x, y) =>
+                removePairs.Sort((x, y) =>
                 {
-                    var xc = _settings.ClusterIndex[x];
-                    var yc = _settings.ClusterIndex[y];
-
-                    return xc.UpdateTime.CompareTo(yc.UpdateTime);
+                    return x.Value.UpdateTime.CompareTo(y.Value.UpdateTime);
                 });
 
-                foreach (var key in removeKeys)
+                foreach (var key in removePairs.Select(n => n.Key))
                 {
                     if (sectorCount <= _spaceSectors.Count) break;
 
@@ -505,13 +503,17 @@ namespace Library.Net.Amoeba
             {
                 _shareIndexLinkUpdate();
 
+                var list = new List<Key>();
+
                 foreach (var key in keys)
                 {
                     if (_settings.ClusterIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key))
                     {
-                        yield return key;
+                        list.Add(key);
                     }
                 }
+
+                return list;
             }
         }
 
@@ -521,13 +523,17 @@ namespace Library.Net.Amoeba
             {
                 _shareIndexLinkUpdate();
 
+                var list = new List<Key>();
+
                 foreach (var key in keys)
                 {
                     if (!(_settings.ClusterIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key)))
                     {
-                        yield return key;
+                        list.Add(key);
                     }
                 }
+
+                return list;
             }
         }
 
@@ -544,7 +550,7 @@ namespace Library.Net.Amoeba
                     foreach (var sector in clusterInfo.Indexes)
                     {
                         _bitmapManager.Set(sector, false);
-                        if (_spaceSectors.Count < 8192) _spaceSectors.Add(sector);
+                        if (_spaceSectors.Count < CacheManager.SpaceSectorCount) _spaceSectors.Add(sector);
                     }
 
                     this.OnRemoveKeyEvent(new Key[] { key });
@@ -1116,7 +1122,7 @@ namespace Library.Net.Amoeba
                             else if (bufferLength < blockLength)
                             {
                                 ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                                Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
                                 Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
                                 _bufferManager.ReturnBuffer(buffer.Array);
                                 buffer = tbuffer;
@@ -1273,7 +1279,7 @@ namespace Library.Net.Amoeba
                             else if (bufferLength < group.BlockLength)
                             {
                                 ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
-                                Array.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
                                 Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
                                 _bufferManager.ReturnBuffer(buffer.Array);
                                 buffer = tbuffer;
@@ -1420,7 +1426,7 @@ namespace Library.Net.Amoeba
 
                                 if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                 {
-                                    if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
+                                    if (!Native.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
                                     {
                                         this.Remove(key);
 
@@ -1467,7 +1473,7 @@ namespace Library.Net.Amoeba
 
                                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                     {
-                                        if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
+                                        if (!Native.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
                                         {
                                             foreach (var item in _ids.ToArray())
                                             {
@@ -1510,7 +1516,7 @@ namespace Library.Net.Amoeba
 
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        if (!Unsafe.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
+                        if (!Native.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
                     else
                     {
@@ -1529,7 +1535,7 @@ namespace Library.Net.Amoeba
 
                         if (_spaceSectors.Count < count)
                         {
-                            this.CreatingSpace(8192);// 256MB
+                            this.CreatingSpace(CacheManager.SpaceSectorCount);
                         }
 
                         if (_spaceSectors.Count < count) throw new SpaceNotFoundException();

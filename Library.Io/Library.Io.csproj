@@ -53,7 +53,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Tools\StreamMode.cs" />
+    <Compile Include="Utilities\StreamMode.cs" />
     <Compile Include="WrapperStream.cs" />
     <Compile Include="UniteStream.cs" />
     <Compile Include="BufferStream.cs" />

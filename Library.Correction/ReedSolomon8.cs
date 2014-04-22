@@ -72,7 +72,7 @@ namespace Library.Correction
                 if (index[row] < _k)
                 {
                     // < k, systematic so direct copy.
-                    System.Array.Copy(src[index[row]], srcOff[index[row]], repair[row], repairOff[row], packetLength);
+                    Native.Copy(src[index[row]], srcOff[index[row]], repair[row], repairOff[row], packetLength);
                 }
                 else
                 {
@@ -147,7 +147,7 @@ namespace Library.Correction
                 if (index[row] >= _k)
                 {
                     // only copy those actually decoded.
-                    System.Array.Copy(tmpPkts[row], 0, pkts[row], pktsOff[row], packetLength);
+                    Native.Copy(tmpPkts[row], 0, pkts[row], pktsOff[row], packetLength);
                     index[row] = row;
                     _bufferManager.ReturnBuffer(tmpPkts[row]);
                 }
@@ -207,7 +207,7 @@ namespace Library.Correction
 #if Mono
 
 #else
-            private UnmanagedLibraryManager _unmanagedLibraryManager;
+            private NativeLibraryManager _nativeLibraryManager;
 
             delegate void MulDelegate(byte* src, byte* dst, byte* mulc, int len);
             private MulDelegate _mul;
@@ -280,14 +280,14 @@ namespace Library.Correction
                 {
                     if (System.Environment.Is64BitProcess)
                     {
-                        _unmanagedLibraryManager = new UnmanagedLibraryManager("Assembly/ReedSolomon_Utility_x64.dll");
+                        _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Correction_x64.dll");
                     }
                     else
                     {
-                        _unmanagedLibraryManager = new UnmanagedLibraryManager("Assembly/ReedSolomon_Utility_x86.dll");
+                        _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Correction_x86.dll");
                     }
 
-                    _mul = _unmanagedLibraryManager.GetDelegate<MulDelegate>("mul");
+                    _mul = _nativeLibraryManager.GetMethod<MulDelegate>("mul");
                 }
                 catch (Exception e)
                 {
@@ -849,7 +849,7 @@ namespace Library.Correction
 
                 for (int i = 0, pos = 0; i < k; i++, pos += k)
                 {
-                    System.Array.Copy(encMatrix, index[i] * k, matrix, pos, k);
+                    Native.Copy(encMatrix, index[i] * k, matrix, pos, k);
                 }
 
                 InvertMatrix(matrix, k);
@@ -867,18 +867,18 @@ namespace Library.Correction
 #if Mono
 
 #else
-                    if (_unmanagedLibraryManager != null)
+                    if (_nativeLibraryManager != null)
                     {
                         try
                         {
-                            _unmanagedLibraryManager.Dispose();
+                            _nativeLibraryManager.Dispose();
                         }
                         catch (Exception)
                         {
 
                         }
 
-                        _unmanagedLibraryManager = null;
+                        _nativeLibraryManager = null;
                     }
 #endif
                 }

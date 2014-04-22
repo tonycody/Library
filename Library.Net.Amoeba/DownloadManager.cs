@@ -25,8 +25,8 @@ namespace Library.Net.Amoeba
         private SortedDictionary<int, DownloadItem> _ids = new SortedDictionary<int, DownloadItem>();
         private int _id;
 
-        private ManagerState _state = ManagerState.Stop;
-        private ManagerState _decodeState = ManagerState.Stop;
+        private volatile ManagerState _state = ManagerState.Stop;
+        private volatile ManagerState _decodeState = ManagerState.Stop;
 
         private Thread _setThread;
         private Thread _removeThread;
@@ -1064,10 +1064,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
                     return _state;
-                }
             }
         }
 
@@ -1075,10 +1072,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
                     return _decodeState;
-                }
             }
         }
 

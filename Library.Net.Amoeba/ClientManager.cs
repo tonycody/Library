@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
-using Library.Net.Caps;
+using Library.Net;
 using Library.Net.Connections;
 using Library.Net.Proxy;
 
@@ -22,6 +22,7 @@ namespace Library.Net.Amoeba
         private Regex _regex2 = new Regex(@"(.*?):(.*)", RegexOptions.Compiled);
 
         private CreateCapEventHandler _createConnectionEvent;
+        private CheckUriEventHandler _uriFilterEvent;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -46,6 +47,17 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public CheckUriEventHandler CheckUriEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _uriFilterEvent = value;
+                }
+            }
+        }
+
         public ConnectionFilterCollection Filters
         {
             get
@@ -65,6 +77,16 @@ namespace Library.Net.Amoeba
             }
 
             return null;
+        }
+
+        protected virtual bool OnCheckUriEvent(string uri)
+        {
+            if (_uriFilterEvent != null)
+            {
+                return _uriFilterEvent(this, uri);
+            }
+
+            return true;
         }
 
         private static IEnumerable<KeyValuePair<string, string>> DecodeCommand(string option)
@@ -223,6 +245,8 @@ namespace Library.Net.Amoeba
 
         public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
+            if (!this.OnCheckUriEvent(uri)) return null;
+
             List<IDisposable> garbages = new List<IDisposable>();
 
             try
@@ -445,7 +469,7 @@ namespace Library.Net.Amoeba
 
                 if (connection == null) return null;
 
-                var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version2 | SecureConnectionVersion.Version3, connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionType.Client, SecureConnectionVersion.Version3, connection, null, _bufferManager);
                 garbages.Add(secureConnection);
 
                 secureConnection.Connect(new TimeSpan(0, 0, 30));

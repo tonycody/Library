@@ -8,84 +8,78 @@ namespace Library.Net.Amoeba
 {
     delegate IEnumerable<Node> GetLockNodesEventHandler(object sender);
 
-    sealed class MessagesManager : IThisLock
+    sealed class MessagesManager : ManagerBase, IThisLock
     {
         private Dictionary<Node, MessageManager> _messageManagerDictionary = new Dictionary<Node, MessageManager>();
         private Dictionary<Node, DateTime> _updateTimeDictionary = new Dictionary<Node, DateTime>();
         private int _id;
-        private DateTime _lastCircularTime = DateTime.UtcNow;
+
+        private System.Threading.Timer _watchTimer;
+        private bool _checkedFlag = false; 
+        
+        private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
         public GetLockNodesEventHandler GetLockNodesEvent;
 
-        private void Circular()
+        public MessagesManager()
+        {
+            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 0, 10), new TimeSpan(0, 0, 10));
+        }
+
+        private void WatchTimer(object state)
         {
             lock (this.ThisLock)
             {
-                bool flag = false;
-                var now = DateTime.UtcNow;
-
-                if ((now - _lastCircularTime) > new TimeSpan(0, 1, 0))
+                foreach (var messageManager in _messageManagerDictionary.Values.ToArray())
                 {
-                    if (_messageManagerDictionary.Count > 128)
-                    {
-                        flag = true;
-                    }
+                    messageManager.StockBlocks.TrimExcess();
+                    messageManager.StockLinkSeeds.TrimExcess();
+                    messageManager.StockStoreSeeds.TrimExcess();
 
-                    foreach (var node in _messageManagerDictionary.Keys.ToArray())
-                    {
-                        var messageManager = _messageManagerDictionary[node];
+                    messageManager.PushBlocksLink.TrimExcess();
+                    messageManager.PullBlocksLink.TrimExcess();
 
-                        messageManager.StockBlocks.TrimExcess();
-                        messageManager.StockLinkSeeds.TrimExcess();
-                        messageManager.StockStoreSeeds.TrimExcess();
+                    messageManager.PushBlocksRequest.TrimExcess();
+                    messageManager.PullBlocksRequest.TrimExcess();
 
-                        messageManager.PushBlocksLink.TrimExcess();
-                        messageManager.PullBlocksLink.TrimExcess();
-
-                        messageManager.PushBlocksRequest.TrimExcess();
-                        messageManager.PullBlocksRequest.TrimExcess();
-
-                        messageManager.PushSeedsRequest.TrimExcess();
-                        messageManager.PullSeedsRequest.TrimExcess();
-                    }
-
-                    _lastCircularTime = now;
+                    messageManager.PushSeedsRequest.TrimExcess();
+                    messageManager.PullSeedsRequest.TrimExcess();
                 }
 
-                if (flag)
+                if (_messageManagerDictionary.Count > 128)
                 {
+                    if (_checkedFlag) return;
+                    _checkedFlag = true;
+
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
-                        List<Node> lockedNodes = new List<Node>();
+                        HashSet<Node> lockedNodes = new HashSet<Node>();
 
                         if (this.GetLockNodesEvent != null)
                         {
-                            lockedNodes.AddRange(this.GetLockNodesEvent(this));
+                            lockedNodes.UnionWith(this.GetLockNodesEvent(this));
                         }
 
                         lock (this.ThisLock)
                         {
                             if (_messageManagerDictionary.Count > 128)
                             {
-                                var nodes = _messageManagerDictionary.Keys.ToList();
+                                var pairs = _updateTimeDictionary.Where(n => !lockedNodes.Contains(n.Key)).ToList();
 
-                                foreach (var node in lockedNodes)
+                                pairs.Sort((x, y) =>
                                 {
-                                    nodes.Remove(node);
-                                }
-
-                                nodes.Sort((x, y) =>
-                                {
-                                    return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
+                                    return x.Value.CompareTo(y.Value);
                                 });
 
-                                foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
+                                foreach (var node in pairs.Select(n => n.Key).Take(_messageManagerDictionary.Count - 128))
                                 {
                                     _messageManagerDictionary.Remove(node);
                                     _updateTimeDictionary.Remove(node);
                                 }
                             }
+
+                            _checkedFlag = false;
                         }
                     });
                 }
@@ -98,8 +92,6 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular();
-
                     MessageManager messageManager = null;
 
                     if (!_messageManagerDictionary.TryGetValue(node, out messageManager))
@@ -132,6 +124,29 @@ namespace Library.Net.Amoeba
             {
                 _messageManagerDictionary.Clear();
                 _updateTimeDictionary.Clear();
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
+            {
+                if (_watchTimer != null)
+                {
+                    try
+                    {
+                        _watchTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _watchTimer = null;
+                }
             }
         }
 

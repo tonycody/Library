@@ -28,6 +28,7 @@
         <Command type="BeforeBuild" command="&quot;$(SolutionDir)\Define.bat&quot; on &quot;$(ProjectDir)\Signature\ECDsaP521_Sha512.cs&quot; MONO" workingdir="${SolutionDir}" />
       </CustomCommands>
     </CustomCommands>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -41,6 +42,7 @@
         <Command type="BeforeBuild" command="&quot;$(SolutionDir)\Define.bat&quot; on &quot;$(ProjectDir)\Signature\ECDsaP521_Sha512.cs&quot; MONO" workingdir="${SolutionDir}" />
       </CustomCommands>
     </CustomCommands>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -55,7 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Derivation\Pbkdf2.cs" />
-    <Compile Include="Tools\EqualityComparer.cs" />
+    <Compile Include="Utilities\EqualityComparer.cs" />
     <Compile Include="Exchange\ExchangePrivateKey.cs" />
     <Compile Include="Exchange\ExchangePublicKey.cs" />
     <Compile Include="Exchange\Exchange.cs" />
@@ -67,19 +69,19 @@
     <Compile Include="Signature\MutableCertificateItemBase.cs" />
     <Compile Include="Signature\DigitalSignatureConverter.cs" />
     <Compile Include="Signature\Signature.cs" />
-    <Compile Include="Tools\ItemUtility.cs" />
-    <Compile Include="Tools\Rsa2048.cs" />
-    <Compile Include="Tools\Converter.cs" />
-    <Compile Include="Tools\Crc32_Castagnoli.cs" />
-    <Compile Include="Tools\Sha512.cs" />
+    <Compile Include="Utilities\ItemUtilities.cs" />
+    <Compile Include="Utilities\Rsa2048.cs" />
+    <Compile Include="Utilities\Converter.cs" />
+    <Compile Include="Hash\Crc32_Castagnoli.cs" />
+    <Compile Include="Utilities\Sha512.cs" />
     <Compile Include="Signature\ICertificate.cs" />
     <Compile Include="Exchange\IExchangeAlgorithm.cs" />
     <Compile Include="Signature\DigitalSignature.cs" />
     <Compile Include="Signature\DigitalSignatureAlgorithm.cs" />
     <Compile Include="Signature\SignatureCollection.cs" />
-    <Compile Include="Tools\EcDsaP521_Sha512.cs" />
+    <Compile Include="Utilities\EcDsaP521_Sha512.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tools\Rsa2048_Sha512.cs" />
+    <Compile Include="Utilities\Rsa2048_Sha512.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
@@ -96,6 +98,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assembly\Library_Security_x64.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assembly\Library_Security_x86.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Properties\Library.Security.License">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

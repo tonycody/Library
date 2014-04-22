@@ -89,14 +89,13 @@
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
-    <Compile Include="Tools\Comparer.cs" />
-    <Compile Include="Tools\CountCache.cs" />
+    <Compile Include="Utilities\Comparer.cs" />
+    <Compile Include="Utilities\CountCache.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
-    <Compile Include="Tools\EqualityComparer.cs" />
-    <Compile Include="Tools\Crc32_Castagnoli.cs" />
-    <Compile Include="Tools\ItemUtility.cs" />
-    <Compile Include="Tools\Sha512.cs" />
+    <Compile Include="Utilities\EqualityComparer.cs" />
+    <Compile Include="Utilities\ItemUtilities.cs" />
+    <Compile Include="Utilities\Sha512.cs" />
     <Compile Include="MessagesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerManager.cs" />
@@ -159,10 +158,6 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Library.Net.Caps\Library.Net.Caps.csproj">
-      <Project>{364FD425-45B7-41D5-A180-1CE912C7BA31}</Project>
-      <Name>Library.Net.Caps</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Library.Net.Connections\Library.Net.Connections.csproj">
       <Project>{38994E3C-0699-4D6C-AD02-F9F657340347}</Project>
       <Name>Library.Net.Connections</Name>

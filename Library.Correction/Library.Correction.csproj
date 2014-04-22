@@ -69,10 +69,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Assembly\ReedSolomon_Utility_x64.dll">
+    <Content Include="Assembly\Library_Correction_x64.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assembly\ReedSolomon_Utility_x86.dll">
+    <Content Include="Assembly\Library_Correction_x86.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Properties\Library.Correction.License">

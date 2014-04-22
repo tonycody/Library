@@ -28,13 +28,17 @@ namespace Library.Net.Amoeba
         private byte[] _cryptoKey;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxCryptoKeyLength = 64;
 
         public Index()
         {
 
+        }
+
+        protected override void Initialize()
+        {
+            _thisLock = new object();
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -58,16 +62,16 @@ namespace Library.Net.Amoeba
 
                         else if (id == (byte)SerializeId.CompressionAlgorithm)
                         {
-                            this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), ItemUtility.GetString(rangeStream));
+                            this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), ItemUtilities.GetString(rangeStream));
                         }
 
                         else if (id == (byte)SerializeId.CryptoAlgorithm)
                         {
-                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), ItemUtility.GetString(rangeStream));
+                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), ItemUtilities.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.CryptoKey)
                         {
-                            this.CryptoKey = ItemUtility.GetByteArray(rangeStream);
+                            this.CryptoKey = ItemUtilities.GetByteArray(rangeStream);
                         }
                     }
                 }
@@ -85,25 +89,25 @@ namespace Library.Net.Amoeba
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Group, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Group, stream);
                     }
                 }
 
                 // CompressionAlgorithm
                 if (this.CompressionAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CompressionAlgorithm, this.CompressionAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CompressionAlgorithm, this.CompressionAlgorithm.ToString());
                 }
 
                 // CryptoAlgorithm
                 if (this.CryptoAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
                 }
                 // CryptoKey
                 if (this.CryptoKey != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoKey, this.CryptoKey);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CryptoKey, this.CryptoKey);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -145,7 +149,7 @@ namespace Library.Net.Amoeba
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {
-                if (!Unsafe.Equals(this.CryptoKey, other.CryptoKey)) return false;
+                if (!Native.Equals(this.CryptoKey, other.CryptoKey)) return false;
             }
 
             return true;
@@ -288,17 +292,6 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
                 return _thisLock;
             }
         }

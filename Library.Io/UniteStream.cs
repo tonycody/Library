@@ -148,7 +148,7 @@ namespace Library.Io
 
             int readSumLength = 0;
 
-            for (; 0 < count && index < _streams.Count; index++)
+            for (; count > 0 && index < _streams.Count; index++)
             {
                 int length = (int)Math.Min(_streams[index].Length - (long)position, count);
 
@@ -157,7 +157,7 @@ namespace Library.Io
 
                 int readLength = 0;
 
-                while (0 < length && 0 < (readLength = _streams[index].Read(buffer, offset, length)))
+                while (length > 0 && (readLength = _streams[index].Read(buffer, offset, length)) > 0)
                 {
                     offset += readLength;
                     length -= readLength;

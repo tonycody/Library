@@ -41,6 +41,11 @@ namespace Library.Security
             }
         }
 
+        protected override void Initialize()
+        {
+
+        }
+
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             byte[] lengthBuffer = new byte[4];
@@ -55,15 +60,15 @@ namespace Library.Security
                 {
                     if (id == (byte)SerializeId.ExchangeAlgorithm)
                     {
-                        this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), ItemUtility.GetString(rangeStream));
+                        this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), ItemUtilities.GetString(rangeStream));
                     }
                     else if (id == (byte)SerializeId.PublicKey)
                     {
-                        this.PublicKey = ItemUtility.GetByteArray(rangeStream);
+                        this.PublicKey = ItemUtilities.GetByteArray(rangeStream);
                     }
                     else if (id == (byte)SerializeId.PrivateKey)
                     {
-                        this.PrivateKey = ItemUtility.GetByteArray(rangeStream);
+                        this.PrivateKey = ItemUtilities.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -76,17 +81,17 @@ namespace Library.Security
             // ExchangeAlgorithm
             if (this.ExchangeAlgorithm != 0)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.ExchangeAlgorithm, this.ExchangeAlgorithm.ToString());
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.ExchangeAlgorithm, this.ExchangeAlgorithm.ToString());
             }
             // PublicKey
             if (this.PublicKey != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
             }
             // PrivateKey
             if (this.PrivateKey != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.PrivateKey, this.PrivateKey);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.PrivateKey, this.PrivateKey);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -119,12 +124,12 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (!Unsafe.Equals(this.PublicKey, other.PublicKey)) return false;
+                if (!Native.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             if (this.PrivateKey != null && other.PrivateKey != null)
             {
-                if (!Unsafe.Equals(this.PrivateKey, other.PrivateKey)) return false;
+                if (!Native.Equals(this.PrivateKey, other.PrivateKey)) return false;
             }
 
             return true;
@@ -198,9 +203,9 @@ namespace Library.Security
                     _publicKey = value;
                 }
 
-                if (value != null && value.Length != 0)
+                if (value != null)
                 {
-                    _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
+                    _hashCode = ItemUtilities.GetHashCode(value);
                 }
                 else
                 {

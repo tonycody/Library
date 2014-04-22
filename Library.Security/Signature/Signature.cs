@@ -1,20 +1,65 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Library.Io;
 
 namespace Library.Security
 {
-    public static class Signature
+    public unsafe static class Signature
     {
-        private static InternPool<byte[], string> _signatureCache = new InternPool<byte[], string>(new ByteArrayEqualityComparer());
+#if Mono
+
+#else
+        private static NativeLibraryManager _nativeLibraryManager;
+
+        [return: MarshalAs(UnmanagedType.U1)]
+        delegate bool CheckBase64Delegate(ushort* source, int length);
+        private static CheckBase64Delegate _checkBase64;
+#endif
+
+        private static InternPool<string> _signatureCache = new InternPool<string>();
         private static ConditionalWeakTable<string, byte[]> _signatureHashCache = new ConditionalWeakTable<string, byte[]>();
         private static object _signatureHashCacheLockObject = new object();
 
         private static BufferManager _bufferManager = BufferManager.Instance;
-        private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*)$", RegexOptions.Compiled | RegexOptions.Singleline);
+
+        static Signature()
+        {
+#if Mono
+
+#else
+            try
+            {
+                if (System.Environment.Is64BitProcess)
+                {
+                    _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Security_x64.dll");
+                }
+                else
+                {
+                    _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Security_x86.dll");
+                }
+
+                _checkBase64 = _nativeLibraryManager.GetMethod<CheckBase64Delegate>("checkBase64");
+            }
+            catch (Exception e)
+            {
+                Log.Warning(e);
+            }
+#endif
+        }
+
+        internal static bool CheckBase64(string value)
+        {
+            fixed (char* t_value = value)
+            {
+                return _checkBase64((ushort*)t_value, value.Length);
+            }
+        }
 
         public static string GetSignature(DigitalSignature digitalSignature)
         {
@@ -34,7 +79,7 @@ namespace Library.Security
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
                         var signature = digitalSignature.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
-                        return _signatureCache.GetOrCreateValue(Sha512.ComputeHash(signature), signature, digitalSignature);
+                        return _signatureCache.GetValue(signature, digitalSignature);
                     }
                 }
             }
@@ -64,7 +109,7 @@ namespace Library.Security
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
                         var signature = certificate.Nickname + "@" + NetworkConverter.ToBase64UrlString(Sha512.ComputeHash(bufferStream));
-                        return _signatureCache.GetOrCreateValue(Sha512.ComputeHash(signature), signature, certificate);
+                        return _signatureCache.GetValue(signature, certificate);
                     }
                 }
             }
@@ -89,15 +134,14 @@ namespace Library.Security
                 var hash = item.Substring(index + 1);
 
                 if (nickname.Length > 256) return false;
-                var match = _base64Regex.Match(hash);
-                if (!match.Success) return false;
+                if (!Signature.CheckBase64(hash)) return false;
+
+                return true;
             }
             catch (Exception)
             {
                 return false;
             }
-
-            return true;
         }
 
         public static string GetSignatureNickname(string item)
@@ -113,8 +157,7 @@ namespace Library.Security
                 var hash = item.Substring(index + 1);
 
                 if (nickname.Length > 256) return null;
-                var match = _base64Regex.Match(hash);
-                if (!match.Success) return null;
+                if (!Signature.CheckBase64(hash)) return null;
 
                 return nickname;
             }
@@ -143,8 +186,7 @@ namespace Library.Security
                         var hash = item.Substring(index + 1);
 
                         if (nickname.Length > 256) return null;
-                        var match = _base64Regex.Match(hash);
-                        if (!match.Success) return null;
+                        if (!Signature.CheckBase64(hash)) return null;
 
                         value = NetworkConverter.FromBase64UrlString(hash);
                         _signatureHashCache.Add(item, value);

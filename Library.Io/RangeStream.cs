@@ -18,7 +18,7 @@ namespace Library.Io
             if (stream == null) throw new ArgumentNullException("stream");
             if (position < 0 || stream.Length < position) throw new ArgumentOutOfRangeException("offset");
             if (length < 0 || (stream.Length - position) < length) throw new ArgumentOutOfRangeException("length");
-            
+
             _stream = stream;
             _position = position;
             _length = length;
@@ -138,7 +138,7 @@ namespace Library.Io
             int readSumLength = 0;
             int readLength = 0;
 
-            while (0 < count && 0 < (readLength = _stream.Read(buffer, offset, count)))
+            while (count > 0 && (readLength = _stream.Read(buffer, offset, count)) > 0)
             {
                 offset += readLength;
                 count -= readLength;

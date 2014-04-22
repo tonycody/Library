@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
+using Library.Security;
 
 namespace Library.Net.Connections.SecureVersion3
 {
@@ -28,9 +29,13 @@ namespace Library.Net.Connections.SecureVersion3
         private int _hashCode;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxSessionIdLength = 64;
+
+        protected override void Initialize()
+        {
+            _thisLock = new object();
+        }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
@@ -48,23 +53,23 @@ namespace Library.Net.Connections.SecureVersion3
                     {
                         if (id == (byte)SerializeId.KeyExchangeAlgorithm)
                         {
-                            this.KeyExchangeAlgorithm = EnumEx<KeyExchangeAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
+                            this.KeyExchangeAlgorithm = EnumEx<KeyExchangeAlgorithm>.Parse(ItemUtilities.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.KeyDerivationAlgorithm)
                         {
-                            this.KeyDerivationAlgorithm = EnumEx<KeyDerivationAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
+                            this.KeyDerivationAlgorithm = EnumEx<KeyDerivationAlgorithm>.Parse(ItemUtilities.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.CryptoAlgorithm)
                         {
-                            this.CryptoAlgorithm = EnumEx<CryptoAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
+                            this.CryptoAlgorithm = EnumEx<CryptoAlgorithm>.Parse(ItemUtilities.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.HashAlgorithm)
                         {
-                            this.HashAlgorithm = EnumEx<HashAlgorithm>.Parse(ItemUtility.GetString(rangeStream));
+                            this.HashAlgorithm = EnumEx<HashAlgorithm>.Parse(ItemUtilities.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.SessionId)
                         {
-                            this.SessionId = ItemUtility.GetByteArray(rangeStream);
+                            this.SessionId = ItemUtilities.GetByteArray(rangeStream);
                         }
                     }
                 }
@@ -80,27 +85,27 @@ namespace Library.Net.Connections.SecureVersion3
                 // KeyExchangeAlgorithm
                 if (this.KeyExchangeAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.KeyExchangeAlgorithm, this.KeyExchangeAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.KeyExchangeAlgorithm, this.KeyExchangeAlgorithm.ToString());
                 }
                 // KeyDerivationAlgorithm
                 if (this.KeyDerivationAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.KeyDerivationAlgorithm, this.KeyDerivationAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.KeyDerivationAlgorithm, this.KeyDerivationAlgorithm.ToString());
                 }
                 // CryptoAlgorithm
                 if (this.CryptoAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
                 }
                 // HashAlgorithm
                 if (this.HashAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.HashAlgorithm, this.HashAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.HashAlgorithm, this.HashAlgorithm.ToString());
                 }
                 // SessionId
                 if (this.SessionId != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.SessionId, this.SessionId);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.SessionId, this.SessionId);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -139,7 +144,7 @@ namespace Library.Net.Connections.SecureVersion3
 
             if (this.SessionId != null && other.SessionId != null)
             {
-                if (!Collection.Equals(this.SessionId, other.SessionId)) return false;
+                if (!Native.Equals(this.SessionId, other.SessionId)) return false;
             }
 
             return true;
@@ -239,11 +244,9 @@ namespace Library.Net.Connections.SecureVersion3
                     _sessionId = value;
                 }
 
-                if (value != null && value.Length != 0)
+                if (value != null)
                 {
-                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                    else _hashCode = value[0];
+                    _hashCode = ItemUtilities.GetHashCode(value);
                 }
                 else
                 {
@@ -273,17 +276,6 @@ namespace Library.Net.Connections.SecureVersion3
         {
             get
             {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
                 return _thisLock;
             }
         }

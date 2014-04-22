@@ -1,9 +1,11 @@
 set BATDIR=%~dp0
 cd %BATDIR%
 
-copy /Y /B Cpp\ReedSolomon\Release\ReedSolomon.dll ReedSolomon_x86.dll
-copy /Y /B Cpp\ReedSolomon\x64\Release\ReedSolomon.dll ReedSolomon_x64.dll
+copy /Y /B Cpp\Library\Release\Library.dll ..\Library\Assembly\Library_x86.dll
+copy /Y /B Cpp\Library\x64\Release\Library.dll ..\Library\Assembly\Library_x64.dll
 
-copy /Y /B Cpp\ReedSolomon_Utility\Release\ReedSolomon_Utility.dll ReedSolomon_Utility_x86.dll
-copy /Y /B Cpp\ReedSolomon_Utility\x64\Release\ReedSolomon_Utility.dll ReedSolomon_Utility_x64.dll
+copy /Y /B Cpp\Library_Correction\Release\Library_Correction.dll ..\Library.Correction\Assembly\Library_Correction_x86.dll
+copy /Y /B Cpp\Library_Correction\x64\Release\Library_Correction.dll ..\Library.Correction\Assembly\Library_Correction_x64.dll
 
+copy /Y /B Cpp\Library_Security\Release\Library_Security.dll ..\Library.Security\Assembly\Library_Security_x86.dll
+copy /Y /B Cpp\Library_Security\x64\Release\Library_Security.dll ..\Library.Security\Assembly\Library_Security_x64.dll

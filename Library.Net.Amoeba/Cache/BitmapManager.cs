@@ -15,6 +15,7 @@ namespace Library.Net.Amoeba
         private BufferManager _bufferManager;
 
         private Settings _settings;
+        private long _length;
 
         private bool _cacheChanged = false;
         private long _cacheSector = -1;
@@ -43,7 +44,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    return _settings.Length;
+                    return _length;
                 }
             }
         }
@@ -69,7 +70,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                _settings.Length = length;
+                _length = length;
 
                 {
                     _cacheChanged = false;
@@ -82,42 +83,36 @@ namespace Library.Net.Amoeba
 
         private void Flush()
         {
-            lock (this.ThisLock)
+            if (_cacheChanged)
             {
-                if (_cacheChanged)
-                {
-                    _bitmapStream.Seek(_cacheSector * BitmapManager.SectorSize, SeekOrigin.Begin);
-                    _bitmapStream.Write(_cacheBuffer, 0, _cacheBufferCount);
-                    _bitmapStream.Flush();
+                _bitmapStream.Seek(_cacheSector * BitmapManager.SectorSize, SeekOrigin.Begin);
+                _bitmapStream.Write(_cacheBuffer, 0, _cacheBufferCount);
+                _bitmapStream.Flush();
 
-                    _cacheChanged = false;
-                }
+                _cacheChanged = false;
             }
         }
 
         private ArraySegment<byte> GetBuffer(long sector)
         {
-            lock (this.ThisLock)
+            if (_cacheSector != sector)
             {
-                if (_cacheSector != sector)
-                {
-                    this.Flush();
+                this.Flush();
 
-                    _bitmapStream.Seek(sector * BitmapManager.SectorSize, SeekOrigin.Begin);
-                    _cacheBufferCount = _bitmapStream.Read(_cacheBuffer, 0, _cacheBuffer.Length);
+                _bitmapStream.Seek(sector * BitmapManager.SectorSize, SeekOrigin.Begin);
+                _cacheBufferCount = _bitmapStream.Read(_cacheBuffer, 0, _cacheBuffer.Length);
 
-                    _cacheSector = sector;
-                }
-
-                return new ArraySegment<byte>(_cacheBuffer, 0, _cacheBufferCount);
+                _cacheSector = sector;
             }
+
+            return new ArraySegment<byte>(_cacheBuffer, 0, _cacheBufferCount);
         }
 
         public bool Get(long point)
         {
             lock (this.ThisLock)
             {
-                if (point >= this.Length) throw new ArgumentOutOfRangeException("point");
+                if (point >= _length) throw new ArgumentOutOfRangeException("point");
 
                 var sectorOffset = (point / 8) / BitmapManager.SectorSize;
                 var bufferOffset = (int)((point / 8) % BitmapManager.SectorSize);
@@ -132,7 +127,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                if (point >= this.Length) throw new ArgumentOutOfRangeException("point");
+                if (point >= _length) throw new ArgumentOutOfRangeException("point");
 
                 if (state)
                 {
@@ -164,6 +159,7 @@ namespace Library.Net.Amoeba
             lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
+                _length = _settings.Length;
             }
         }
 
@@ -171,6 +167,7 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
+                _settings.Length = _length;
                 _settings.Save(directoryPath);
 
                 this.Flush();
@@ -218,8 +215,6 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private long _length = 0;
-
             private volatile object _thisLock;
 
             public Settings(object lockObject)
@@ -235,8 +230,6 @@ namespace Library.Net.Amoeba
                 lock (_thisLock)
                 {
                     base.Load(directoryPath);
-
-                    _length = (long)this["Length"];
                 }
             }
 
@@ -244,8 +237,6 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisLock)
                 {
-                    this["Length"] = _length;
-
                     base.Save(directoryPath);
                 }
             }
@@ -256,14 +247,14 @@ namespace Library.Net.Amoeba
                 {
                     lock (_thisLock)
                     {
-                        return _length;
+                        return (long)this["Length"];
                     }
                 }
                 set
                 {
                     lock (_thisLock)
                     {
-                        _length = value;
+                        this["Length"] = value;
                     }
                 }
             }

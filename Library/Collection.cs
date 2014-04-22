@@ -123,7 +123,7 @@ namespace Library
 
                 if (x != null && y != null)
                 {
-                    return Unsafe.Equals(x, y);
+                    return Native.Equals(x, y);
                 }
             }
 
@@ -152,7 +152,7 @@ namespace Library
                     if (length > (source.Count - sourceIndex)) throw new ArgumentOutOfRangeException("length");
                     if (length > (destination.Count - destinationIndex)) throw new ArgumentOutOfRangeException("length");
 
-                    return Unsafe.Equals(x, sourceIndex, y, destinationIndex, length);
+                    return Native.Equals(x, sourceIndex, y, destinationIndex, length);
                 }
             }
 
@@ -273,8 +273,20 @@ namespace Library
 
         public static int Compare<T>(IList<T> source, IList<T> destination)
         {
-            var compare = Comparer<T>.Default;
-            return Collection.Compare(source, destination, compare);
+            {
+                var x = source as byte[];
+                var y = destination as byte[];
+
+                if (x != null && y != null)
+                {
+                    return Native.Compare(x, y);
+                }
+            }
+
+            {
+                var compare = Comparer<T>.Default;
+                return Collection.Compare(source, destination, compare);
+            }
         }
 
         public static int Compare<T>(IEnumerable<T> source, IEnumerable<T> destination)
@@ -285,8 +297,25 @@ namespace Library
 
         public static int Compare<T>(IList<T> source, int sourceIndex, IList<T> destination, int destinationIndex, int length)
         {
-            var compare = Comparer<T>.Default;
-            return Collection.Compare(source, sourceIndex, destination, destinationIndex, length, compare);
+            {
+                var x = source as byte[];
+                var y = destination as byte[];
+
+                if (x != null && y != null)
+                {
+                    if (0 > (source.Count - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
+                    if (0 > (destination.Count - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
+                    if (length > (source.Count - sourceIndex)) throw new ArgumentOutOfRangeException("length");
+                    if (length > (destination.Count - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+
+                    return Native.Compare(x, sourceIndex, y, destinationIndex, length);
+                }
+            }
+
+            {
+                var compare = Comparer<T>.Default;
+                return Collection.Compare(source, sourceIndex, destination, destinationIndex, length, compare);
+            }
         }
 
         public static int Compare<T>(IEnumerable<T> source, int sourceIndex, IEnumerable<T> destination, int destinationIndex, int length)

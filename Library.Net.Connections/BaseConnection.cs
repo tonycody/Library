@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Library.Io;
-using Library.Net.Caps;
 
 namespace Library.Net.Connections
 {
@@ -45,7 +44,7 @@ namespace Library.Net.Connections
 
             if (_bandwidthLimit != null) _bandwidthLimit.Join(this);
 
-            _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 30, 1000 * 30);
+            _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 30, 1000 * 30);
             _sendUpdateTime = DateTime.UtcNow;
 
             _connect = true;
@@ -87,7 +86,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Connect(TimeSpan timeout)
+        public override void Connect(TimeSpan timeout, Information options)
         {
             throw new NotSupportedException();
         }
@@ -142,7 +141,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Close(TimeSpan timeout)
+        public override void Close(TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -167,7 +166,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override Stream Receive(TimeSpan timeout)
+        public override Stream Receive(TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -213,7 +212,7 @@ namespace Library.Net.Connections
 
                         try
                         {
-                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 8);
+                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                             do
                             {
@@ -262,7 +261,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Send(Stream stream, TimeSpan timeout)
+        public override void Send(Stream stream, TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -284,7 +283,7 @@ namespace Library.Net.Connections
 
                         try
                         {
-                            sendBuffer = _bufferManager.TakeBuffer(1024 * 8);
+                            sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
                             using (Stream dataStream = new UniteStream(headerStream, new WrapperStream(targetStream, true)))
                             {

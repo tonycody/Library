@@ -33,7 +33,6 @@ namespace Library.Net.Amoeba
         private int _hashCode;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxCommentLength = 1024;
@@ -43,6 +42,11 @@ namespace Library.Net.Amoeba
         public Box()
         {
 
+        }
+
+        protected override void Initialize()
+        {
+            _thisLock = new object();
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -63,15 +67,15 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Name)
                         {
-                            this.Name = ItemUtility.GetString(rangeStream);
+                            this.Name = ItemUtilities.GetString(rangeStream);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
-                            this.CreationTime = DateTime.ParseExact(ItemUtility.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                            this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                         else if (id == (int)SerializeId.Comment)
                         {
-                            this.Comment = ItemUtility.GetString(rangeStream);
+                            this.Comment = ItemUtilities.GetString(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Seed)
                         {
@@ -102,24 +106,24 @@ namespace Library.Net.Amoeba
                 // Name
                 if (this.Name != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Name, this.Name);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Name, this.Name);
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
                 // Comment
                 if (this.Comment != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
                 }
                 // Seeds
                 foreach (var value in this.Seeds)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Seed, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Seed, stream);
                     }
                 }
                 // Boxes
@@ -127,7 +131,7 @@ namespace Library.Net.Amoeba
                 {
                     using (var stream = value.Export(bufferManager, count + 1))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Box, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Box, stream);
                     }
                 }
 
@@ -136,7 +140,7 @@ namespace Library.Net.Amoeba
                 {
                     using (var stream = this.Certificate.Export(bufferManager))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
                     }
                 }
 
@@ -390,17 +394,6 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
                 return _thisLock;
             }
         }

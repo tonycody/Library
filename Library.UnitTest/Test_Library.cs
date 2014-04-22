@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
@@ -155,11 +156,11 @@ namespace Library.UnitTest
         public void Test_InternPool()
         {
             //var w = new WeakReference(new object());
-            InternPool<int, object> rt = new InternPool<int, object>();
+            InternPool<object> rt = new InternPool<object>();
 
             {
-                var target1 = rt.GetOrCreateValue(1, new object(), new object()); // Set
-                var target2 = rt.GetOrCreateValue(1, new object(), new object());
+                var target1 = rt.GetValue(new Uri("http://127.0.0.1/"), new object()); // Set
+                var target2 = rt.GetValue(new Uri("http://127.0.0.1/"), new object());
 
                 Assert.IsTrue(object.ReferenceEquals(target1, target2));
             }

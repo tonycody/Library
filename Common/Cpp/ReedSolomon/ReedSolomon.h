@@ -1,4 +1,0 @@
-// ReedSolomon.h
-
-#pragma once
-

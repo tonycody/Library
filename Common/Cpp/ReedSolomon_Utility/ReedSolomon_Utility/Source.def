@@ -1,4 +1,0 @@
-LIBRARY ReedSolomon_Utility
-
-EXPORTS
-	mul

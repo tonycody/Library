@@ -21,7 +21,7 @@ namespace Library.Net.Amoeba
         private volatile Thread _uploadManagerThread;
         private volatile Thread _watchThread;
 
-        private ManagerState _state = ManagerState.Stop;
+        private volatile ManagerState _state = ManagerState.Stop;
 
         private Thread _uploadedThread;
 
@@ -503,10 +503,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
+                return _state;
             }
         }
 

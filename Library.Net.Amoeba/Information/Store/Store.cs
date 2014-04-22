@@ -16,13 +16,17 @@ namespace Library.Net.Amoeba
         private BoxCollection _boxes;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxBoxCount = 8192;
 
         public Store()
         {
 
+        }
+
+        protected override void Initialize()
+        {
+            _thisLock = new object();
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -59,7 +63,7 @@ namespace Library.Net.Amoeba
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Box, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Box, stream);
                     }
                 }
 
@@ -148,17 +152,6 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
                 return _thisLock;
             }
         }

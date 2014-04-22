@@ -1,17 +1,45 @@
 using System;
 using System.IO;
 using System.Runtime.Serialization;
+using System.Threading;
 
 namespace Library
 {
+    [Serializable]
     [DataContract(Name = "ItemBase", Namespace = "http://Library")]
     public abstract class ItemBase<T> : IEquatable<T>
         where T : ItemBase<T>
     {
+        public ItemBase()
+        {
+            this.Initialize();
+        }
+
+        protected abstract void Initialize();
+
+#if DEBUG
+        private int _callCount = 0;
+
+        [OnDeserializing]
+        private void OnDeserializingMethod(StreamingContext context)
+        {
+            if (Interlocked.Increment(ref _callCount) > 1) Log.Error("ItemBase<T>.OnDeserializingMethod");
+            this.Initialize();
+        }
+#else
+        [OnDeserializing()]
+        private void OnDeserializingMethod(StreamingContext context)
+        {
+            this.Initialize();
+        }
+#endif
+
         public static T Import(Stream stream, BufferManager bufferManager)
         {
             var item = (T)FormatterServices.GetUninitializedObject(typeof(T));
+            item.Initialize();
             item.ProtectedImport(stream, bufferManager);
+
             return item;
         }
 
@@ -23,7 +51,9 @@ namespace Library
         protected static T Import(Stream stream, BufferManager bufferManager, int count)
         {
             var item = (T)FormatterServices.GetUninitializedObject(typeof(T));
+            item.Initialize();
             item.ProtectedImport(stream, bufferManager, count);
+
             return item;
         }
 

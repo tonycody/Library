@@ -19,7 +19,6 @@ namespace Library.Net.Amoeba
         private SignatureCollection _trustSignatures;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxTrustSignatureCount = 1024;
 
@@ -28,6 +27,11 @@ namespace Library.Net.Amoeba
 
         }
 
+        protected override void Initialize()
+        {
+            _thisLock = new object();
+        }
+        
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)
@@ -44,7 +48,7 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.TrustSignature)
                         {
-                            this.TrustSignatures.Add(ItemUtility.GetString(rangeStream));
+                            this.TrustSignatures.Add(ItemUtilities.GetString(rangeStream));
                         }
                     }
                 }
@@ -60,7 +64,7 @@ namespace Library.Net.Amoeba
                 // TrustSignatures
                 foreach (var value in this.TrustSignatures)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.TrustSignature, value);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.TrustSignature, value);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -148,17 +152,6 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
                 return _thisLock;
             }
         }

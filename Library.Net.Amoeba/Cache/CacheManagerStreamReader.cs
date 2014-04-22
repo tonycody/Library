@@ -115,7 +115,7 @@ namespace Library.Net.Amoeba
             while (count > 0)
             {
                 int length = Math.Min(count, _blockBuffer.Count - _blockBufferPosition);
-                Array.Copy(_blockBuffer.Array, _blockBuffer.Offset + _blockBufferPosition, buffer, offset, length);
+                Native.Copy(_blockBuffer.Array, _blockBuffer.Offset + _blockBufferPosition, buffer, offset, length);
                 _blockBufferPosition += length;
                 count -= length;
                 offset += length;

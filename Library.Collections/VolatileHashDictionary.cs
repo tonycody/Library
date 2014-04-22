@@ -47,8 +47,6 @@ namespace Library.Collections
 
         public void Refresh(TKey item)
         {
-            this.CheckLifeTime();
-
             Info<TValue> info;
 
             if (_dic.TryGetValue(item, out info))
@@ -108,8 +106,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CheckLifeTime();
-
                     return new VolatileKeyCollection(_dic.Keys, this.ThisLock);
                 }
             }
@@ -121,8 +117,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CheckLifeTime();
-
                     return new VolatileValueCollection(_dic.Values, this.ThisLock);
                 }
             }
@@ -145,8 +139,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CheckLifeTime();
-
                     return _dic.Count;
                 }
             }
@@ -158,8 +150,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CheckLifeTime();
-
                     return _dic[key].Value;
                 }
             }
@@ -167,8 +157,6 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    this.CheckLifeTime();
-
                     _dic[key] = new Info<TValue>() { Value = value, UpdateTime = DateTime.UtcNow };
                 }
             }
@@ -178,8 +166,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 int count = _dic.Count;
                 _dic[key] = new Info<TValue>() { Value = value, UpdateTime = DateTime.UtcNow };
 
@@ -199,8 +185,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 return _dic.ContainsKey(key);
             }
         }
@@ -209,8 +193,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 return _dic.Values.Select(n => n.Value).Contains(value);
             }
         }
@@ -219,8 +201,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 return _dic.Remove(key);
             }
         }
@@ -229,8 +209,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 Info<TValue> info;
 
                 if (_dic.TryGetValue(key, out info))
@@ -392,8 +370,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 var keyComparer = EqualityComparer<TKey>.Default;
                 var valueComparer = EqualityComparer<TValue>.Default;
 
@@ -417,8 +393,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 foreach (var pair in _dic)
                 {
                     var key = pair.Key;
@@ -433,8 +407,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 var keyComparer = EqualityComparer<TKey>.Default;
                 var valueComparer = EqualityComparer<TValue>.Default;
 
@@ -481,8 +453,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 foreach (var pair in _dic)
                 {
                     var key = pair.Key;
@@ -497,8 +467,6 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                this.CheckLifeTime();
-
                 foreach (var pair in _dic)
                 {
                     var key = pair.Key;

@@ -137,13 +137,13 @@ namespace Library.Tool
                                     string dependentUponBaseDirectory = Path.GetDirectoryName(path);
                                     filePaths.Add(HttpUtility.UrlDecode(Path.Combine(baseDirectory, path)));
 
-                                    using (var xmlReader = xml.ReadSubtree())
+                                    using (var xmlSubtree = xml.ReadSubtree())
                                     {
-                                        while (xmlReader.Read())
+                                        while (xmlSubtree.Read())
                                         {
-                                            if (xmlReader.NodeType == XmlNodeType.Element)
+                                            if (xmlSubtree.NodeType == XmlNodeType.Element)
                                             {
-                                                if (xmlReader.LocalName == "DependentUpon")
+                                                if (xmlSubtree.LocalName == "DependentUpon")
                                                 {
                                                     filePaths.Add(HttpUtility.UrlDecode(Path.Combine(Path.Combine(baseDirectory, dependentUponBaseDirectory), xml.ReadString())));
                                                 }

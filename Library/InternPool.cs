@@ -6,10 +6,10 @@ using System.Threading;
 
 namespace Library
 {
-    public class InternPool<TKey, TValue> : ManagerBase, IThisLock
+    public class InternPool<T> : ManagerBase, IThisLock
     {
         private System.Threading.Timer _watchTimer;
-        private Dictionary<TKey, Info<TValue>> _dic;
+        private Dictionary<T, Info<T>> _dic;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -17,13 +17,13 @@ namespace Library
         public InternPool()
         {
             _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
-            _dic = new Dictionary<TKey, Info<TValue>>();
+            _dic = new Dictionary<T, Info<T>>();
         }
 
-        public InternPool(IEqualityComparer<TKey> comparer)
+        public InternPool(IEqualityComparer<T> comparer)
         {
             _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
-            _dic = new Dictionary<TKey, Info<TValue>>(comparer);
+            _dic = new Dictionary<T, Info<T>>(comparer);
         }
 
         private void WatchTimer(object state)
@@ -46,7 +46,7 @@ namespace Library
         {
             lock (this.ThisLock)
             {
-                List<TKey> list = null;
+                List<T> list = null;
 
                 foreach (var pair in _dic)
                 {
@@ -56,7 +56,7 @@ namespace Library
                     if (info.Count == 0)
                     {
                         if (list == null)
-                            list = new List<TKey>();
+                            list = new List<T>();
 
                         list.Add(key);
                     }
@@ -72,16 +72,16 @@ namespace Library
             }
         }
 
-        public TValue GetOrCreateValue(TKey key, TValue value, object holder)
+        public T GetValue(T value, object holder)
         {
             lock (this.ThisLock)
             {
-                Info<TValue> info;
+                Info<T> info;
 
-                if (!_dic.TryGetValue(key, out info))
+                if (!_dic.TryGetValue(value, out info))
                 {
-                    info = new Info<TValue>(value);
-                    _dic[key] = info;
+                    info = new Info<T>(value);
+                    _dic[value] = info;
                 }
 
                 info.Add(holder);
@@ -89,41 +89,17 @@ namespace Library
             }
         }
 
-        public TValue GetValue(TKey key)
-        {
-            lock (this.ThisLock)
-            {
-                return _dic[key].Value;
-            }
-        }
-
-        public void SetValue(TKey key, TValue value, object holder)
-        {
-            lock (this.ThisLock)
-            {
-                Info<TValue> info;
-
-                if (!_dic.TryGetValue(key, out info))
-                {
-                    info = new Info<TValue>(value);
-                    _dic[key] = info;
-                }
-
-                info.Add(holder);
-            }
-        }
-
-        private class Info<T>
+        private class Info<TValue>
         {
             private List<WeakReference> _list = new List<WeakReference>();
-            private T _value;
+            private TValue _value;
 
-            public Info(T value)
+            public Info(TValue value)
             {
                 _value = value;
             }
 
-            public T Value
+            public TValue Value
             {
                 get
                 {

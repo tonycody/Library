@@ -61,6 +61,11 @@ namespace Library.Security
             }
         }
 
+        protected override void Initialize()
+        {
+
+        }
+
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             byte[] lengthBuffer = new byte[4];
@@ -75,19 +80,19 @@ namespace Library.Security
                 {
                     if (id == (byte)SerializeId.Nickname)
                     {
-                        this.Nickname = ItemUtility.GetString(rangeStream);
+                        this.Nickname = ItemUtilities.GetString(rangeStream);
                     }
                     else if (id == (byte)SerializeId.DigitalSignatureAlgorithm)
                     {
-                        this.DigitalSignatureAlgorithm = (DigitalSignatureAlgorithm)Enum.Parse(typeof(DigitalSignatureAlgorithm), ItemUtility.GetString(rangeStream));
+                        this.DigitalSignatureAlgorithm = (DigitalSignatureAlgorithm)Enum.Parse(typeof(DigitalSignatureAlgorithm), ItemUtilities.GetString(rangeStream));
                     }
                     else if (id == (byte)SerializeId.PublicKey)
                     {
-                        this.PublicKey = ItemUtility.GetByteArray(rangeStream);
+                        this.PublicKey = ItemUtilities.GetByteArray(rangeStream);
                     }
                     else if (id == (byte)SerializeId.PrivateKey)
                     {
-                        this.PrivateKey = ItemUtility.GetByteArray(rangeStream);
+                        this.PrivateKey = ItemUtilities.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -100,22 +105,22 @@ namespace Library.Security
             // Nickname
             if (this.Nickname != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Nickname, this.Nickname);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Nickname, this.Nickname);
             }
             // DigitalSignatureAlgorithm
             if (this.DigitalSignatureAlgorithm != 0)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.DigitalSignatureAlgorithm, this.DigitalSignatureAlgorithm.ToString());
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.DigitalSignatureAlgorithm, this.DigitalSignatureAlgorithm.ToString());
             }
             // PublicKey
             if (this.PublicKey != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.PublicKey, this.PublicKey);
             }
             // PrivateKey
             if (this.PrivateKey != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.PrivateKey, this.PrivateKey);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.PrivateKey, this.PrivateKey);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -149,12 +154,12 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (!Unsafe.Equals(this.PublicKey, other.PublicKey)) return false;
+                if (!Native.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             if (this.PrivateKey != null && other.PrivateKey != null)
             {
-                if (!Unsafe.Equals(this.PrivateKey, other.PrivateKey)) return false;
+                if (!Native.Equals(this.PrivateKey, other.PrivateKey)) return false;
             }
 
             return true;
@@ -326,9 +331,9 @@ namespace Library.Security
                     _publicKey = value;
                 }
 
-                if (value != null && value.Length != 0)
+                if (value != null)
                 {
-                    _hashCode = BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(value), 0) & 0x7FFFFFFF;
+                    _hashCode = ItemUtilities.GetHashCode(value);
                 }
                 else
                 {

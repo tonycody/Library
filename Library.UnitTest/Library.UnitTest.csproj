@@ -69,8 +69,15 @@
   <ItemGroup>
     <Compile Include="Benchmark\Benchmark_Xor.cs" />
     <Compile Include="Benchmark\Benchmark_ReedSolomon8.cs" />
+    <Compile Include="Benchmark\Benchmark_Equels.cs" />
+    <Compile Include="Benchmark\Benchmark_Compare.cs" />
+    <Compile Include="Benchmark\Benchmark_Copy.cs" />
+    <Compile Include="Benchmark\Benchmark_Crc32_Castagnoli.cs" />
+    <Compile Include="Benchmark\Benchmark_CheckBase64.cs" />
+    <Compile Include="Benchmark\Benchmark.cs" />
     <Compile Include="Test_Library_Compression.cs" />
-    <Compile Include="Tools\D_Box.cs" />
+    <Compile Include="Utilities\T_Crc32_Castagnoli.cs" />
+    <Compile Include="Utilities\D_Box.cs" />
     <Compile Include="Test_Library_Net.cs" />
     <Compile Include="Test_Library_Io.cs" />
     <Compile Include="Test_Library_Net_Amoeba.cs" />
@@ -82,8 +89,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Test_Library_Security.cs.cs" />
     <Compile Include="Test_Library_Collections.cs" />
-    <Compile Include="Tools\RandomString.cs" />
-    <Compile Include="Tools\Sha512.cs" />
+    <Compile Include="Utilities\RandomString.cs" />
+    <Compile Include="Utilities\Sha512.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
@@ -99,12 +106,8 @@
       <Name>Library.Io</Name>
     </ProjectReference>
     <ProjectReference Include="..\Library.Net.Amoeba\Library.Net.Amoeba.csproj">
-      <Project>{82230C99-6599-4130-AAC9-FC926ABC0724}</Project>
+      <Project>{82230c99-6599-4130-aac9-fc926abc0724}</Project>
       <Name>Library.Net.Amoeba</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Library.Net.Caps\Library.Net.Caps.csproj">
-      <Project>{364FD425-45B7-41D5-A180-1CE912C7BA31}</Project>
-      <Name>Library.Net.Caps</Name>
     </ProjectReference>
     <ProjectReference Include="..\Library.Net.Connections\Library.Net.Connections.csproj">
       <Project>{38994E3C-0699-4D6C-AD02-F9F657340347}</Project>

@@ -18,7 +18,7 @@ namespace Library.UnitTest
         public void Test_ReedSolomon8()
         {
             {
-                ReedSolomon8 pc = new ReedSolomon8(128, 256, 4, _bufferManager);
+                ReedSolomon8 reedSolomon8 = new ReedSolomon8(128, 256, 4, _bufferManager);
 
                 var buffList = new ArraySegment<byte>[128];
                 for (int i = 0; i < 128; i++)
@@ -43,7 +43,7 @@ namespace Library.UnitTest
                     intList[i] = i;
                 }
 
-                pc.Encode(buffList, buffList2, intList, 1024 * 32);
+                reedSolomon8.Encode(buffList, buffList2, intList, 1024 * 32);
 
                 var buffList3 = new ArraySegment<byte>[128];
                 {
@@ -90,10 +90,7 @@ namespace Library.UnitTest
                     }
                 }
 
-                // これだと(参照が)ToArrayで切り離され、Decode内部からIListをシャッフルしている意味が無くなるため、正常にデコードできない
-                //pc.Decode(buffList3.ToArray(), intList2.ToArray());          
-
-                pc.Decode(buffList3, intList2, 1024 * 32);
+                reedSolomon8.Decode(buffList3, intList2, 1024 * 32);
 
                 for (int i = 0; i < buffList.Length; i++)
                 {
@@ -101,6 +98,107 @@ namespace Library.UnitTest
                 }
             }
 
+            {
+                ReedSolomon8 reedSolomon8 = new ReedSolomon8(128, 256, 4, _bufferManager);
+
+                var buffList = new ArraySegment<byte>[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+                    _random.NextBytes(buffer);
+
+                    buffList[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
+                }
+
+                var buffList2 = new ArraySegment<byte>[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+
+                    buffList2[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
+                }
+
+                var intList = new int[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    intList[i] = i + 128;
+                }
+
+                {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
+
+                    var task1 = Task.Factory.StartNew(() =>
+                    {
+                        reedSolomon8.Encode(buffList, buffList2, intList, 1024 * 32);
+                    });
+
+                    Thread.Sleep(1000 * 1);
+
+                    var task2 = Task.Factory.StartNew(() =>
+                    {
+                        reedSolomon8.Cancel();
+                    });
+
+                    Task.WaitAll(task1, task2);
+
+                    sw.Stop();
+
+                    Assert.IsTrue(sw.Elapsed.TotalSeconds < 3);
+                }
+            }
+
+            {
+                ReedSolomon8 pc = new ReedSolomon8(128, 256, 4, _bufferManager);
+
+                var buffList = new ArraySegment<byte>[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+                    _random.NextBytes(buffer);
+
+                    buffList[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
+                }
+
+                var buffList2 = new ArraySegment<byte>[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    var buffer = new byte[1024 * 32];
+
+                    buffList2[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
+                }
+
+                var intList = new int[128];
+                for (int i = 0; i < 128; i++)
+                {
+                    intList[i] = i + 128;
+                }
+
+                pc.Encode(buffList, buffList2, intList, 1024 * 32);
+
+                {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
+
+                    var task1 = Task.Factory.StartNew(() =>
+                    {
+                        pc.Decode(buffList2.ToArray(), intList, 1024 * 32);
+                    });
+
+                    Thread.Sleep(1000 * 1);
+
+                    var task2 = Task.Factory.StartNew(() =>
+                    {
+                        pc.Cancel();
+                    });
+
+                    Task.WaitAll(task1, task2);
+
+                    sw.Stop();
+
+                    Assert.IsTrue(sw.Elapsed.TotalSeconds < 3);
+                }
+            }
         }
     }
 }

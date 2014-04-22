@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
         private string _workDirectory = Path.GetTempPath();
         private CountCache _countCache = new CountCache();
 
-        private ManagerState _state = ManagerState.Stop;
+        private volatile ManagerState _state = ManagerState.Stop;
 
         private Thread _setThread;
         private Thread _removeThread;
@@ -985,10 +985,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
+                return _state;
             }
         }
 

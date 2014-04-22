@@ -4,8 +4,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Library.Collections;
+using Library.Net;
 using Library.Net.Amoeba;
-using Library.Net.Caps;
 using Library.Net.Connections;
 using Library.Security;
 using NUnit.Framework;
@@ -440,8 +440,8 @@ namespace Library.UnitTest
                         _random.NextBytes(clientSessionId);
                     }
 
-                    serverConnectionManager = new ConnectionManager(tcpServer, serverSessionId, serverNode, ConnectionManagerType.Server, _bufferManager);
-                    clientConnectionManager = new ConnectionManager(tcpClient, clientSessionId, clientNode, ConnectionManagerType.Client, _bufferManager);
+                    serverConnectionManager = new ConnectionManager(tcpServer, serverSessionId, serverNode, ConnectDirection.In, _bufferManager);
+                    clientConnectionManager = new ConnectionManager(tcpClient, clientSessionId, clientNode, ConnectDirection.Out, _bufferManager);
 
                     Thread serverThread = new Thread(new ThreadStart(() =>
                     {

@@ -202,7 +202,7 @@ namespace Library.Io
             if ((_readerBuffer.Length - _readerBufferPosition) + _readerBuffer.Length < count)
             {
                 int length = Math.Min(_readerBufferLength - _readerBufferPosition, count);
-                Array.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
+                Native.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
                 _readerBufferPosition += length;
                 offset += length;
                 count -= length;
@@ -228,7 +228,7 @@ namespace Library.Io
                         int readLength = 0;
                         _readerBufferLength = 0;
 
-                        while (tCount > 0 && 0 < (readLength = _stream.Read(_readerBuffer, tOffset, tCount)))
+                        while (tCount > 0 && (readLength = _stream.Read(_readerBuffer, tOffset, tCount)) > 0)
                         {
                             tOffset += readLength;
                             tCount -= readLength;
@@ -240,7 +240,7 @@ namespace Library.Io
                     }
 
                     int length = Math.Min(_readerBufferLength - _readerBufferPosition, count);
-                    Array.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
+                    Native.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
                     _readerBufferPosition += length;
                     offset += length;
                     count -= length;
@@ -298,10 +298,10 @@ namespace Library.Io
             }
             else
             {
-                while (0 < count)
+                while (count > 0)
                 {
                     int length = Math.Min(_writerBlockBuffer.Length - _writerBufferPosition, count);
-                    Array.Copy(buffer, offset, _writerBlockBuffer, _writerBufferPosition, length);
+                    Native.Copy(buffer, offset, _writerBlockBuffer, _writerBufferPosition, length);
                     _writerBufferPosition += length;
                     offset += length;
                     count -= length;

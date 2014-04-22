@@ -58,10 +58,10 @@ namespace Library.Net.Amoeba
 
     delegate void CloseEventHandler(object sender, EventArgs e);
 
-    enum ConnectionManagerType
+    public enum ConnectDirection
     {
-        Client,
-        Server,
+        In = 0,
+        Out = 1,
     }
 
     class ConnectionManager : ManagerBase, IThisLock
@@ -94,7 +94,7 @@ namespace Library.Net.Amoeba
         private Node _otherNode;
         private BufferManager _bufferManager;
 
-        private ConnectionManagerType _type;
+        private ConnectDirection _direction;
 
         private DateTime _sendUpdateTime;
         private bool _onClose;
@@ -130,12 +130,12 @@ namespace Library.Net.Amoeba
 
         public event CloseEventHandler CloseEvent;
 
-        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectionManagerType type, BufferManager bufferManager)
+        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectDirection direction, BufferManager bufferManager)
         {
             _connection = connection;
             _mySessionId = mySessionId;
             _baseNode = baseNode;
-            _type = type;
+            _direction = direction;
             _bufferManager = bufferManager;
 
             _myProtocolVersion = ProtocolVersion.Version1;
@@ -167,7 +167,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public ConnectionManagerType Type
+        public ConnectDirection Direction
         {
             get
             {
@@ -175,7 +175,7 @@ namespace Library.Net.Amoeba
 
                 lock (this.ThisLock)
                 {
-                    return _type;
+                    return _direction;
                 }
             }
         }
@@ -328,7 +328,7 @@ namespace Library.Net.Amoeba
                         this.Ping(_pingHash);
 
                         ThreadPool.QueueUserWorkItem(this.Pull);
-                        _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 10, 1000 * 10);
+                        _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 10, 1000 * 10);
                     }
                     else
                     {
@@ -497,6 +497,7 @@ namespace Library.Net.Amoeba
         private void Pull(object state)
         {
             Thread.CurrentThread.Name = "ConnectionManager_Pull";
+            Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
             try
             {
@@ -596,25 +597,15 @@ namespace Library.Net.Amoeba
                     if (300 > sw.ElapsedMilliseconds) Thread.Sleep(300 - (int)sw.ElapsedMilliseconds);
                 }
             }
-#if DEBUG
             catch (Exception e)
             {
-                Log.Information(e);
+                Debug.WriteLine(e);
 
                 if (!_disposed)
                 {
                     this.OnClose(new EventArgs());
                 }
             }
-#else
-            catch (Exception)
-            {
-                if (!_disposed)
-                {
-                    this.OnClose(new EventArgs());
-                }
-            }
-#endif
         }
 
         protected virtual void OnPullNodes(PullNodesEventArgs e)
@@ -812,6 +803,10 @@ namespace Library.Net.Amoeba
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
+                    //var contexts = new List<InformationContext>();
+                    //contexts.Add(new InformationContext("isCompress", false));
+
+                    //_connection.Send(stream, _sendTimeSpan, new Information(contexts));
                     _connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
                 }
@@ -953,9 +948,13 @@ namespace Library.Net.Amoeba
                 if (nodes != null) this.ProtectedNodes.AddRange(nodes);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -977,31 +976,13 @@ namespace Library.Net.Amoeba
             protected override Stream Export(BufferManager bufferManager, int count)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // Keys
                 foreach (var value in this.Nodes)
                 {
-                    using (Stream exportStream = value.Export(bufferManager))
+                    using (var stream = value.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Node);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Node, stream);
                     }
                 }
 
@@ -1057,9 +1038,13 @@ namespace Library.Net.Amoeba
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1081,31 +1066,13 @@ namespace Library.Net.Amoeba
             protected override Stream Export(BufferManager bufferManager, int count)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // Keys
                 foreach (var value in this.Keys)
                 {
-                    using (Stream exportStream = value.Export(bufferManager))
+                    using (var stream = value.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Key);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
@@ -1161,9 +1128,13 @@ namespace Library.Net.Amoeba
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1185,31 +1156,13 @@ namespace Library.Net.Amoeba
             protected override Stream Export(BufferManager bufferManager, int count)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // Keys
                 foreach (var value in this.Keys)
                 {
-                    using (Stream exportStream = value.Export(bufferManager))
+                    using (var stream = value.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Key);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
@@ -1268,6 +1221,11 @@ namespace Library.Net.Amoeba
                 this.Value = value;
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
                 byte[] lengthBuffer = new byte[4];
@@ -1322,26 +1280,9 @@ namespace Library.Net.Amoeba
                 // Key
                 if (this.Key != null)
                 {
-                    using (Stream exportStream = this.Key.Export(bufferManager))
+                    using (var stream = this.Key.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Key);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
                 // Value
@@ -1403,9 +1344,13 @@ namespace Library.Net.Amoeba
                 if (signatures != null) this.ProtectedSignatures.AddRange(signatures);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1418,10 +1363,7 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Signature)
                         {
-                            using (StreamReader reader = new StreamReader(rangeStream, encoding))
-                            {
-                                this.ProtectedSignatures.Add(reader.ReadToEnd());
-                            }
+                            this.ProtectedSignatures.Add(ItemUtilities.GetString(rangeStream));
                         }
                     }
                 }
@@ -1430,29 +1372,11 @@ namespace Library.Net.Amoeba
             protected override Stream Export(BufferManager bufferManager, int count)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // Signatures
                 foreach (var value in this.Signatures)
                 {
-                    byte[] buffer = null;
-
-                    try
-                    {
-                        buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
-                        var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
-
-                        bufferStream.Write(NetworkConverter.GetBytes(length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Signature);
-                        bufferStream.Write(buffer, 0, length);
-                    }
-                    finally
-                    {
-                        if (buffer != null)
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, value);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -1507,9 +1431,13 @@ namespace Library.Net.Amoeba
                 if (seeds != null) this.ProtectedSeeds.AddRange(seeds);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1531,31 +1459,13 @@ namespace Library.Net.Amoeba
             protected override Stream Export(BufferManager bufferManager, int count)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
-                Encoding encoding = new UTF8Encoding(false);
 
                 // Seeds
                 foreach (var value in this.Seeds)
                 {
-                    using (Stream exportStream = value.Export(bufferManager))
+                    using (var stream = value.Export(bufferManager))
                     {
-                        bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                        bufferStream.WriteByte((byte)SerializeId.Seed);
-
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            bufferManager.ReturnBuffer(buffer);
-                        }
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Seed, stream);
                     }
                 }
 

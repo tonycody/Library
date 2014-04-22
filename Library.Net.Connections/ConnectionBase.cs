@@ -27,44 +27,88 @@ namespace Library.Net.Connections
 
         public abstract long SentByteCount { get; }
 
-        public abstract void Connect(TimeSpan timeout);
+        // Connect
+        public abstract void Connect(TimeSpan timeout, Information options);
+
+        public virtual void Connect(TimeSpan timeout)
+        {
+            this.Connect(timeout, null);
+        }
+
+        public virtual Task ConnectAsync(TimeSpan timeout, Information options)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                this.Connect(timeout, options);
+            });
+        }
 
         public virtual Task ConnectAsync(TimeSpan timeout)
         {
-            return Task.Factory.StartNew(() =>
-            {
-                this.Connect(timeout);
-            });
+            return this.ConnectAsync(timeout, null);
         }
 
-        public abstract void Close(TimeSpan timeout);
+        // Close
+        public abstract void Close(TimeSpan timeout, Information options);
+
+        public virtual void Close(TimeSpan timeout)
+        {
+            this.Close(timeout, null);
+        }
+
+        public virtual Task CloseAsync(TimeSpan timeout, Information options)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                this.Close(timeout, options);
+            });
+        }
 
         public virtual Task CloseAsync(TimeSpan timeout)
         {
-            return Task.Factory.StartNew(() =>
-            {
-                this.Close(timeout);
-            });
+            return this.CloseAsync(timeout, null);
         }
 
-        public abstract Stream Receive(TimeSpan timeout);
+        // Receive
+        public abstract Stream Receive(TimeSpan timeout, Information options);
+
+        public virtual Stream Receive(TimeSpan timeout)
+        {
+            return this.Receive(timeout, null);
+        }
+
+        public virtual Task<Stream> ReceiveAsync(TimeSpan timeout, Information options)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                return this.Receive(timeout, options);
+            });
+        }
 
         public virtual Task<Stream> ReceiveAsync(TimeSpan timeout)
         {
-            return Task.Factory.StartNew(() =>
-            {
-                return this.Receive(timeout);
-            });
+            return this.ReceiveAsync(timeout, null);
         }
 
-        public abstract void Send(Stream stream, TimeSpan timeout);
+        // Send
+        public abstract void Send(Stream stream, TimeSpan timeout, Information options);
 
-        public virtual Task SendAsync(Stream stream, TimeSpan timeout)
+        public virtual void Send(Stream stream, TimeSpan timeout)
+        {
+            this.Send(stream, timeout, null);
+        }
+
+        public virtual Task SendAsync(Stream stream, TimeSpan timeout, Information options)
         {
             return Task.Factory.StartNew(() =>
             {
-                this.Send(stream, timeout);
+                this.Send(stream, timeout, options);
             });
+        }
+
+        public virtual Task SendAsync(Stream stream, TimeSpan timeout)
+        {
+            return this.SendAsync(stream, timeout, null);
         }
     }
 

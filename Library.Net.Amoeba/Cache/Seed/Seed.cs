@@ -49,7 +49,6 @@ namespace Library.Net.Amoeba
         private int _hashCode;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxCommentLength = 1024;
@@ -61,6 +60,11 @@ namespace Library.Net.Amoeba
         public Seed()
         {
 
+        }
+
+        protected override void Initialize()
+        {
+            _thisLock = new object();
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -79,23 +83,23 @@ namespace Library.Net.Amoeba
                     {
                         if (id == (byte)SerializeId.Name)
                         {
-                            this.Name = ItemUtility.GetString(rangeStream);
+                            this.Name = ItemUtilities.GetString(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Length)
                         {
-                            this.Length = ItemUtility.GetLong(rangeStream);
+                            this.Length = ItemUtilities.GetLong(rangeStream);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
-                            this.CreationTime = DateTime.ParseExact(ItemUtility.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                            this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
                         else if (id == (byte)SerializeId.Comment)
                         {
-                            this.Comment = ItemUtility.GetString(rangeStream);
+                            this.Comment = ItemUtilities.GetString(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Rank)
                         {
-                            this.Rank = ItemUtility.GetInt(rangeStream);
+                            this.Rank = ItemUtilities.GetInt(rangeStream);
                         }
                         else if (id == (byte)SerializeId.Key)
                         {
@@ -104,21 +108,21 @@ namespace Library.Net.Amoeba
 
                         else if (id == (byte)SerializeId.Keyword)
                         {
-                            this.Keywords.Add(ItemUtility.GetString(rangeStream));
+                            this.Keywords.Add(ItemUtilities.GetString(rangeStream));
                         }
 
                         else if (id == (byte)SerializeId.CompressionAlgorithm)
                         {
-                            this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), ItemUtility.GetString(rangeStream));
+                            this.CompressionAlgorithm = (CompressionAlgorithm)Enum.Parse(typeof(CompressionAlgorithm), ItemUtilities.GetString(rangeStream));
                         }
 
                         else if (id == (byte)SerializeId.CryptoAlgorithm)
                         {
-                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), ItemUtility.GetString(rangeStream));
+                            this.CryptoAlgorithm = (CryptoAlgorithm)Enum.Parse(typeof(CryptoAlgorithm), ItemUtilities.GetString(rangeStream));
                         }
                         else if (id == (byte)SerializeId.CryptoKey)
                         {
-                            this.CryptoKey = ItemUtility.GetByteArray(rangeStream);
+                            this.CryptoKey = ItemUtilities.GetByteArray(rangeStream);
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -139,58 +143,58 @@ namespace Library.Net.Amoeba
                 // Name
                 if (this.Name != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Name, this.Name);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Name, this.Name);
                 }
                 // Length
                 if (this.Length != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Length, this.Length);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Length, this.Length);
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
                 // Comment
                 if (this.Comment != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
                 }
                 // Rank
                 if (this.Rank != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Rank, this.Rank);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Rank, this.Rank);
                 }
                 // Key
                 if (this.Key != null)
                 {
                     using (var stream = this.Key.Export(bufferManager))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Key, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
                 // Keywords
                 foreach (var value in this.Keywords)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Keyword, value);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Keyword, value);
                 }
 
                 // CompressionAlgorithm
                 if (this.CompressionAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CompressionAlgorithm, this.CompressionAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CompressionAlgorithm, this.CompressionAlgorithm.ToString());
                 }
 
                 // CryptoAlgorithm
                 if (this.CryptoAlgorithm != 0)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CryptoAlgorithm, this.CryptoAlgorithm.ToString());
                 }
                 // CryptoKey
                 if (this.CryptoKey != null)
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.CryptoKey, this.CryptoKey);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CryptoKey, this.CryptoKey);
                 }
 
                 // Certificate
@@ -198,7 +202,7 @@ namespace Library.Net.Amoeba
                 {
                     using (var stream = this.Certificate.Export(bufferManager))
                     {
-                        ItemUtility.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
                     }
                 }
 
@@ -248,7 +252,7 @@ namespace Library.Net.Amoeba
 
             if (this.CryptoKey != null && other.CryptoKey != null)
             {
-                if (!Unsafe.Equals(this.CryptoKey, other.CryptoKey)) return false;
+                if (!Native.Equals(this.CryptoKey, other.CryptoKey)) return false;
             }
 
             return true;
@@ -593,17 +597,6 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
                 return _thisLock;
             }
         }

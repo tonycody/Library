@@ -80,7 +80,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Connect(TimeSpan timeout)
+        public override void Connect(TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -122,7 +122,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Close(TimeSpan timeout)
+        public override void Close(TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -147,7 +147,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public override System.IO.Stream Receive(TimeSpan timeout)
+        public override System.IO.Stream Receive(TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
@@ -159,7 +159,7 @@ namespace Library.Net.Connections
 
                 try
                 {
-                    stream = _connection.Receive(timeout);
+                    stream = _connection.Receive(timeout, options);
 
                     byte version = (byte)stream.ReadByte();
 
@@ -240,12 +240,19 @@ namespace Library.Net.Connections
             }
         }
 
-        public override void Send(System.IO.Stream stream, TimeSpan timeout)
+        public override void Send(System.IO.Stream stream, TimeSpan timeout, Information options)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new ConnectionException();
             if (stream == null) throw new ArgumentNullException("stream");
             if (stream.Length == 0) throw new ArgumentOutOfRangeException("stream");
+
+            bool isCompress = true;
+
+            if (options != null)
+            {
+                if (options.Contains("isCompress")) isCompress = (bool)options["isCompress"];
+            }
 
             lock (_sendLock)
             {
@@ -255,46 +262,49 @@ namespace Library.Net.Connections
                     {
                         List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
 
-                        if (targetStream.Length < 1024 * 32 && _otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
+                        if (isCompress)
                         {
-                            try
+                            if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
                             {
-                                BufferStream deflateBufferStream = new BufferStream(_bufferManager);
-                                byte[] compressBuffer = null;
-
                                 try
                                 {
-                                    compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                    BufferStream deflateBufferStream = new BufferStream(_bufferManager);
+                                    byte[] compressBuffer = null;
 
-                                    using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
+                                    try
                                     {
-                                        int i = -1;
+                                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                        while ((i = targetStream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
+                                        using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                                         {
-                                            deflateStream.Write(compressBuffer, 0, i);
+                                            int i = -1;
+
+                                            while ((i = targetStream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
+                                            {
+                                                deflateStream.Write(compressBuffer, 0, i);
+                                            }
                                         }
                                     }
-                                }
-                                finally
-                                {
-                                    _bufferManager.ReturnBuffer(compressBuffer);
-                                }
+                                    finally
+                                    {
+                                        _bufferManager.ReturnBuffer(compressBuffer);
+                                    }
 
-                                deflateBufferStream.Seek(0, SeekOrigin.Begin);
+                                    deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
-                                if (deflateBufferStream.Length < targetStream.Length)
-                                {
-                                    list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                                    if (deflateBufferStream.Length < targetStream.Length)
+                                    {
+                                        list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                                    }
+                                    else
+                                    {
+                                        deflateBufferStream.Dispose();
+                                    }
                                 }
-                                else
+                                catch (Exception)
                                 {
-                                    deflateBufferStream.Dispose();
+                                    throw;
                                 }
-                            }
-                            catch (Exception)
-                            {
-                                throw;
                             }
                         }
 
@@ -325,7 +335,7 @@ namespace Library.Net.Connections
 
                         using (var dataStream = new UniteStream(headerStream, list[0].Value))
                         {
-                            _connection.Send(dataStream, timeout);
+                            _connection.Send(dataStream, timeout, options);
                         }
                     }
                     catch (ConnectionException ex)
