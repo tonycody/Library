@@ -99,7 +99,7 @@ namespace Library.Tool
                     //        byte[] b = new byte[3];
                     //        stream.Read(b, 0, b.Length);
 
-                    //        flag = Collection.Equals(b, new byte[] { 0xEF, 0xBB, 0xBF });
+                    //        flag = CollectionUtilities.Equals(b, new byte[] { 0xEF, 0xBB, 0xBF });
                     //    }
 
                     //    if (!flag) goto End;

@@ -440,13 +440,13 @@ namespace Library.Net.Amoeba
                     return;
                 }
 
-                //if (Collection.Equals(connectionManager.Node.Id, this.BaseNode.Id))
+                //if (CollectionUtilities.Equals(connectionManager.Node.Id, this.BaseNode.Id))
                 //{
                 //    connectionManager.Dispose();
                 //    return;
                 //}
 
-                //var oldConnectionManager = _connectionManagers.FirstOrDefault(n => Collection.Equals(n.Node.Id, connectionManager.Node.Id));
+                //var oldConnectionManager = _connectionManagers.FirstOrDefault(n => CollectionUtilities.Equals(n.Node.Id, connectionManager.Node.Id));
 
                 //if (oldConnectionManager != null)
                 //{

@@ -34,6 +34,11 @@ namespace Library.Net.Outopos
             if (uris != null) this.ProtectedUris.AddRange(uris);
         }
 
+        protected override void Initialize()
+        {
+
+        }
+
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             byte[] lengthBuffer = new byte[4];
@@ -48,12 +53,12 @@ namespace Library.Net.Outopos
                 {
                     if (id == (byte)SerializeId.Id)
                     {
-                        this.Id = ItemUtility.GetByteArray(rangeStream);
+                        this.Id = ItemUtilities.GetByteArray(rangeStream);
                     }
 
                     else if (id == (byte)SerializeId.Uri)
                     {
-                        this.ProtectedUris.Add(ItemUtility.GetString(rangeStream));
+                        this.ProtectedUris.Add(ItemUtilities.GetString(rangeStream));
                     }
                 }
             }
@@ -66,13 +71,13 @@ namespace Library.Net.Outopos
             // Id
             if (this.Id != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Id, this.Id);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Id, this.Id);
             }
 
             // Uris
             foreach (var value in this.Uris)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Uri, value);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Uri, value);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -104,12 +109,12 @@ namespace Library.Net.Outopos
 
             if (this.Id != null && other.Id != null)
             {
-                if (!Collection.Equals(this.Id, other.Id)) return false;
+                if (!Native.Equals(this.Id, other.Id)) return false;
             }
 
             if (this.Uris != null && other.Uris != null)
             {
-                if (!Collection.Equals(this.Uris, other.Uris)) return false;
+                if (!CollectionUtilities.Equals(this.Uris, other.Uris)) return false;
             }
 
             return true;
@@ -143,11 +148,9 @@ namespace Library.Net.Outopos
                     _id = value;
                 }
 
-                if (value != null && value.Length != 0)
+                if (value != null)
                 {
-                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                    else _hashCode = value[0];
+                    _hashCode = ItemUtilities.GetHashCode(value);
                 }
                 else
                 {
@@ -158,14 +161,16 @@ namespace Library.Net.Outopos
 
         #endregion
 
+        private volatile ReadOnlyCollection<string> _readOnlyUris;
+
         public IEnumerable<string> Uris
         {
             get
             {
-                foreach (var item in this.ProtectedUris)
-                {
-                    yield return item;
-                }
+                if (_readOnlyUris == null)
+                    _readOnlyUris = new ReadOnlyCollection<string>(this.ProtectedUris);
+
+                return _readOnlyUris;
             }
         }
 
