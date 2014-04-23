@@ -56,7 +56,7 @@ namespace Library.UnitTest
 
                 for (int i = 0; i < buffList.Length; i++)
                 {
-                    Assert.IsTrue(Collection.Equals(buffList[i].Array, buffList[i].Offset, buffList2[i].Array, buffList2[i].Offset, blockSize), "ReedSolomon");
+                    Assert.IsTrue(CollectionUtilities.Equals(buffList[i].Array, buffList[i].Offset, buffList2[i].Array, buffList2[i].Offset, blockSize), "ReedSolomon");
                 }
 
                 for (int i = 0; i < 128; i++)

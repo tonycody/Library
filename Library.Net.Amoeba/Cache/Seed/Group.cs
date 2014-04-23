@@ -141,7 +141,7 @@ namespace Library.Net.Amoeba
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (!Collection.Equals(this.Keys, other.Keys)
+            if (!CollectionUtilities.Equals(this.Keys, other.Keys)
 
                 || this.CorrectionAlgorithm != other.CorrectionAlgorithm
                 || this.InformationLength != other.InformationLength

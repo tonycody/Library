@@ -15,8 +15,8 @@ namespace Library.Net.Amoeba
         private int _id;
 
         private System.Threading.Timer _watchTimer;
-        private bool _checkedFlag = false; 
-        
+        private bool _checkedFlag = false;
+
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
@@ -167,10 +167,10 @@ namespace Library.Net.Amoeba
     {
         private int _id;
         private byte[] _sessionId;
-        private int _priority;
+        private SafeInteger _priority;
 
-        private long _receivedByteCount;
-        private long _sentByteCount;
+        private SafeInteger _receivedByteCount;
+        private SafeInteger _sentByteCount;
 
         private DateTime _lastPullTime = DateTime.UtcNow;
 
@@ -192,6 +192,10 @@ namespace Library.Net.Amoeba
         public MessageManager(int id)
         {
             _id = id;
+
+            _priority = new SafeInteger();
+            _receivedByteCount = new SafeInteger();
+            _sentByteCount = new SafeInteger();
 
             _stockBlocks = new VolatileHashSet<Key>(new TimeSpan(1, 0, 0, 0));
             _stockLinkSeeds = new VolatileHashDictionary<string, DateTime>(new TimeSpan(1, 0, 0, 0));
@@ -236,57 +240,27 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public int Priority
+        public SafeInteger Priority
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _priority;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _priority = value;
-                }
+                return _priority;
             }
         }
 
-        public long ReceivedByteCount
+        public SafeInteger ReceivedByteCount
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _receivedByteCount;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _receivedByteCount = value;
-                }
+                return _receivedByteCount;
             }
         }
 
-        public long SentByteCount
+        public SafeInteger SentByteCount
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _sentByteCount;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _sentByteCount = value;
-                }
+                return _sentByteCount;
             }
         }
 

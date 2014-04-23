@@ -93,7 +93,7 @@ namespace Library.Net.Amoeba
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (!Collection.Equals(this.TrustSignatures, other.TrustSignatures))
+            if (!CollectionUtilities.Equals(this.TrustSignatures, other.TrustSignatures))
             {
                 return false;
             }

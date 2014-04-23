@@ -686,7 +686,7 @@ namespace Library.Correction
                      */
                     id_row[icol] = (byte)1;
 
-                    if (!Collection.Equals(src, pivotRowPos, id_row, 0, k))
+                    if (!CollectionUtilities.Equals(src, pivotRowPos, id_row, 0, k))
                     {
                         for (int p = 0, ix = 0; ix < k; ix++, p += k)
                         {

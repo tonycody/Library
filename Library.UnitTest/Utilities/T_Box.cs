@@ -10,8 +10,8 @@ using Library.Security;
 
 namespace Library.UnitTest
 {
-    [DataContract(Name = "D_Box", Namespace = "http://Library/Net/Amoeba")]
-    public sealed class D_Box : MutableCertificateItemBase<D_Box>, IThisLock
+    [DataContract(Name = "T_Box", Namespace = "http://Library/Net/Amoeba")]
+    public sealed class T_Box : MutableCertificateItemBase<T_Box>, IThisLock
     {
         private enum SerializeId : byte
         {
@@ -28,7 +28,7 @@ namespace Library.UnitTest
         private DateTime _creationTime;
         private string _comment;
         private SeedCollection _seeds;
-        private LockedList<D_Box> _boxes;
+        private LockedList<T_Box> _boxes;
 
         private Certificate _certificate;
 
@@ -42,7 +42,7 @@ namespace Library.UnitTest
         public static readonly int MaxD_BoxCount = 8192;
         public static readonly int MaxSeedCount = 1024 * 64;
 
-        public D_Box()
+        public T_Box()
         {
 
         }
@@ -96,7 +96,7 @@ namespace Library.UnitTest
                         }
                         else if (id == (byte)SerializeId.D_Box)
                         {
-                            this.D_Boxes.Add(D_Box.Import(rangeStream, bufferManager, count + 1));
+                            this.D_Boxes.Add(T_Box.Import(rangeStream, bufferManager, count + 1));
                         }
 
                         else if (id == (byte)SerializeId.Certificate)
@@ -223,12 +223,12 @@ namespace Library.UnitTest
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is D_Box)) return false;
+            if ((object)obj == null || !(obj is T_Box)) return false;
 
-            return this.Equals((D_Box)obj);
+            return this.Equals((T_Box)obj);
         }
 
-        public override bool Equals(D_Box other)
+        public override bool Equals(T_Box other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -248,12 +248,12 @@ namespace Library.UnitTest
 
             if (this.Seeds != null && other.Seeds != null)
             {
-                if (!Collection.Equals(this.Seeds, other.Seeds)) return false;
+                if (!CollectionUtilities.Equals(this.Seeds, other.Seeds)) return false;
             }
 
             if (this.D_Boxes != null && other.D_Boxes != null)
             {
-                if (!Collection.Equals(this.D_Boxes, other.D_Boxes)) return false;
+                if (!CollectionUtilities.Equals(this.D_Boxes, other.D_Boxes)) return false;
             }
 
             return true;
@@ -335,7 +335,7 @@ namespace Library.UnitTest
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > D_Box.MaxNameLength)
+                    if (value != null && value.Length > T_Box.MaxNameLength)
                     {
                         throw new ArgumentException();
                     }
@@ -382,7 +382,7 @@ namespace Library.UnitTest
             {
                 lock (this.ThisLock)
                 {
-                    if (value != null && value.Length > D_Box.MaxCommentLength)
+                    if (value != null && value.Length > T_Box.MaxCommentLength)
                     {
                         throw new ArgumentException();
                     }
@@ -402,7 +402,7 @@ namespace Library.UnitTest
                 lock (this.ThisLock)
                 {
                     if (_seeds == null)
-                        _seeds = new SeedCollection(D_Box.MaxSeedCount);
+                        _seeds = new SeedCollection(T_Box.MaxSeedCount);
 
                     return _seeds;
                 }
@@ -410,14 +410,14 @@ namespace Library.UnitTest
         }
 
         [DataMember(Name = "D_Boxes")]
-        public LockedList<D_Box> D_Boxes
+        public LockedList<T_Box> D_Boxes
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_boxes == null)
-                        _boxes = new LockedList<D_Box>(D_Box.MaxD_BoxCount);
+                        _boxes = new LockedList<T_Box>(T_Box.MaxD_BoxCount);
 
                     return _boxes;
                 }
@@ -428,13 +428,13 @@ namespace Library.UnitTest
 
         #region ICloneable<D_Box>
 
-        public D_Box Clone()
+        public T_Box Clone()
         {
             lock (this.ThisLock)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return D_Box.Import(stream, BufferManager.Instance);
+                    return T_Box.Import(stream, BufferManager.Instance);
                 }
             }
         }

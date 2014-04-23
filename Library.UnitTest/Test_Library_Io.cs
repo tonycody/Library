@@ -33,9 +33,9 @@ namespace Library.UnitTest
                     byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
                     stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
 
-                    if (!Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
+                    if (!CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
                     {
-                        Assert.IsTrue(Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
                     }
 
                     _bufferManager.ReturnBuffer(buffer);
@@ -87,9 +87,9 @@ namespace Library.UnitTest
                     byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
                     stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
 
-                    if (!Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
+                    if (!CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
                     {
-                        Assert.IsTrue(Collection.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
                     }
 
                     _bufferManager.ReturnBuffer(buffer);
@@ -140,7 +140,7 @@ namespace Library.UnitTest
                     rangeStream.Read(rbyte, 0, rbyte.Length);
 
                     Assert.AreEqual(rangeStream.Length, 4, "RangeStream #3");
-                    Assert.IsTrue(Collection.Equals(mbyte, rbyte), "RangeStream #4");
+                    Assert.IsTrue(CollectionUtilities.Equals(mbyte, rbyte), "RangeStream #4");
                 }
             }
         }
@@ -155,19 +155,19 @@ namespace Library.UnitTest
                 {
                     byte[] buffer1 = new byte[2];
                     addStream.Read(buffer1, 0, buffer1.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 2, 3 }, buffer1), "UniteStream #1");
+                    Assert.IsTrue(CollectionUtilities.Equals(new byte[] { 2, 3 }, buffer1), "UniteStream #1");
 
                     byte[] buffer2 = new byte[2];
                     addStream.Read(buffer2, 0, buffer2.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 4, 5 }, buffer2), "UniteStream #2");
+                    Assert.IsTrue(CollectionUtilities.Equals(new byte[] { 4, 5 }, buffer2), "UniteStream #2");
 
                     byte[] buffer3 = new byte[2];
                     addStream.Read(buffer3, 0, buffer3.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 10, 11 }, buffer3), "UniteStream #3");
+                    Assert.IsTrue(CollectionUtilities.Equals(new byte[] { 10, 11 }, buffer3), "UniteStream #3");
 
                     byte[] buffer4 = new byte[2];
                     addStream.Read(buffer4, 0, buffer4.Length);
-                    Assert.IsTrue(Collection.Equals(new byte[] { 12, 13 }, buffer4), "UniteStream #4");
+                    Assert.IsTrue(CollectionUtilities.Equals(new byte[] { 12, 13 }, buffer4), "UniteStream #4");
                 }
             }
         }

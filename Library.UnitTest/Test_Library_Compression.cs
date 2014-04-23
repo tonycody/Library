@@ -55,7 +55,7 @@ namespace Library.UnitTest
                     if ((buffer1Length = stream1.Read(buffer1, 0, buffer1.Length)) <= 0) break;
                     if ((buffer2Length = stream3.Read(buffer2, 0, buffer2.Length)) <= 0) break;
 
-                    Assert.IsTrue(Collection.Equals(buffer1, 0, buffer2, 0, buffer1Length));
+                    Assert.IsTrue(CollectionUtilities.Equals(buffer1, 0, buffer2, 0, buffer1Length));
                 }
             }
         }
@@ -101,7 +101,7 @@ namespace Library.UnitTest
                     if ((buffer1Length = stream1.Read(buffer1, 0, buffer1.Length)) <= 0) break;
                     if ((buffer2Length = stream3.Read(buffer2, 0, buffer2.Length)) <= 0) break;
 
-                    Assert.IsTrue(Collection.Equals(buffer1, 0, buffer2, 0, buffer1Length));
+                    Assert.IsTrue(CollectionUtilities.Equals(buffer1, 0, buffer2, 0, buffer1Length));
                 }
             }
         }

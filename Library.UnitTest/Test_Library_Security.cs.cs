@@ -69,7 +69,7 @@ namespace Library.UnitTest
                 var eBuffer = Exchange.Encrypt(exchange.GetPublicKey(), buffer);
                 var dBuffer = Exchange.Decrypt(exchange.GetPrivateKey(), eBuffer);
 
-                Assert.IsTrue(Collection.Equals(buffer, dBuffer), "Exchange #1");
+                Assert.IsTrue(CollectionUtilities.Equals(buffer, dBuffer), "Exchange #1");
             }
         }
 
@@ -85,7 +85,7 @@ namespace Library.UnitTest
             Pbkdf2 pbkdf2 = new Pbkdf2(new System.Security.Cryptography.HMACSHA1(), password, salt, 1024);
             System.Security.Cryptography.Rfc2898DeriveBytes rfc2898DeriveBytes = new System.Security.Cryptography.Rfc2898DeriveBytes(password, salt, 1024);
 
-            Assert.IsTrue(Collection.Equals(pbkdf2.GetBytes(1024), rfc2898DeriveBytes.GetBytes(1024)), "Pbkdf2 #1");
+            Assert.IsTrue(CollectionUtilities.Equals(pbkdf2.GetBytes(1024), rfc2898DeriveBytes.GetBytes(1024)), "Pbkdf2 #1");
         }
 
         [Test]
@@ -94,12 +94,12 @@ namespace Library.UnitTest
             byte[] buffer = new byte[1024 * 32];
             _random.NextBytes(buffer);
 
-            Assert.IsTrue(Collection.Equals(T_Crc32_Castagnoli.ComputeHash(buffer), Crc32_Castagnoli.ComputeHash(buffer)));
+            Assert.IsTrue(CollectionUtilities.Equals(T_Crc32_Castagnoli.ComputeHash(buffer), Crc32_Castagnoli.ComputeHash(buffer)));
 
             using (MemoryStream stream1 = new MemoryStream(buffer))
             using (MemoryStream stream2 = new MemoryStream(buffer))
             {
-                Assert.IsTrue(Collection.Equals(T_Crc32_Castagnoli.ComputeHash(stream1), Crc32_Castagnoli.ComputeHash(stream2)));
+                Assert.IsTrue(CollectionUtilities.Equals(T_Crc32_Castagnoli.ComputeHash(stream1), Crc32_Castagnoli.ComputeHash(stream2)));
             }
 
             var list = new List<ArraySegment<byte>>();
@@ -108,7 +108,7 @@ namespace Library.UnitTest
             list.Add(new ArraySegment<byte>(buffer));
             list.Add(new ArraySegment<byte>(buffer));
 
-            Assert.IsTrue(Collection.Equals(T_Crc32_Castagnoli.ComputeHash(list), Crc32_Castagnoli.ComputeHash(list)));
+            Assert.IsTrue(CollectionUtilities.Equals(T_Crc32_Castagnoli.ComputeHash(list), Crc32_Castagnoli.ComputeHash(list)));
         }
     }
 }

@@ -175,8 +175,8 @@ namespace Library.Net.Amoeba
 
                 || this.Certificate != other.Certificate
 
-                || !Collection.Equals(this.Seeds, other.Seeds)
-                || !Collection.Equals(this.Boxes, other.Boxes))
+                || !CollectionUtilities.Equals(this.Seeds, other.Seeds)
+                || !CollectionUtilities.Equals(this.Boxes, other.Boxes))
             {
                 return false;
             }

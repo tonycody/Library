@@ -93,7 +93,7 @@ namespace Library.Net.Amoeba
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (!Collection.Equals(this.Boxes, other.Boxes))
+            if (!CollectionUtilities.Equals(this.Boxes, other.Boxes))
             {
                 return false;
             }

@@ -94,7 +94,7 @@ namespace Library.UnitTest
 
                 for (int i = 0; i < buffList.Length; i++)
                 {
-                    Assert.IsTrue(Collection.Equals(buffList[i].Array, buffList[i].Offset, buffList3[i].Array, buffList3[i].Offset, 1024 * 32), "ReedSolomon");
+                    Assert.IsTrue(CollectionUtilities.Equals(buffList[i].Array, buffList[i].Offset, buffList3[i].Array, buffList3[i].Offset, 1024 * 32), "ReedSolomon");
                 }
             }
 

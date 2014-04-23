@@ -15,7 +15,7 @@ namespace Library.Net.Amoeba
             c = x.HashAlgorithm.CompareTo(y.HashAlgorithm);
             if (c != 0) return c;
 
-            c = Collection.Compare(x.Hash, y.Hash);
+            c = CollectionUtilities.Compare(x.Hash, y.Hash);
             if (c != 0) return c;
 
             return 0;

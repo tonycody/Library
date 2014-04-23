@@ -15,8 +15,8 @@ namespace Library.Net.Connections
 
         private BandwidthLimit _bandwidthLimit;
 
-        private long _receivedByteCount;
-        private long _sentByteCount;
+        private SafeInteger _receivedByteCount = new SafeInteger();
+        private SafeInteger _sentByteCount = new SafeInteger();
 
         private DateTime _sendUpdateTime;
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 6, 0);
@@ -72,7 +72,7 @@ namespace Library.Net.Connections
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _receivedByteCount;
+                return (long)_receivedByteCount;
             }
         }
 
@@ -82,7 +82,7 @@ namespace Library.Net.Connections
             {
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-                return _sentByteCount;
+                return (long)_sentByteCount;
             }
         }
 
@@ -137,7 +137,7 @@ namespace Library.Net.Connections
 
                 _cap.Send(buffer, 0, buffer.Length, _sendTimeSpan);
                 _sendUpdateTime = DateTime.UtcNow;
-                _sentByteCount += 4;
+                _sentByteCount.Add(4);
             }
         }
 
@@ -188,7 +188,7 @@ namespace Library.Net.Connections
                         time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
                         if (_cap.Receive(lengthbuffer, time) != lengthbuffer.Length) throw new ConnectionException();
-                        _receivedByteCount += 4;
+                        _receivedByteCount.Add(4);
 
                         length = NetworkConverter.ToInt32(lengthbuffer);
                     }
@@ -229,7 +229,7 @@ namespace Library.Net.Connections
 
                                 int i = _cap.Receive(receiveBuffer, 0, receiveLength, time);
 
-                                _receivedByteCount += i;
+                                _receivedByteCount.Add(i);
                                 bufferStream.Write(receiveBuffer, 0, i);
                                 length -= i;
                             } while (length > 0);
@@ -307,7 +307,7 @@ namespace Library.Net.Connections
 
                                     _cap.Send(sendBuffer, 0, i, time);
                                     _sendUpdateTime = DateTime.UtcNow;
-                                    _sentByteCount += i;
+                                    _sentByteCount.Add(i);
                                 }
                             }
                         }

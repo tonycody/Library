@@ -250,12 +250,12 @@ namespace Library.UnitTest
             }
 
             {
-                var parentBox = new D_Box();
+                var parentBox = new T_Box();
                 var childBox = parentBox;
 
                 for (int i = 0; i < 256; i++)
                 {
-                    var tempBox = new D_Box();
+                    var tempBox = new T_Box();
                     childBox.D_Boxes.Add(tempBox);
                     childBox = tempBox;
                 }
@@ -267,12 +267,12 @@ namespace Library.UnitTest
             }
 
             {
-                var parentBox = new D_Box();
+                var parentBox = new T_Box();
                 var childBox = parentBox;
 
                 for (int i = 0; i < 256 + 1; i++)
                 {
-                    var tempBox = new D_Box();
+                    var tempBox = new T_Box();
                     childBox.D_Boxes.Add(tempBox);
                     childBox = tempBox;
                 }
@@ -459,8 +459,8 @@ namespace Library.UnitTest
                     serverThread.Join();
                     clientThread.Join();
 
-                    Assert.IsTrue(Collection.Equals(serverConnectionManager.SesstionId, clientSessionId), "ConnectionManager SessionId #1");
-                    Assert.IsTrue(Collection.Equals(clientConnectionManager.SesstionId, serverSessionId), "ConnectionManager SessionId #2");
+                    Assert.IsTrue(CollectionUtilities.Equals(serverConnectionManager.SesstionId, clientSessionId), "ConnectionManager SessionId #1");
+                    Assert.IsTrue(CollectionUtilities.Equals(clientConnectionManager.SesstionId, serverSessionId), "ConnectionManager SessionId #2");
 
                     Assert.AreEqual(serverConnectionManager.Node, clientNode, "ConnectionManager Node #1");
                     Assert.AreEqual(clientConnectionManager.Node, serverNode, "ConnectionManager Node #2");
@@ -502,7 +502,7 @@ namespace Library.UnitTest
                     senderConnection.PushNodes(nodes);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(Collection.Equals(nodes, item.Nodes), "ConnectionManager #1");
+                    Assert.IsTrue(CollectionUtilities.Equals(nodes, item.Nodes), "ConnectionManager #1");
                 }
 
                 connectionManagers.Randomize();
@@ -537,7 +537,7 @@ namespace Library.UnitTest
                     senderConnection.PushBlocksLink(keys);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(Collection.Equals(keys, item.Keys), "ConnectionManager #2");
+                    Assert.IsTrue(CollectionUtilities.Equals(keys, item.Keys), "ConnectionManager #2");
                 }
 
                 connectionManagers.Randomize();
@@ -572,7 +572,7 @@ namespace Library.UnitTest
                     senderConnection.PushBlocksRequest(keys);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(Collection.Equals(keys, item.Keys), "ConnectionManager #3");
+                    Assert.IsTrue(CollectionUtilities.Equals(keys, item.Keys), "ConnectionManager #3");
                 }
 
                 connectionManagers.Randomize();
@@ -595,7 +595,7 @@ namespace Library.UnitTest
 
                     var item = queue.Dequeue();
                     Assert.AreEqual(key, item.Key, "ConnectionManager #4");
-                    Assert.IsTrue(Collection.Equals(buffer, 0, item.Value.Array, item.Value.Offset, 1024 * 1024 * 4), "ConnectionManager #5");
+                    Assert.IsTrue(CollectionUtilities.Equals(buffer, 0, item.Value.Array, item.Value.Offset, 1024 * 1024 * 4), "ConnectionManager #5");
 
                     _bufferManager.ReturnBuffer(buffer);
                     _bufferManager.ReturnBuffer(item.Value.Array);
@@ -624,7 +624,7 @@ namespace Library.UnitTest
                     senderConnection.PushSeedsRequest(signatures);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(Collection.Equals(signatures, item.Signatures), "ConnectionManager #6");
+                    Assert.IsTrue(CollectionUtilities.Equals(signatures, item.Signatures), "ConnectionManager #6");
                 }
 
                 connectionManagers.Randomize();
@@ -667,7 +667,7 @@ namespace Library.UnitTest
                     senderConnection.PushSeeds(seeds);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(Collection.Equals(seeds, item.Seeds), "ConnectionManager #7");
+                    Assert.IsTrue(CollectionUtilities.Equals(seeds, item.Seeds), "ConnectionManager #7");
                 }
 
                 foreach (var connectionManager in connectionManagers)

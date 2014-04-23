@@ -69,7 +69,7 @@ namespace Library
                 {
                     long size = 0;
 
-                    foreach (var weakReference in Collection.Unite(_buffers))
+                    foreach (var weakReference in CollectionUtilities.Unite(_buffers))
                     {
                         var buffer = weakReference.Target as byte[];
                         if (buffer == null) continue;

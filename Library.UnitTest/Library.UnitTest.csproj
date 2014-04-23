@@ -75,9 +75,11 @@
     <Compile Include="Benchmark\Benchmark_Crc32_Castagnoli.cs" />
     <Compile Include="Benchmark\Benchmark_CheckBase64.cs" />
     <Compile Include="Benchmark\Benchmark.cs" />
+    <Compile Include="Benchmark\Benchmark_ToInt32.cs" />
+    <Compile Include="Benchmark\Benchmark_Reverse.cs" />
     <Compile Include="Test_Library_Compression.cs" />
     <Compile Include="Utilities\T_Crc32_Castagnoli.cs" />
-    <Compile Include="Utilities\D_Box.cs" />
+    <Compile Include="Utilities\T_Box.cs" />
     <Compile Include="Test_Library_Net.cs" />
     <Compile Include="Test_Library_Io.cs" />
     <Compile Include="Test_Library_Net_Amoeba.cs" />

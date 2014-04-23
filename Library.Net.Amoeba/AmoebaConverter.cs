@@ -124,7 +124,7 @@ namespace Library.Net.Amoeba
                         crcStream.Read(orignalCrc, 0, orignalCrc.Length);
                     }
 
-                    if (!Collection.Equals(verifyCrc, orignalCrc))
+                    if (!CollectionUtilities.Equals(verifyCrc, orignalCrc))
                         throw new ArgumentException("Crc Error");
                 }
 

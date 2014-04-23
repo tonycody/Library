@@ -545,7 +545,7 @@ namespace Library.Net.Amoeba
                                         var buffer = new byte[stream2.Length];
                                         stream2.Read(buffer, 0, buffer.Length);
 
-                                        if (!Collection.Equals(buffer, _pingHash)) continue;
+                                        if (!CollectionUtilities.Equals(buffer, _pingHash)) continue;
 
                                         _responseStopwatch.Stop();
                                     }

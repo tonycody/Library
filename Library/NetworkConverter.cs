@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Library
 {
-    public static class NetworkConverter
+    public unsafe static class NetworkConverter
     {
         private static readonly string[] _toHexStringHashtable;
 
@@ -19,14 +20,41 @@ namespace Library
             }
         }
 
-        private static byte[] Reverse(byte[] value, int offset, int length)
+        internal static byte[] Reverse(byte[] value, int offset, int length)
         {
-            byte[] buffer = new byte[length];
-            int r = length - 1;
+            var buffer = new byte[length];
 
-            for (int i = 0; i < length; i++)
+            fixed (byte* p1 = value)
+            fixed (byte* p2 = buffer)
             {
-                buffer[r - i] = value[offset + i];
+                var t_p1 = p1 + offset; // Start point
+                var t_p2 = p2 + (length - 1); // End point
+
+                for (int i = length - 1; i >= 0; i--)
+                {
+                    *t_p2-- = *t_p1++;
+                }
+            }
+
+            return buffer;
+        }
+
+        internal static byte[] Reverse_2(byte[] value, int offset, int length)
+        {
+            var buffer = new byte[length];
+
+            fixed (byte* p1 = value)
+            fixed (byte* p2 = buffer)
+            {
+                var t_p1 = p1 + offset; // Start point
+                var t_p2 = p2 + (length - 1); // End point
+
+                var t_end = t_p1 + length;
+
+                while (t_p1 < t_end)
+                {
+                    *t_p2-- = *t_p1++;
+                }
             }
 
             return buffer;
@@ -358,12 +386,36 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
+                return ((int)value[offset]) << (8 * 3)
+                    | ((int)value[offset + 1]) << (8 * 2)
+                    | ((int)value[offset + 2]) << (8 * 1)
+                    | ((int)value[offset + 3]);
+            }
+            else
+            {
+                return System.BitConverter.ToInt32(value, offset);
+            }
+        }
+
+        internal static int ToInt32_2(byte[] value, int offset)
+        {
+            if (value == null) throw new ArgumentNullException("value");
+            if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
+            if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
+
+            if (System.BitConverter.IsLittleEndian)
+            {
                 int result = 0;
 
-                result = ((int)value[offset]) << (8 * 3);
-                result |= ((int)value[offset + 1]) << (8 * 2);
-                result |= ((int)value[offset + 2]) << (8 * 1);
-                result |= ((int)value[offset + 3]);
+                fixed (byte* p = value)
+                {
+                    byte* t_p = p + offset;
+
+                    result = ((int)*t_p++) << (8 * 3)
+                        | ((int)*t_p++) << (8 * 2)
+                        | ((int)*t_p++) << (8 * 1)
+                        | ((int)*t_p);
+                }
 
                 return result;
             }
@@ -386,18 +438,14 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
-                long result = 0;
-
-                result = ((long)value[offset]) << (8 * 7);
-                result |= ((long)value[offset + 1]) << (8 * 6);
-                result |= ((long)value[offset + 2]) << (8 * 5);
-                result |= ((long)value[offset + 3]) << (8 * 4);
-                result |= ((long)value[offset + 4]) << (8 * 3);
-                result |= ((long)value[offset + 5]) << (8 * 2);
-                result |= ((long)value[offset + 6]) << (8 * 1);
-                result |= ((long)value[offset + 7]);
-
-                return result;
+                return ((long)value[offset]) << (8 * 7)
+                    | ((long)value[offset + 1]) << (8 * 6)
+                    | ((long)value[offset + 2]) << (8 * 5)
+                    | ((long)value[offset + 3]) << (8 * 4)
+                    | ((long)value[offset + 4]) << (8 * 3)
+                    | ((long)value[offset + 5]) << (8 * 2)
+                    | ((long)value[offset + 6]) << (8 * 1)
+                    | ((long)value[offset + 7]);
             }
             else
             {
@@ -433,14 +481,10 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
-                uint result = 0;
-
-                result = ((uint)value[offset]) << (8 * 3);
-                result |= ((uint)value[offset + 1]) << (8 * 2);
-                result |= ((uint)value[offset + 2]) << (8 * 1);
-                result |= ((uint)value[offset + 3]);
-
-                return result;
+                return ((uint)value[offset]) << (8 * 3)
+                    | ((uint)value[offset + 1]) << (8 * 2)
+                    | ((uint)value[offset + 2]) << (8 * 1)
+                    | ((uint)value[offset + 3]);
             }
             else
             {
@@ -461,18 +505,14 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
-                ulong result = 0;
-
-                result = ((ulong)value[offset]) << (8 * 7);
-                result |= ((ulong)value[offset + 1]) << (8 * 6);
-                result |= ((ulong)value[offset + 2]) << (8 * 5);
-                result |= ((ulong)value[offset + 3]) << (8 * 4);
-                result |= ((ulong)value[offset + 4]) << (8 * 3);
-                result |= ((ulong)value[offset + 5]) << (8 * 2);
-                result |= ((ulong)value[offset + 6]) << (8 * 1);
-                result |= ((ulong)value[offset + 7]);
-
-                return result;
+                return ((ulong)value[offset]) << (8 * 7)
+                    | ((ulong)value[offset + 1]) << (8 * 6)
+                    | ((ulong)value[offset + 2]) << (8 * 5)
+                    | ((ulong)value[offset + 3]) << (8 * 4)
+                    | ((ulong)value[offset + 4]) << (8 * 3)
+                    | ((ulong)value[offset + 5]) << (8 * 2)
+                    | ((ulong)value[offset + 6]) << (8 * 1)
+                    | ((ulong)value[offset + 7]);
             }
             else
             {

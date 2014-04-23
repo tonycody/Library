@@ -137,7 +137,7 @@ namespace Library.Net.Amoeba
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (!Collection.Equals(this.Groups, other.Groups)
+            if (!CollectionUtilities.Equals(this.Groups, other.Groups)
 
                 || this.CompressionAlgorithm != other.CompressionAlgorithm
 

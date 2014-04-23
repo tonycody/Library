@@ -114,7 +114,7 @@ namespace Library.Net.Amoeba
 
             if (this.Uris != null && other.Uris != null)
             {
-                if (!Collection.Equals(this.Uris, other.Uris)) return false;
+                if (!CollectionUtilities.Equals(this.Uris, other.Uris)) return false;
             }
 
             return true;

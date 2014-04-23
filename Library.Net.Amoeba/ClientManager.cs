@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Library.Net;
 using Library.Net.Connections;
 using Library.Net.Proxy;
@@ -24,6 +25,8 @@ namespace Library.Net.Amoeba
         private CreateCapEventHandler _createConnectionEvent;
         private CheckUriEventHandler _uriFilterEvent;
 
+        private SafeInteger _blockedCount = new SafeInteger();
+
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
@@ -34,6 +37,23 @@ namespace Library.Net.Amoeba
             _bufferManager = bufferManager;
 
             _settings = new Settings(this.ThisLock);
+        }
+
+        public Information Information
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    List<InformationContext> contexts = new List<InformationContext>();
+
+                    contexts.Add(new InformationContext("ConnectBlockedCount", (long)_blockedCount));
+
+                    return new Information(contexts);
+                }
+            }
         }
 
         public CreateCapEventHandler CreateCapEvent
@@ -245,7 +265,12 @@ namespace Library.Net.Amoeba
 
         public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
-            if (!this.OnCheckUriEvent(uri)) return null;
+            if (!this.OnCheckUriEvent(uri))
+            {
+                _blockedCount.Increment();
+
+                return null;
+            }
 
             List<IDisposable> garbages = new List<IDisposable>();
 

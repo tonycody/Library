@@ -238,7 +238,7 @@ namespace Library.Net.Amoeba
                 || this.Rank != other.Rank
                 || this.Key != other.Key
 
-                || !Collection.Equals(this.Keywords, other.Keywords)
+                || !CollectionUtilities.Equals(this.Keywords, other.Keywords)
 
                 || this.CompressionAlgorithm != other.CompressionAlgorithm
 

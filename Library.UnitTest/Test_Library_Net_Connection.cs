@@ -52,7 +52,7 @@ namespace Library.UnitTest
                         var buff2 = new byte[(int)returnStream.Length];
                         returnStream.Read(buff2, 0, buff2.Length);
 
-                        Assert.IsTrue(Collection.Equals(buffer, buff2), "BaseConnection #1");
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "BaseConnection #1");
                     }
                 }
 
@@ -74,7 +74,7 @@ namespace Library.UnitTest
                         var buff2 = new byte[(int)returnStream.Length];
                         returnStream.Read(buff2, 0, buff2.Length);
 
-                        Assert.IsTrue(Collection.Equals(buffer, buff2), "BaseConnection #2");
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "BaseConnection #2");
                     }
                 }
             }
@@ -117,7 +117,7 @@ namespace Library.UnitTest
                         var buff2 = new byte[(int)returnStream.Length];
                         returnStream.Read(buff2, 0, buff2.Length);
 
-                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #1");
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "CrcConnection #1");
                     }
                 }
 
@@ -139,7 +139,7 @@ namespace Library.UnitTest
                         var buff2 = new byte[(int)returnStream.Length];
                         returnStream.Read(buff2, 0, buff2.Length);
 
-                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CrcConnection #2");
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "CrcConnection #2");
                     }
                 }
             }
@@ -187,7 +187,7 @@ namespace Library.UnitTest
                         var buff2 = new byte[(int)returnStream.Length];
                         returnStream.Read(buff2, 0, buff2.Length);
 
-                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CompressConnection #1");
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "CompressConnection #1");
                     }
                 }
 
@@ -209,7 +209,7 @@ namespace Library.UnitTest
                         var buff2 = new byte[(int)returnStream.Length];
                         returnStream.Read(buff2, 0, buff2.Length);
 
-                        Assert.IsTrue(Collection.Equals(buffer, buff2), "CompressConnection #2");
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "CompressConnection #2");
                     }
                 }
             }
@@ -329,7 +329,7 @@ namespace Library.UnitTest
                                 var buff2 = new byte[(int)returnStream.Length];
                                 returnStream.Read(buff2, 0, buff2.Length);
 
-                                Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #1");
+                                Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "SecureConnection #1");
                             }
                         }
 
@@ -351,7 +351,7 @@ namespace Library.UnitTest
                                 var buff2 = new byte[(int)returnStream.Length];
                                 returnStream.Read(buff2, 0, buff2.Length);
 
-                                Assert.IsTrue(Collection.Equals(buffer, buff2), "SecureConnection #2");
+                                Assert.IsTrue(CollectionUtilities.Equals(buffer, buff2), "SecureConnection #2");
                             }
                         }
                     }

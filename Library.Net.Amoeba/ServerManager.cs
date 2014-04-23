@@ -30,6 +30,8 @@ namespace Library.Net.Amoeba
         private AcceptCapEventHandler _acceptConnectionEvent;
         private CheckUriEventHandler _uriFilterEvent;
 
+        private SafeInteger _blockedCount = new SafeInteger();
+
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
@@ -42,6 +44,23 @@ namespace Library.Net.Amoeba
             _settings = new Settings(this.ThisLock);
 
             _watchTimer = new System.Threading.Timer(this.WatchTimer, null, Timeout.Infinite, Timeout.Infinite);
+        }
+
+        public Information Information
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+                lock (this.ThisLock)
+                {
+                    List<InformationContext> contexts = new List<InformationContext>();
+
+                    contexts.Add(new InformationContext("AcceptBlockedCount", (long)_blockedCount));
+
+                    return new Information(contexts);
+                }
+            }
         }
 
         public AcceptCapEventHandler AcceptCapEvent
@@ -132,8 +151,8 @@ namespace Library.Net.Amoeba
 
                                     if (!this.OnCheckUriEvent(uri))
                                     {
-                                        Log.Information(string.Format("Blocked: {0}", uri));
-                                       
+                                        _blockedCount.Increment();
+
                                         continue;
                                     }
 
@@ -153,7 +172,12 @@ namespace Library.Net.Amoeba
 
                         garbages.Add(cap);
 
-                        if (!this.OnCheckUriEvent(uri)) continue;
+                        if (!this.OnCheckUriEvent(uri))
+                        {
+                            _blockedCount.Increment();
+
+                            continue;
+                        }
 
                         connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                         garbages.Add(connection);
@@ -194,7 +218,7 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Stop) return;
 
                 // 差分を更新。
-                if (!Collection.Equals(_urisHistory, this.ListenUris))
+                if (!CollectionUtilities.Equals(_urisHistory, this.ListenUris))
                 {
                     foreach (var item in _tcpListeners.ToArray())
                     {

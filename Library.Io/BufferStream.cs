@@ -113,7 +113,7 @@ namespace Library.Io
                 while (sum < value)
                 {
                     var buffer = _bufferManager.TakeBuffer(_bufferSize);
-                    _bufferSize *= 2;
+                    if (_bufferSize < 1024 * 32) _bufferSize *= 2;
 
                     _buffers.Add(buffer);
                     sum += buffer.Length;
