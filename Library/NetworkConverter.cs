@@ -3,24 +3,13 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Library
 {
     public unsafe static class NetworkConverter
     {
-        private static readonly string[] _toHexStringHashtable;
-
-        static NetworkConverter()
-        {
-            _toHexStringHashtable = new string[256];
-
-            for (int i = 0; i < 256; i++)
-            {
-                _toHexStringHashtable[i] = i.ToString("x2");
-            }
-        }
-
-        internal static byte[] Reverse(byte[] value, int offset, int length)
+        internal static byte[] GetReverse(byte[] value, int offset, int length)
         {
             var buffer = new byte[length];
 
@@ -39,46 +28,40 @@ namespace Library
             return buffer;
         }
 
-        internal static byte[] Reverse_2(byte[] value, int offset, int length)
+        private static void Reverse(byte[] value)
         {
-            var buffer = new byte[length];
-
-            fixed (byte* p1 = value)
-            fixed (byte* p2 = buffer)
+            fixed (byte* p = value)
             {
-                var t_p1 = p1 + offset; // Start point
-                var t_p2 = p2 + (length - 1); // End point
+                byte swap;
 
-                var t_end = t_p1 + length;
-
-                while (t_p1 < t_end)
+                for (int i = 0, j = value.Length - 1; i < j; i++, j--)
                 {
-                    *t_p2-- = *t_p1++;
+                    swap = p[i];
+                    p[i] = p[j];
+                    p[j] = swap;
                 }
             }
-
-            return buffer;
         }
 
-        public static string ToBase64UrlString(byte[] bytes)
+        public static string ToBase64UrlString(byte[] value)
         {
-            if (bytes == null) throw new ArgumentNullException("bytes");
-
-            return NetworkConverter.ToBase64UrlString(bytes, 0, bytes.Length);
+            return NetworkConverter.ToBase64UrlString(value, 0, value.Length);
         }
 
-        public static string ToBase64UrlString(byte[] bytes, int offset, int length)
+        public static string ToBase64UrlString(byte[] value, int offset, int length)
         {
-            if (bytes == null) throw new ArgumentNullException("bytes");
-            if (offset < 0 || bytes.Length < offset) throw new ArgumentOutOfRangeException("offset");
-            if (length < 0 || (bytes.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
+            if (value == null) throw new ArgumentNullException("value");
+            if (offset < 0 || value.Length < offset) throw new ArgumentOutOfRangeException("offset");
+            if (length < 0 || (value.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
 
-            var value = System.Convert.ToBase64String(bytes, offset, length);
-            StringBuilder sb = new StringBuilder(value.Length);
+            var temp = System.Convert.ToBase64String(value, offset, length);
+            StringBuilder sb = new StringBuilder(temp.Length);
 
-            for (int i = 0; i < value.Length; i++)
+            for (int i = 0; i < temp.Length; i++)
             {
-                switch (value[i])
+                var c = temp[i];
+
+                switch (c)
                 {
                     case '+':
                         sb.Append('-');
@@ -89,7 +72,7 @@ namespace Library
                     case '=':
                         break;
                     default:
-                        sb.Append(value[i]);
+                        sb.Append(c);
                         break;
                 }
             }
@@ -115,9 +98,28 @@ namespace Library
                     break;
             }
 
-            StringBuilder sb = new StringBuilder(value);
-            sb.Replace('-', '+');
-            sb.Replace('_', '/');
+            StringBuilder sb = new StringBuilder(value.Length);
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                var c = value[i];
+
+                switch (c)
+                {
+                    case '-':
+                        sb.Append('+');
+                        break;
+                    case '_':
+                        sb.Append('/');
+                        break;
+                    case '=':
+                        break;
+                    default:
+                        sb.Append(c);
+                        break;
+                }
+            }
+
             sb.Append(padding);
 
             return System.Convert.FromBase64String(sb.ToString());
@@ -126,64 +128,62 @@ namespace Library
         /// <summary>
         /// バイト列を16進数表記の文字列に変換
         /// </summary>
-        /// <param name="bytes">文字列に変換するバイト配列</param>
+        /// <param name="value">文字列に変換するバイト配列</param>
         /// <returns>変換された文字列</returns>
-        public static string ToHexString(byte[] bytes)
+        public static string ToHexString(byte[] value)
         {
-            if (bytes == null) throw new ArgumentNullException("bytes");
-
-            return NetworkConverter.ToHexString(bytes, 0, bytes.Length);
+            return NetworkConverter.ToHexString(value, 0, value.Length);
         }
 
         /// <summary>
         /// バイト列を16進数表記の文字列に変換
         /// </summary>
-        /// <param name="bytes">文字列に変換するバイト配列</param>
+        /// <param name="value">文字列に変換するバイト配列</param>
         /// <returns>変換された文字列</returns>
-        public static string ToHexString(byte[] bytes, int offset, int length)
+        public static string ToHexString(byte[] value, int offset, int length)
         {
-            if (bytes == null) throw new ArgumentNullException("bytes");
-            if (offset < 0 || bytes.Length < offset) throw new ArgumentOutOfRangeException("offset");
-            if (length < 0 || (bytes.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
+            if (value == null) throw new ArgumentNullException("value");
+            if (offset < 0 || value.Length < offset) throw new ArgumentOutOfRangeException("offset");
+            if (length < 0 || (value.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
 
-            StringBuilder sb = new StringBuilder(length);
+            char[] array = new char[length * 2];
 
-            for (int i = offset; i < length; i++)
+            for (int index = 0, i = offset, count = offset + length; i < count; i++)
             {
-                sb.Append(_toHexStringHashtable[bytes[i]]);
+                byte b = value[i];
+
+                array[index++] = NetworkConverter.GetHexValue(b / 16);
+                array[index++] = NetworkConverter.GetHexValue(b % 16);
             }
 
-            return sb.ToString();
+            return new string(array);
+        }
+
+        private static char GetHexValue(int c)
+        {
+            if (c < 10) return (char)(c + 0x30);
+            else return (char)(c - 10 + 0x61);
         }
 
         /// <summary>
         /// 16進数表記の文字列をバイト列に変換
         /// </summary>
-        /// <param name="byteString">バイト配列に変換する文字列</param>
+        /// <param name="value">バイト配列に変換する文字列</param>
         /// <returns>変換されたバイト配列</returns>
-        public static byte[] FromHexString(string byteString)
+        public static byte[] FromHexString(string value)
         {
-            if (byteString == null) throw new ArgumentNullException("byteString");
+            if (value == null) throw new ArgumentNullException("value");
 
-            if (byteString.Length % 2 != 0)
+            if (value.Length % 2 != 0)
             {
-                byteString = "0" + byteString;
+                value = "0" + value;
             }
 
             List<byte> data = new List<byte>();
 
-            for (int i = 0; i < byteString.Length - 1; i += 2)
+            for (int i = 0, count = value.Length - 1; i < count; i += 2)
             {
-                string buf = byteString.Substring(i, 2);
-
-                if (Regex.IsMatch(buf, @"^[0-9a-fA-F]{2}$"))
-                {
-                    data.Add(System.Convert.ToByte(buf, 16));
-                }
-                else
-                {
-                    data.Add(System.Convert.ToByte("00", 16));
-                }
+                data.Add(System.Convert.ToByte(value.Substring(i, 2), 16));
             }
 
             return data.ToArray();
@@ -309,7 +309,7 @@ namespace Library
             if (value.Length < 1) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 1) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToBoolean(NetworkConverter.Reverse(value, offset, 1), 0);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToBoolean(NetworkConverter.GetReverse(value, offset, 1), 0);
             else return System.BitConverter.ToBoolean(value, offset);
         }
 
@@ -324,7 +324,7 @@ namespace Library
             if (value.Length < 2) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 2) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToChar(NetworkConverter.Reverse(value, offset, 2), 0);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToChar(NetworkConverter.GetReverse(value, offset, 2), 0);
             else return System.BitConverter.ToChar(value, offset);
         }
 
@@ -339,7 +339,7 @@ namespace Library
             if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToSingle(NetworkConverter.Reverse(value, offset, 4), 0);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToSingle(NetworkConverter.GetReverse(value, offset, 4), 0);
             else return System.BitConverter.ToSingle(value, offset);
         }
 
@@ -354,7 +354,7 @@ namespace Library
             if (value.Length < 8) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 8) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToDouble(NetworkConverter.Reverse(value, offset, 8), 0);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToDouble(NetworkConverter.GetReverse(value, offset, 8), 0);
             else return System.BitConverter.ToDouble(value, offset);
         }
 
@@ -369,7 +369,7 @@ namespace Library
             if (value.Length < 2) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 2) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt16(NetworkConverter.Reverse(value, offset, 2), 0);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToInt16(NetworkConverter.GetReverse(value, offset, 2), 0);
             else return System.BitConverter.ToInt16(value, offset);
         }
 
@@ -386,38 +386,15 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
-                return ((int)value[offset]) << (8 * 3)
-                    | ((int)value[offset + 1]) << (8 * 2)
-                    | ((int)value[offset + 2]) << (8 * 1)
-                    | ((int)value[offset + 3]);
-            }
-            else
-            {
-                return System.BitConverter.ToInt32(value, offset);
-            }
-        }
-
-        internal static int ToInt32_2(byte[] value, int offset)
-        {
-            if (value == null) throw new ArgumentNullException("value");
-            if (value.Length < 4) throw new ArgumentOutOfRangeException("value");
-            if ((value.Length - offset) < 4) throw new ArgumentOutOfRangeException("offset");
-
-            if (System.BitConverter.IsLittleEndian)
-            {
-                int result = 0;
-
                 fixed (byte* p = value)
                 {
-                    byte* t_p = p + offset;
+                    var t_p = p + offset;
 
-                    result = ((int)*t_p++) << (8 * 3)
-                        | ((int)*t_p++) << (8 * 2)
-                        | ((int)*t_p++) << (8 * 1)
-                        | ((int)*t_p);
+                    return ((int)*t_p++ << (8 * 3))
+                        | ((int)*t_p++ << (8 * 2))
+                        | ((int)*t_p++ << (8 * 1))
+                        | (int)*t_p;
                 }
-
-                return result;
             }
             else
             {
@@ -438,14 +415,19 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
-                return ((long)value[offset]) << (8 * 7)
-                    | ((long)value[offset + 1]) << (8 * 6)
-                    | ((long)value[offset + 2]) << (8 * 5)
-                    | ((long)value[offset + 3]) << (8 * 4)
-                    | ((long)value[offset + 4]) << (8 * 3)
-                    | ((long)value[offset + 5]) << (8 * 2)
-                    | ((long)value[offset + 6]) << (8 * 1)
-                    | ((long)value[offset + 7]);
+                fixed (byte* p = value)
+                {
+                    var t_p = p + offset;
+
+                    return ((long)*t_p++ << (8 * 7))
+                        | ((long)*t_p++ << (8 * 6))
+                        | ((long)*t_p++ << (8 * 5))
+                        | ((long)*t_p++ << (8 * 4))
+                        | ((long)*t_p++ << (8 * 3))
+                        | ((long)*t_p++ << (8 * 2))
+                        | ((long)*t_p++ << (8 * 1))
+                        | (long)*t_p;
+                }
             }
             else
             {
@@ -464,7 +446,7 @@ namespace Library
             if (value.Length < 2) throw new ArgumentOutOfRangeException("value");
             if ((value.Length - offset) < 2) throw new ArgumentOutOfRangeException("offset");
 
-            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt16(NetworkConverter.Reverse(value, offset, 2), 0);
+            if (System.BitConverter.IsLittleEndian) return System.BitConverter.ToUInt16(NetworkConverter.GetReverse(value, offset, 2), 0);
             else return System.BitConverter.ToUInt16(value, offset);
         }
 
@@ -481,10 +463,15 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
-                return ((uint)value[offset]) << (8 * 3)
-                    | ((uint)value[offset + 1]) << (8 * 2)
-                    | ((uint)value[offset + 2]) << (8 * 1)
-                    | ((uint)value[offset + 3]);
+                fixed (byte* p = value)
+                {
+                    var t_p = p + offset;
+
+                    return (uint)(*t_p++ << (8 * 3))
+                        | (uint)(*t_p++ << (8 * 2))
+                        | (uint)(*t_p++ << (8 * 1))
+                        | (uint)*t_p;
+                }
             }
             else
             {
@@ -505,14 +492,19 @@ namespace Library
 
             if (System.BitConverter.IsLittleEndian)
             {
-                return ((ulong)value[offset]) << (8 * 7)
-                    | ((ulong)value[offset + 1]) << (8 * 6)
-                    | ((ulong)value[offset + 2]) << (8 * 5)
-                    | ((ulong)value[offset + 3]) << (8 * 4)
-                    | ((ulong)value[offset + 4]) << (8 * 3)
-                    | ((ulong)value[offset + 5]) << (8 * 2)
-                    | ((ulong)value[offset + 6]) << (8 * 1)
-                    | ((ulong)value[offset + 7]);
+                fixed (byte* p = value)
+                {
+                    var t_p = p + offset;
+
+                    return ((ulong)*t_p++ << (8 * 7))
+                        | ((ulong)*t_p++ << (8 * 6))
+                        | ((ulong)*t_p++ << (8 * 5))
+                        | ((ulong)*t_p++ << (8 * 4))
+                        | ((ulong)*t_p++ << (8 * 3))
+                        | ((ulong)*t_p++ << (8 * 2))
+                        | ((ulong)*t_p++ << (8 * 1))
+                        | (ulong)*t_p;
+                }
             }
             else
             {
@@ -520,73 +512,74 @@ namespace Library
             }
         }
 
+
         public static byte[] GetBytes(bool value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(char value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(float value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(double value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(short value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(int value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(long value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(ushort value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(uint value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
 
         public static byte[] GetBytes(ulong value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);
-            if (System.BitConverter.IsLittleEndian) Array.Reverse(buffer);
+            if (System.BitConverter.IsLittleEndian) NetworkConverter.Reverse(buffer);
             return buffer;
         }
     }

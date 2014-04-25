@@ -106,7 +106,7 @@ namespace Library.Net.Amoeba
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 12, 0);
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 6, 0);
 
-        private System.Threading.Timer _aliveTimer;
+        private WatchTimer _aliveTimer;
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -328,7 +328,7 @@ namespace Library.Net.Amoeba
                         this.Ping(_pingHash);
 
                         ThreadPool.QueueUserWorkItem(this.Pull);
-                        _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 10, 1000 * 10);
+                        _aliveTimer = new WatchTimer(this.AliveTimer, new TimeSpan(0, 0, 30));
                     }
                     else
                     {
@@ -361,38 +361,22 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private bool _aliveSending;
-
-        private void AliveTimer(object state)
+        private void AliveTimer()
         {
+            if (_disposed) return;
+
+            Thread.CurrentThread.Name = "ConnectionManager_AliveTimer";
+
             try
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                if (_aliveSending) return;
-                _aliveSending = true;
-
-                Thread.CurrentThread.Name = "ConnectionManager_AliveTimer";
-
-                try
+                if ((DateTime.UtcNow - _sendUpdateTime) > _aliveTimeSpan)
                 {
-                    if ((DateTime.UtcNow - _sendUpdateTime) > _aliveTimeSpan)
-                    {
-                        this.Alive();
-                    }
-                }
-                catch (Exception)
-                {
-                    this.OnClose(new EventArgs());
-                }
-                finally
-                {
-                    _aliveSending = false;
+                    this.Alive();
                 }
             }
             catch (Exception)
             {
-
+                this.OnClose(new EventArgs());
             }
         }
 
@@ -803,11 +787,11 @@ namespace Library.Net.Amoeba
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
-                    //var contexts = new List<InformationContext>();
-                    //contexts.Add(new InformationContext("isCompress", false));
+                    var contexts = new List<InformationContext>();
+                    contexts.Add(new InformationContext("isCompress", false));
 
-                    //_connection.Send(stream, _sendTimeSpan, new Information(contexts));
-                    _connection.Send(stream, _sendTimeSpan);
+                    _connection.Send(stream, _sendTimeSpan, new Information(contexts));
+                    //_connection.Send(stream, _sendTimeSpan);
                     _sendUpdateTime = DateTime.UtcNow;
                 }
                 catch (ConnectionException)

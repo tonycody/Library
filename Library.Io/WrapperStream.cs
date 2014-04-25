@@ -7,6 +7,7 @@ namespace Library.Io
     {
         private Stream _stream;
         private bool _leaveInnerStreamOpen;
+
         private bool _disposed;
 
         public WrapperStream(Stream stream, bool leaveInnerStreamOpen)

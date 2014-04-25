@@ -8,7 +8,7 @@ using System.Threading;
 using Library.Io;
 using Library.Security;
 
-namespace Library.Security
+namespace <# 1 #>
 {
     static class ItemUtilities
     {

@@ -1,6 +1,9 @@
 set BATDIR=%~dp0
 cd %BATDIR%
 
+set TOOL="..\Library.Tools\bin\Debug\Library.Tools.exe"
+IF EXIST %TOOL% call %TOOL% "Template" Template\Settings.txt
+
 copy /Y /B Cpp\Library\Release\Library.dll ..\Library\Assembly\Library_x86.dll
 copy /Y /B Cpp\Library\x64\Release\Library.dll ..\Library\Assembly\Library_x64.dll
 

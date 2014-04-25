@@ -95,14 +95,14 @@ namespace Library.Net.Connections
 
         private void AliveTimer(object state)
         {
+            if (_disposed) return;
+            if (!_connect) return;
+
+            if (_aliveSending) return;
+            _aliveSending = true;
+
             try
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-                if (!_connect) return;
-
-                if (_aliveSending) return;
-                _aliveSending = true;
-
                 Thread.CurrentThread.Name = "CapConnection_AliveTimer";
 
                 try
@@ -116,14 +116,10 @@ namespace Library.Net.Connections
                 {
 
                 }
-                finally
-                {
-                    _aliveSending = false;
-                }
             }
-            catch (Exception)
+            finally
             {
-
+                _aliveSending = false;
             }
         }
 

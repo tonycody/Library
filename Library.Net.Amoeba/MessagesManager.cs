@@ -14,8 +14,8 @@ namespace Library.Net.Amoeba
         private Dictionary<Node, DateTime> _updateTimeDictionary = new Dictionary<Node, DateTime>();
         private int _id;
 
-        private System.Threading.Timer _watchTimer;
-        private bool _checkedFlag = false;
+        private WatchTimer _watchTimer;
+        private volatile bool _checkedFlag = false;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -24,10 +24,10 @@ namespace Library.Net.Amoeba
 
         public MessagesManager()
         {
-            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 0, 10), new TimeSpan(0, 0, 10));
+            _watchTimer = new WatchTimer(this.RefreshTimer, new TimeSpan(0, 0, 10));
         }
 
-        private void WatchTimer(object state)
+        private void RefreshTimer()
         {
             lock (this.ThisLock)
             {

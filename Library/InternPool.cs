@@ -9,6 +9,8 @@ namespace Library
     public class InternPool<T> : ManagerBase, IThisLock
     {
         private System.Threading.Timer _watchTimer;
+        private volatile bool _isRefreshing = false;
+
         private Dictionary<T, Info<T>> _dic;
 
         private volatile bool _disposed;
@@ -44,31 +46,41 @@ namespace Library
 
         internal void Refresh()
         {
-            lock (this.ThisLock)
+            if (_isRefreshing) return;
+            _isRefreshing = true;
+
+            try
             {
-                List<T> list = null;
-
-                foreach (var pair in _dic)
+                lock (this.ThisLock)
                 {
-                    var key = pair.Key;
-                    var info = pair.Value;
+                    List<T> list = null;
 
-                    if (info.Count == 0)
+                    foreach (var pair in _dic)
                     {
-                        if (list == null)
-                            list = new List<T>();
+                        var key = pair.Key;
+                        var info = pair.Value;
 
-                        list.Add(key);
+                        if (info.Count == 0)
+                        {
+                            if (list == null)
+                                list = new List<T>();
+
+                            list.Add(key);
+                        }
+                    }
+
+                    if (list != null)
+                    {
+                        foreach (var key in list)
+                        {
+                            _dic.Remove(key);
+                        }
                     }
                 }
-
-                if (list != null)
-                {
-                    foreach (var key in list)
-                    {
-                        _dic.Remove(key);
-                    }
-                }
+            }
+            finally
+            {
+                _isRefreshing = false;
             }
         }
 

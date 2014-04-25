@@ -23,7 +23,7 @@ namespace Library.Net.Amoeba
         private static Random _random = new Random();
         private Regex _regex = new Regex(@"(.*?):(.*):(\d*)");
 
-        private System.Threading.Timer _watchTimer;
+        private WatchTimer _watchTimer;
 
         private volatile ManagerState _state = ManagerState.Stop;
 
@@ -43,7 +43,7 @@ namespace Library.Net.Amoeba
 
             _settings = new Settings(this.ThisLock);
 
-            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, Timeout.Infinite, Timeout.Infinite);
+            _watchTimer = new WatchTimer(this.WatchTimer, Timeout.Infinite);
         }
 
         public Information Information
@@ -172,13 +172,6 @@ namespace Library.Net.Amoeba
 
                         garbages.Add(cap);
 
-                        if (!this.OnCheckUriEvent(uri))
-                        {
-                            _blockedCount.Increment();
-
-                            continue;
-                        }
-
                         connection = new BaseConnection(cap, bandwidthLimit, _maxReceiveCount, _bufferManager);
                         garbages.Add(connection);
                     }
@@ -211,7 +204,7 @@ namespace Library.Net.Amoeba
             return null;
         }
 
-        private void WatchTimer(object state)
+        private void WatchTimer()
         {
             lock (this.ThisLock)
             {
@@ -293,7 +286,7 @@ namespace Library.Net.Amoeba
                     if (this.State == ManagerState.Stop) return;
                     _state = ManagerState.Stop;
 
-                    _watchTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                    _watchTimer.Change(Timeout.Infinite);
 
                     foreach (var tcpListener in _tcpListeners.Values)
                     {

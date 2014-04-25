@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Library.Io;
+using Library.Security;
 using NUnit.Framework;
 
 namespace Library.UnitTest
@@ -208,6 +209,38 @@ namespace Library.UnitTest
             catch (StopIoException)
             {
                 Assert.AreEqual(count, 2, "ProgressStream");
+            }
+        }
+
+        [Test]
+        public void Test_QueueStream()
+        {
+            using (FileStream stream1 = new FileStream("QueueStream1.tmp", FileMode.Create))
+            using (QueueStream queueStream = new QueueStream(stream1, StreamMode.Write, 1024 * 1024 * 4, _bufferManager))
+            using (FileStream stream2 = new FileStream("QueueStream2.tmp", FileMode.Create))
+            {
+                byte[] buffer = new byte[1024];
+
+                for (int i = 0; i < 1024 * 32; i++)
+                {
+                    _random.NextBytes(buffer);
+
+                    queueStream.Write(buffer, 0, buffer.Length);
+                    stream2.Write(buffer, 0, buffer.Length);
+                }
+            }
+
+            using (FileStream stream1 = new FileStream("QueueStream1.tmp", FileMode.Open))
+            using (FileStream stream2 = new FileStream("QueueStream2.tmp", FileMode.Open))
+            {
+                Assert.IsTrue(CollectionUtilities.Equals(Sha512.ComputeHash(stream1), Sha512.ComputeHash(stream2)), "QueueStream #1");
+            }
+
+            using (FileStream stream1 = new FileStream("QueueStream1.tmp", FileMode.Open))
+            using (QueueStream queueStream = new QueueStream(stream1, StreamMode.Read, 1024 * 1024 * 4, _bufferManager))
+            using (FileStream stream2 = new FileStream("QueueStream2.tmp", FileMode.Open))
+            {
+                Assert.IsTrue(CollectionUtilities.Equals(Sha512.ComputeHash(queueStream), Sha512.ComputeHash(stream2)), "QueueStream #2");
             }
         }
     }

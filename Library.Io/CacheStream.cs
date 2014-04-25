@@ -11,7 +11,7 @@ namespace Library.Io
         private bool _leaveInnerStreamOpen;
         private BufferManager _bufferManager;
 
-        private StreamMode _mode = StreamMode.None;
+        private StreamMode? _mode = null;
 
         private byte[] _readerBuffer;
         private int _readerBufferPosition;
@@ -101,14 +101,10 @@ namespace Library.Io
                 {
                     if (_position < value)
                     {
-                        int s = (int)(value - _position);
-
-                        _readerBufferPosition += s;
+                        _readerBufferPosition += (int)Math.Min((value - _position), _readerBufferLength - _readerBufferPosition);
 
                         if (_readerBufferPosition >= _readerBufferLength)
                         {
-                            if (!_stream.CanSeek) throw new NotSupportedException();
-
                             _readerBufferPosition = 0;
                             _readerBufferLength = 0;
 
@@ -117,14 +113,10 @@ namespace Library.Io
                     }
                     else
                     {
-                        int s = (int)(_position - value);
+                        _readerBufferPosition -= (int)Math.Min((value - _position), _readerBufferPosition);
 
-                        _readerBufferPosition -= s;
-
-                        if (_readerBufferPosition < 0)
+                        if (_readerBufferPosition <= 0)
                         {
-                            if (!_stream.CanSeek) throw new NotSupportedException();
-
                             _readerBufferPosition = 0;
                             _readerBufferLength = 0;
 
@@ -182,8 +174,6 @@ namespace Library.Io
             if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
             if (count == 0) return 0;
-
-            //count = Math.Min(count, (int)this.Length - (int)this.Position);
 
             if (_readerBuffer == null)
             {

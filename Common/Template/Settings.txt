@@ -1,0 +1,5 @@
+Template\ItemUtilities.cs
+..\Library.Net.Outopos\Utilities\ItemUtilities.cs "Library.Net.Outopos"
+..\Library.Net.Amoeba\Utilities\ItemUtilities.cs "Library.Net.Amoeba"
+..\Library.Net.Connections\Utilities\ItemUtilities.cs "Library.Net.Connections"
+..\Library.Security\Utilities\ItemUtilities.cs "Library.Security"

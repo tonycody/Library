@@ -128,12 +128,12 @@ namespace Library.Io
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
-            if (count == 0) return 0;
 
             count = (int)Math.Min(count, this.Length - this.Position);
+            if (count == 0) return 0;
 
             int index = 0;
-            int position = 0;
+            long position = 0;
 
             for (long p = 0; index < _streams.Count; index++)
             {
@@ -141,7 +141,7 @@ namespace Library.Io
 
                 if (this.Position < p)
                 {
-                    position = (int)(_streams[index].Length - (p - this.Position));
+                    position = _streams[index].Length - (p - this.Position);
                     break;
                 }
             }
@@ -150,7 +150,7 @@ namespace Library.Io
 
             for (; count > 0 && index < _streams.Count; index++)
             {
-                int length = (int)Math.Min(_streams[index].Length - (long)position, count);
+                int length = (int)Math.Min(_streams[index].Length - position, count);
 
                 _streams[index].Seek(position, SeekOrigin.Begin);
                 position = 0;

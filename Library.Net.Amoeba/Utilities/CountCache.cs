@@ -10,7 +10,7 @@ namespace Library.Net.Amoeba
 
     sealed class CountCache : ManagerBase, IThisLock
     {
-        private System.Threading.Timer _watchTimer;
+        private WatchTimer _watchTimer;
         private ConditionalWeakTable<Group, GroupManager> _table = new ConditionalWeakTable<Group, GroupManager>();
         private List<WeakReference> _groupManagers = new List<WeakReference>();
 
@@ -19,10 +19,10 @@ namespace Library.Net.Amoeba
 
         public CountCache()
         {
-            _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
+            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 1, 0));
         }
 
-        private void WatchTimer(object state)
+        private void WatchTimer()
         {
             this.Refresh();
         }
@@ -90,8 +90,8 @@ namespace Library.Net.Amoeba
         {
             private Group _group;
 
-            private SortedDictionary<Key, bool> _dic;
-            //private Dictionary<Key, bool> _dic;
+            //private SortedDictionary<Key, bool> _dic;
+            private Dictionary<Key, bool> _dic;
 
             private bool _isCached;
             private List<Key> _cacheTrueKeys;
@@ -101,8 +101,8 @@ namespace Library.Net.Amoeba
             {
                 _group = group;
 
-                _dic = new SortedDictionary<Key, bool>(new KeyComparer());
-                //_dic = new Dictionary<Key, bool>();
+                //_dic = new SortedDictionary<Key, bool>(new KeyComparer());
+                _dic = new Dictionary<Key, bool>();
 
                 foreach (var key in group.Keys)
                 {

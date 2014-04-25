@@ -8,6 +8,7 @@ namespace Library.UnitTest
     public class Test_Library
     {
         private BufferManager _bufferManager = BufferManager.Instance;
+        private Random _random = new Random();
 
         [Test]
         public void Test_Collection()
@@ -139,6 +140,14 @@ namespace Library.UnitTest
             Assert.IsTrue(CollectionUtilities.Equals(NetworkConverter.GetBytes((double)413579651.15465754), new byte[] { 0x41, 0xb8, 0xa6, 0xb9, 0x83, 0x27, 0x97, 0xa3 }), "GetBytes #double");
 
             Assert.IsTrue(NetworkConverter.ToInt32(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x74, 0xab, 0x05, 0xc1 }, 4) == 0x74ab05c1, "ToInt32");
+
+            {
+                byte[] buffer = new byte[1024];
+                _random.NextBytes(buffer);
+
+                var s = NetworkConverter.ToBase64UrlString(buffer);
+                Assert.IsTrue(CollectionUtilities.Equals(buffer, NetworkConverter.FromBase64UrlString(s)));
+            }
         }
 
         [Test]

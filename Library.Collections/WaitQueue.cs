@@ -6,12 +6,13 @@ using System.Threading;
 
 namespace Library.Collections
 {
-    public class WaitQueue<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock, IDisposable
+    public class WaitQueue<T> : ManagerBase, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private Queue<T> _queue;
         private int? _capacity;
         private volatile ManualResetEvent _lowerResetEvent = new ManualResetEvent(false);
         private volatile ManualResetEvent _upperResetEvent = new ManualResetEvent(false);
+
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
@@ -392,7 +393,7 @@ namespace Library.Collections
             }
         }
 
-        protected void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
             _disposed = true;
@@ -430,16 +431,6 @@ namespace Library.Collections
                 }
             }
         }
-
-        #region IDisposable
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        #endregion
 
         #region IThisLock
 

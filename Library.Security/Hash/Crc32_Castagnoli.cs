@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Threading;
 
 namespace Library.Security
 {
     public unsafe static class Crc32_Castagnoli
     {
+        private static readonly ThreadLocal<Encoding> _threadLocalEncoding = new ThreadLocal<Encoding>(() => new UTF8Encoding(false));
+
 #if Mono
 
 #else
@@ -64,12 +68,16 @@ namespace Library.Security
         /// <param name="buffer">ハッシュ値を計算するbyte配列</param>
         public static byte[] ComputeHash(byte[] buffer)
         {
-            if (buffer == null)
-            {
-                throw new ArgumentNullException("buffer");
-            }
+            if (buffer == null) throw new ArgumentNullException("buffer");
 
             return Crc32_Castagnoli.ComputeHash(buffer, 0, buffer.Length);
+        }
+
+        public static byte[] ComputeHash(string value)
+        {
+            if (value == null) throw new ArgumentNullException("value");
+
+            return Crc32_Castagnoli.ComputeHash(_threadLocalEncoding.Value.GetBytes(value));
         }
 
         public static byte[] ComputeHash(ArraySegment<byte> value)
@@ -84,10 +92,7 @@ namespace Library.Security
 
         public static byte[] ComputeHash(Stream inputStream)
         {
-            if (inputStream == null)
-            {
-                throw new ArgumentNullException("inputStream");
-            }
+            if (inputStream == null) throw new ArgumentNullException("inputStream");
 
             uint x = 0xFFFFFFFF;
 
@@ -107,10 +112,7 @@ namespace Library.Security
 
         public static byte[] ComputeHash(IList<ArraySegment<byte>> value)
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException("value");
-            }
+            if (value == null) throw new ArgumentNullException("value");
 
             uint x = 0xFFFFFFFF;
 

@@ -147,6 +147,10 @@ namespace Library.Net.Amoeba
                                 vl.Add(w2.Value);
                                 i++;
                             }
+                            else
+                            {
+                                vl.Add(w1);
+                            }
                         }
                         else
                         {
@@ -265,13 +269,6 @@ namespace Library.Net.Amoeba
 
         public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
-            if (!this.OnCheckUriEvent(uri))
-            {
-                _blockedCount.Increment();
-
-                return null;
-            }
-
             List<IDisposable> garbages = new List<IDisposable>();
 
             try
@@ -351,59 +348,70 @@ namespace Library.Net.Amoeba
 
                     if (connectionFilter.ConnectionType == ConnectionType.Tcp)
                     {
+                        var ipAddress = ClientManager.GetIpAddress(host);
+                        if (ipAddress == null) return null;
+
+                        host = ipAddress.ToString();
+                        uri = string.Format("{0}:{1}:{2}", scheme, host, port);
+
+                        if (!this.OnCheckUriEvent(uri))
+                        {
+                            _blockedCount.Increment();
+
+                            return null;
+                        }
+
 #if !DEBUG
+                        // Check
                         {
                             Uri url = new Uri(string.Format("{0}://{1}:{2}", scheme, host, port));
 
                             if (url.HostNameType == UriHostNameType.IPv4)
                             {
-                                var myIpAddress = IPAddress.Parse(url.Host);
-
-                                if (IPAddress.Any.ToString() == myIpAddress.ToString()
-                                    || IPAddress.Loopback.ToString() == myIpAddress.ToString()
-                                    || IPAddress.Broadcast.ToString() == myIpAddress.ToString())
+                                if (IPAddress.Any.ToString() == ipAddress.ToString()
+                                    || IPAddress.Loopback.ToString() == ipAddress.ToString()
+                                    || IPAddress.Broadcast.ToString() == ipAddress.ToString())
                                 {
                                     return null;
                                 }
-                                if (CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("10.0.0.0").GetAddressBytes()) >= 0
-                                    && CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("10.255.255.255").GetAddressBytes()) <= 0)
+                                if (CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("10.0.0.0").GetAddressBytes()) >= 0
+                                    && CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("10.255.255.255").GetAddressBytes()) <= 0)
                                 {
                                     return null;
                                 }
-                                if (CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("172.16.0.0").GetAddressBytes()) >= 0
-                                    && CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("172.31.255.255").GetAddressBytes()) <= 0)
+                                if (CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("172.16.0.0").GetAddressBytes()) >= 0
+                                    && CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("172.31.255.255").GetAddressBytes()) <= 0)
                                 {
                                     return null;
                                 }
-                                if (CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("127.0.0.0").GetAddressBytes()) >= 0
-                                    && CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("127.255.255.255").GetAddressBytes()) <= 0)
+                                if (CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("127.0.0.0").GetAddressBytes()) >= 0
+                                    && CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("127.255.255.255").GetAddressBytes()) <= 0)
                                 {
                                     return null;
                                 }
-                                if (CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("192.168.0.0").GetAddressBytes()) >= 0
-                                    && CollectionUtilities.Compare(myIpAddress.GetAddressBytes(), IPAddress.Parse("192.168.255.255").GetAddressBytes()) <= 0)
+                                if (CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("192.168.0.0").GetAddressBytes()) >= 0
+                                    && CollectionUtilities.Compare(ipAddress.GetAddressBytes(), IPAddress.Parse("192.168.255.255").GetAddressBytes()) <= 0)
                                 {
                                     return null;
                                 }
                             }
                             else if (url.HostNameType == UriHostNameType.IPv6)
                             {
-                                var myIpAddress = IPAddress.Parse(url.Host);
-
-                                if (IPAddress.IPv6Any.ToString() == myIpAddress.ToString()
-                                    || IPAddress.IPv6Loopback.ToString() == myIpAddress.ToString()
-                                    || IPAddress.IPv6None.ToString() == myIpAddress.ToString())
+                                if (IPAddress.IPv6Any.ToString() == ipAddress.ToString()
+                                    || IPAddress.IPv6Loopback.ToString() == ipAddress.ToString()
+                                    || IPAddress.IPv6None.ToString() == ipAddress.ToString())
                                 {
                                     return null;
                                 }
-                                if (myIpAddress.ToString().ToLower().StartsWith("fe80:"))
+                                if (ipAddress.ToString().ToLower().StartsWith("fe80:"))
                                 {
                                     return null;
                                 }
                             }
                         }
 #endif
-                        var socket = ClientManager.Connect(new IPEndPoint(ClientManager.GetIpAddress(host), port), new TimeSpan(0, 0, 10));
+
+                        var socket = ClientManager.Connect(new IPEndPoint(ipAddress, port), new TimeSpan(0, 0, 10));
                         garbages.Add(socket);
 
                         var cap = new SocketCap(socket);
@@ -414,6 +422,13 @@ namespace Library.Net.Amoeba
                     }
                     else
                     {
+                        if (!this.OnCheckUriEvent(uri))
+                        {
+                            _blockedCount.Increment();
+
+                            return null;
+                        }
+
                         string proxyScheme = null;
                         string proxyHost = null;
                         int proxyPort = -1;

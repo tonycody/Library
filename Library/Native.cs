@@ -57,42 +57,42 @@ namespace Library
 
         public static void Copy(byte[] source, byte[] destination, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            //if (source == null) throw new ArgumentNullException("source");
+            //if (destination == null) throw new ArgumentNullException("destination");
 
-            if (length > source.Length) throw new ArgumentOutOfRangeException("length");
-            if (length > destination.Length) throw new ArgumentOutOfRangeException("length");
+            //if (length > source.Length) throw new ArgumentOutOfRangeException("length");
+            //if (length > destination.Length) throw new ArgumentOutOfRangeException("length");
 
-            if (length == 0) return;
+            //if (length == 0) return;
 
-            fixed (byte* p_x = source)
-            {
-                Marshal.Copy(new IntPtr((void*)p_x), destination, 0, length);
-            }
+            //fixed (byte* p_x = source)
+            //{
+            //    Marshal.Copy(new IntPtr((void*)p_x), destination, 0, length);
+            //}
 
-            //Buffer.BlockCopy(source, 0, destination, 0, length);
+            Array.Copy(source, 0, destination, 0, length);
         }
 
         public static void Copy(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            //if (source == null) throw new ArgumentNullException("source");
+            //if (destination == null) throw new ArgumentNullException("destination");
 
-            if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
-            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
-            if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
-            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+            //if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
+            //if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
+            //if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
+            //if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
 
-            if (length == 0) return;
+            //if (length == 0) return;
 
-            fixed (byte* p_x = source)
-            {
-                byte* t_x = p_x + sourceIndex;
+            //fixed (byte* p_x = source)
+            //{
+            //    byte* t_x = p_x + sourceIndex;
 
-                Marshal.Copy(new IntPtr((void*)t_x), destination, destinationIndex, length);
-            }
+            //    Marshal.Copy(new IntPtr((void*)t_x), destination, destinationIndex, length);
+            //}
 
-            //Buffer.BlockCopy(source, sourceIndex, destination, destinationIndex, length);
+            Array.Copy(source, sourceIndex, destination, destinationIndex, length);
         }
 
         // Copyright (c) 2008-2013 Hafthor Stefansson

@@ -74,14 +74,18 @@ namespace Library.UnitTest
                     if (list.ElementAt(0) != node) throw new Exception();
                 }
 
+                for (int i = 0; i < 128; i++)
                 {
                     var id = new byte[64];
                     _random.NextBytes(id);
 
                     var slist = Kademlia<Node>.Sort(kademlia.BaseNode.Id, id, kademlia.ToArray(), kademlia.Count).ToList();
-                    var slist2 = Kademlia<Node>.Sort(kademlia.BaseNode.Id, id, kademlia.ToArray(), 1).ToList();
+                    var slist2 = Kademlia<Node>.Sort(kademlia.BaseNode.Id, id, kademlia.ToArray(), 3).ToList();
 
-                    Assert.AreEqual(slist[0], slist2[0]);
+                    if (slist.Count == 0 && slist2.Count == 0) continue;
+                    var length = Math.Min(slist.Count, slist2.Count);
+
+                    Assert.IsTrue(CollectionUtilities.Equals(slist, 0, slist2, 0, length));
                 }
             }
         }

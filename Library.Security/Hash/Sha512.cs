@@ -7,16 +7,18 @@ using System.Threading;
 
 namespace Library.Security
 {
-    static class Sha512
+    public static class Sha512
     {
         private static readonly ThreadLocal<SHA512> _threadLocalSha512 = new ThreadLocal<SHA512>(() => SHA512.Create());
         private static readonly ThreadLocal<Encoding> _threadLocalEncoding = new ThreadLocal<Encoding>(() => new UTF8Encoding(false));
 
-        public static byte[] ComputeHash(byte[] buffer, int offset, int count)
+        public static byte[] ComputeHash(byte[] buffer, int offset, int length)
         {
             if (buffer == null) throw new ArgumentNullException("buffer");
+            if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
+            if (length < 0 || (buffer.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
 
-            return _threadLocalSha512.Value.ComputeHash(buffer, offset, count);
+            return _threadLocalSha512.Value.ComputeHash(buffer, offset, length);
         }
 
         public static byte[] ComputeHash(byte[] buffer)

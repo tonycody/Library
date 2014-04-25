@@ -2,10 +2,9 @@ using System.Runtime.Serialization;
 
 namespace Library.Io
 {
-    enum StreamMode
+    public enum StreamMode
     {
-        None = 0,
-        Read = 1,
-        Write = 2,
+        Read = 0,
+        Write = 1,
     }
 }

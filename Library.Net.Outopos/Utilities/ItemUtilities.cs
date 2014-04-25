@@ -2,15 +2,36 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Library.Io;
+using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    static class ItemUtility
+    static class ItemUtilities
     {
+        private static readonly byte[] _vector;
         private static readonly ThreadLocal<Encoding> _threadLocalEncoding = new ThreadLocal<Encoding>(() => new UTF8Encoding(false));
+
+        static ItemUtilities()
+        {
+            _vector = new byte[4];
+            RandomNumberGenerator.Create().GetBytes(_vector);
+        }
+
+        public static int GetHashCode(byte[] buffer)
+        {
+            if (buffer == null) throw new ArgumentNullException("buffer");
+
+            return (BitConverter.ToInt32(Crc32_Castagnoli.ComputeHash(
+                new ArraySegment<byte>[]
+                {
+                    new ArraySegment<byte>(_vector),
+                    new ArraySegment<byte>(buffer),
+                }), 0)) & 0x7FFFFFFF;
+        }
 
         public static void Write(Stream stream, byte type, Stream exportStream)
         {
@@ -20,20 +41,24 @@ namespace Library.Net.Outopos
                 stream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 stream.WriteByte(type);
 
-                byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
+                byte[] buffer = null;
 
                 try
                 {
+                    buffer = bufferManager.TakeBuffer(1024 * 4);
                     int length = 0;
 
-                    while (0 < (length = exportStream.Read(buffer, 0, buffer.Length)))
+                    while ((length = exportStream.Read(buffer, 0, buffer.Length)) > 0)
                     {
                         stream.Write(buffer, 0, length);
                     }
                 }
                 finally
                 {
-                    bufferManager.ReturnBuffer(buffer);
+                    if (buffer != null)
+                    {
+                        bufferManager.ReturnBuffer(buffer);
+                    }
                 }
             }
         }

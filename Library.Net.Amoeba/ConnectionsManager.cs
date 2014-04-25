@@ -37,6 +37,8 @@ namespace Library.Net.Amoeba
         private LockedHashDictionary<Node, Queue<Key>> _diffusionBlocksDictionary = new LockedHashDictionary<Node, Queue<Key>>();
         private LockedHashDictionary<Node, Queue<Key>> _uploadBlocksDictionary = new LockedHashDictionary<Node, Queue<Key>>();
 
+        private WatchTimer _watchTimer;
+
         private LockedList<Node> _creatingNodes;
         private VolatileHashSet<Node> _waitingNodes;
         private VolatileHashSet<Node> _cuttingNodes;
@@ -44,6 +46,7 @@ namespace Library.Net.Amoeba
         private VolatileHashDictionary<Node, int> _nodesStatus;
 
         private VolatileHashSet<string> _succeededUris;
+        private VolatileHashSet<string> _failedUris;
 
         private VolatileHashSet<string> _pushSeedsRequestList;
         private VolatileHashSet<Key> _downloadBlocks;
@@ -145,11 +148,27 @@ namespace Library.Net.Amoeba
             _nodesStatus = new VolatileHashDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _succeededUris = new VolatileHashSet<string>(new TimeSpan(1, 0, 0));
+            _failedUris = new VolatileHashSet<string>(new TimeSpan(0, 10, 0));
 
             _downloadBlocks = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
             _pushSeedsRequestList = new VolatileHashSet<string>(new TimeSpan(0, 3, 0));
 
             _relayBlocks = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
+
+            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 0, 5));
+        }
+
+        private void WatchTimer()
+        {
+            _waitingNodes.TrimExcess();
+            _cuttingNodes.TrimExcess();
+            _removeNodes.TrimExcess();
+            _nodesStatus.TrimExcess();
+            _succeededUris.TrimExcess();
+            _failedUris.TrimExcess();
+            _downloadBlocks.TrimExcess();
+            _pushSeedsRequestList.TrimExcess();
+            _relayBlocks.TrimExcess();
         }
 
         public GetSignaturesEventHandler GetLockSignaturesEvent
@@ -670,18 +689,20 @@ namespace Library.Net.Amoeba
                     {
                         if (this.State == ManagerState.Stop) return;
 
+                        if (_failedUris.Contains(uri)) continue;
+
                         var connection = _clientManager.CreateConnection(uri, _bandwidthLimit);
 
                         if (connection != null)
                         {
-                            _succeededUris.Add(uri);
-
                             var connectionManager = new ConnectionManager(connection, _mySessionId, this.BaseNode, ConnectDirection.Out, _bufferManager);
 
                             try
                             {
                                 connectionManager.Connect();
                                 if (!ConnectionsManager.Check(connectionManager.Node)) continue;
+
+                                _succeededUris.Add(uri);
 
                                 lock (this.ThisLock)
                                 {
@@ -709,6 +730,10 @@ namespace Library.Net.Amoeba
 
                                 connectionManager.Dispose();
                             }
+                        }
+                        else
+                        {
+                            _failedUris.Add(uri);
                         }
                     }
 
@@ -1224,17 +1249,26 @@ namespace Library.Net.Amoeba
 
                     {
                         {
-                            var array = _cacheManager.ToArray();
-                            _random.Shuffle(array);
+                            var hashSet = new HashSet<Key>(_cacheManager.ToArray());
 
-                            for (int i = 0, j = 0; j < _maxBlockLinkCount && i < array.Length; i++)
+                            foreach (var tempMessageManager in messageManagers.Values)
                             {
-                                if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
-                                {
-                                    pullBlocksLinkList.Add(array[i]);
-                                    j++;
-                                }
+                                hashSet.ExceptWith(tempMessageManager.PushBlocksLink.ToArray());
                             }
+
+                            pullBlocksLinkList.UnionWith(hashSet.Take(_maxBlockLinkCount).Randomize());
+
+                            //var array = _cacheManager.ToArray();
+                            //_random.Shuffle(array);
+
+                            //for (int i = 0, j = 0; j < _maxBlockLinkCount && i < array.Length; i++)
+                            //{
+                            //    if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
+                            //    {
+                            //        pullBlocksLinkList.Add(array[i]);
+                            //        j++;
+                            //    }
+                            //}
                         }
 
                         foreach (var pair in messageManagers)
@@ -1242,33 +1276,53 @@ namespace Library.Net.Amoeba
                             var node = pair.Key;
                             var messageManager = pair.Value;
 
-                            var array = messageManager.PullBlocksLink.ToArray();
-                            _random.Shuffle(array);
+                            var hashSet = new HashSet<Key>(messageManager.PullBlocksLink.ToArray());
+
+                            foreach (var tempMessageManager in messageManagers.Values)
+                            {
+                                hashSet.ExceptWith(tempMessageManager.PushBlocksLink.ToArray());
+                            }
 
                             int count = (int)(_maxBlockLinkCount * ((double)12 / otherNodes.Count));
 
-                            for (int i = 0, j = 0; j < count && i < array.Length; i++)
-                            {
-                                if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
-                                {
-                                    pullBlocksLinkList.Add(array[i]);
-                                    j++;
-                                }
-                            }
+                            pullBlocksLinkList.UnionWith(hashSet.Take(count).Randomize());
+
+                            //var array = messageManager.PullBlocksLink.ToArray();
+                            //_random.Shuffle(array);
+
+                            //int count = (int)(_maxBlockLinkCount * ((double)12 / otherNodes.Count));
+
+                            //for (int i = 0, j = 0; j < count && i < array.Length; i++)
+                            //{
+                            //    if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
+                            //    {
+                            //        pullBlocksLinkList.Add(array[i]);
+                            //        j++;
+                            //    }
+                            //}
                         }
 
                         {
-                            var array = _cacheManager.ExceptFrom(_downloadBlocks.ToArray()).ToArray();
-                            _random.Shuffle(array);
+                            var hashSet = new HashSet<Key>(_cacheManager.ExceptFrom(_downloadBlocks.ToArray()));
 
-                            for (int i = 0, j = 0; j < _maxBlockRequestCount && i < array.Length; i++)
+                            foreach (var tempMessageManager in messageManagers.Values)
                             {
-                                if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
-                                {
-                                    pullBlocksRequestList.Add(array[i]);
-                                    j++;
-                                }
+                                hashSet.ExceptWith(tempMessageManager.PushBlocksRequest.ToArray());
                             }
+
+                            pullBlocksRequestList.UnionWith(hashSet.Take(_maxBlockRequestCount).Randomize());
+
+                            //var array = _cacheManager.ExceptFrom(_downloadBlocks.ToArray()).ToArray();
+                            //_random.Shuffle(array);
+
+                            //for (int i = 0, j = 0; j < _maxBlockRequestCount && i < array.Length; i++)
+                            //{
+                            //    if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
+                            //    {
+                            //        pullBlocksRequestList.Add(array[i]);
+                            //        j++;
+                            //    }
+                            //}
                         }
 
                         foreach (var pair in messageManagers)
@@ -1276,19 +1330,30 @@ namespace Library.Net.Amoeba
                             var node = pair.Key;
                             var messageManager = pair.Value;
 
-                            var array = _cacheManager.ExceptFrom(messageManager.PullBlocksRequest.ToArray()).ToArray();
-                            _random.Shuffle(array);
+                            var hashSet = new HashSet<Key>(_cacheManager.ExceptFrom(messageManager.PullBlocksRequest.ToArray()));
+
+                            foreach (var tempMessageManager in messageManagers.Values)
+                            {
+                                hashSet.ExceptWith(tempMessageManager.PushBlocksRequest.ToArray());
+                            }
 
                             int count = (int)(_maxBlockRequestCount * ((double)12 / otherNodes.Count));
 
-                            for (int i = 0, j = 0; j < count && i < array.Length; i++)
-                            {
-                                if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
-                                {
-                                    pullBlocksRequestList.Add(array[i]);
-                                    j++;
-                                }
-                            }
+                            pullBlocksRequestList.UnionWith(hashSet.Take(count).Randomize());
+
+                            //var array = _cacheManager.ExceptFrom(messageManager.PullBlocksRequest.ToArray()).ToArray();
+                            //_random.Shuffle(array);
+
+                            //int count = (int)(_maxBlockRequestCount * ((double)12 / otherNodes.Count));
+
+                            //for (int i = 0, j = 0; j < count && i < array.Length; i++)
+                            //{
+                            //    if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
+                            //    {
+                            //        pullBlocksRequestList.Add(array[i]);
+                            //        j++;
+                            //    }
+                            //}
                         }
                     }
 
@@ -1506,17 +1571,26 @@ namespace Library.Net.Amoeba
 
                     {
                         {
-                            var array = _pushSeedsRequestList.ToArray();
-                            _random.Shuffle(array);
+                            var hashSet = new HashSet<string>(_pushSeedsRequestList.ToArray());
 
-                            for (int i = 0, j = 0; j < _maxSeedRequestCount && i < array.Length; i++)
+                            foreach (var tempMessageManager in messageManagers.Values)
                             {
-                                if (!messageManagers.Values.Any(n => n.PushSeedsRequest.Contains(array[i])))
-                                {
-                                    pushSeedsRequestList.Add(array[i]);
-                                    j++;
-                                }
+                                hashSet.ExceptWith(tempMessageManager.PushSeedsRequest.ToArray());
                             }
+
+                            pushSeedsRequestList.UnionWith(hashSet.Take(_maxSeedRequestCount).Randomize());
+
+                            //var array = _pushSeedsRequestList.ToArray();
+                            //_random.Shuffle(array);
+
+                            //for (int i = 0, j = 0; j < _maxSeedRequestCount && i < array.Length; i++)
+                            //{
+                            //    if (!messageManagers.Values.Any(n => n.PushSeedsRequest.Contains(array[i])))
+                            //    {
+                            //        pushSeedsRequestList.Add(array[i]);
+                            //        j++;
+                            //    }
+                            //}
                         }
 
                         foreach (var pair in messageManagers)
@@ -1524,17 +1598,26 @@ namespace Library.Net.Amoeba
                             var node = pair.Key;
                             var messageManager = pair.Value;
 
-                            var array = messageManager.PullSeedsRequest.ToArray();
-                            _random.Shuffle(array);
+                            var hashSet = new HashSet<string>(messageManager.PullSeedsRequest.ToArray());
 
-                            for (int i = 0, j = 0; j < _maxSeedRequestCount && i < array.Length; i++)
+                            foreach (var tempMessageManager in messageManagers.Values)
                             {
-                                if (!messageManagers.Values.Any(n => n.PushSeedsRequest.Contains(array[i])))
-                                {
-                                    pushSeedsRequestList.Add(array[i]);
-                                    j++;
-                                }
+                                hashSet.ExceptWith(tempMessageManager.PushSeedsRequest.ToArray());
                             }
+
+                            pushSeedsRequestList.UnionWith(hashSet.Take(_maxSeedRequestCount).Randomize());
+
+                            //var array = messageManager.PullSeedsRequest.ToArray();
+                            //_random.Shuffle(array);
+
+                            //for (int i = 0, j = 0; j < _maxSeedRequestCount && i < array.Length; i++)
+                            //{
+                            //    if (!messageManagers.Values.Any(n => n.PushSeedsRequest.Contains(array[i])))
+                            //    {
+                            //        pushSeedsRequestList.Add(array[i]);
+                            //        j++;
+                            //    }
+                            //}
                         }
                     }
 
@@ -1662,20 +1745,31 @@ namespace Library.Net.Amoeba
                     {
                         nodeUpdateTime.Restart();
 
-                        List<Node> nodes = new List<Node>();
+                        var nodes = new HashSet<Node>();
 
                         lock (this.ThisLock)
                         {
                             foreach (var node in _routeTable.Randomize())
                             {
-                                if (!node.Uris.Any(n => _succeededUris.Contains(n))) continue;
+                                if (nodes.Count >= 64) break;
+
+                                if (node.Uris.Any(n => _succeededUris.Contains(n)))
+                                {
+                                    nodes.Add(node);
+                                }
+                            }
+
+                            foreach (var node in _routeTable.Randomize())
+                            {
+                                if (nodes.Count >= 128) break;
+
                                 nodes.Add(node);
                             }
                         }
 
                         if (nodes.Count > 0)
                         {
-                            connectionManager.PushNodes(nodes);
+                            connectionManager.PushNodes(nodes.Randomize());
 
                             Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
                             _pushNodeCount.Add(nodes.Count);
@@ -2794,6 +2888,20 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
+                if (_watchTimer != null)
+                {
+                    try
+                    {
+                        _watchTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _watchTimer = null;
+                }
+
                 if (_messagesManager != null)
                 {
                     try

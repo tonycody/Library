@@ -10,6 +10,7 @@ using System.Threading;
 using Library.Collections;
 using Library.Compression;
 using Library.Correction;
+using Library.Security;
 
 namespace Library.Net.Amoeba
 {
@@ -45,7 +46,7 @@ namespace Library.Net.Amoeba
         private RemoveShareEventHandler _removeShareEvent;
         private RemoveKeyEventHandler _removeKeyEvent;
 
-        private System.Threading.Timer _watchTimer;
+        private WatchTimer _watchTimer;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -65,18 +66,18 @@ namespace Library.Net.Amoeba
 
             _threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 4);
 
-            _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 5, 0));
+            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 5, 0));
         }
 
         public void Rewatch()
         {
             lock (this.ThisLock)
             {
-                this.WatchTimer(null);
+                this.WatchTimer();
             }
         }
 
-        private void WatchTimer(object state)
+        private void WatchTimer()
         {
             lock (this.ThisLock)
             {

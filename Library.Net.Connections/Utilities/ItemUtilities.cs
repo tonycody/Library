@@ -41,10 +41,11 @@ namespace Library.Net.Connections
                 stream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 stream.WriteByte(type);
 
-                byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
+                byte[] buffer = null;
 
                 try
                 {
+                    buffer = bufferManager.TakeBuffer(1024 * 4);
                     int length = 0;
 
                     while ((length = exportStream.Read(buffer, 0, buffer.Length)) > 0)
@@ -54,7 +55,10 @@ namespace Library.Net.Connections
                 }
                 finally
                 {
-                    bufferManager.ReturnBuffer(buffer);
+                    if (buffer != null)
+                    {
+                        bufferManager.ReturnBuffer(buffer);
+                    }
                 }
             }
         }

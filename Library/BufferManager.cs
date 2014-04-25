@@ -21,8 +21,7 @@ namespace Library
         private int _maxBufferSize;
 
         private int[] _sizes;
-        private LinkedList<WeakReference>[] _buffers;
-        private long[] _callCounts;
+        private LinkedList<byte[]>[] _buffers;
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -38,17 +37,16 @@ namespace Library
             _maxBufferSize = maxBufferSize;
 
             List<int> sizes = new List<int>();
-            List<LinkedList<WeakReference>> buffers = new List<LinkedList<WeakReference>>();
+            List<LinkedList<byte[]>> buffers = new List<LinkedList<byte[]>>();
 
-            for (int i = 32; i < _maxBufferSize; i *= 2)
+            for (int i = 256; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
-                buffers.Add(new LinkedList<WeakReference>());
+                buffers.Add(new LinkedList<byte[]>());
             }
 
             _sizes = sizes.ToArray();
             _buffers = buffers.ToArray();
-            _callCounts = new long[sizes.Count];
         }
 
         public static BufferManager Instance
@@ -69,11 +67,8 @@ namespace Library
                 {
                     long size = 0;
 
-                    foreach (var weakReference in CollectionUtilities.Unite(_buffers))
+                    foreach (var buffer in CollectionUtilities.Unite(_buffers))
                     {
-                        var buffer = weakReference.Target as byte[];
-                        if (buffer == null) continue;
-
                         size += buffer.Length;
                     }
 
@@ -92,15 +87,12 @@ namespace Library
                 {
                     if (bufferSize <= _sizes[i])
                     {
-                        _callCounts[i]++;
-
                         while (_buffers[i].Count > 0)
                         {
-                            var weakReference = _buffers[i].First.Value;
-                            byte[] buffer = weakReference.Target as byte[];
+                            var buffer = _buffers[i].First.Value;
                             _buffers[i].RemoveFirst();
 
-                            if (buffer != null) return buffer;
+                            return buffer;
                         }
 
                         return new byte[_sizes[i]];
@@ -133,29 +125,11 @@ namespace Library
 
                     if (_maxBufferPoolSize > memorySize) break;
 
+                    for (int i = 0; i < _sizes.Length; i++)
                     {
-                        var sortItems = new List<KeyValuePair<long, int>>();
-
-                        for (int i = 0; i < _callCounts.Length; i++)
+                        if (_buffers[i].Count > 0)
                         {
-                            sortItems.Add(new KeyValuePair<long, int>(_callCounts[i], i));
-                        }
-
-                        sortItems.Sort((x, y) =>
-                        {
-                            return x.Key.CompareTo(y.Key);
-                        });
-
-                        for (int i = 0; i < sortItems.Count; i++)
-                        {
-                            int index = sortItems[i].Value;
-
-                            if (_buffers[index].Count > 0)
-                            {
-                                _buffers[index].RemoveFirst();
-
-                                break;
-                            }
+                            _buffers[i].RemoveFirst();
                         }
                     }
                 }
@@ -164,7 +138,7 @@ namespace Library
                 {
                     if (buffer.Length == _sizes[i])
                     {
-                        _buffers[i].AddFirst(new WeakReference(buffer));
+                        _buffers[i].AddFirst(buffer);
 
                         break;
                     }
@@ -181,11 +155,6 @@ namespace Library
                 for (int i = 0; i < _buffers.Length; i++)
                 {
                     _buffers[i].Clear();
-                }
-
-                for (int i = 0; i < _callCounts.Length; i++)
-                {
-                    _callCounts[i] = 0;
                 }
             }
         }

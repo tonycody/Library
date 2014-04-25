@@ -128,9 +128,9 @@ namespace Library.Io
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (offset < 0 || buffer.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (count < 0 || (buffer.Length - offset) < count) throw new ArgumentOutOfRangeException("count");
-            if (count == 0) return 0;
 
             count = (int)Math.Min(count, this.Length - this.Position);
+            if (count == 0) return 0;
 
             int index = 0;
             int position = 0;
