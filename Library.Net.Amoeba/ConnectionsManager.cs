@@ -51,7 +51,7 @@ namespace Library.Net.Amoeba
         private VolatileHashSet<string> _pushSeedsRequestList;
         private VolatileHashSet<Key> _downloadBlocks;
 
-        private LockedHashDictionary<string, DateTime> _lastUsedSeedTimes = new LockedHashDictionary<string, DateTime>();
+        private LockedHashDictionary<string, DateTime> _seedLastAccessTimes = new LockedHashDictionary<string, DateTime>();
 
         private volatile Thread _connectionsManagerThread;
         private volatile Thread _createClientConnection1Thread;
@@ -794,6 +794,12 @@ namespace Library.Net.Amoeba
             public TimeSpan ResponseTime { get; set; }
         }
 
+        private class SignatureSortItem
+        {
+            public string Signature { get; set; }
+            public DateTime LastAccessTime { get; set; }
+        }
+
         private volatile bool _refreshThreadRunning;
 
         private void ConnectionsManagerThread()
@@ -966,28 +972,34 @@ namespace Library.Net.Amoeba
                                 removeSignatures.UnionWith(_settings.GetSignatures());
                                 removeSignatures.ExceptWith(lockSignatures);
 
-                                var sortList = removeSignatures.ToList();
+                                var signatureSortItems = new List<SignatureSortItem>();
 
-                                sortList.Sort((x, y) =>
+                                foreach (var signature in removeSignatures)
                                 {
-                                    DateTime tx;
-                                    DateTime ty;
+                                    DateTime lastAccessTime;
+                                    _seedLastAccessTimes.TryGetValue(signature, out lastAccessTime);
 
-                                    _lastUsedSeedTimes.TryGetValue(x, out tx);
-                                    _lastUsedSeedTimes.TryGetValue(y, out ty);
+                                    signatureSortItems.Add(new SignatureSortItem()
+                                    {
+                                        Signature = signature,
+                                        LastAccessTime = lastAccessTime,
+                                    });
+                                }
 
-                                    return tx.CompareTo(ty);
+                                signatureSortItems.Sort((x, y) =>
+                                {
+                                    return x.LastAccessTime.CompareTo(y.LastAccessTime);
                                 });
 
-                                _settings.RemoveSignatures(sortList.Take(sortList.Count - 8192));
+                                _settings.RemoveSignatures(signatureSortItems.Select(n => n.Signature).Take(signatureSortItems.Count - 8192));
 
                                 var liveSignatures = new HashSet<string>(_settings.GetSignatures());
 
-                                foreach (var signature in _lastUsedSeedTimes.Keys.ToArray())
+                                foreach (var signature in _seedLastAccessTimes.Keys.ToArray())
                                 {
                                     if (liveSignatures.Contains(signature)) continue;
 
-                                    _lastUsedSeedTimes.Remove(signature);
+                                    _seedLastAccessTimes.Remove(signature);
                                 }
                             }
                         }
@@ -2257,7 +2269,7 @@ namespace Library.Net.Amoeba
                 messageManager.PullSeedsRequest.Add(signature);
                 _pullSeedRequestCount.Increment();
 
-                _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                _seedLastAccessTimes[signature] = DateTime.UtcNow;
             }
         }
 
@@ -2281,7 +2293,7 @@ namespace Library.Net.Amoeba
 
                     messageManager.StockLinkSeeds[signature] = seed.CreationTime;
 
-                    _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                    _seedLastAccessTimes[signature] = DateTime.UtcNow;
                 }
                 else if (_settings.SetStoreSeed(seed))
                 {
@@ -2289,7 +2301,7 @@ namespace Library.Net.Amoeba
 
                     messageManager.StockStoreSeeds[signature] = seed.CreationTime;
 
-                    _lastUsedSeedTimes[signature] = DateTime.UtcNow;
+                    _seedLastAccessTimes[signature] = DateTime.UtcNow;
                 }
 
                 _pullSeedCount.Increment();
