@@ -28,7 +28,7 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
     byte* p7;
     byte* p8;
 
-    register byte* end;
+    byte* end;
     end = dst + (len / 64) * 64;
 
     byte* end2;
@@ -150,7 +150,7 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
     byte* p7;
     byte* p8;
 
-    register byte* end;
+    byte* end;
     end = dst + (len / 32) * 32;
 
     byte* end2;

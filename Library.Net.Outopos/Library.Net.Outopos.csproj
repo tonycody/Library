@@ -97,6 +97,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\CacheManager.cs" />
+    <Compile Include="Cache\CacheManagerStreamReader.cs" />
+    <Compile Include="Cache\CacheManagerStreamWriter.cs" />
     <Compile Include="Cache\Header\Index.cs" />
     <Compile Include="Cache\Header\HeaderCollection.cs" />
     <Compile Include="Cache\Header\IndexCollection.cs" />
@@ -138,9 +140,10 @@
     <Compile Include="ProtocolVersion.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />
+    <Compile Include="Utilities\Comparer.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
-    <Compile Include="Utilities\ItemUtility.cs" />
-    <Compile Include="Utilities\Sha512.cs" />
+    <Compile Include="Utilities\ItemUtilities.cs" />
+    <Compile Include="Utilities\WatchTimer.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Library.Collections\Library.Collections.csproj">
@@ -189,23 +192,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Cache\Header\TextTemplate1.txt">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>TextTemplate1.tt</DependentUpon>
-    </Content>
     <Content Include="Properties\Library.Net.Outopos.License">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Properties\Library.Net.Outopos.Readme">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Cache\Header\TextTemplate1.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>TextTemplate1.txt</LastGenOutput>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
