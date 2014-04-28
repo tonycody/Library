@@ -38,13 +38,16 @@ namespace Library
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is long)) return false;
+            if ((SafeInteger)obj == null || !(obj is SafeInteger)) return false;
 
-            return this.Equals((long)obj);
+            return this.Equals((SafeInteger)obj);
         }
 
         public bool Equals(SafeInteger other)
         {
+            if ((object)other == null) return false;
+            if (object.ReferenceEquals(this, other)) return true;
+
             return this.Value == other.Value;
         }
 

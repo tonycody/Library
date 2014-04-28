@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using Library.Io;
 using Library.Security;
 
@@ -46,7 +47,7 @@ namespace Library.Net.Amoeba
 
         private Certificate _certificate;
 
-        private int _hashCode;
+        private volatile int _hashCode;
 
         private volatile object _thisLock;
 
@@ -379,8 +380,8 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                    _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                    var utc = value.ToUniversalTime();
+                    _creationTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
                 }
             }
         }
@@ -446,13 +447,13 @@ namespace Library.Net.Amoeba
                 {
                     _key = value;
 
-                    if (_key == null)
+                    if (value != null)
                     {
-                        _hashCode = 0;
+                        _hashCode = value.GetHashCode();
                     }
                     else
                     {
-                        _hashCode = _key.GetHashCode();
+                        _hashCode = 0;
                     }
                 }
             }

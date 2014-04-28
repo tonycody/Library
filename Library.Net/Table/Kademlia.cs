@@ -179,30 +179,42 @@ namespace Library.Net
             if (targetId == null) throw new ArgumentNullException("targetId");
             if (nodeList == null) throw new ArgumentNullException("nodeList");
 
-            byte[] baseXor = Native.Xor(targetId, baseId);
-
             var targetList = new LinkedList<Pair>();
 
             foreach (var node in nodeList)
             {
                 byte[] targetXor = Native.Xor(targetId, node.Id);
-                if (Native.Compare(baseXor, targetXor) <= 0) continue;
 
                 // 挿入ソート（countが小さい場合、countで比較範囲を狭めた挿入ソートが高速。）
-                var current = targetList.Last;
+                var currentItem = targetList.Last;
 
-                while (current != null)
+                while (currentItem != null)
                 {
-                    var pair = current.Value;
+                    var pair = currentItem.Value;
                     if (Native.Compare(pair.Xor, targetXor) <= 0) break;
 
-                    current = current.Previous;
+                    currentItem = currentItem.Previous;
                 }
 
-                if (current == null) targetList.AddFirst(new Pair() { Xor = targetXor, Node = node });
-                else targetList.AddAfter(current, new Pair() { Xor = targetXor, Node = node });
+                if (currentItem == null) targetList.AddFirst(new Pair() { Xor = targetXor, Node = node });
+                else targetList.AddAfter(currentItem, new Pair() { Xor = targetXor, Node = node });
 
                 if (targetList.Count > count) targetList.RemoveLast();
+            }
+
+            byte[] baseXor = Native.Xor(targetId, baseId);
+
+            {
+                var currentItem = targetList.Last;
+
+                while (currentItem != null)
+                {
+                    if (Native.Compare(baseXor, currentItem.Value.Xor) > 0) break;
+
+                    var removeItem = currentItem;
+                    currentItem = currentItem.Previous;
+                    targetList.Remove(removeItem);
+                }
             }
 
             return targetList.Select(n => n.Node);

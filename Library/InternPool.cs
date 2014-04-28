@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 
 namespace Library
 {
@@ -18,13 +17,13 @@ namespace Library
 
         public InternPool()
         {
-            _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
+            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 3, 0), new TimeSpan(0, 3, 0));
             _dic = new Dictionary<T, Info<T>>();
         }
 
         public InternPool(IEqualityComparer<T> comparer)
         {
-            _watchTimer = new Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
+            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 3, 0), new TimeSpan(0, 3, 0));
             _dic = new Dictionary<T, Info<T>>(comparer);
         }
 
@@ -53,7 +52,7 @@ namespace Library
             {
                 lock (this.ThisLock)
                 {
-                    List<T> list = null;
+                    LinkedList<T> list = null;
 
                     foreach (var pair in _dic)
                     {
@@ -63,9 +62,9 @@ namespace Library
                         if (info.Count == 0)
                         {
                             if (list == null)
-                                list = new List<T>();
+                                list = new LinkedList<T>();
 
-                            list.Add(key);
+                            list.AddLast(key);
                         }
                     }
 
@@ -103,7 +102,7 @@ namespace Library
 
         private class Info<TValue>
         {
-            private List<WeakReference> _list = new List<WeakReference>();
+            private LinkedList<WeakReference> _list = new LinkedList<WeakReference>();
             private TValue _value;
 
             public Info(TValue value)
@@ -131,17 +130,26 @@ namespace Library
 
             private void Refresh()
             {
-                for (int i = 0; i < _list.Count; )
+                var currentItem = _list.First;
+
+                while (currentItem != null)
                 {
-                    if (!_list[i].IsAlive) _list.RemoveAt(i);
-                    else i++;
+                    if (!currentItem.Value.IsAlive)
+                    {
+                        var removeNode = currentItem;
+                        currentItem = currentItem.Next;
+                        _list.Remove(removeNode);
+                    }
+                    else
+                    {
+                        currentItem = currentItem.Next;
+                    }
                 }
             }
 
             public void Add(object holder)
             {
-                //if (_list.Any(n => object.ReferenceEquals(n.Target, holder))) return;
-                _list.Add(new WeakReference(holder));
+                _list.AddLast(new WeakReference(holder));
             }
         }
 

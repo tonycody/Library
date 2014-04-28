@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using Library.Io;
 using Library.Security;
 
@@ -26,7 +27,7 @@ namespace Library.Net.Connections.SecureVersion3
         private HashAlgorithm _hashAlgorithm;
         private byte[] _sessionId;
 
-        private int _hashCode;
+        private volatile int _hashCode;
 
         private volatile object _thisLock;
 

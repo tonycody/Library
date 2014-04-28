@@ -16,9 +16,6 @@ Library.Net.Outopos\NodeCollection.cs
 Library.Net.Amoeba\UriCollection.cs
 Library.Net.Outopos\UriCollection.cs
 
-Library.Net.Amoeba\Utilities\Comparer.cs
-Library.Net.Outopos\Utilities\Comparer.cs
-
 Library.Net.Amoeba\Utilities\EqualityComparer.cs
 Library.Net.Outopos\Utilities\EqualityComparer.cs
 

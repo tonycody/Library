@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace Library
 {
@@ -17,11 +18,14 @@ namespace Library
 
         //private System.ServiceModel.Channels.BufferManager _bufferManager;
 
+        private System.Threading.Timer _watchTimer;
+        private volatile bool _isRefreshing = false;
+
         private long _maxBufferPoolSize;
         private int _maxBufferSize;
 
         private int[] _sizes;
-        private LinkedList<byte[]>[] _buffers;
+        private LinkedList<IReference>[] _buffers;
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -36,17 +40,60 @@ namespace Library
             _maxBufferPoolSize = maxBufferPoolSize;
             _maxBufferSize = maxBufferSize;
 
-            List<int> sizes = new List<int>();
-            List<LinkedList<byte[]>> buffers = new List<LinkedList<byte[]>>();
+            var sizes = new List<int>();
+            var buffers = new List<LinkedList<IReference>>();
 
             for (int i = 256; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
-                buffers.Add(new LinkedList<byte[]>());
+                buffers.Add(new LinkedList<IReference>());
             }
 
             _sizes = sizes.ToArray();
             _buffers = buffers.ToArray();
+
+            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 0, 30), new TimeSpan(0, 0, 30));
+        }
+
+        private void WatchTimer(object state)
+        {
+            this.Refresh();
+        }
+
+        internal void Refresh()
+        {
+            if (_isRefreshing) return;
+            _isRefreshing = true;
+
+            try
+            {
+                lock (_thisLock)
+                {
+                    long memorySize = 0;
+
+                    for (int i = 0; i < _sizes.Length; i++)
+                    {
+                        memorySize += (_sizes[i] * _buffers[i].Count);
+                    }
+
+                    if (_maxBufferPoolSize > memorySize) return;
+
+                    for (int i = 0; i < _sizes.Length; i++)
+                    {
+                        while (_buffers[i].Count > 0)
+                        {
+                            _buffers[i].RemoveFirst();
+                            memorySize -= _sizes[i];
+
+                            if (_maxBufferPoolSize > memorySize) return;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                _isRefreshing = false;
+            }
         }
 
         public static BufferManager Instance
@@ -67,8 +114,11 @@ namespace Library
                 {
                     long size = 0;
 
-                    foreach (var buffer in CollectionUtilities.Unite(_buffers))
+                    foreach (var weakReference in CollectionUtilities.Unite(_buffers))
                     {
+                        var buffer = weakReference.Target;
+                        if (buffer == null) continue;
+
                         size += buffer.Length;
                     }
 
@@ -89,10 +139,11 @@ namespace Library
                     {
                         while (_buffers[i].Count > 0)
                         {
-                            var buffer = _buffers[i].First.Value;
+                            var weakReference = _buffers[i].First.Value;
+                            byte[] buffer = weakReference.Target;
                             _buffers[i].RemoveFirst();
 
-                            return buffer;
+                            if (buffer != null) return buffer;
                         }
 
                         return new byte[_sizes[i]];
@@ -112,33 +163,18 @@ namespace Library
             {
                 if (buffer.Length > _maxBufferSize) return;
 
-                for (; ; )
-                {
-                    long memorySize = 0;
-
-                    memorySize += buffer.Length;
-
-                    for (int i = 0; i < _sizes.Length; i++)
-                    {
-                        memorySize += (_sizes[i] * _buffers[i].Count);
-                    }
-
-                    if (_maxBufferPoolSize > memorySize) break;
-
-                    for (int i = 0; i < _sizes.Length; i++)
-                    {
-                        if (_buffers[i].Count > 0)
-                        {
-                            _buffers[i].RemoveFirst();
-                        }
-                    }
-                }
-
                 for (int i = 0; i < _sizes.Length; i++)
                 {
                     if (buffer.Length == _sizes[i])
                     {
-                        _buffers[i].AddFirst(buffer);
+                        if (buffer.Length <= 1024 * 64)
+                        {
+                            _buffers[i].AddFirst(new StrongReferenceInfo(buffer));
+                        }
+                        else
+                        {
+                            _buffers[i].AddFirst(new WeakReferenceInfo(buffer));
+                        }
 
                         break;
                     }
@@ -155,6 +191,64 @@ namespace Library
                 for (int i = 0; i < _buffers.Length; i++)
                 {
                     _buffers[i].Clear();
+                }
+            }
+        }
+
+        private interface IReference
+        {
+            bool IsAlive { get; }
+            byte[] Target { get; }
+        }
+
+        private class StrongReferenceInfo : IReference
+        {
+            private byte[] _target;
+
+            public StrongReferenceInfo(byte[] target)
+            {
+                _target = target;
+            }
+
+            public bool IsAlive
+            {
+                get
+                {
+                    return true;
+                }
+            }
+
+            public byte[] Target
+            {
+                get
+                {
+                    return _target;
+                }
+            }
+        }
+
+        private class WeakReferenceInfo : IReference
+        {
+            private WeakReference _weakReference;
+
+            public WeakReferenceInfo(byte[] target)
+            {
+                _weakReference = new WeakReference(target);
+            }
+
+            public bool IsAlive
+            {
+                get
+                {
+                    return _weakReference.IsAlive;
+                }
+            }
+
+            public byte[] Target
+            {
+                get
+                {
+                    return _weakReference.Target as byte[];
                 }
             }
         }

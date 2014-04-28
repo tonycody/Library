@@ -59,15 +59,10 @@ namespace Library.Security
             {
                 for (int i = 0; i < value.Count; i++)
                 {
-                    if (i == value.Count - 1)
-                    {
-                        sha512.TransformFinalBlock(value[i].Array, value[i].Offset, value[i].Count);
-                    }
-                    else
-                    {
-                        sha512.TransformBlock(value[i].Array, value[i].Offset, value[i].Count, value[i].Array, value[i].Offset);
-                    }
+                    sha512.TransformBlock(value[i].Array, value[i].Offset, value[i].Count, value[i].Array, value[i].Offset);
                 }
+
+                sha512.TransformFinalBlock(new byte[0], 0, 0);
 
                 return sha512.Hash;
             }

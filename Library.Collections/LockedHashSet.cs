@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class LockedHashSet<T> : ISet<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
+    public class LockedHashSet<T> : ISet<T>, ISetOperators<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private HashSet<T> _hashSet;
         private int? _capacity;
@@ -88,6 +88,34 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 _hashSet.TrimExcess();
+            }
+        }
+
+        public IEnumerable<T> IntersectFrom(IEnumerable<T> collection)
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var item in collection)
+                {
+                    if (_hashSet.Contains(item))
+                    {
+                        yield return item;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<T> ExceptFrom(IEnumerable<T> collection)
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var item in collection)
+                {
+                    if (!_hashSet.Contains(item))
+                    {
+                        yield return item;
+                    }
+                }
             }
         }
 

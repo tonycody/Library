@@ -31,7 +31,7 @@ namespace Library.Net.Amoeba
         {
             _thisLock = new object();
         }
-        
+
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             lock (this.ThisLock)

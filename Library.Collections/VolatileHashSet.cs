@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class VolatileHashSet<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
+    public class VolatileHashSet<T> : ISetOperators<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private Dictionary<T, DateTime> _dic;
 
@@ -102,6 +102,34 @@ namespace Library.Collections
                 lock (this.ThisLock)
                 {
                     return _dic.Count;
+                }
+            }
+        }
+
+        public IEnumerable<T> IntersectFrom(IEnumerable<T> collection)
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var item in collection)
+                {
+                    if (_dic.ContainsKey(item))
+                    {
+                        yield return item;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<T> ExceptFrom(IEnumerable<T> collection)
+        {
+            lock (this.ThisLock)
+            {
+                foreach (var item in collection)
+                {
+                    if (!_dic.ContainsKey(item))
+                    {
+                        yield return item;
+                    }
                 }
             }
         }

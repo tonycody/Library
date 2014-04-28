@@ -1127,7 +1127,7 @@ namespace Library.Net.I2p
         {
             public static byte[] Compute(byte[] buffer, int offset, int count)
             {
-                return SHA256Managed.Create().ComputeHash(buffer, offset, count);
+                return System.Security.Cryptography.SHA256.Create().ComputeHash(buffer, offset, count);
             }
             public static byte[] Compute(byte[] buffer)
             {

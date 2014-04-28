@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
 
         public MessagesManager()
         {
-            _watchTimer = new WatchTimer(this.RefreshTimer, new TimeSpan(0, 0, 10));
+            _watchTimer = new WatchTimer(this.RefreshTimer, new TimeSpan(0, 0, 30));
         }
 
         private void RefreshTimer()

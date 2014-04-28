@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using Library.Io;
 
 namespace Library.Net.Amoeba
@@ -167,5 +168,22 @@ namespace Library.Net.Amoeba
         }
 
         #endregion
+
+        public class Comparer : IComparer<Key>
+        {
+            public int Compare(Key x, Key y)
+            {
+                int c = x._hashCode.CompareTo(y._hashCode);
+                if (c != 0) return c;
+
+                c = x._hashAlgorithm.CompareTo(y._hashAlgorithm);
+                if (c != 0) return c;
+
+                c = CollectionUtilities.Compare(x._hash, y._hash);
+                if (c != 0) return c;
+
+                return 0;
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using Library.Security;
 using NUnit.Framework;
 
@@ -82,10 +83,30 @@ namespace Library.UnitTest
             _random.NextBytes(password);
             _random.NextBytes(salt);
 
-            Pbkdf2 pbkdf2 = new Pbkdf2(new System.Security.Cryptography.HMACSHA1(), password, salt, 1024);
-            System.Security.Cryptography.Rfc2898DeriveBytes rfc2898DeriveBytes = new System.Security.Cryptography.Rfc2898DeriveBytes(password, salt, 1024);
+            using (var hmac = new System.Security.Cryptography.HMACSHA1())
+            {
+                Pbkdf2 pbkdf2 = new Pbkdf2(hmac, password, salt, 1024);
+                System.Security.Cryptography.Rfc2898DeriveBytes rfc2898DeriveBytes = new System.Security.Cryptography.Rfc2898DeriveBytes(password, salt, 1024);
 
-            Assert.IsTrue(CollectionUtilities.Equals(pbkdf2.GetBytes(1024), rfc2898DeriveBytes.GetBytes(1024)), "Pbkdf2 #1");
+                Assert.IsTrue(CollectionUtilities.Equals(pbkdf2.GetBytes(1024), rfc2898DeriveBytes.GetBytes(1024)), "Pbkdf2 #1");
+            }
+
+            _random.NextBytes(password);
+            _random.NextBytes(salt);
+
+            //using (var hmac = new System.Security.Cryptography.HMACSHA512())
+            //{
+            //    CryptoConfig.AddAlgorithm(typeof(SHA512Cng),
+            //        "SHA512",
+            //        "SHA512Cng",
+            //        "System.Security.Cryptography.SHA512",
+            //        "System.Security.Cryptography.SHA512Cng");
+
+            //    hmac.HashName = "System.Security.Cryptography.SHA512";
+
+            //    Pbkdf2 pbkdf2 = new Pbkdf2(hmac, password, salt, 1024);
+            //    var h = pbkdf2.GetBytes(10);
+            //}
         }
 
         [Test]
@@ -109,6 +130,76 @@ namespace Library.UnitTest
             list.Add(new ArraySegment<byte>(buffer));
 
             Assert.IsTrue(CollectionUtilities.Equals(T_Crc32_Castagnoli.ComputeHash(list), Crc32_Castagnoli.ComputeHash(list)));
+        }
+
+        [Test]
+        public void Test_HmacSha256()
+        {
+            var list = new List<int>();
+            list.Add(1);
+            list.Add(64);
+            list.Add(128);
+
+            byte[] buffer = new byte[1024 * 32];
+            _random.NextBytes(buffer);
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                byte[] key = new byte[list[i]];
+                _random.NextBytes(key);
+
+                using (MemoryStream stream1 = new MemoryStream(buffer))
+                using (MemoryStream stream2 = new MemoryStream(buffer))
+                {
+                    using (HMACSHA256 hmacSha256 = new HMACSHA256(key))
+                    {
+                        Assert.IsTrue(Native.Equals(hmacSha256.ComputeHash(stream1), HmacSha256.ComputeHash(stream2, key)));
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void Test_HmacSha512()
+        {
+            // http://tools.ietf.org/html/rfc4868#section-2.7.1
+            {
+                var key = NetworkConverter.FromHexString("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
+                var value = NetworkConverter.FromHexString("4869205468657265");
+
+                using (MemoryStream stream = new MemoryStream(value))
+                {
+                    var s = NetworkConverter.ToHexString(HmacSha512.ComputeHash(stream, key));
+                }
+
+                using (HMACSHA512 hmacSha512 = new HMACSHA512(key))
+                {
+                    var s = NetworkConverter.ToHexString(hmacSha512.ComputeHash(value));
+                }
+            }
+
+            var list = new List<int>();
+            list.Add(1);
+            list.Add(64);
+            list.Add(128);
+
+            byte[] buffer = new byte[1024 * 32];
+            _random.NextBytes(buffer);
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                byte[] key = new byte[list[i]];
+                _random.NextBytes(key);
+
+                using (MemoryStream stream1 = new MemoryStream(buffer))
+                using (MemoryStream stream2 = new MemoryStream(buffer))
+                {
+                    using (HMACSHA512 hmacSha512 = new HMACSHA512(key))
+                    {
+                        Assert.IsTrue(Native.Equals(hmacSha512.ComputeHash(stream1), HmacSha512.ComputeHash(stream2, key)));
+                    }
+                }
+            }
         }
     }
 }

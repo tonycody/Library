@@ -20,7 +20,7 @@ namespace Library.Net.Amoeba
     delegate void RemoveKeyEventHandler(object sender, IEnumerable<Key> keys);
     delegate bool WatchEventHandler(object sender);
 
-    class CacheManager : ManagerBase, Library.Configuration.ISettings, IEnumerable<Key>, IThisLock
+    class CacheManager : ManagerBase, Library.Configuration.ISettings, ISetOperators<Key>, IEnumerable<Key>, IThisLock
     {
         private FileStream _fileStream;
         private BitmapManager _bitmapManager;
@@ -83,7 +83,7 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    var usingKeys = new SortedSet<Key>(new KeyComparer());
+                    var usingKeys = new SortedSet<Key>(new Key.Comparer());
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
                     foreach (var seedInfo in _settings.SeedsInformation)
@@ -356,7 +356,7 @@ namespace Library.Net.Amoeba
                 this.CheckSpace(sectorCount);
                 if (sectorCount <= _spaceSectors.Count) return;
 
-                var usingKeys = new SortedSet<Key>(new KeyComparer());
+                var usingKeys = new SortedSet<Key>(new Key.Comparer());
                 usingKeys.UnionWith(_lockedKeys.Keys);
 
                 foreach (var info in _settings.SeedsInformation)
@@ -498,43 +498,35 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public IEnumerable<Key> IntersectFrom(IEnumerable<Key> keys)
+        public IEnumerable<Key> IntersectFrom(IEnumerable<Key> collection)
         {
             lock (this.ThisLock)
             {
                 _shareIndexLinkUpdate();
 
-                var list = new List<Key>();
-
-                foreach (var key in keys)
+                foreach (var key in collection)
                 {
                     if (_settings.ClusterIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key))
                     {
-                        list.Add(key);
+                        yield return key;
                     }
                 }
-
-                return list;
             }
         }
 
-        public IEnumerable<Key> ExceptFrom(IEnumerable<Key> keys)
+        public IEnumerable<Key> ExceptFrom(IEnumerable<Key> collection)
         {
             lock (this.ThisLock)
             {
                 _shareIndexLinkUpdate();
 
-                var list = new List<Key>();
-
-                foreach (var key in keys)
+                foreach (var key in collection)
                 {
                     if (!(_settings.ClusterIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key)))
                     {
-                        list.Add(key);
+                        yield return key;
                     }
                 }
-
-                return list;
             }
         }
 
@@ -1833,7 +1825,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_indexes == null)
-                        _indexes = new SortedDictionary<Key, int>(new KeyComparer());
+                        _indexes = new SortedDictionary<Key, int>(new Key.Comparer());
 
                     return _indexes;
                 }
