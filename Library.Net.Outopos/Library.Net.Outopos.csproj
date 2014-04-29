@@ -140,7 +140,6 @@
     <Compile Include="ProtocolVersion.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />
-    <Compile Include="Utilities\Comparer.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
     <Compile Include="Utilities\ItemUtilities.cs" />
     <Compile Include="Utilities\WatchTimer.cs" />

@@ -19,14 +19,14 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
     uint64_t value7;
     uint64_t value8;
 
-    byte* p1;
-    byte* p2;
-    byte* p3;
-    byte* p4;
-    byte* p5;
-    byte* p6;
-    byte* p7;
-    byte* p8;
+    register byte* p1;
+    register byte* p2;
+    register byte* p3;
+    register byte* p4;
+    register byte* p5;
+    register byte* p6;
+    register byte* p7;
+    register byte* p8;
 
     byte* end;
     end = dst + (len / 64) * 64;
@@ -141,14 +141,14 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
     uint32_t value7;
     uint32_t value8;
 
-    byte* p1;
-    byte* p2;
-    byte* p3;
-    byte* p4;
-    byte* p5;
-    byte* p6;
-    byte* p7;
-    byte* p8;
+    register byte* p1;
+    register byte* p2;
+    register byte* p3;
+    register byte* p4;
+    register byte* p5;
+    register byte* p6;
+    register byte* p7;
+    register byte* p8;
 
     byte* end;
     end = dst + (len / 32) * 32;

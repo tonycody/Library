@@ -522,26 +522,31 @@ namespace Library.Correction
                 // be used many times.
                 byte[] gf_mulc = _gf_mul_table[c];
 
-                var h_dst = GCHandle.Alloc(dst, GCHandleType.Pinned);
-                var h_src = GCHandle.Alloc(src, GCHandleType.Pinned);
-                var h_gf_mulc = GCHandle.Alloc(gf_mulc, GCHandleType.Pinned);
+                //var h_dst = GCHandle.Alloc(dst, GCHandleType.Pinned);
+                //var h_src = GCHandle.Alloc(src, GCHandleType.Pinned);
+                //var h_gf_mulc = GCHandle.Alloc(gf_mulc, GCHandleType.Pinned);
 
                 try
                 {
-                    var p_dst = (byte*)h_dst.AddrOfPinnedObject();
-                    var p_src = (byte*)h_src.AddrOfPinnedObject();
-                    var p_gf_mulc = (byte*)h_gf_mulc.AddrOfPinnedObject();
+                    //var p_dst = (byte*)h_dst.AddrOfPinnedObject();
+                    //var p_src = (byte*)h_src.AddrOfPinnedObject();
+                    //var p_gf_mulc = (byte*)h_gf_mulc.AddrOfPinnedObject();
 
-                    _mul(p_src + srcPos, p_dst + dstPos, p_gf_mulc, len);
+                    fixed (byte* p_dst = dst)
+                    fixed (byte* p_src = src)
+                    fixed (byte* p_gf_mulc = gf_mulc)
+                    {
+                        _mul(p_src + srcPos, p_dst + dstPos, p_gf_mulc, len);
+                    }
                 }
                 catch (Exception e)
                 {
                     Log.Error(e);
                 }
 
-                h_dst.Free();
-                h_src.Free();
-                h_gf_mulc.Free();
+                //h_dst.Free();
+                //h_src.Free();
+                //h_gf_mulc.Free();
             }
 #endif
 
