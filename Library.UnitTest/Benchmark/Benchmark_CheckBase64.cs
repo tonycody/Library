@@ -85,26 +85,5 @@ namespace Library.UnitTest
 
             return true;
         }
-
-        private unsafe static bool CheckBase64_2(string value)
-        {
-            fixed (char* p_value = value)
-            {
-                var current_value = p_value;
-                var end_value = p_value + value.Length;
-
-                while (current_value < end_value)
-                {
-                    if (!('A' <= *current_value && *current_value <= 'Z')
-                        && !('a' <= *current_value && *current_value <= 'z')
-                        && !('0' <= *current_value && *current_value <= '9')
-                        && !(*current_value == '-' || *current_value == '_')) return false;
-
-                    current_value++;
-                }
-            }
-
-            return true;
-        }
     }
 }

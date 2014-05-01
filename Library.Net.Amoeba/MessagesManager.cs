@@ -14,7 +14,7 @@ namespace Library.Net.Amoeba
         private Dictionary<Node, DateTime> _updateTimeDictionary = new Dictionary<Node, DateTime>();
         private int _id;
 
-        private WatchTimer _watchTimer;
+        private WatchTimer _refreshTimer;
         private volatile bool _checkedFlag = false;
 
         private volatile bool _disposed;
@@ -24,7 +24,7 @@ namespace Library.Net.Amoeba
 
         public MessagesManager()
         {
-            _watchTimer = new WatchTimer(this.RefreshTimer, new TimeSpan(0, 0, 30));
+            _refreshTimer = new WatchTimer(this.RefreshTimer, new TimeSpan(0, 0, 30));
         }
 
         private void RefreshTimer()
@@ -134,18 +134,18 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
-                if (_watchTimer != null)
+                if (_refreshTimer != null)
                 {
                     try
                     {
-                        _watchTimer.Dispose();
+                        _refreshTimer.Dispose();
                     }
                     catch (Exception)
                     {
 
                     }
 
-                    _watchTimer = null;
+                    _refreshTimer = null;
                 }
             }
         }

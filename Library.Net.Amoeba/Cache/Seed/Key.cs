@@ -169,18 +169,24 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        public class Comparer : IComparer<Key>
+        internal class Comparer : IComparer<Key>
         {
             public int Compare(Key x, Key y)
             {
                 int c = x._hashCode.CompareTo(y._hashCode);
                 if (c != 0) return c;
 
-                c = x._hashAlgorithm.CompareTo(y._hashAlgorithm);
+                c = x.HashAlgorithm.CompareTo(y.HashAlgorithm);
                 if (c != 0) return c;
 
-                c = CollectionUtilities.Compare(x._hash, y._hash);
+                c = ((x.Hash == null) ? 0 : 1) - ((y.Hash == null) ? 0 : 1);
                 if (c != 0) return c;
+
+                if (x.Hash != null && y.Hash != null)
+                {
+                    c = Native.Compare(x.Hash, y.Hash);
+                    if (c != 0) return c;
+                }
 
                 return 0;
             }

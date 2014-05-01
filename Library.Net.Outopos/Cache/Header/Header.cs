@@ -28,7 +28,6 @@ namespace Library.Net.Outopos
         private volatile Certificate _certificate;
 
         private volatile object _thisLock;
-        private static readonly object _initializeLock = new object();
 
         public Header(Tag tag, DateTime creationTime, Key key, DigitalSignature digitalSignature)
         {
@@ -39,9 +38,13 @@ namespace Library.Net.Outopos
             this.CreateCertificate(digitalSignature);
         }
 
+        protected override void Initialize()
+        {
+            _thisLock = new object();
+        }
+
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            Encoding encoding = new UTF8Encoding(false);
             byte[] lengthBuffer = new byte[4];
 
             for (; ; )
@@ -58,7 +61,7 @@ namespace Library.Net.Outopos
                     }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
-                        this.CreationTime = DateTime.ParseExact(ItemUtility.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                        this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                     }
                     else if (id == (byte)SerializeId.Key)
                     {
@@ -82,20 +85,20 @@ namespace Library.Net.Outopos
             {
                 using (var stream = this.Tag.Export(bufferManager))
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Tag, stream);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
                 }
             }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
             }
             // Key
             if (this.Key != null)
             {
                 using (var stream = this.Key.Export(bufferManager))
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Key, stream);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                 }
             }
 
@@ -104,7 +107,7 @@ namespace Library.Net.Outopos
             {
                 using (var stream = this.Certificate.Export(bufferManager))
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
                 }
             }
 
@@ -128,7 +131,6 @@ namespace Library.Net.Outopos
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
             if (this.Tag != other.Tag
                 || this.CreationTime != other.CreationTime
@@ -179,25 +181,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        private object ThisLock
-        {
-            get
-            {
-                if (_thisLock == null)
-                {
-                    lock (_initializeLock)
-                    {
-                        if (_thisLock == null)
-                        {
-                            _thisLock = new object();
-                        }
-                    }
-                }
-
-                return _thisLock;
-            }
-        }
-
         #region IHeader<Tag, Key>
 
         [DataMember(Name = "Tag")]
@@ -218,17 +201,17 @@ namespace Library.Net.Outopos
         {
             get
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
                     return _creationTime;
                 }
             }
             private set
             {
-                lock (this.ThisLock)
+                lock (_thisLock)
                 {
-                    var temp = value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo);
-                    _creationTime = DateTime.ParseExact(temp, "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                    var utc = value.ToUniversalTime();
+                    _creationTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
                 }
             }
         }

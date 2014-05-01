@@ -11,6 +11,7 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     public delegate IEnumerable<string> GetSignaturesEventHandler(object sender);
+
     delegate void UploadedEventHandler(object sender, IEnumerable<Key> keys);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
@@ -37,9 +38,10 @@ namespace Library.Net.Amoeba
         private LockedHashDictionary<Node, Queue<Key>> _diffusionBlocksDictionary = new LockedHashDictionary<Node, Queue<Key>>();
         private LockedHashDictionary<Node, Queue<Key>> _uploadBlocksDictionary = new LockedHashDictionary<Node, Queue<Key>>();
 
-        private WatchTimer _watchTimer;
+        private WatchTimer _refreshTimer;
 
         private LockedList<Node> _creatingNodes;
+
         private VolatileHashSet<Node> _waitingNodes;
         private VolatileHashSet<Node> _cuttingNodes;
         private VolatileHashSet<Node> _removeNodes;
@@ -142,6 +144,7 @@ namespace Library.Net.Amoeba
             };
 
             _creatingNodes = new LockedList<Node>();
+
             _waitingNodes = new VolatileHashSet<Node>(new TimeSpan(0, 0, 10));
             _cuttingNodes = new VolatileHashSet<Node>(new TimeSpan(0, 10, 0));
             _removeNodes = new VolatileHashSet<Node>(new TimeSpan(0, 30, 0));
@@ -155,19 +158,22 @@ namespace Library.Net.Amoeba
 
             _relayBlocks = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
 
-            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 0, 5));
+            _refreshTimer = new WatchTimer(this.RefreshTimer, new TimeSpan(0, 0, 5));
         }
 
-        private void WatchTimer()
+        private void RefreshTimer()
         {
             _waitingNodes.TrimExcess();
             _cuttingNodes.TrimExcess();
             _removeNodes.TrimExcess();
             _nodesStatus.TrimExcess();
+
             _succeededUris.TrimExcess();
             _failedUris.TrimExcess();
+
             _downloadBlocks.TrimExcess();
             _pushSeedsRequestList.TrimExcess();
+
             _relayBlocks.TrimExcess();
         }
 
@@ -1044,21 +1050,22 @@ namespace Library.Net.Amoeba
                     }
 
                     var baseNode = this.BaseNode;
-                    List<Node> otherNodes = new List<Node>();
+
+                    var otherNodes = new List<Node>();
 
                     lock (this.ThisLock)
                     {
                         otherNodes.AddRange(_connectionManagers.Select(n => n.Node));
                     }
 
-                    Dictionary<Node, MessageManager> messageManagers = new Dictionary<Node, MessageManager>();
+                    var messageManagers = new Dictionary<Node, MessageManager>();
 
                     foreach (var node in otherNodes)
                     {
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    HashSet<Key> diffusionBlocksList = new HashSet<Key>();
+                    var diffusionBlocksList = new HashSet<Key>();
 
                     {
                         {
@@ -1087,7 +1094,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, SortedSet<Key>> diffusionBlocksDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var diffusionBlocksDictionary = new Dictionary<Node, List<Key>>();
 
                         foreach (var key in diffusionBlocksList)
                         {
@@ -1113,11 +1120,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    List<Key> collection;
 
                                     if (!diffusionBlocksDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new Key.Comparer());
+                                        collection = new List<Key>();
                                         diffusionBlocksDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1132,16 +1139,16 @@ namespace Library.Net.Amoeba
 
                         lock (_diffusionBlocksDictionary.ThisLock)
                         {
-                            foreach (var node in diffusionBlocksDictionary.Keys.ToArray())
+                            foreach (var node in _diffusionBlocksDictionary.Keys.ToArray())
                             {
                                 if (diffusionBlocksDictionary.ContainsKey(node)) continue;
-                                diffusionBlocksDictionary.Remove(node);
+                                _diffusionBlocksDictionary.Remove(node);
                             }
 
                             foreach (var pair in diffusionBlocksDictionary)
                             {
                                 var node = pair.Key;
-                                var value = pair.Value;
+                                var targets = pair.Value;
 
                                 Queue<Key> queue;
 
@@ -1151,9 +1158,11 @@ namespace Library.Net.Amoeba
                                     _diffusionBlocksDictionary[node] = queue;
                                 }
 
+                                _random.Shuffle(targets);
+
                                 queue.Clear();
 
-                                foreach (var key in value.Randomize())
+                                foreach (var key in targets)
                                 {
                                     queue.Enqueue(key);
                                 }
@@ -1169,14 +1178,15 @@ namespace Library.Net.Amoeba
                     pushBlockUploadStopwatch.Restart();
 
                     var baseNode = this.BaseNode;
-                    List<Node> otherNodes = new List<Node>();
+
+                    var otherNodes = new List<Node>();
 
                     lock (this.ThisLock)
                     {
                         otherNodes.AddRange(_connectionManagers.Select(n => n.Node));
                     }
 
-                    Dictionary<Node, MessageManager> messageManagers = new Dictionary<Node, MessageManager>();
+                    var messageManagers = new Dictionary<Node, MessageManager>();
 
                     foreach (var node in otherNodes)
                     {
@@ -1184,28 +1194,28 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, KeyCollection> uploadBlocksDictionary = new Dictionary<Node, KeyCollection>();
+                        var uploadBlocksDictionary = new Dictionary<Node, List<Key>>();
 
                         foreach (var pair in messageManagers)
                         {
                             var node = pair.Key;
                             var messageManager = pair.Value;
 
-                            uploadBlocksDictionary.Add(node, new KeyCollection(_cacheManager.IntersectFrom(messageManager.PullBlocksRequest.ToArray()).Take(128).ToArray()));
+                            uploadBlocksDictionary.Add(node, _cacheManager.IntersectFrom(messageManager.PullBlocksRequest.ToArray()).Take(128).ToList());
                         }
 
                         lock (_uploadBlocksDictionary.ThisLock)
                         {
-                            foreach (var node in uploadBlocksDictionary.Keys.ToArray())
+                            foreach (var node in _uploadBlocksDictionary.Keys.ToArray())
                             {
                                 if (uploadBlocksDictionary.ContainsKey(node)) continue;
-                                uploadBlocksDictionary.Remove(node);
+                                _uploadBlocksDictionary.Remove(node);
                             }
 
                             foreach (var pair in uploadBlocksDictionary)
                             {
                                 var node = pair.Key;
-                                var value = pair.Value;
+                                var targets = pair.Value;
 
                                 Queue<Key> queue;
 
@@ -1215,9 +1225,11 @@ namespace Library.Net.Amoeba
                                     _uploadBlocksDictionary[node] = queue;
                                 }
 
+                                _random.Shuffle(targets);
+
                                 queue.Clear();
 
-                                foreach (var key in value.Randomize())
+                                foreach (var key in targets)
                                 {
                                     queue.Enqueue(key);
                                 }
@@ -1233,22 +1245,23 @@ namespace Library.Net.Amoeba
                     pushBlockDownloadStopwatch.Restart();
 
                     var baseNode = this.BaseNode;
-                    List<Node> otherNodes = new List<Node>();
+
+                    var otherNodes = new List<Node>();
 
                     lock (this.ThisLock)
                     {
                         otherNodes.AddRange(_connectionManagers.Select(n => n.Node));
                     }
 
-                    Dictionary<Node, MessageManager> messageManagers = new Dictionary<Node, MessageManager>();
+                    var messageManagers = new Dictionary<Node, MessageManager>();
 
                     foreach (var node in otherNodes)
                     {
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    SortedSet<Key> pushBlocksLinkList = new SortedSet<Key>(new Key.Comparer());
-                    SortedSet<Key> pushBlocksRequestList = new SortedSet<Key>(new Key.Comparer());
+                    var pushBlocksLinkList = new HashSet<Key>();
+                    var pushBlocksRequestList = new HashSet<Key>();
 
                     {
                         {
@@ -1453,7 +1466,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, SortedSet<Key>> pushBlocksLinkDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var pushBlocksLinkDictionary = new Dictionary<Node, List<Key>>();
 
                         foreach (var key in pushBlocksLinkList)
                         {
@@ -1469,11 +1482,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    List<Key> collection;
 
                                     if (!pushBlocksLinkDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new Key.Comparer());
+                                        collection = new List<Key>();
                                         pushBlocksLinkDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1497,25 +1510,26 @@ namespace Library.Net.Amoeba
                             foreach (var pair in pushBlocksLinkDictionary)
                             {
                                 var node = pair.Key;
-                                var value = pair.Value;
+                                var targets = pair.Value;
 
-                                List<Key> list;
+                                List<Key> collection;
 
-                                if (!_pushBlocksLinkDictionary.TryGetValue(node, out list))
+                                if (!_pushBlocksLinkDictionary.TryGetValue(node, out collection))
                                 {
-                                    list = new List<Key>();
-                                    _pushBlocksLinkDictionary[node] = list;
+                                    collection = new List<Key>();
+                                    _pushBlocksLinkDictionary[node] = collection;
                                 }
 
-                                list.Clear();
+                                _random.Shuffle(targets);
 
-                                list.AddRange(value.Randomize());
+                                collection.Clear();
+                                collection.AddRange(targets);
                             }
                         }
                     }
 
                     {
-                        Dictionary<Node, SortedSet<Key>> pushBlocksRequestDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var pushBlocksRequestDictionary = new Dictionary<Node, List<Key>>();
 
                         foreach (var key in pushBlocksRequestList)
                         {
@@ -1551,11 +1565,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < 1 && i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    List<Key> collection;
 
                                     if (!pushBlocksRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new Key.Comparer());
+                                        collection = new List<Key>();
                                         pushBlocksRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1579,19 +1593,20 @@ namespace Library.Net.Amoeba
                             foreach (var pair in pushBlocksRequestDictionary)
                             {
                                 var node = pair.Key;
-                                var value = pair.Value;
+                                var targets = pair.Value;
 
-                                List<Key> list;
+                                List<Key> collection;
 
-                                if (!_pushBlocksRequestDictionary.TryGetValue(node, out list))
+                                if (!_pushBlocksRequestDictionary.TryGetValue(node, out collection))
                                 {
-                                    list = new List<Key>();
-                                    _pushBlocksRequestDictionary[node] = list;
+                                    collection = new List<Key>();
+                                    _pushBlocksRequestDictionary[node] = collection;
                                 }
 
-                                list.Clear();
+                                _random.Shuffle(targets);
 
-                                list.AddRange(value.Randomize());
+                                collection.Clear();
+                                collection.AddRange(targets);
                             }
                         }
                     }
@@ -1604,14 +1619,15 @@ namespace Library.Net.Amoeba
                     pushSeedUploadStopwatch.Restart();
 
                     var baseNode = this.BaseNode;
-                    List<Node> otherNodes = new List<Node>();
+
+                    var otherNodes = new List<Node>();
 
                     lock (this.ThisLock)
                     {
                         otherNodes.AddRange(_connectionManagers.Select(n => n.Node));
                     }
 
-                    Dictionary<Node, MessageManager> messageManagers = new Dictionary<Node, MessageManager>();
+                    var messageManagers = new Dictionary<Node, MessageManager>();
 
                     foreach (var node in otherNodes)
                     {
@@ -1648,21 +1664,22 @@ namespace Library.Net.Amoeba
                     pushSeedDownloadStopwatch.Restart();
 
                     var baseNode = this.BaseNode;
-                    List<Node> otherNodes = new List<Node>();
+
+                    var otherNodes = new List<Node>();
 
                     lock (this.ThisLock)
                     {
                         otherNodes.AddRange(_connectionManagers.Select(n => n.Node));
                     }
 
-                    Dictionary<Node, MessageManager> messageManagers = new Dictionary<Node, MessageManager>();
+                    var messageManagers = new Dictionary<Node, MessageManager>();
 
                     foreach (var node in otherNodes)
                     {
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    SortedSet<string> pushSeedsRequestList = new SortedSet<string>();
+                    var pushSeedsRequestList = new HashSet<string>();
 
                     {
                         {
@@ -1763,7 +1780,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        Dictionary<Node, SortedSet<string>> pushSeedsRequestDictionary = new Dictionary<Node, SortedSet<string>>();
+                        var pushSeedsRequestDictionary = new Dictionary<Node, List<string>>();
 
                         foreach (var signature in pushSeedsRequestList)
                         {
@@ -1778,11 +1795,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<string> collection;
+                                    List<string> collection;
 
                                     if (!pushSeedsRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<string>();
+                                        collection = new List<string>();
                                         pushSeedsRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1806,19 +1823,20 @@ namespace Library.Net.Amoeba
                             foreach (var pair in pushSeedsRequestDictionary)
                             {
                                 var node = pair.Key;
-                                var value = pair.Value;
+                                var targets = pair.Value;
 
-                                List<string> list;
+                                List<string> collection;
 
-                                if (!_pushSeedsRequestDictionary.TryGetValue(node, out list))
+                                if (!_pushSeedsRequestDictionary.TryGetValue(node, out collection))
                                 {
-                                    list = new List<string>();
-                                    _pushSeedsRequestDictionary[node] = list;
+                                    collection = new List<string>();
+                                    _pushSeedsRequestDictionary[node] = collection;
                                 }
 
-                                list.Clear();
+                                _random.Shuffle(targets);
 
-                                list.AddRange(value.Randomize());
+                                collection.Clear();
+                                collection.AddRange(targets);
                             }
                         }
                     }
@@ -2765,8 +2783,6 @@ namespace Library.Net.Amoeba
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private VolatileHashSet<string> _removeSignatures = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
-
             private volatile object _thisLock;
 
             public Settings(object lockObject)
@@ -2821,8 +2837,6 @@ namespace Library.Net.Amoeba
                         this.LinkSeeds.Remove(signature);
                         this.StoreSeeds.Remove(signature);
                     }
-
-                    _removeSignatures.AddRange(signatures);
                 }
             }
 
@@ -2873,8 +2887,6 @@ namespace Library.Net.Amoeba
                 // なるべく電子署名の検証をさけ、CPU使用率を下げるよう工夫する。
                 lock (_thisLock)
                 {
-                    if (_removeSignatures.Contains(signature)) return false;
-
                     Seed tempSeed;
 
                     if (!this.LinkSeeds.TryGetValue(signature, out tempSeed)
@@ -2902,8 +2914,6 @@ namespace Library.Net.Amoeba
                 // なるべく電子署名の検証をさけ、CPU使用率を下げるよう工夫する。
                 lock (_thisLock)
                 {
-                    if (_removeSignatures.Contains(signature)) return false;
-
                     Seed tempSeed;
 
                     if (!this.StoreSeeds.TryGetValue(signature, out tempSeed)
@@ -3029,18 +3039,18 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
-                if (_watchTimer != null)
+                if (_refreshTimer != null)
                 {
                     try
                     {
-                        _watchTimer.Dispose();
+                        _refreshTimer.Dispose();
                     }
                     catch (Exception)
                     {
 
                     }
 
-                    _watchTimer = null;
+                    _refreshTimer = null;
                 }
 
                 if (_messagesManager != null)

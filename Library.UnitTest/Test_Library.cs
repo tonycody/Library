@@ -115,7 +115,7 @@ namespace Library.UnitTest
         public void Test_NetworkConverter()
         {
             Assert.IsTrue(NetworkConverter.ToHexString(new byte[] { 0x00, 0x9e, 0x0f }) == "009e0f", "ToHexString");
-            Assert.IsTrue(CollectionUtilities.Equals(NetworkConverter.FromHexString("51af4b"), new byte[] { 0x51, 0xaf, 0x4b }), "FromHexString");
+            Assert.IsTrue(CollectionUtilities.Equals(NetworkConverter.FromHexString("1af4b"), new byte[] { 0x01, 0xaf, 0x4b }), "FromHexString");
 
             Assert.IsTrue(NetworkConverter.ToBoolean(new byte[] { 0x01 }), "ToBoolean");
             Assert.IsTrue(NetworkConverter.ToChar(new byte[] { 0x00, 0x41 }) == 'A', "ToChar");
@@ -141,12 +141,22 @@ namespace Library.UnitTest
 
             Assert.IsTrue(NetworkConverter.ToInt32(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x74, 0xab, 0x05, 0xc1 }, 4) == 0x74ab05c1, "ToInt32");
 
+            for (int i = 0; i < 1024; i++)
             {
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[_random.Next(0, 128)];
                 _random.NextBytes(buffer);
 
                 var s = NetworkConverter.ToBase64UrlString(buffer);
                 Assert.IsTrue(CollectionUtilities.Equals(buffer, NetworkConverter.FromBase64UrlString(s)));
+            }
+
+            for (int i = 0; i < 1024; i++)
+            {
+                byte[] buffer = new byte[_random.Next(0, 128)];
+                _random.NextBytes(buffer);
+
+                var s = NetworkConverter.ToHexString(buffer);
+                Assert.IsTrue(CollectionUtilities.Equals(buffer, NetworkConverter.FromHexString(s)));
             }
         }
 

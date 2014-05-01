@@ -884,7 +884,7 @@ namespace Library.Net.Amoeba
 
                 Task.WaitAll(tasks.ToArray());
 
-                _cacheManager.Rewatch();
+                _cacheManager.CheckInformation();
             }
         }
 

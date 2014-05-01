@@ -27,7 +27,7 @@ namespace Library
             this.Initialize();
         }
 #else
-        [OnDeserializing()]
+        [OnDeserializing]
         private void OnDeserializingMethod(StreamingContext context)
         {
             this.Initialize();

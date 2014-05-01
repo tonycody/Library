@@ -54,75 +54,87 @@ namespace Library
             if (offset < 0 || value.Length < offset) throw new ArgumentOutOfRangeException("offset");
             if (length < 0 || (value.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
 
-            var temp = System.Convert.ToBase64String(value, offset, length);
-            StringBuilder sb = new StringBuilder(temp.Length);
+            var charArray = System.Convert.ToBase64String(value, offset, length).ToCharArray();
+            var charLength = charArray.Length;
 
-            for (int i = 0; i < temp.Length; i++)
+            fixed (char* p_charArray = charArray)
             {
-                var c = temp[i];
+                var t_charArray = p_charArray;
 
-                switch (c)
+                for (int i = charArray.Length - 1; i >= 0; i--)
                 {
-                    case '+':
-                        sb.Append('-');
-                        break;
-                    case '/':
-                        sb.Append('_');
-                        break;
-                    case '=':
-                        break;
-                    default:
-                        sb.Append(c);
-                        break;
+                    switch (*t_charArray)
+                    {
+                        case '+':
+                            *t_charArray = '-';
+                            break;
+                        case '/':
+                            *t_charArray = '_';
+                            break;
+                        case '=':
+                            charLength--;
+                            break;
+                    }
+
+                    t_charArray++;
                 }
             }
 
-            return sb.ToString();
+            return new string(charArray, 0, charLength);
         }
 
         public static byte[] FromBase64UrlString(string value)
         {
             if (value == null) throw new ArgumentNullException("value");
 
-            string padding = "";
+            char[] charArray = null;
 
             switch (value.Length % 4)
             {
                 case 1:
                 case 3:
-                    padding = "=";
+                    charArray = new char[value.Length + 1];
                     break;
-
                 case 2:
-                    padding = "==";
+                    charArray = new char[value.Length + 2];
+                    break;
+                default:
+                    charArray = new char[value.Length];
                     break;
             }
 
-            StringBuilder sb = new StringBuilder(value.Length);
-
-            for (int i = 0; i < value.Length; i++)
+            fixed (char* p_value = value.ToCharArray())
+            fixed (char* p_charArray = charArray)
             {
-                var c = value[i];
+                var t_value = p_value;
+                var t_charArray = p_charArray;
 
-                switch (c)
+                for (int i = value.Length - 1; i >= 0; i--)
                 {
-                    case '-':
-                        sb.Append('+');
-                        break;
-                    case '_':
-                        sb.Append('/');
-                        break;
-                    case '=':
-                        break;
-                    default:
-                        sb.Append(c);
-                        break;
+                    switch (*t_value)
+                    {
+                        case '-':
+                            *t_charArray = '+';
+                            break;
+                        case '_':
+                            *t_charArray = '/';
+                            break;
+                        default:
+                            *t_charArray = *t_value;
+                            break;
+                    }
+
+                    t_value++;
+                    t_charArray++;
+                }
+
+                for (int i = (charArray.Length - value.Length) - 1; i >= 0; i--)
+                {
+                    *t_charArray++ = '=';
                 }
             }
 
-            sb.Append(padding);
-
-            return System.Convert.FromBase64String(sb.ToString());
+            return System.Convert.FromBase64CharArray(charArray, 0, charArray.Length);
         }
 
         /// <summary>
@@ -148,12 +160,45 @@ namespace Library
 
             char[] array = new char[length * 2];
 
-            for (int index = 0, i = offset, count = offset + length; i < count; i++)
+            fixed (byte* p_value = value)
+            fixed (char* p_array = array)
             {
-                byte b = value[i];
+                var t_value = p_value + offset;
+                var t_array = p_array;
 
-                array[index++] = NetworkConverter.GetHexValue(b / 16);
-                array[index++] = NetworkConverter.GetHexValue(b % 16);
+                for (int i = length - 1; i >= 0; i--)
+                {
+                    byte b = *t_value++;
+
+                    *t_array++ = NetworkConverter.GetHexValue(b >> 4);
+                    *t_array++ = NetworkConverter.GetHexValue(b & 0x0F);
+                }
+            }
+
+            return new string(array);
+        }
+
+        internal static string ToHexString_2(byte[] value, int offset, int length)
+        {
+            if (value == null) throw new ArgumentNullException("value");
+            if (offset < 0 || value.Length < offset) throw new ArgumentOutOfRangeException("offset");
+            if (length < 0 || (value.Length - offset) < length) throw new ArgumentOutOfRangeException("length");
+
+            char[] array = new char[length * 2];
+
+            fixed (byte* p_value = value)
+            fixed (char* p_array = array)
+            {
+                var t_value = p_value + offset;
+                var t_array = p_array;
+
+                for (int i = length - 1; i >= 0; i--)
+                {
+                    byte b = *t_value++;
+
+                    *t_array++ = NetworkConverter.GetHexValue(b / 16);
+                    *t_array++ = NetworkConverter.GetHexValue(b % 16);
+                }
             }
 
             return new string(array);
@@ -161,8 +206,8 @@ namespace Library
 
         private static char GetHexValue(int c)
         {
-            if (c < 10) return (char)(c + 0x30);
-            else return (char)(c - 10 + 0x61);
+            if (c < 10) return (char)(c + '0');
+            else return (char)(c - 10 + 'a');
         }
 
         /// <summary>
@@ -179,14 +224,111 @@ namespace Library
                 value = "0" + value;
             }
 
-            List<byte> data = new List<byte>();
+            byte[] buffer = new byte[value.Length / 2];
 
-            for (int i = 0, count = value.Length - 1; i < count; i += 2)
+            fixed (byte* p_buffer = buffer)
+            fixed (char* p_value = value.ToCharArray())
             {
-                data.Add(System.Convert.ToByte(value.Substring(i, 2), 16));
+                var t_buffer = p_buffer;
+                var t_value = p_value;
+
+                for (int i = buffer.Length - 1; i >= 0; i--)
+                {
+                    int i1 = 0, i2 = 0;
+
+                    if ('0' <= *t_value && *t_value <= '9')
+                    {
+                        i1 = *t_value - '0';
+                    }
+                    else if ('a' <= *t_value && *t_value <= 'f')
+                    {
+                        i1 = (*t_value - 'a') + 10;
+                    }
+                    else if ('A' <= *t_value && *t_value <= 'F')
+                    {
+                        i1 = (*t_value - 'A') + 10;
+                    }
+
+                    t_value++;
+
+                    if ('0' <= *t_value && *t_value <= '9')
+                    {
+                        i2 = *t_value - '0';
+                    }
+                    else if ('a' <= *t_value && *t_value <= 'f')
+                    {
+                        i2 = (*t_value - 'a') + 10;
+                    }
+                    else if ('A' <= *t_value && *t_value <= 'F')
+                    {
+                        i2 = (*t_value - 'A') + 10;
+                    }
+
+                    t_value++;
+
+                    *t_buffer++ = (byte)((i1 << 4) | i2);
+                }
             }
 
-            return data.ToArray();
+            return buffer;
+        }
+
+        internal static byte[] FromHexString_2(string value)
+        {
+            if (value == null) throw new ArgumentNullException("value");
+
+            if (value.Length % 2 != 0)
+            {
+                value = "0" + value;
+            }
+
+            byte[] buffer = new byte[value.Length / 2];
+
+            fixed (byte* p_buffer = buffer)
+            fixed (char* p_value = value.ToCharArray())
+            {
+                var t_buffer = p_buffer;
+                var t_value = p_value;
+
+                for (int i = buffer.Length - 1; i >= 0; i--)
+                {
+                    int i1 = 0, i2 = 0;
+
+                    if ('0' <= *t_value && *t_value <= '9')
+                    {
+                        i1 = *t_value - '0';
+                    }
+                    else if ('a' <= *t_value && *t_value <= 'f')
+                    {
+                        i1 = (*t_value - 'a') + 10;
+                    }
+                    else if ('A' <= *t_value && *t_value <= 'F')
+                    {
+                        i1 = (*t_value - 'A') + 10;
+                    }
+
+                    t_value++;
+
+                    if ('0' <= *t_value && *t_value <= '9')
+                    {
+                        i2 = *t_value - '0';
+                    }
+                    else if ('a' <= *t_value && *t_value <= 'f')
+                    {
+                        i2 = (*t_value - 'a') + 10;
+                    }
+                    else if ('A' <= *t_value && *t_value <= 'F')
+                    {
+                        i2 = (*t_value - 'A') + 10;
+                    }
+
+                    t_value++;
+
+                    *t_buffer++ = (byte)((i1 * 16) + i2);
+                }
+            }
+
+            return buffer;
         }
 
         public static string ToSizeString(decimal b)

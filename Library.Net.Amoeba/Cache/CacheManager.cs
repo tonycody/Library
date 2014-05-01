@@ -15,9 +15,11 @@ using Library.Security;
 namespace Library.Net.Amoeba
 {
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
+
     delegate void SetKeyEventHandler(object sender, IEnumerable<Key> keys);
-    delegate void RemoveShareEventHandler(object sender, string path);
     delegate void RemoveKeyEventHandler(object sender, IEnumerable<Key> keys);
+    delegate void RemoveShareEventHandler(object sender, string path);
+
     delegate bool WatchEventHandler(object sender);
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, ISetOperators<Key>, IEnumerable<Key>, IThisLock
@@ -69,15 +71,12 @@ namespace Library.Net.Amoeba
             _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 5, 0));
         }
 
-        public void Rewatch()
+        private void WatchTimer()
         {
-            lock (this.ThisLock)
-            {
-                this.WatchTimer();
-            }
+            this.CheckInformation();
         }
 
-        private void WatchTimer()
+        public void CheckInformation()
         {
             lock (this.ThisLock)
             {
@@ -678,7 +677,7 @@ namespace Library.Net.Amoeba
                 int badBlockCount = 0;
                 int checkedBlockCount = 0;
                 int blockCount = list.Count;
-                bool isStop = false;
+                bool isStop;
 
                 getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
 
@@ -734,7 +733,7 @@ namespace Library.Net.Amoeba
                 int badBlockCount = 0;
                 int checkedBlockCount = 0;
                 int blockCount = list.Count;
-                bool isStop = false;
+                bool isStop;
 
                 getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
 
@@ -1079,6 +1078,7 @@ namespace Library.Net.Amoeba
             }
             else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
+
 #if DEBUG
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
@@ -1086,16 +1086,14 @@ namespace Library.Net.Amoeba
 
                 if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
 
-                var bufferArray = new ArraySegment<byte>[keys.Count];
-                var parityBufferArray = new ArraySegment<byte>[keys.Count];
+                var buffers = new ArraySegment<byte>[keys.Count];
+                var parityBuffers = new ArraySegment<byte>[keys.Count];
 
                 int sumLength = 0;
 
                 try
                 {
-                    KeyCollection parityKeys = new KeyCollection();
-
-                    for (int i = 0; i < bufferArray.Length; i++)
+                    for (int i = 0; i < buffers.Length; i++)
                     {
                         if (watchEvent(this)) throw new StopException();
 
@@ -1121,7 +1119,7 @@ namespace Library.Net.Amoeba
                                 buffer = tbuffer;
                             }
 
-                            bufferArray[i] = buffer;
+                            buffers[i] = buffer;
                         }
                         catch (Exception)
                         {
@@ -1134,19 +1132,19 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    for (int i = 0; i < parityBufferArray.Length; i++)
+                    for (int i = 0; i < parityBuffers.Length; i++)
                     {
-                        parityBufferArray[i] = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
+                        parityBuffers[i] = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
                     }
 
-                    var intArray = new int[parityBufferArray.Length];
+                    var indexes = new int[parityBuffers.Length];
 
-                    for (int i = 0; i < parityBufferArray.Length; i++)
+                    for (int i = 0; i < parityBuffers.Length; i++)
                     {
-                        intArray[i] = bufferArray.Length + i;
+                        indexes[i] = buffers.Length + i;
                     }
 
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(bufferArray.Length, bufferArray.Length + parityBufferArray.Length, _threadCount, _bufferManager))
+                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(buffers.Length, buffers.Length + parityBuffers.Length, _threadCount, _bufferManager))
                     {
                         Exception exception = null;
 
@@ -1154,7 +1152,7 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                reedSolomon.Encode(bufferArray, parityBufferArray, intArray, blockLength);
+                                reedSolomon.Encode(buffers, parityBuffers, indexes, blockLength);
                             }
                             catch (Exception e)
                             {
@@ -1181,16 +1179,18 @@ namespace Library.Net.Amoeba
                         if (exception != null) throw new StopException("Stop", exception);
                     }
 
-                    for (int i = 0; i < parityBufferArray.Length; i++)
+                    KeyCollection parityKeys = new KeyCollection();
+
+                    for (int i = 0; i < parityBuffers.Length; i++)
                     {
                         if (hashAlgorithm == HashAlgorithm.Sha512)
                         {
-                            var key = new Key(Sha512.ComputeHash(parityBufferArray[i]), hashAlgorithm);
+                            var key = new Key(Sha512.ComputeHash(parityBuffers[i]), hashAlgorithm);
 
                             lock (this.ThisLock)
                             {
                                 this.Lock(key);
-                                this[key] = parityBufferArray[i];
+                                this[key] = parityBuffers[i];
                             }
 
                             parityKeys.Add(key);
@@ -1203,7 +1203,7 @@ namespace Library.Net.Amoeba
 
                     Group group = new Group();
                     group.CorrectionAlgorithm = correctionAlgorithm;
-                    group.InformationLength = bufferArray.Length;
+                    group.InformationLength = buffers.Length;
                     group.BlockLength = blockLength;
                     group.Length = sumLength;
                     group.Keys.AddRange(keys);
@@ -1217,14 +1217,20 @@ namespace Library.Net.Amoeba
                 }
                 finally
                 {
-                    for (int i = 0; i < bufferArray.Length; i++)
+                    for (int i = 0; i < buffers.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(bufferArray[i].Array);
+                        if (buffers[i].Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffers[i].Array);
+                        }
                     }
 
-                    for (int i = 0; i < parityBufferArray.Length; i++)
+                    for (int i = 0; i < parityBuffers.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(parityBufferArray[i].Array);
+                        if (parityBuffers[i].Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(parityBuffers[i].Array);
+                        }
                     }
                 }
             }
@@ -1244,11 +1250,11 @@ namespace Library.Net.Amoeba
             }
             else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
             {
-                var bufferArray = new ArraySegment<byte>[group.InformationLength];
+                var buffers = new ArraySegment<byte>[group.InformationLength];
 
                 try
                 {
-                    var intArray = new int[group.InformationLength];
+                    var indexes = new int[group.InformationLength];
 
                     int count = 0;
 
@@ -1278,8 +1284,8 @@ namespace Library.Net.Amoeba
                                 buffer = tbuffer;
                             }
 
-                            intArray[count] = i;
-                            bufferArray[count] = buffer;
+                            indexes[count] = i;
+                            buffers[count] = buffer;
 
                             count++;
                         }
@@ -1308,7 +1314,7 @@ namespace Library.Net.Amoeba
                         {
                             try
                             {
-                                reedSolomon.Decode(bufferArray, intArray, group.BlockLength);
+                                reedSolomon.Decode(buffers, indexes, group.BlockLength);
                             }
                             catch (Exception e)
                             {
@@ -1339,14 +1345,17 @@ namespace Library.Net.Amoeba
 
                     for (int i = 0; i < group.InformationLength; length -= group.BlockLength, i++)
                     {
-                        this[group.Keys[i]] = new ArraySegment<byte>(bufferArray[i].Array, bufferArray[i].Offset, (int)Math.Min(bufferArray[i].Count, length));
+                        this[group.Keys[i]] = new ArraySegment<byte>(buffers[i].Array, buffers[i].Offset, (int)Math.Min(buffers[i].Count, length));
                     }
                 }
                 finally
                 {
-                    for (int i = 0; i < bufferArray.Length; i++)
+                    for (int i = 0; i < buffers.Length; i++)
                     {
-                        _bufferManager.ReturnBuffer(bufferArray[i].Array);
+                        if (buffers[i].Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffers[i].Array);
+                        }
                     }
                 }
 
@@ -1771,7 +1780,7 @@ namespace Library.Net.Amoeba
         {
             private long[] _indexes;
             private int _length;
-            private DateTime _updateTime = DateTime.UtcNow;
+            private DateTime _updateTime;
 
             [DataMember(Name = "Indexs")]
             public long[] Indexes
@@ -1808,7 +1817,8 @@ namespace Library.Net.Amoeba
                 }
                 set
                 {
-                    _updateTime = value;
+                    var utc = value.ToUniversalTime();
+                    _updateTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
                 }
             }
         }

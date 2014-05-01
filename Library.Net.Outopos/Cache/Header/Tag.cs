@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
@@ -18,8 +19,11 @@ namespace Library.Net.Outopos
             Id = 2,
         }
 
+        private static InternPool<string> _typeCache = new InternPool<string>();
         private volatile string _type;
+        private static InternPool<string> _nameCache = new InternPool<string>();
         private volatile string _name;
+        private static InternPool<byte[]> _idCache = new InternPool<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _id;
 
         private volatile int _hashCode;
@@ -37,7 +41,6 @@ namespace Library.Net.Outopos
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            Encoding encoding = new UTF8Encoding(false);
             byte[] lengthBuffer = new byte[4];
 
             for (; ; )
@@ -50,15 +53,15 @@ namespace Library.Net.Outopos
                 {
                     if (id == (byte)SerializeId.Type)
                     {
-                        this.Type = ItemUtility.GetString(rangeStream);
+                        this.Type = ItemUtilities.GetString(rangeStream);
                     }
                     else if (id == (byte)SerializeId.Name)
                     {
-                        this.Name = ItemUtility.GetString(rangeStream);
+                        this.Name = ItemUtilities.GetString(rangeStream);
                     }
                     else if (id == (byte)SerializeId.Id)
                     {
-                        this.Id = ItemUtility.GetByteArray(rangeStream);
+                        this.Id = ItemUtilities.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -71,17 +74,17 @@ namespace Library.Net.Outopos
             // Type
             if (this.Type != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Type, this.Type);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Type, this.Type);
             }
             // Name
             if (this.Name != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Name, this.Name);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Name, this.Name);
             }
             // Id
             if (this.Id != null)
             {
-                ItemUtility.Write(bufferStream, (byte)SerializeId.Id, this.Id);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Id, this.Id);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -104,18 +107,12 @@ namespace Library.Net.Outopos
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
-            if (this.GetHashCode() != other.GetHashCode()) return false;
 
-            if (this.Type != other.Type
-                || this.Name != other.Name
-                || (this.Id == null) != (other.Id == null))
+            if (!object.ReferenceEquals(this.Type, other.Type)
+                || !object.ReferenceEquals(this.Name, other.Name)
+                || !object.ReferenceEquals(this.Id, other.Id))
             {
                 return false;
-            }
-
-            if (this.Id != null && other.Id != null)
-            {
-                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;
@@ -138,7 +135,7 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _type = value;
+                    _type = _typeCache.GetValue(value, this);
                 }
             }
         }
@@ -158,7 +155,7 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _name = value;
+                    _name = _nameCache.GetValue(value, this);
                 }
             }
         }
@@ -178,14 +175,12 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _id = value;
+                    _id = _idCache.GetValue(value, this);
                 }
 
-                if (value != null && value.Length != 0)
+                if (value != null)
                 {
-                    if (value.Length >= 4) _hashCode = BitConverter.ToInt32(value, 0) & 0x7FFFFFFF;
-                    else if (value.Length >= 2) _hashCode = BitConverter.ToUInt16(value, 0);
-                    else _hashCode = value[0];
+                    _hashCode = RuntimeHelpers.GetHashCode(_id);
                 }
                 else
                 {
