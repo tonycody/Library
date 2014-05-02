@@ -40,7 +40,7 @@ namespace Library.UnitTest
                 random.NextBytes(x);
                 random.NextBytes(y);
 
-                byte[] result = null;
+                byte[] result1 = null;
                 byte[] result2 = null;
 
                 random.Shuffle(flags);
@@ -49,7 +49,7 @@ namespace Library.UnitTest
                     if (index == 0)
                     {
                         sw1.Start();
-                        result = Native.Xor(x, y);
+                        result1 = Native.Xor(x, y);
                         sw1.Stop();
                     }
                     else if (index == 1)
@@ -60,7 +60,7 @@ namespace Library.UnitTest
                     }
                 }
 
-                Assert.IsTrue(Native.Equals(result, result2));
+                Assert.IsTrue(Native.Equals(result1, result2));
             }
 
             StringBuilder sb = new StringBuilder();

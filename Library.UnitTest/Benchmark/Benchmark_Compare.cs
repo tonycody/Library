@@ -46,7 +46,7 @@ namespace Library.UnitTest
                     random.NextBytes(y);
                 }
 
-                int result = 0;
+                int result1 = 0;
                 int result2 = 0;
                 int result3 = 0;
                 int result4 = 0;
@@ -59,7 +59,7 @@ namespace Library.UnitTest
                     if (index == 0)
                     {
                         sw1.Start();
-                        result = Native.Compare(x, y);
+                        result1 = Native.Compare(x, y);
                         sw1.Stop();
                     }
                     else if (index == 1)
@@ -82,7 +82,7 @@ namespace Library.UnitTest
                     }
                 }
 
-                Assert.IsTrue(result == result2);
+                Assert.IsTrue(result1 == result2);
                 Assert.IsTrue(result3 == result4);
             }
 

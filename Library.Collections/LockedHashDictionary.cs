@@ -9,6 +9,7 @@ namespace Library.Collections
     {
         private Dictionary<TKey, TValue> _dic;
         private int? _capacity;
+
         private readonly object _thisLock = new object();
 
         public LockedHashDictionary()
@@ -139,7 +140,7 @@ namespace Library.Collections
             {
                 lock (this.ThisLock)
                 {
-                    _dic[key] = value;
+                    this.Add(key, value);
                 }
             }
         }

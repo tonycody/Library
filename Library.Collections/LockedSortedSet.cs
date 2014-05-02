@@ -9,6 +9,7 @@ namespace Library.Collections
     {
         private SortedSet<T> _sortedSet;
         private int? _capacity;
+
         private readonly object _thisLock = new object();
 
         public LockedSortedSet()
@@ -87,6 +88,36 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
+                if (_sortedSet.Count == 0)
+                {
+                    yield break;
+                }
+                else
+                {
+                    BitArray bitmap = new BitArray(_sortedSet.Count * 10);
+
+                    foreach (var item in _sortedSet)
+                    {
+                        bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
+                    }
+
+                    foreach (var item in collection)
+                    {
+                        if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)) continue;
+
+                        if (_sortedSet.Contains(item))
+                        {
+                            yield return item;
+                        }
+                    }
+                }
+            }
+        }
+
+        internal IEnumerable<T> IntersectFrom_2(IEnumerable<T> collection)
+        {
+            lock (this.ThisLock)
+            {
                 foreach (var item in collection)
                 {
                     if (_sortedSet.Contains(item))
@@ -98,6 +129,38 @@ namespace Library.Collections
         }
 
         public IEnumerable<T> ExceptFrom(IEnumerable<T> collection)
+        {
+            lock (this.ThisLock)
+            {
+                if (_sortedSet.Count == 0)
+                {
+                    foreach (var item in collection)
+                    {
+                        yield return item;
+                    }
+                }
+                else
+                {
+                    BitArray bitmap = new BitArray(_sortedSet.Count * 10);
+
+                    foreach (var item in _sortedSet)
+                    {
+                        bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
+                    }
+
+                    foreach (var item in collection)
+                    {
+                        if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)
+                            || !_sortedSet.Contains(item))
+                        {
+                            yield return item;
+                        }
+                    }
+                }
+            }
+        }
+
+        internal IEnumerable<T> ExceptFrom_2(IEnumerable<T> collection)
         {
             lock (this.ThisLock)
             {

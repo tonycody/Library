@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Library.Net
 {
@@ -173,57 +174,174 @@ namespace Library.Net
             }
         }
 
+        private static readonly ThreadLocal<BufferManager> _threadBufferManager = new ThreadLocal<BufferManager>(() => new BufferManager());
+
         public static IEnumerable<T> Sort(byte[] baseId, byte[] targetId, IEnumerable<T> nodeList, int count)
         {
             if (baseId == null) throw new ArgumentNullException("baseId");
             if (targetId == null) throw new ArgumentNullException("targetId");
             if (nodeList == null) throw new ArgumentNullException("nodeList");
 
-            var targetList = new LinkedList<Pair>();
+            if (count == 0) yield break;
 
+            var bufferManager = _threadBufferManager.Value;
+            bufferManager.SetBufferSize(targetId.Length);
+
+            int bufferIndex = 0;
+
+            Info firstItem = null;
+            Info lastItem = null;
+            int itemCount = 0;
+
+            // 挿入ソート（countが小さい場合、countで比較範囲を狭めた挿入ソートが高速。）
             foreach (var node in nodeList)
             {
-                byte[] targetXor = Native.Xor(targetId, node.Id);
+                byte[] targetXor = bufferManager.GetBuffer(bufferIndex++);
+                Native.Xor(targetId, node.Id, targetXor);
 
-                // 挿入ソート（countが小さい場合、countで比較範囲を狭めた挿入ソートが高速。）
-                var currentItem = targetList.Last;
+                var currentItem = lastItem;
 
                 while (currentItem != null)
                 {
-                    var pair = currentItem.Value;
-                    if (Native.Compare(pair.Xor, targetXor) <= 0) break;
+                    if (Native.Compare(currentItem.Xor, targetXor) <= 0) break;
 
                     currentItem = currentItem.Previous;
                 }
 
-                if (currentItem == null) targetList.AddFirst(new Pair() { Xor = targetXor, Node = node });
-                else targetList.AddAfter(currentItem, new Pair() { Xor = targetXor, Node = node });
+                if (firstItem == null && lastItem == null)
+                {
+                    var targetItem = new Info() { Xor = targetXor, Node = node };
 
-                if (targetList.Count > count) targetList.RemoveLast();
+                    firstItem = targetItem;
+                    lastItem = targetItem;
+
+                    itemCount++;
+                }
+                else if (currentItem == null)
+                {
+                    var targetItem = new Info() { Xor = targetXor, Node = node };
+
+                    firstItem.Previous = targetItem;
+                    targetItem.Next = firstItem;
+                    firstItem = targetItem;
+
+                    itemCount++;
+                }
+                else
+                {
+                    if (lastItem == currentItem)
+                    {
+                        if (itemCount < count)
+                        {
+                            var targetItem = new Info() { Xor = targetXor, Node = node };
+
+                            currentItem.Next = targetItem;
+                            targetItem.Previous = currentItem;
+                            lastItem = targetItem;
+
+                            itemCount++;
+                        }
+                    }
+                    else
+                    {
+                        var targetItem = new Info() { Xor = targetXor, Node = node };
+                        var swapItem = currentItem.Next;
+
+                        currentItem.Next = targetItem;
+                        targetItem.Previous = currentItem;
+
+                        targetItem.Next = swapItem;
+                        swapItem.Previous = targetItem;
+
+                        itemCount++;
+                    }
+                }
+
+                if (itemCount > count)
+                {
+                    var previousItem = lastItem.Previous;
+
+                    if (previousItem != null)
+                    {
+                        previousItem.Next = null;
+                        lastItem = previousItem;
+                    }
+                    else
+                    {
+                        firstItem = null;
+                        lastItem = null;
+                    }
+
+                    itemCount--;
+                }
             }
 
-            byte[] baseXor = Native.Xor(targetId, baseId);
+            byte[] baseXor = bufferManager.GetBuffer(bufferIndex++);
+            Native.Xor(targetId, baseId, baseXor);
 
+            while (lastItem != null)
             {
-                var currentItem = targetList.Last;
+                if (Native.Compare(baseXor, lastItem.Xor) > 0) break;
 
-                while (currentItem != null)
+                var previousItem = lastItem.Previous;
+
+                if (previousItem != null)
                 {
-                    if (Native.Compare(baseXor, currentItem.Value.Xor) > 0) break;
-
-                    var removeItem = currentItem;
-                    currentItem = currentItem.Previous;
-                    targetList.Remove(removeItem);
+                    previousItem.Next = null;
+                    lastItem = previousItem;
                 }
+                else
+                {
+                    firstItem = null;
+                    lastItem = null;
+                }
+
+                itemCount--;
             }
 
-            return targetList.Select(n => n.Node);
+            for (var currentItem = firstItem; currentItem != null; currentItem = currentItem.Next)
+            {
+                yield return currentItem.Node;
+            }
         }
 
-        private class Pair
+        // 自前のLinkedListを用意。
+        private class Info
         {
             public byte[] Xor { get; set; }
             public T Node { get; set; }
+
+            public Info Previous { get; set; }
+            public Info Next { get; set; }
+        }
+
+        // XORのためのバッファを用意。
+        private class BufferManager
+        {
+            private List<byte[]> _buffers = new List<byte[]>();
+            private int _bufferSize;
+
+            public void SetBufferSize(int size)
+            {
+                if (_bufferSize != size)
+                {
+                    _buffers.Clear();
+                }
+
+                _bufferSize = size;
+            }
+
+            public byte[] GetBuffer(int index)
+            {
+                if (index > 1024) return new byte[_bufferSize];
+
+                while (_buffers.Count <= index)
+                {
+                    _buffers.Add(new byte[_bufferSize]);
+                }
+
+                return _buffers[index];
+            }
         }
 
         // Addより優先的に
@@ -236,10 +354,10 @@ namespace Library.Net
 
             lock (this.ThisLock)
             {
-                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
-                if (i == 0) return;
+                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id) - 1;
+                if (i == -1) return;
 
-                var targetList = _nodesList[i - 1];
+                var targetList = _nodesList[i];
 
                 // 生存率の高いNodeはFirstに、そうでないNodeはLastに
                 if (targetList != null)
@@ -263,7 +381,7 @@ namespace Library.Net
                 {
                     targetList = new LinkedList<T>();
                     targetList.AddLast(item);
-                    _nodesList[i - 1] = targetList;
+                    _nodesList[i] = targetList;
                 }
             }
         }
@@ -277,10 +395,10 @@ namespace Library.Net
 
             lock (this.ThisLock)
             {
-                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
-                if (i == 0) return;
+                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id) - 1;
+                if (i == -1) return;
 
-                var targetList = _nodesList[i - 1];
+                var targetList = _nodesList[i];
 
                 if (targetList != null)
                 {
@@ -297,20 +415,21 @@ namespace Library.Net
                 {
                     targetList = new LinkedList<T>();
                     targetList.AddLast(item);
-                    _nodesList[i - 1] = targetList;
+                    _nodesList[i] = targetList;
                 }
             }
         }
 
-        public IEnumerable<T> Search(byte[] id)
+        public IEnumerable<T> Search(byte[] targetId, int count)
         {
             if (_baseNode == null) throw new ArgumentNullException("BaseNode");
             if (_baseNode.Id == null) throw new ArgumentNullException("BaseNode.Id");
-            if (id == null) throw new ArgumentNullException("key");
+            if (targetId == null) throw new ArgumentNullException("targetId");
+            if (count < 0) throw new ArgumentOutOfRangeException("count");
 
             lock (this.ThisLock)
             {
-                return Kademlia<T>.Sort(_baseNode.Id, id, this.ToArray(), this.Count);
+                return Kademlia<T>.Sort(_baseNode.Id, targetId, this.ToArray(), count);
             }
         }
 
@@ -320,7 +439,7 @@ namespace Library.Net
             {
                 List<INode> tempNodeList = new List<INode>();
 
-                for (int i = 0; i < _nodesList.Length; i++)
+                for (int i = _nodesList.Length - 1; i >= 0; i--)
                 {
                     if (_nodesList[i] != null)
                     {
@@ -353,12 +472,14 @@ namespace Library.Net
 
             lock (this.ThisLock)
             {
-                for (int i = _nodesList.Length - 1; i >= 0; i--)
+                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id) - 1;
+                if (i == -1) return false;
+
+                var targetList = _nodesList[i];
+
+                if (targetList != null)
                 {
-                    if (_nodesList[i] != null)
-                    {
-                        if (_nodesList[i].Contains(item)) return true;
-                    }
+                    return targetList.Contains(item);
                 }
 
                 return false;
@@ -390,10 +511,10 @@ namespace Library.Net
 
             lock (this.ThisLock)
             {
-                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id);
-                if (i == 0) return false;
+                int i = Kademlia<T>.Distance(this.BaseNode.Id, item.Id) - 1;
+                if (i == -1) return false;
 
-                var targetList = _nodesList[i - 1];
+                var targetList = _nodesList[i];
 
                 if (targetList != null)
                 {
@@ -401,6 +522,24 @@ namespace Library.Net
                 }
 
                 return false;
+            }
+        }
+
+        void ICollection.CopyTo(Array array, int index)
+        {
+            lock (this.ThisLock)
+            {
+                List<T> tempList = new List<T>();
+
+                for (int i = 0; i < _nodesList.Length; i++)
+                {
+                    if (_nodesList[i] != null)
+                    {
+                        tempList.AddRange(_nodesList[i].ToArray());
+                    }
+                }
+
+                ((ICollection)tempList).CopyTo(array, index);
             }
         }
 
@@ -426,14 +565,6 @@ namespace Library.Net
             lock (this.ThisLock)
             {
                 return this.GetEnumerator();
-            }
-        }
-
-        void ICollection.CopyTo(Array array, int index)
-        {
-            lock (this.ThisLock)
-            {
-                this.CopyTo(array.OfType<T>().ToArray(), index);
             }
         }
 

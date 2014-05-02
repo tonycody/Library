@@ -14,9 +14,9 @@ namespace Library
         private static NativeLibraryManager _nativeLibraryManager;
 
         [return: MarshalAs(UnmanagedType.U1)]
-        private unsafe delegate bool EqualsDelegate(byte* source, byte* destination, int len);
-        private unsafe delegate int CompareDelegate(byte* source, byte* destination, int len);
-        private unsafe delegate void XorDelegate(byte* source, byte* destination, byte* result, int len);
+        private unsafe delegate bool EqualsDelegate(byte* source1, byte* source2, int len);
+        private unsafe delegate int CompareDelegate(byte* source1, byte* source2, int len);
+        private unsafe delegate void XorDelegate(byte* source1, byte* source2, byte* result, int len);
 
         private static EqualsDelegate _equals;
         private static CompareDelegate _compare;
@@ -55,103 +55,149 @@ namespace Library
             throw new NotImplementedException();
         }
 
-        public static void Copy(byte[] source, byte[] destination, int length)
+        public static void Copy(byte[] source1, byte[] source2, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (length > source.Length) throw new ArgumentOutOfRangeException("length");
-            if (length > destination.Length) throw new ArgumentOutOfRangeException("length");
+            if (length > source1.Length) throw new ArgumentOutOfRangeException("length");
+            if (length > source2.Length) throw new ArgumentOutOfRangeException("length");
 
             if (length == 0) return;
 
-            fixed (byte* p_x = source)
+            fixed (byte* p_x = source1)
             {
-                Marshal.Copy(new IntPtr((void*)p_x), destination, 0, length);
+                Marshal.Copy(new IntPtr((void*)p_x), source2, 0, length);
             }
 
-            //Array.Copy(source, 0, destination, 0, length);
+            //Array.Copy(source1, 0, source2, 0, length);
         }
 
-        public static void Copy(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int length)
+        public static void Copy(byte[] source1, int source1Index, byte[] source2, int source2Index, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
-            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
-            if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
-            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+            if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
+            if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
+            if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
+            if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
 
             if (length == 0) return;
 
-            fixed (byte* p_x = source)
+            fixed (byte* p_x = source1)
             {
-                byte* t_x = p_x + sourceIndex;
+                byte* t_x = p_x + source1Index;
 
-                Marshal.Copy(new IntPtr((void*)t_x), destination, destinationIndex, length);
+                Marshal.Copy(new IntPtr((void*)t_x), source2, source2Index, length);
             }
 
-            //Array.Copy(source, sourceIndex, destination, destinationIndex, length);
+            //Array.Copy(source1, source1Index, source2, source2Index, length);
         }
 
         // Copyright (c) 2008-2013 Hafthor Stefansson
         // Distributed under the MIT/X11 software license
         // Ref: http://www.opensource.org/licenses/mit-license.php.
         // http://stackoverflow.com/questions/43289/comparing-two-byte-arrays-in-net
-        public static bool Equals(byte[] source, byte[] destination)
+        public static bool Equals(byte[] source1, byte[] source2)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (object.ReferenceEquals(source, destination)) return true;
-            if (source.Length != destination.Length) return false;
+            if (object.ReferenceEquals(source1, source2)) return true;
+            if (source1.Length != source2.Length) return false;
 
-            fixed (byte* p_x = source, p_y = destination)
+            fixed (byte* p_x = source1, p_y = source2)
             {
-                int length = source.Length;
+                byte* t_x = p_x, t_y = p_y;
 
-                return _equals(p_x, p_y, length);
+                int length = source1.Length;
+
+                for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8)
+                {
+                    if (*((long*)t_x) != *((long*)t_y)) return false;
+                }
+
+                if ((length & 4) != 0)
+                {
+                    if (*((int*)t_x) != *((int*)t_y)) return false;
+                    t_x += 4; t_y += 4;
+                }
+
+                if ((length & 2) != 0)
+                {
+                    if (*((short*)t_x) != *((short*)t_y)) return false;
+                    t_x += 2; t_y += 2;
+                }
+
+                if ((length & 1) != 0)
+                {
+                    if (*((byte*)t_x) != *((byte*)t_y)) return false;
+                }
+
+                return true;
             }
         }
 
-        public static bool Equals(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int length)
+        public static bool Equals(byte[] source1, int source1Index, byte[] source2, int source2Index, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
-            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
-            if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
-            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+            if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
+            if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
+            if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
+            if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
 
-            fixed (byte* p_x = source, p_y = destination)
+            fixed (byte* p_x = source1, p_y = source2)
             {
-                byte* t_x = p_x + sourceIndex, t_y = p_y + destinationIndex;
+                byte* t_x = p_x + source1Index, t_y = p_y + source2Index;
 
-                return _equals(t_x, t_y, length);
+                for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8)
+                {
+                    if (*((long*)t_x) != *((long*)t_y)) return false;
+                }
+
+                if ((length & 4) != 0)
+                {
+                    if (*((int*)t_x) != *((int*)t_y)) return false;
+                    t_x += 4; t_y += 4;
+                }
+
+                if ((length & 2) != 0)
+                {
+                    if (*((short*)t_x) != *((short*)t_y)) return false;
+                    t_x += 2; t_y += 2;
+                }
+
+                if ((length & 1) != 0)
+                {
+                    if (*((byte*)t_x) != *((byte*)t_y)) return false;
+                }
+
+                return true;
             }
         }
 
-        public static int Compare(byte[] source, byte[] destination)
+        public static int Compare(byte[] source1, byte[] source2)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (source.Length != destination.Length) return (source.Length > destination.Length) ? 1 : -1;
+            if (source1.Length != source2.Length) return (source1.Length > source2.Length) ? 1 : -1;
 
-            if (source.Length == 0) return 0;
+            if (source1.Length == 0) return 0;
 
             // ネイティブ呼び出しの前に、最低限の比較を行う。
             {
                 int c;
-                if ((c = source[0] - destination[0]) != 0) return c;
+                if ((c = source1[0] - source2[0]) != 0) return c;
             }
 
-            var length = source.Length - 1;
+            var length = source1.Length - 1;
             if (length == 0) return 0;
 
-            fixed (byte* p_x = source, p_y = destination)
+            fixed (byte* p_x = source1, p_y = source2)
             {
                 byte* t_x = p_x + 1, t_y = p_y + 1;
 
@@ -159,152 +205,261 @@ namespace Library
             }
         }
 
-        internal static int Compare2(byte[] source, byte[] destination)
+        internal static int Compare2(byte[] source1, byte[] source2)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (source.Length != destination.Length) return (source.Length > destination.Length) ? 1 : -1;
+            if (source1.Length != source2.Length) return (source1.Length > source2.Length) ? 1 : -1;
 
-            if (source.Length == 0) return 0;
+            if (source1.Length == 0) return 0;
 
-            fixed (byte* p_x = source, p_y = destination)
+            fixed (byte* p_x = source1, p_y = source2)
             {
-                return _compare(p_x, p_y, source.Length);
+                return _compare(p_x, p_y, source1.Length);
             }
         }
 
-        public static int Compare(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int length)
+        public static int Compare(byte[] source1, int source1Index, byte[] source2, int source2Index, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
-            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
-            if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
-            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+            if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
+            if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
+            if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
+            if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
 
             if (length == 0) return 0;
 
             // ネイティブ呼び出しの前に、最低限の比較を行う。
             {
                 int c;
-                if ((c = source[sourceIndex] - destination[destinationIndex]) != 0) return c;
+                if ((c = source1[source1Index] - source2[source2Index]) != 0) return c;
             }
 
             length--;
 
             if (length == 0) return 0;
 
-            fixed (byte* p_x = source, p_y = destination)
+            fixed (byte* p_x = source1, p_y = source2)
             {
-                byte* t_x = p_x + sourceIndex + 1, t_y = p_y + destinationIndex + 1;
+                byte* t_x = p_x + source1Index + 1, t_y = p_y + source2Index + 1;
 
                 return _compare(t_x, t_y, length);
             }
         }
 
-        internal static int Compare2(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int length)
+        internal static int Compare2(byte[] source1, int source1Index, byte[] source2, int source2Index, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
-            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
-            if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
-            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+            if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
+            if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
+            if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
+            if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
 
             if (length == 0) return 0;
 
-            fixed (byte* p_x = source, p_y = destination)
+            fixed (byte* p_x = source1, p_y = source2)
             {
-                byte* t_x = p_x + sourceIndex, t_y = p_y + destinationIndex;
+                byte* t_x = p_x + source1Index, t_y = p_y + source2Index;
 
                 return _compare(t_x, t_y, length);
             }
         }
 
-        public static byte[] Xor(byte[] source, byte[] destination)
+        public static byte[] Xor(byte[] source1, byte[] source2)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (source.Length != destination.Length)
+            byte[] buffer = new byte[Math.Max(source1.Length, source2.Length)];
+
+            if (source1.Length < source2.Length)
             {
-                if (source.Length < destination.Length)
+                Native.Copy(source2, source1.Length, buffer, source1.Length, source2.Length - source1.Length);
+            }
+            else if (source1.Length > source2.Length)
+            {
+                Native.Copy(source1, source2.Length, buffer, source2.Length, source1.Length - source2.Length);
+            }
+
+            int length = Math.Min(source1.Length, source2.Length);
+
+            fixed (byte* p_x = source1, p_y = source2)
+            {
+                byte* t_x = p_x, t_y = p_y;
+
+                fixed (byte* p_buffer = buffer)
                 {
-                    fixed (byte* p_x = source, p_y = destination)
+                    byte* t_buffer = p_buffer;
+
+                    for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
                     {
-                        byte[] buffer = new byte[destination.Length];
-                        int length = source.Length;
-
-                        fixed (byte* p_buffer = buffer)
-                        {
-                            _xor(p_x, p_y, p_buffer, length);
-                        }
-
-                        Native.Copy(destination, source.Length, buffer, source.Length, destination.Length - source.Length);
-
-                        return buffer;
+                        *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
                     }
-                }
-                else
-                {
-                    fixed (byte* p_x = source, p_y = destination)
+
+                    if ((length & 4) != 0)
                     {
-                        byte[] buffer = new byte[source.Length];
-                        int length = destination.Length;
+                        *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
+                        t_x += 4; t_y += 4; t_buffer += 4;
+                    }
 
-                        fixed (byte* p_buffer = buffer)
-                        {
-                            _xor(p_x, p_y, p_buffer, length);
-                        }
+                    if ((length & 2) != 0)
+                    {
+                        *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
+                        t_x += 2; t_y += 2; t_buffer += 2;
+                    }
 
-                        Native.Copy(source, destination.Length, buffer, destination.Length, source.Length - destination.Length);
-
-                        return buffer;
+                    if ((length & 1) != 0)
+                    {
+                        *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
                     }
                 }
             }
-            else
-            {
-                fixed (byte* p_x = source, p_y = destination)
-                {
-                    byte[] buffer = new byte[source.Length];
-                    int length = source.Length;
 
-                    fixed (byte* p_buffer = buffer)
+            return buffer;
+        }
+
+        public static void Xor(byte[] source1, byte[] source2, byte[] destination)
+        {
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
+            if (destination == null) throw new ArgumentNullException("destination");
+
+            int length = Math.Min(source1.Length, source2.Length);
+            length = Math.Min(length, destination.Length);
+
+            if (length < destination.Length)
+            {
+                Array.Clear(destination, length, destination.Length - length);
+            }
+
+            fixed (byte* p_x = source1, p_y = source2)
+            {
+                byte* t_x = p_x, t_y = p_y;
+
+                fixed (byte* p_buffer = destination)
+                {
+                    byte* t_buffer = p_buffer;
+
+                    for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
                     {
-                        _xor(p_x, p_y, p_buffer, length);
+                        *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
                     }
 
-                    return buffer;
+                    if ((length & 4) != 0)
+                    {
+                        *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
+                        t_x += 4; t_y += 4; t_buffer += 4;
+                    }
+
+                    if ((length & 2) != 0)
+                    {
+                        *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
+                        t_x += 2; t_y += 2; t_buffer += 2;
+                    }
+
+                    if ((length & 1) != 0)
+                    {
+                        *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
+                    }
                 }
             }
         }
 
-        public static byte[] Xor(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int length)
+        public static byte[] Xor(byte[] source1, int source1Index, byte[] source2, int source2Index, int length)
         {
-            if (source == null) throw new ArgumentNullException("source");
-            if (destination == null) throw new ArgumentNullException("destination");
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
-            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
-            if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
-            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+            if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
+            if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
+            if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
+            if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
 
-            fixed (byte* p_x = source, p_y = destination)
+            byte[] buffer = new byte[length];
+
+            fixed (byte* p_x = source1, p_y = source2)
             {
-                byte* t_x = p_x + sourceIndex, t_y = p_y + destinationIndex;
-
-                byte[] buffer = new byte[length];
+                byte* t_x = p_x + source1Index, t_y = p_y + source2Index;
 
                 fixed (byte* p_buffer = buffer)
                 {
-                    _xor(t_x, t_y, p_buffer, length);
-                }
+                    byte* t_buffer = p_buffer;
 
-                return buffer;
+                    for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
+                    {
+                        *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
+                    }
+
+                    if ((length & 4) != 0)
+                    {
+                        *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
+                        t_x += 4; t_y += 4; t_buffer += 4;
+                    }
+
+                    if ((length & 2) != 0)
+                    {
+                        *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
+                        t_x += 2; t_y += 2; t_buffer += 2;
+                    }
+
+                    if ((length & 1) != 0)
+                    {
+                        *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
+                    }
+                }
+            }
+
+            return buffer;
+        }
+
+        public static void Xor(byte[] source1, int source1Index, byte[] source2, int source2Index, byte[] destination, int destinationIndex, int length)
+        {
+            if (source1 == null) throw new ArgumentNullException("source1");
+            if (source2 == null) throw new ArgumentNullException("source2");
+            if (destination == null) throw new ArgumentNullException("destination");
+
+            if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
+            if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
+            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
+            if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
+            if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
+            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
+
+            fixed (byte* p_x = source1, p_y = source2)
+            {
+                byte* t_x = p_x + source1Index, t_y = p_y + source2Index;
+
+                fixed (byte* p_buffer = destination)
+                {
+                    byte* t_buffer = p_buffer;
+
+                    for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
+                    {
+                        *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
+                    }
+
+                    if ((length & 4) != 0)
+                    {
+                        *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
+                        t_x += 4; t_y += 4; t_buffer += 4;
+                    }
+
+                    if ((length & 2) != 0)
+                    {
+                        *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
+                        t_x += 2; t_y += 2; t_buffer += 2;
+                    }
+
+                    if ((length & 1) != 0)
+                    {
+                        *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
+                    }
+                }
             }
         }
     }

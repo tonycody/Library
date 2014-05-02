@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Library.Collections;
@@ -9,6 +10,8 @@ namespace Library.UnitTest
     [TestFixture, Category("Library.Collections")]
     public class Test_Library_Collections
     {
+        private Random _random = new Random();
+
         [Test]
         public void Test_WaitQueue()
         {

@@ -9,6 +9,7 @@ namespace Library.Collections
     {
         private HashSet<T> _hashSet;
         private int? _capacity;
+
         private readonly object _thisLock = new object();
 
         public LockedHashSet()

@@ -655,7 +655,7 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    HashSet<string> uris = new HashSet<string>();
+                    var uris = new SortedSet<string>();
                     uris.UnionWith(node.Uris.Take(12));
 
                     if (uris.Count == 0)
@@ -712,7 +712,9 @@ namespace Library.Net.Amoeba
                                     }
 
                                     if (connectionManager.Node.Uris.Count() != 0)
+                                    {
                                         _routeTable.Live(connectionManager.Node);
+                                    }
                                 }
 
                                 _connectConnectionCount.Increment();
@@ -766,7 +768,9 @@ namespace Library.Net.Amoeba
                         lock (this.ThisLock)
                         {
                             if (connectionManager.Node.Uris.Count() != 0)
+                            {
                                 _routeTable.Add(connectionManager.Node);
+                            }
 
                             _cuttingNodes.Remove(connectionManager.Node);
                         }
@@ -965,7 +969,7 @@ namespace Library.Net.Amoeba
 
                             if (lockSignatures != null)
                             {
-                                var removeSignatures = new HashSet<string>();
+                                var removeSignatures = new SortedSet<string>();
                                 removeSignatures.UnionWith(_settings.GetSignatures());
                                 removeSignatures.ExceptWith(lockSignatures);
 
@@ -990,7 +994,7 @@ namespace Library.Net.Amoeba
 
                                 _settings.RemoveSignatures(signatureSortItems.Select(n => n.Signature).Take(signatureSortItems.Count - 8192));
 
-                                var liveSignatures = new HashSet<string>(_settings.GetSignatures());
+                                var liveSignatures = new SortedSet<string>(_settings.GetSignatures());
 
                                 foreach (var signature in _seedLastAccessTimes.Keys.ToArray())
                                 {
@@ -1065,7 +1069,7 @@ namespace Library.Net.Amoeba
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    var diffusionBlocksList = new HashSet<Key>();
+                    var diffusionBlocksList = new SortedSet<Key>(new Key.Comparer());
 
                     {
                         {
@@ -1260,8 +1264,8 @@ namespace Library.Net.Amoeba
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    var pushBlocksLinkList = new HashSet<Key>();
-                    var pushBlocksRequestList = new HashSet<Key>();
+                    var pushBlocksLinkList = new SortedSet<Key>(new Key.Comparer());
+                    var pushBlocksRequestList = new SortedSet<Key>(new Key.Comparer());
 
                     {
                         {
@@ -1679,7 +1683,7 @@ namespace Library.Net.Amoeba
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    var pushSeedsRequestList = new HashSet<string>();
+                    var pushSeedsRequestList = new SortedSet<string>();
 
                     {
                         {
@@ -2302,8 +2306,6 @@ namespace Library.Net.Amoeba
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull Nodes ({0})", e.Nodes.Count()));
 
-            _routeTable.Live(connectionManager.Node);
-
             foreach (var node in e.Nodes.Take(_maxNodeCount))
             {
                 if (!ConnectionsManager.Check(node) || node.Uris.Count() == 0 || _removeNodes.Contains(node)) continue;
@@ -2820,7 +2822,7 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisLock)
                 {
-                    HashSet<string> signatures = new HashSet<string>();
+                    var signatures = new SortedSet<string>();
                     signatures.UnionWith(this.LinkSeeds.Keys);
                     signatures.UnionWith(this.StoreSeeds.Keys);
 

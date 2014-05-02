@@ -9,6 +9,7 @@ namespace Library.Collections
     {
         private Queue<T> _queue;
         private int? _capacity;
+
         private readonly object _thisLock = new object();
 
         public LockedQueue()

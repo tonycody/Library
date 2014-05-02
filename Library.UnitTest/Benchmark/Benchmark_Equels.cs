@@ -45,7 +45,7 @@ namespace Library.UnitTest
 
                 for (int j = 0; j < 32; j++)
                 {
-                    bool result = false;
+                    bool result1 = false;
                     bool result2 = false;
 
                     random.Shuffle(flags);
@@ -54,7 +54,7 @@ namespace Library.UnitTest
                         if (index == 0)
                         {
                             sw1.Start();
-                            result = Native.Equals(x, y);
+                            result1 = Native.Equals(x, y);
                             sw1.Stop();
                         }
                         else if (index == 1)
@@ -65,7 +65,7 @@ namespace Library.UnitTest
                         }
                     }
 
-                    Assert.IsTrue(result == result2);
+                    Assert.IsTrue(result1 == result2);
                 }
             }
 

@@ -30,7 +30,7 @@ namespace Library.Net.Outopos
                 {
                     new ArraySegment<byte>(_vector),
                     new ArraySegment<byte>(buffer),
-                }), 0)) & 0x7FFFFFFF;
+                }), 0));
         }
 
         public static void Write(Stream stream, byte type, Stream exportStream)

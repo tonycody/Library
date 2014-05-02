@@ -25,7 +25,7 @@ namespace Library
         private int _maxBufferSize;
 
         private int[] _sizes;
-        private LinkedList<IReference>[] _buffers;
+        private LinkedList<IReferenceInfo>[] _buffers;
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -41,12 +41,12 @@ namespace Library
             _maxBufferSize = maxBufferSize;
 
             var sizes = new List<int>();
-            var buffers = new List<LinkedList<IReference>>();
+            var buffers = new List<LinkedList<IReferenceInfo>>();
 
             for (int i = 256; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
-                buffers.Add(new LinkedList<IReference>());
+                buffers.Add(new LinkedList<IReferenceInfo>());
             }
 
             _sizes = sizes.ToArray();
@@ -195,13 +195,13 @@ namespace Library
             }
         }
 
-        private interface IReference
+        private interface IReferenceInfo
         {
             bool IsAlive { get; }
             byte[] Target { get; }
         }
 
-        private class StrongReferenceInfo : IReference
+        private class StrongReferenceInfo : IReferenceInfo
         {
             private byte[] _target;
 
@@ -227,7 +227,7 @@ namespace Library
             }
         }
 
-        private class WeakReferenceInfo : IReference
+        private class WeakReferenceInfo : IReferenceInfo
         {
             private WeakReference _weakReference;
 

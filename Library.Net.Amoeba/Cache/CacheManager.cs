@@ -264,7 +264,7 @@ namespace Library.Net.Amoeba
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                var pathList = new HashSet<string>();
+                var pathList = new SortedSet<string>();
 
                 pathList.UnionWith(_settings.ShareIndex.Keys);
 

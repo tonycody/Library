@@ -193,5 +193,28 @@ namespace Library.UnitTest
             rt.Refresh();
             Assert.IsTrue(rt.Count == 0);
         }
+
+        [Test]
+        public void Test_Xor()
+        {
+            {
+                byte[] value1 = new byte[1024];
+                byte[] value2 = new byte[1024];
+
+                _random.NextBytes(value1);
+                _random.NextBytes(value2);
+
+                var r1 = Native.Xor(value1, value2);
+                var r2 = Native.Xor(value1, 0, value2, 0, value1.Length);
+                var r3 = new byte[1024];
+                Native.Xor(value1, value2, r3);
+                var r4 = new byte[1024];
+                Native.Xor(value1, 0, value2, 0, r4, 0, r4.Length);
+
+                Assert.IsTrue(Native.Equals(r1, r2));
+                Assert.IsTrue(Native.Equals(r1, r3));
+                Assert.IsTrue(Native.Equals(r1, r4));
+            }
+        }
     }
 }

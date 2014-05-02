@@ -70,7 +70,7 @@ namespace Library.UnitTest
 
                 foreach (var node in kademlia.ToArray())
                 {
-                    var list = kademlia.Search(node.Id);
+                    var list = kademlia.Search(node.Id, kademlia.Count);
                     if (list.ElementAt(0) != node) throw new Exception();
                 }
 

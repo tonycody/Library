@@ -63,8 +63,8 @@ namespace Library.Net.Amoeba
         private long _encodingBytes;
 
         private List<Key> _LockedKeys;
-        private HashSet<Key> _uploadKeys;
-        private HashSet<Key> _uploadedKeys;
+        private SortedSet<Key> _uploadKeys;
+        private SortedSet<Key> _uploadedKeys;
         private IndexCollection _indexes;
 
         private volatile object _thisLock;
@@ -420,14 +420,14 @@ namespace Library.Net.Amoeba
         }
 
         [DataMember(Name = "UploadKeys")]
-        public HashSet<Key> UploadKeys
+        public SortedSet<Key> UploadKeys
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_uploadKeys == null)
-                        _uploadKeys = new HashSet<Key>();
+                        _uploadKeys = new SortedSet<Key>(new Key.Comparer());
 
                     return _uploadKeys;
                 }
@@ -435,14 +435,14 @@ namespace Library.Net.Amoeba
         }
 
         [DataMember(Name = "UploadedKeys")]
-        public HashSet<Key> UploadedKeys
+        public SortedSet<Key> UploadedKeys
         {
             get
             {
                 lock (this.ThisLock)
                 {
                     if (_uploadedKeys == null)
-                        _uploadedKeys = new HashSet<Key>();
+                        _uploadedKeys = new SortedSet<Key>(new Key.Comparer());
 
                     return _uploadedKeys;
                 }

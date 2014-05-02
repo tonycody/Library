@@ -77,6 +77,8 @@
     <Compile Include="Benchmark\Benchmark.cs" />
     <Compile Include="Benchmark\Benchmark_ToHexString.cs" />
     <Compile Include="Benchmark\Benchmark_FromHexString.cs" />
+    <Compile Include="Benchmark\Benchmark_Bloom_Intersect.cs" />
+    <Compile Include="Benchmark\Benchmark_Bloom_Except.cs" />
     <Compile Include="Test_Library_Compression.cs" />
     <Compile Include="Utilities\T_Crc32_Castagnoli.cs" />
     <Compile Include="Utilities\T_Box.cs" />
