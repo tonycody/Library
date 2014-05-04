@@ -4,7 +4,6 @@ namespace Library
 {
     public enum LogMessageLevel
     {
-        Output,
         Information,
         Warning,
         Error,
@@ -88,16 +87,6 @@ namespace Library
                 "Message:\t{1}\r\n" +
                 "StackTrace:\r\n{2}",
                 message1, message2, message3);
-        }
-
-        public static void Output(string value)
-        {
-            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Output, Message = value });
-        }
-
-        public static void Output(Exception exception)
-        {
-            Log.LogEventHandler(new LogEventArgs() { MessageLevel = LogMessageLevel.Output, Message = Log.FromException(exception), Exception = exception });
         }
 
         public static void Information(string value)

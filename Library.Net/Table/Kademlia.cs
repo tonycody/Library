@@ -174,7 +174,7 @@ namespace Library.Net
             }
         }
 
-        private static readonly ThreadLocal<BufferManager> _threadBufferManager = new ThreadLocal<BufferManager>(() => new BufferManager());
+        private static readonly ThreadLocal<InfoManager> _threadLocalInfoManager = new ThreadLocal<InfoManager>(() => new InfoManager());
 
         public static IEnumerable<T> Sort(byte[] baseId, byte[] targetId, IEnumerable<T> nodeList, int count)
         {
@@ -184,163 +184,126 @@ namespace Library.Net
 
             if (count == 0) yield break;
 
-            var bufferManager = _threadBufferManager.Value;
-            bufferManager.SetBufferSize(targetId.Length);
+            int InfoIndex = 0;
 
-            int bufferIndex = 0;
+            var infoManager = _threadLocalInfoManager.Value;
+            infoManager.SetBufferSize(targetId.Length);
 
-            Info firstItem = null;
-            Info lastItem = null;
-            int itemCount = 0;
+            int linkIndex = 0;
+
+            var baseItem = infoManager.GetInfo(InfoIndex++);
+            Native.Xor(targetId, baseId, baseItem.Xor);
+
+            var firstItem = baseItem;
+            var lastItem = baseItem;
+            linkIndex++;
 
             // 挿入ソート（countが小さい場合、countで比較範囲を狭めた挿入ソートが高速。）
             foreach (var node in nodeList)
             {
-                byte[] targetXor = bufferManager.GetBuffer(bufferIndex++);
-                Native.Xor(targetId, node.Id, targetXor);
+                var targetItem = infoManager.GetInfo(InfoIndex++);
+                Native.Xor(targetId, node.Id, targetItem.Xor);
+                targetItem.Node = node;
 
                 var currentItem = lastItem;
 
                 while (currentItem != null)
                 {
-                    if (Native.Compare(currentItem.Xor, targetXor) <= 0) break;
+                    if (Native.Compare(currentItem.Xor, targetItem.Xor) <= 0) break;
 
                     currentItem = currentItem.Previous;
                 }
 
-                if (firstItem == null && lastItem == null)
+                //　最前列に挿入。
+                if (currentItem == null)
                 {
-                    var targetItem = new Info() { Xor = targetXor, Node = node };
-
-                    firstItem = targetItem;
-                    lastItem = targetItem;
-
-                    itemCount++;
-                }
-                else if (currentItem == null)
-                {
-                    var targetItem = new Info() { Xor = targetXor, Node = node };
-
                     firstItem.Previous = targetItem;
                     targetItem.Next = firstItem;
                     firstItem = targetItem;
-
-                    itemCount++;
                 }
+                // 最後尾に挿入。
+                else if (lastItem == currentItem)
+                {
+                    currentItem.Next = targetItem;
+                    targetItem.Previous = currentItem;
+                    lastItem = targetItem;
+                }
+                // 中間に挿入。
                 else
                 {
-                    if (lastItem == currentItem)
-                    {
-                        if (itemCount < count)
-                        {
-                            var targetItem = new Info() { Xor = targetXor, Node = node };
+                    var swapItem = currentItem.Next;
 
-                            currentItem.Next = targetItem;
-                            targetItem.Previous = currentItem;
-                            lastItem = targetItem;
+                    currentItem.Next = targetItem;
+                    targetItem.Previous = currentItem;
 
-                            itemCount++;
-                        }
-                    }
-                    else
-                    {
-                        var targetItem = new Info() { Xor = targetXor, Node = node };
-                        var swapItem = currentItem.Next;
-
-                        currentItem.Next = targetItem;
-                        targetItem.Previous = currentItem;
-
-                        targetItem.Next = swapItem;
-                        swapItem.Previous = targetItem;
-
-                        itemCount++;
-                    }
+                    targetItem.Next = swapItem;
+                    swapItem.Previous = targetItem;
                 }
 
-                if (itemCount > count)
+                linkIndex++;
+
+                // count数を超えている場合はlastItemを削除する。
+                if (linkIndex > count)
                 {
                     var previousItem = lastItem.Previous;
 
-                    if (previousItem != null)
-                    {
-                        previousItem.Next = null;
-                        lastItem = previousItem;
-                    }
-                    else
-                    {
-                        firstItem = null;
-                        lastItem = null;
-                    }
-
-                    itemCount--;
-                }
-            }
-
-            byte[] baseXor = bufferManager.GetBuffer(bufferIndex++);
-            Native.Xor(targetId, baseId, baseXor);
-
-            while (lastItem != null)
-            {
-                if (Native.Compare(baseXor, lastItem.Xor) > 0) break;
-
-                var previousItem = lastItem.Previous;
-
-                if (previousItem != null)
-                {
                     previousItem.Next = null;
                     lastItem = previousItem;
-                }
-                else
-                {
-                    firstItem = null;
-                    lastItem = null;
-                }
 
-                itemCount--;
+                    linkIndex--;
+                }
             }
 
             for (var currentItem = firstItem; currentItem != null; currentItem = currentItem.Next)
             {
+                // baseItem以上に距離が近いノードのみ許可する。
+                if (currentItem == baseItem) yield break;
+
                 yield return currentItem.Node;
             }
         }
 
-        // 自前のLinkedListを用意。
-        private class Info
+        // 自前のLinkedListのためのアイテムを用意。
+        private sealed class Info
         {
-            public byte[] Xor { get; set; }
             public T Node { get; set; }
+            public byte[] Xor { get; set; }
 
             public Info Previous { get; set; }
             public Info Next { get; set; }
         }
 
-        // XORのためのバッファを用意。
-        private class BufferManager
+        // Infoのプールを用意し、高速化を図る。
+        private class InfoManager
         {
-            private List<byte[]> _buffers = new List<byte[]>();
+            private List<Info> _Infos = new List<Info>();
             private int _bufferSize;
 
-            public void SetBufferSize(int size)
+            public void SetBufferSize(int bufferSize)
             {
-                if (_bufferSize != size)
+                if (_bufferSize != bufferSize)
                 {
-                    _buffers.Clear();
+                    _Infos.Clear();
                 }
 
-                _bufferSize = size;
+                _bufferSize = bufferSize;
             }
 
-            public byte[] GetBuffer(int index)
+            public Info GetInfo(int index)
             {
-                if (index > 1024) return new byte[_bufferSize];
+                if (index > 1024) return new Info() { Xor = new byte[_bufferSize] };
 
-                while (_buffers.Count <= index)
+                for (int i = ((index + 1) - _Infos.Count) - 1; i >= 0; i--)
                 {
-                    _buffers.Add(new byte[_bufferSize]);
+                    _Infos.Add(new Info() { Xor = new byte[_bufferSize] });
                 }
 
-                return _buffers[index];
+                var info = _Infos[index];
+                info.Node = default(T);
+                info.Previous = null;
+                info.Next = null;
+
+                return info;
             }
         }
 
@@ -380,7 +343,7 @@ namespace Library.Net
                 else
                 {
                     targetList = new LinkedList<T>();
-                    targetList.AddLast(item);
+                    targetList.AddFirst(item);
                     _nodesList[i] = targetList;
                 }
             }
@@ -496,7 +459,7 @@ namespace Library.Net
                 {
                     if (_nodesList[i] != null)
                     {
-                        tempList.AddRange(_nodesList[i].ToArray());
+                        tempList.AddRange(_nodesList[i]);
                     }
                 }
 
@@ -535,7 +498,7 @@ namespace Library.Net
                 {
                     if (_nodesList[i] != null)
                     {
-                        tempList.AddRange(_nodesList[i].ToArray());
+                        tempList.AddRange(_nodesList[i]);
                     }
                 }
 

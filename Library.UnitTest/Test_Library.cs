@@ -201,19 +201,60 @@ namespace Library.UnitTest
                 byte[] value1 = new byte[1024];
                 byte[] value2 = new byte[1024];
 
-                _random.NextBytes(value1);
-                _random.NextBytes(value2);
+                byte[] result1 = new byte[1024];
+                byte[] result2 = new byte[1024];
 
-                var r1 = Native.Xor(value1, value2);
-                var r2 = Native.Xor(value1, 0, value2, 0, value1.Length);
-                var r3 = new byte[1024];
-                Native.Xor(value1, value2, r3);
-                var r4 = new byte[1024];
-                Native.Xor(value1, 0, value2, 0, r4, 0, r4.Length);
+                for (int i = 0; i < 1024; i++)
+                {
+                    _random.NextBytes(value1);
+                    _random.NextBytes(value2);
 
-                Assert.IsTrue(Native.Equals(r1, r2));
-                Assert.IsTrue(Native.Equals(r1, r3));
-                Assert.IsTrue(Native.Equals(r1, r4));
+                    Native.Xor(value1, value2, result1);
+                    Native.Xor(value1, 0, value2, 0, result2, 0, result2.Length);
+
+                    Assert.IsTrue(Native.Equals(result1, result2));
+                }
+            }
+
+            {
+                byte[] value1 = new byte[] { 0x00, 0x01, 0x02, };
+                byte[] value2 = new byte[] { 0x00 };
+
+                byte[] result1 = new byte[1024];
+                _random.NextBytes(result1);
+                byte[] result2 = new byte[1024];
+
+                Native.Xor(value1, value2, result1);
+                Native.Copy(value1, 0, result2, 0, value1.Length);
+
+                Assert.IsTrue(Native.Equals(result1, result2));
+            }
+
+            {
+                byte[] value1 = new byte[] { 0x00 };
+                byte[] value2 = new byte[] { 0x00, 0x01, 0x02, };
+
+                byte[] result1 = new byte[1024];
+                _random.NextBytes(result1);
+                byte[] result2 = new byte[1024];
+
+                Native.Xor(value1, value2, result1);
+                Native.Copy(value2, 0, result2, 0, value2.Length);
+
+                Assert.IsTrue(Native.Equals(result1, result2));
+            }
+
+            {
+                byte[] value1 = new byte[] { 0x00, 0x01, 0x00, 0x03 };
+                byte[] value2 = new byte[] { 0x00, 0x00, 0x02, 0x00, 0x04 };
+
+                byte[] result1 = new byte[3];
+                _random.NextBytes(result1);
+                byte[] result2 = new byte[] { 0x00, 0x01, 0x02 };
+
+                Native.Xor(value1, value2, result1);
+
+                Assert.IsTrue(Native.Equals(result1, result2));
             }
         }
     }

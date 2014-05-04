@@ -1114,7 +1114,7 @@ namespace Library.Net.Amoeba
                             {
                                 ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
                                 Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
                                 _bufferManager.ReturnBuffer(buffer.Array);
                                 buffer = tbuffer;
                             }
@@ -1279,7 +1279,7 @@ namespace Library.Net.Amoeba
                             {
                                 ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
                                 Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
                                 _bufferManager.ReturnBuffer(buffer.Array);
                                 buffer = tbuffer;
                             }

@@ -291,8 +291,8 @@ namespace Library.UnitTest
                 }
 
                 ////var TcpClient = new BaseConnection(client.Client, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager);
-                using (var secureClient = new SecureConnection(SecureConnectionType.Client, clientVersion, new BaseConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
-                using (var secureServer = new SecureConnection(SecureConnectionType.Server, serverVersion, new BaseConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
+                using (var secureClient = new SecureConnection(SecureConnectionType.Out, clientVersion, new BaseConnection(new SocketCap(client.Client), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), clientDigitalSignature, _bufferManager))
+                using (var secureServer = new SecureConnection(SecureConnectionType.In, serverVersion, new BaseConnection(new SocketCap(server), null, Test_Library_Net_Connection.MaxReceiveCount, _bufferManager), serverDigitalSignature, _bufferManager))
                 {
                     try
                     {

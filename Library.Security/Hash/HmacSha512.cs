@@ -46,8 +46,11 @@ namespace Library.Security
                         key = hashAlgorithm.ComputeHash(key);
                     }
 
-                    var ixor = Native.Xor(_ipad, key);
-                    var oxor = Native.Xor(_opad, key);
+                    var ixor = new byte[_blockLength];
+                    Native.Xor(_ipad, key, ixor);
+
+                    var oxor = new byte[_blockLength];
+                    Native.Xor(_opad, key, oxor);
 
                     byte[] ihash;
 

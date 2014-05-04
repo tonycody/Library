@@ -54,7 +54,7 @@ namespace Library.Net.Amoeba
 
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
-                        HashSet<Node> lockedNodes = new HashSet<Node>();
+                        var lockedNodes = new HashSet<Node>();
 
                         if (this.GetLockNodesEvent != null)
                         {

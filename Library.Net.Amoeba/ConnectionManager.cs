@@ -58,9 +58,13 @@ namespace Library.Net.Amoeba
 
     delegate void CloseEventHandler(object sender, EventArgs e);
 
+    [DataContract(Name = "ConnectDirection", Namespace = "http://Library/Net/Amoeba")]
     public enum ConnectDirection
     {
+        [EnumMember(Value = "In")]
         In = 0,
+
+        [EnumMember(Value = "Out")]
         Out = 1,
     }
 

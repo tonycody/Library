@@ -133,33 +133,6 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_HmacSha256()
-        {
-            var list = new List<int>();
-            list.Add(1);
-            list.Add(64);
-            list.Add(128);
-
-            byte[] buffer = new byte[1024 * 32];
-            _random.NextBytes(buffer);
-
-            for (int i = 0; i < list.Count; i++)
-            {
-                byte[] key = new byte[list[i]];
-                _random.NextBytes(key);
-
-                using (MemoryStream stream1 = new MemoryStream(buffer))
-                using (MemoryStream stream2 = new MemoryStream(buffer))
-                {
-                    using (HMACSHA256 hmacSha256 = new HMACSHA256(key))
-                    {
-                        Assert.IsTrue(Native.Equals(hmacSha256.ComputeHash(stream1), HmacSha256.ComputeHash(stream2, key)));
-                    }
-                }
-            }
-        }
-
-        [Test]
         public void Test_HmacSha512()
         {
             // http://tools.ietf.org/html/rfc4868#section-2.7.1

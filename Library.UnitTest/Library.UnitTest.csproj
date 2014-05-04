@@ -67,7 +67,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Benchmark\Benchmark_Xor.cs" />
     <Compile Include="Benchmark\Benchmark_ReedSolomon8.cs" />
     <Compile Include="Benchmark\Benchmark_Equels.cs" />
     <Compile Include="Benchmark\Benchmark_Compare.cs" />

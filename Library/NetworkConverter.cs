@@ -654,7 +654,6 @@ namespace Library
             }
         }
 
-
         public static byte[] GetBytes(bool value)
         {
             byte[] buffer = System.BitConverter.GetBytes(value);

@@ -119,7 +119,7 @@ namespace Library.Net.Outopos
                 var bitOffset = (byte)(point % 8);
 
                 var buffer = this.GetBuffer(sectorOffset);
-                return ((byte)(buffer.Array[buffer.Offset + bufferOffset] << bitOffset) & 0x80) == 0x80;
+                return ((buffer.Array[buffer.Offset + bufferOffset] << bitOffset) & 0x80) == 0x80;
             }
         }
 
@@ -136,7 +136,7 @@ namespace Library.Net.Outopos
                     var bitOffset = (byte)(point % 8);
 
                     var buffer = this.GetBuffer(sectorOffset);
-                    buffer.Array[buffer.Offset + bufferOffset] = (byte)(buffer.Array[buffer.Offset + bufferOffset] | (byte)(0x80 >> bitOffset));
+                    buffer.Array[buffer.Offset + bufferOffset] |= (byte)(0x80 >> bitOffset);
                 }
                 else
                 {
@@ -145,7 +145,7 @@ namespace Library.Net.Outopos
                     var bitOffset = (byte)(point % 8);
 
                     var buffer = this.GetBuffer(sectorOffset);
-                    buffer.Array[buffer.Offset + bufferOffset] = (byte)(buffer.Array[buffer.Offset + bufferOffset] & ~(byte)(0x80 >> bitOffset));
+                    buffer.Array[buffer.Offset + bufferOffset] &= (byte)(~(0x80 >> bitOffset));
                 }
 
                 _cacheChanged = true;

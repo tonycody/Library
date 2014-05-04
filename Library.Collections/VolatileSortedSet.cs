@@ -116,20 +116,21 @@ namespace Library.Collections
                 }
                 else
                 {
-                    BitArray bitmap = new BitArray(_dic.Count * 10);
-
-                    foreach (var item in _dic.Keys)
+                    using (var bitmap = new BinaryArray(_dic.Count * 8))
                     {
-                        bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                    }
-
-                    foreach (var item in collection)
-                    {
-                        if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)) continue;
-
-                        if (_dic.ContainsKey(item))
+                        foreach (var item in _dic.Keys)
                         {
-                            yield return item;
+                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
+                        }
+
+                        foreach (var item in collection)
+                        {
+                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)) continue;
+
+                            if (_dic.ContainsKey(item))
+                            {
+                                yield return item;
+                            }
                         }
                     }
                 }
@@ -149,19 +150,23 @@ namespace Library.Collections
                 }
                 else
                 {
-                    BitArray bitmap = new BitArray(_dic.Count * 10);
-
-                    foreach (var item in _dic.Keys)
+                    using (var bitmap = new BinaryArray(_dic.Count * 8))
                     {
-                        bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                    }
-
-                    foreach (var item in collection)
-                    {
-                        if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)
-                            || !_dic.ContainsKey(item))
+                        foreach (var item in _dic.Keys)
                         {
-                            yield return item;
+                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
+                        }
+
+                        foreach (var item in collection)
+                        {
+                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length))
+                            {
+                                yield return item;
+                            }
+                            else if (!_dic.ContainsKey(item))
+                            {
+                                yield return item;
+                            }
                         }
                     }
                 }

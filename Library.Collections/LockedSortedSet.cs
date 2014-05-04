@@ -94,20 +94,21 @@ namespace Library.Collections
                 }
                 else
                 {
-                    BitArray bitmap = new BitArray(_sortedSet.Count * 10);
-
-                    foreach (var item in _sortedSet)
+                    using (var bitmap = new BinaryArray(_sortedSet.Count * 8))
                     {
-                        bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                    }
-
-                    foreach (var item in collection)
-                    {
-                        if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)) continue;
-
-                        if (_sortedSet.Contains(item))
+                        foreach (var item in _sortedSet)
                         {
-                            yield return item;
+                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
+                        }
+
+                        foreach (var item in collection)
+                        {
+                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)) continue;
+
+                            if (_sortedSet.Contains(item))
+                            {
+                                yield return item;
+                            }
                         }
                     }
                 }
@@ -141,19 +142,23 @@ namespace Library.Collections
                 }
                 else
                 {
-                    BitArray bitmap = new BitArray(_sortedSet.Count * 10);
-
-                    foreach (var item in _sortedSet)
+                    using (var bitmap = new BinaryArray(_sortedSet.Count * 8))
                     {
-                        bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                    }
-
-                    foreach (var item in collection)
-                    {
-                        if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)
-                            || !_sortedSet.Contains(item))
+                        foreach (var item in _sortedSet)
                         {
-                            yield return item;
+                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
+                        }
+
+                        foreach (var item in collection)
+                        {
+                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length))
+                            {
+                                yield return item;
+                            }
+                            else if (!_sortedSet.Contains(item))
+                            {
+                                yield return item;
+                            }
                         }
                     }
                 }

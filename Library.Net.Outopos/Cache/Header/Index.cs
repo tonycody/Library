@@ -52,7 +52,7 @@ namespace Library.Net.Outopos
             {
                 using (var stream = value.Export(bufferManager))
                 {
-                    ItemUtility.Write(bufferStream, (byte)SerializeId.Key, stream);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                 }
             }
 
@@ -78,7 +78,7 @@ namespace Library.Net.Outopos
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (!Collection.Equals(this.Keys, other.Keys))
+            if (!CollectionUtilities.Equals(this.Keys, other.Keys))
             {
                 return false;
             }

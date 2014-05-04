@@ -201,7 +201,7 @@ namespace Library
             byte[] Target { get; }
         }
 
-        private class StrongReferenceInfo : IReferenceInfo
+        private sealed class StrongReferenceInfo : IReferenceInfo
         {
             private byte[] _target;
 
@@ -227,7 +227,7 @@ namespace Library
             }
         }
 
-        private class WeakReferenceInfo : IReferenceInfo
+        private sealed class WeakReferenceInfo : IReferenceInfo
         {
             private WeakReference _weakReference;
 

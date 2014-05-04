@@ -78,7 +78,7 @@ namespace Library.Correction
                 {
                     // index[row] >= k && index[row] < n
                     int pos = index[row] * _k;
-                    Array.Clear(repair[row], repairOff[row], packetLength);
+                    Native.Zero(repair[row], repairOff[row], packetLength);
 
                     for (int col = 0; col < _k; col++)
                     {
@@ -128,7 +128,7 @@ namespace Library.Correction
                 if (index[row] >= _k)
                 {
                     tmpPkts[row] = _bufferManager.TakeBuffer(packetLength);
-                    Array.Clear(tmpPkts[row], 0, packetLength);
+                    Native.Zero(tmpPkts[row], 0, packetLength);
 
                     for (int col = 0; col < _k; col++)
                     {
@@ -838,7 +838,7 @@ namespace Library.Correction
                 /*
                  * the upper matrix is I so do not bother with a slow multiply
                  */
-                Array.Clear(encMatrix, 0, k * k);
+                Native.Zero(encMatrix, 0, k * k);
 
                 for (int i = 0, col = 0; col < k; col++, i += k + 1)
                 {
