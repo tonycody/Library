@@ -42,11 +42,6 @@ namespace Library.Collections
             }
         }
 
-        public void Refresh(T item)
-        {
-            _dic[item] = DateTime.UtcNow;
-        }
-
         private void CheckLifeTime()
         {
             lock (this.ThisLock)

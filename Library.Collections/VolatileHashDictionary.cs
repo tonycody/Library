@@ -45,16 +45,6 @@ namespace Library.Collections
             }
         }
 
-        public void Refresh(TKey item)
-        {
-            Info<TValue> info;
-
-            if (_dic.TryGetValue(item, out info))
-            {
-                info.UpdateTime = DateTime.UtcNow;
-            }
-        }
-
         private void CheckLifeTime()
         {
             lock (this.ThisLock)
@@ -485,17 +475,11 @@ namespace Library.Collections
             }
         }
 
-        #region IThisLock
-
-        public object ThisLock
+        internal struct Info<T>
         {
-            get
-            {
-                return _thisLock;
-            }
+            public T Value { get; set; }
+            public DateTime UpdateTime { get; set; }
         }
-
-        #endregion
 
         public sealed class VolatileKeyCollection : ICollection<TKey>, IEnumerable<TKey>, ICollection, IEnumerable, IThisLock
         {
@@ -783,10 +767,16 @@ namespace Library.Collections
             #endregion
         }
 
-        internal class Info<T>
+        #region IThisLock
+
+        public object ThisLock
         {
-            public T Value { get; set; }
-            public DateTime UpdateTime { get; set; }
+            get
+            {
+                return _thisLock;
+            }
         }
+
+        #endregion
     }
 }

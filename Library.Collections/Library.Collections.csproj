@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinaryArray.cs" />
+    <Compile Include="SmallList.cs" />
     <Compile Include="VolatileSortedSet.cs" />
     <Compile Include="VolatileSortedDictionary.cs" />
     <Compile Include="Utilities\ISetOperators.cs" />

@@ -19,10 +19,10 @@ namespace Library.UnitTest
             //for (int i = 0; i < 10; i++)
             Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
             {
-                ////using (MemoryStream stream = new MemoryStream())
+                //using (MemoryStream stream = new MemoryStream())
                 using (BufferStream stream = new BufferStream(_bufferManager))
                 {
-                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[_random.Next(128, 1024 * 1024 * 10)];
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); //new byte[_random.Next(128, 1024 * 1024 * 10)];
                     long seek = _random.Next(64, buffer.Length);
                     //long seek = 0;
 
@@ -31,7 +31,7 @@ namespace Library.UnitTest
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Position = seek;
 
-                    byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
+                    byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); //new byte[buffer.Length];
                     stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
 
                     if (!CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
@@ -67,16 +67,15 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_CacheStream()
+        public void Test_TempStream()
         {
             //for (int i = 0; i < 10; i++)
             Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
             {
-                ////using (MemoryStream stream = new MemoryStream())
-                using (BufferStream bufferStream = new BufferStream(_bufferManager))
-                using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))
+                //using (MemoryStream stream = new MemoryStream())
+                using (TempStream stream = new TempStream())
                 {
-                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); ////new byte[_random.Next(128, 1024 * 1024 * 10)];
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); //new byte[_random.Next(128, 1024 * 1024 * 10)];
                     long seek = _random.Next(64, buffer.Length);
                     //long seek = 0;
 
@@ -85,7 +84,61 @@ namespace Library.UnitTest
                     stream.Write(buffer, 0, buffer.Length);
                     stream.Position = seek;
 
-                    byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); ////new byte[buffer.Length];
+                    byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); //new byte[buffer.Length];
+                    stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
+
+                    if (!CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))
+                    {
+                        Assert.IsTrue(CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek));
+                    }
+
+                    _bufferManager.ReturnBuffer(buffer);
+                    _bufferManager.ReturnBuffer(buff2);
+                }
+            });
+
+            using (MemoryStream mstream = new MemoryStream())
+            using (TempStream stream = new TempStream())
+            {
+                for (int i = 0; i < 1024 * 1024; i++)
+                {
+                    var v = (byte)_random.Next(0, 255);
+                    mstream.WriteByte(v);
+                    stream.WriteByte(v);
+                }
+
+                mstream.Seek(0, SeekOrigin.Begin);
+                stream.Seek(0, SeekOrigin.Begin);
+
+                Assert.IsTrue(mstream.Length == stream.Length);
+
+                for (int i = 0; i < 1024 * 1024; i++)
+                {
+                    Assert.IsTrue(mstream.ReadByte() == stream.ReadByte());
+                }
+            }
+        }
+
+        [Test]
+        public void Test_CacheStream()
+        {
+            //for (int i = 0; i < 10; i++)
+            Parallel.For(0, 32, new ParallelOptions() { MaxDegreeOfParallelism = 64 }, i =>
+            {
+                //using (MemoryStream stream = new MemoryStream())
+                using (BufferStream bufferStream = new BufferStream(_bufferManager))
+                using (CacheStream stream = new CacheStream(bufferStream, 1024, _bufferManager))
+                {
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 1024); //new byte[_random.Next(128, 1024 * 1024 * 10)];
+                    long seek = _random.Next(64, buffer.Length);
+                    //long seek = 0;
+
+                    _random.NextBytes(buffer);
+
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Position = seek;
+
+                    byte[] buff2 = _bufferManager.TakeBuffer(buffer.Length); //new byte[buffer.Length];
                     stream.Read(buff2, (int)seek, buff2.Length - (int)seek);
 
                     if (!CollectionUtilities.Equals(buffer, (int)seek, buff2, (int)seek, buffer.Length - (int)seek))

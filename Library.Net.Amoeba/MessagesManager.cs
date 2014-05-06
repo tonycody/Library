@@ -78,9 +78,9 @@ namespace Library.Net.Amoeba
                                     _updateTimeDictionary.Remove(node);
                                 }
                             }
-
-                            _checkedFlag = false;
                         }
+
+                        _checkedFlag = false;
                     });
                 }
             }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Library.UnitTest
@@ -255,6 +256,52 @@ namespace Library.UnitTest
                 Native.Xor(value1, value2, result1);
 
                 Assert.IsTrue(Native.Equals(result1, result2));
+            }
+        }
+
+        [Test]
+        public void Test_SimpleLinkedList()
+        {
+            var linkedList = new SimpleLinkedList<int>();
+            linkedList.Add(0);
+            Assert.IsTrue(linkedList.Count == 1);
+            Assert.IsTrue(linkedList.Contains(0));
+            Assert.IsFalse(linkedList.Contains(1));
+
+            linkedList.Remove(0);
+            Assert.IsTrue(linkedList.Count == 0);
+            linkedList.Add(1);
+            Assert.IsTrue(linkedList.Count == 1);
+            Assert.IsTrue(linkedList.Contains(1));
+            Assert.IsFalse(linkedList.Contains(0));
+
+            linkedList.Clear();
+
+            var tempList = new List<int>();
+
+            for (int i = 0; i < 1024 * 32; i++)
+            {
+                var v = _random.Next(0, 256);
+
+                if (_random.Next(0, 2) == 0)
+                {
+                    linkedList.Add(v);
+                    tempList.Add(v);
+                }
+                else
+                {
+                    linkedList.Remove(v);
+                    tempList.Remove(v);
+                }
+            }
+
+            {
+                tempList.Sort();
+
+                var tempList2 = linkedList.ToList();
+                tempList2.Sort();
+
+                Assert.IsTrue(CollectionUtilities.Equals(tempList, tempList2));
             }
         }
     }

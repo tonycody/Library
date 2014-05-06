@@ -124,7 +124,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _hashSet.Count > _capacity.Value) throw new OverflowException();
+                if (_capacity != null && _hashSet.Count + 1 > _capacity.Value) throw new OverflowException();
 
                 return _hashSet.Add(item);
             }

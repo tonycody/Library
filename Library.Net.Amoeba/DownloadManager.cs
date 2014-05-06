@@ -255,8 +255,7 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    FileStream fs = new FileStream(path, FileMode.CreateNew);
-                    return fs;
+                    return new FileStream(path, FileMode.CreateNew);
                 }
                 catch (DirectoryNotFoundException)
                 {
@@ -280,8 +279,7 @@ namespace Library.Net.Amoeba
                 {
                     try
                     {
-                        FileStream fs = new FileStream(text, FileMode.CreateNew);
-                        return fs;
+                        return new FileStream(text, FileMode.CreateNew);
                     }
                     catch (DirectoryNotFoundException)
                     {
@@ -289,7 +287,7 @@ namespace Library.Net.Amoeba
                     }
                     catch (IOException)
                     {
-                        if (index > 100) throw;
+                        if (index > 1024) throw;
                     }
                 }
             }
@@ -1064,7 +1062,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                    return _state;
+                return _state;
             }
         }
 
@@ -1072,7 +1070,7 @@ namespace Library.Net.Amoeba
         {
             get
             {
-                    return _decodeState;
+                return _decodeState;
             }
         }
 

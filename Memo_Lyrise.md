@@ -10,6 +10,7 @@
 * WaitStackの実装。
 * VolatileHashSetのISetの実装。
 * VolatileSortedSetのISetの実装。
+* SmallLinkedListの実装。
 
 ###  Library.Net.I2p
 

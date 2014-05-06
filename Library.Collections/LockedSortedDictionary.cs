@@ -149,7 +149,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _dic.Count > _capacity.Value) throw new OverflowException();
+                if (_capacity != null && _dic.Count + 1 > _capacity.Value) throw new OverflowException();
 
                 int count = _dic.Count;
                 _dic[key] = value;

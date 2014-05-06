@@ -183,7 +183,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _sortedSet.Count > _capacity.Value) throw new OverflowException();
+                if (_capacity != null && _sortedSet.Count + 1 > _capacity.Value) throw new OverflowException();
 
                 return _sortedSet.Add(item);
             }

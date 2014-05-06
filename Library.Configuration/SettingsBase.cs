@@ -271,8 +271,7 @@ namespace Library.Configuration
             {
                 try
                 {
-                    FileStream fs = new FileStream(path, FileMode.CreateNew);
-                    return fs;
+                    return new FileStream(path, FileMode.CreateNew);
                 }
                 catch (DirectoryNotFoundException)
                 {
@@ -296,8 +295,7 @@ namespace Library.Configuration
                 {
                     try
                     {
-                        FileStream fs = new FileStream(text, FileMode.CreateNew);
-                        return fs;
+                        return new FileStream(text, FileMode.CreateNew);
                     }
                     catch (DirectoryNotFoundException)
                     {

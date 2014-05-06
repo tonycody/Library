@@ -15,12 +15,12 @@ namespace Library.Net.Amoeba
         private HashAlgorithm _hashAlgorithm;
         private BufferManager _bufferManager;
 
-        private LockedList<Key> _keyList = new LockedList<Key>();
+        private KeyCollection _keyList = new KeyCollection();
         private long _length;
 
         private volatile bool _disposed;
 
-        public CacheManagerStreamWriter(out IList<Key> keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
+        public CacheManagerStreamWriter(out KeyCollection keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
         {
             keys = _keyList;
             _hashAlgorithm = hashAlgorithm;

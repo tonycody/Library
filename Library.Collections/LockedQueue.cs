@@ -98,7 +98,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _queue.Count > _capacity.Value) throw new OverflowException();
+                if (_capacity != null && _queue.Count + 1 > _capacity.Value) throw new OverflowException();
 
                 _queue.Enqueue(item);
             }

@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Library.Io;
 
 namespace Library.Security
@@ -22,7 +23,10 @@ namespace Library.Security
         private static CheckBase64Delegate _checkBase64;
 #endif
 
+        private static readonly ThreadLocal<Encoding> _threadLocalEncoding = new ThreadLocal<Encoding>(() => new UTF8Encoding(false));
+
         private static InternPool<string> _signatureCache = new InternPool<string>();
+
         private static ConditionalWeakTable<string, byte[]> _signatureHashCache = new ConditionalWeakTable<string, byte[]>();
         private static object _signatureHashCacheLockObject = new object();
 
@@ -72,7 +76,7 @@ namespace Library.Security
                 {
                     using (BufferStream bufferStream = new BufferStream(_bufferManager))
                     {
-                        var nicknameBuffer = new UTF8Encoding(false).GetBytes(digitalSignature.Nickname);
+                        var nicknameBuffer = _threadLocalEncoding.Value.GetBytes(digitalSignature.Nickname);
 
                         bufferStream.Write(nicknameBuffer, 0, nicknameBuffer.Length);
                         bufferStream.Write(digitalSignature.PublicKey, 0, digitalSignature.PublicKey.Length);
@@ -134,7 +138,7 @@ namespace Library.Security
                 var hash = item.Substring(index + 1);
 
                 if (nickname.Length > 256) return false;
-                if (!Signature.CheckBase64(hash)) return false;
+                if (hash.Length > 256 || !Signature.CheckBase64(hash)) return false;
 
                 return true;
             }
@@ -157,7 +161,7 @@ namespace Library.Security
                 var hash = item.Substring(index + 1);
 
                 if (nickname.Length > 256) return null;
-                if (!Signature.CheckBase64(hash)) return null;
+                if (hash.Length > 256 || !Signature.CheckBase64(hash)) return null;
 
                 return nickname;
             }
@@ -169,7 +173,7 @@ namespace Library.Security
 
         public static byte[] GetSignatureHash(string item)
         {
-            if (item == null) return null;
+            if (item == null) throw new ArgumentNullException("item");
 
             try
             {
@@ -186,7 +190,7 @@ namespace Library.Security
                         var hash = item.Substring(index + 1);
 
                         if (nickname.Length > 256) return null;
-                        if (!Signature.CheckBase64(hash)) return null;
+                        if (hash.Length > 256 || !Signature.CheckBase64(hash)) return null;
 
                         value = NetworkConverter.FromBase64UrlString(hash);
                         _signatureHashCache.Add(item, value);

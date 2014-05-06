@@ -169,10 +169,6 @@ namespace Library.UnitTest
 
                 using (var seedStream = seed.Export(_bufferManager))
                 {
-                    var buffer = new byte[seedStream.Length];
-                    seedStream.Read(buffer, 0, buffer.Length);
-
-                    seedStream.Position = 0;
                     seed3 = Seed.Import(seedStream, _bufferManager);
                 }
 
@@ -202,10 +198,6 @@ namespace Library.UnitTest
 
             using (var boxStream = box.Export(_bufferManager))
             {
-                var buffer = new byte[boxStream.Length];
-                boxStream.Read(buffer, 0, buffer.Length);
-
-                boxStream.Position = 0;
                 box3 = Box.Import(boxStream, _bufferManager);
             }
 
@@ -288,6 +280,30 @@ namespace Library.UnitTest
         }
 
         [Test]
+        public void Test_Link()
+        {
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+
+            var link = new Link();
+            link.TrustSignatures.Add(digitalSignature.ToString());
+            link.TrustSignatures.Add(digitalSignature.ToString());
+            link.TrustSignatures.Add(digitalSignature.ToString());
+
+            var link2 = link.Clone();
+
+            Assert.AreEqual(link, link2, "Link #1");
+
+            Link link3;
+
+            using (var linkStream = link.Export(_bufferManager))
+            {
+                link3 = Link.Import(linkStream, _bufferManager);
+            }
+
+            Assert.AreEqual(link, link3, "Link #2");
+        }
+
+        [Test]
         public void Test_Store()
         {
             var store = new Store();
@@ -301,10 +317,6 @@ namespace Library.UnitTest
 
             using (var storeStream = store.Export(_bufferManager))
             {
-                var buffer = new byte[storeStream.Length];
-                storeStream.Read(buffer, 0, buffer.Length);
-
-                storeStream.Position = 0;
                 store3 = Store.Import(storeStream, _bufferManager);
             }
 

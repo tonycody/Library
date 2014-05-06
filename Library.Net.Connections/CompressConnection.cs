@@ -172,11 +172,11 @@ namespace Library.Net.Connections
                     }
                     else if (version == (byte)1)
                     {
-                        BufferStream deflateBufferStream = null;
+                        TempStream deflateTempStream = null;
 
                         try
                         {
-                            deflateBufferStream = new BufferStream(_bufferManager);
+                            deflateTempStream = new TempStream();
                             byte[] decompressBuffer = null;
 
                             try
@@ -189,9 +189,9 @@ namespace Library.Net.Connections
 
                                     while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
                                     {
-                                        deflateBufferStream.Write(decompressBuffer, 0, i);
+                                        deflateTempStream.Write(decompressBuffer, 0, i);
 
-                                        if (deflateBufferStream.Length > _maxReceiveCount) throw new ConnectionException();
+                                        if (deflateTempStream.Length > _maxReceiveCount) throw new ConnectionException();
                                     }
                                 }
                             }
@@ -202,7 +202,7 @@ namespace Library.Net.Connections
                         }
                         catch (Exception e)
                         {
-                            deflateBufferStream.Dispose();
+                            deflateTempStream.Dispose();
 
                             throw e;
                         }
@@ -210,13 +210,14 @@ namespace Library.Net.Connections
 #if DEBUG
                         Debug.WriteLine("Receive : {0}→{1} {2}",
                             NetworkConverter.ToSizeString(stream.Length),
-                            NetworkConverter.ToSizeString(deflateBufferStream.Length),
-                            NetworkConverter.ToSizeString(stream.Length - deflateBufferStream.Length));
+                            NetworkConverter.ToSizeString(deflateTempStream.Length),
+                            NetworkConverter.ToSizeString(stream.Length - deflateTempStream.Length));
 #endif
-                        deflateBufferStream.Seek(0, SeekOrigin.Begin);
+
+                        deflateTempStream.Seek(0, SeekOrigin.Begin);
                         dataStream.Dispose();
 
-                        return deflateBufferStream;
+                        return deflateTempStream;
                     }
                     else
                     {
@@ -268,14 +269,14 @@ namespace Library.Net.Connections
                             {
                                 try
                                 {
-                                    BufferStream deflateBufferStream = new BufferStream(_bufferManager);
+                                    TempStream deflateTempStream = new TempStream();
                                     byte[] compressBuffer = null;
 
                                     try
                                     {
                                         compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
 
-                                        using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
+                                        using (DeflateStream deflateStream = new DeflateStream(deflateTempStream, CompressionMode.Compress, true))
                                         {
                                             int i = -1;
 
@@ -290,15 +291,15 @@ namespace Library.Net.Connections
                                         _bufferManager.ReturnBuffer(compressBuffer);
                                     }
 
-                                    deflateBufferStream.Seek(0, SeekOrigin.Begin);
+                                    deflateTempStream.Seek(0, SeekOrigin.Begin);
 
-                                    if (deflateBufferStream.Length < targetStream.Length)
+                                    if (deflateTempStream.Length < targetStream.Length)
                                     {
-                                        list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
+                                        list.Add(new KeyValuePair<int, Stream>(1, deflateTempStream));
                                     }
                                     else
                                     {
-                                        deflateBufferStream.Dispose();
+                                        deflateTempStream.Dispose();
                                     }
                                 }
                                 catch (Exception)

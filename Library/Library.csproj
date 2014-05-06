@@ -79,6 +79,7 @@
     <Compile Include="StateManagerBase.cs" />
     <Compile Include="NativeLibraryManager.cs" />
     <Compile Include="Native.cs" />
+    <Compile Include="Utilities\SimpleLinkedList.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assembly\Library_x64.dll">

@@ -88,10 +88,8 @@ namespace Library
         }
 
         // explicit
-        public static explicit operator SafeInteger(long i) { return new SafeInteger(i); }
-        public static explicit operator long(SafeInteger safeInteger) { return safeInteger.Value; }
-        public static explicit operator SafeInteger(int i) { return new SafeInteger((long)i); }
-        public static explicit operator int(SafeInteger safeInteger) { return (int)safeInteger.Value; }
+        public static implicit operator SafeInteger(long i) { return new SafeInteger(i); }
+        public static implicit operator long(SafeInteger safeInteger) { return safeInteger.Value; }
 
         public long Increment()
         {

@@ -50,6 +50,8 @@ namespace Library.Net.Amoeba
 
         private WatchTimer _watchTimer;
 
+        private readonly object _convertLock = new object();
+
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
@@ -867,21 +869,149 @@ namespace Library.Net.Amoeba
         public KeyCollection Encoding(Stream inStream,
             CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, HashAlgorithm hashAlgorithm, int blockLength)
         {
-            if (inStream == null) throw new ArgumentNullException("inStream");
-            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(HashAlgorithm), hashAlgorithm)) throw new ArgumentException("HashAlgorithm に存在しない列挙");
-
-            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+            lock (_convertLock)
             {
+                if (inStream == null) throw new ArgumentNullException("inStream");
+                if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
+                if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
+                if (!Enum.IsDefined(typeof(HashAlgorithm), hashAlgorithm)) throw new ArgumentException("HashAlgorithm に存在しない列挙");
+
+                if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+                {
 #if DEBUG
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 #endif
 
-                IList<Key> keys = new List<Key>();
+                    var keys = new KeyCollection();
 
-                try
+                    try
+                    {
+                        using (var rijndael = Rijndael.Create())
+                        {
+                            rijndael.KeySize = 256;
+                            rijndael.BlockSize = 256;
+                            rijndael.Mode = CipherMode.CBC;
+                            rijndael.Padding = PaddingMode.PKCS7;
+
+                            using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                            using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                            {
+                                Xz.Compress(inStream, cs, _bufferManager);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        foreach (var key in keys)
+                        {
+                            this.Unlock(key);
+                        }
+
+                        throw;
+                    }
+
+#if DEBUG
+                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
+#endif
+
+                    return keys;
+                }
+                else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+                {
+#if DEBUG
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+#endif
+
+                    var keys = new KeyCollection();
+
+                    try
+                    {
+                        using (var rijndael = Rijndael.Create())
+                        {
+                            rijndael.KeySize = 256;
+                            rijndael.BlockSize = 256;
+                            rijndael.Mode = CipherMode.CBC;
+                            rijndael.Padding = PaddingMode.PKCS7;
+
+                            using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                            using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                            {
+                                Lzma.Compress(inStream, cs, _bufferManager);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        foreach (var key in keys)
+                        {
+                            this.Unlock(key);
+                        }
+
+                        throw;
+                    }
+
+#if DEBUG
+                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
+#endif
+
+                    return keys;
+                }
+                else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
+                {
+                    var keys = new KeyCollection();
+
+                    try
+                    {
+                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                        {
+                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
+
+                            try
+                            {
+                                int length = 0;
+
+                                while (0 < (length = inStream.Read(buffer, 0, buffer.Length)))
+                                {
+                                    outStream.Write(buffer, 0, length);
+                                }
+                            }
+                            finally
+                            {
+                                _bufferManager.ReturnBuffer(buffer);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        foreach (var key in keys)
+                        {
+                            this.Unlock(key);
+                        }
+
+                        throw;
+                    }
+
+                    return keys;
+                }
+                else
+                {
+                    throw new NotSupportedException();
+                }
+            }
+        }
+
+        public void Decoding(Stream outStream,
+            CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, KeyCollection keys)
+        {
+            lock (_convertLock)
+            {
+                if (outStream == null) throw new ArgumentNullException("outStream");
+                if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
+                if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
+
+                if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
                 {
                     using (var rijndael = Rijndael.Create())
                     {
@@ -890,39 +1020,14 @@ namespace Library.Net.Amoeba
                         rijndael.Mode = CipherMode.CBC;
                         rijndael.Padding = PaddingMode.PKCS7;
 
-                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                        using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+                        using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                         {
-                            Xz.Compress(inStream, cs, _bufferManager);
+                            Xz.Decompress(cs, outStream, _bufferManager);
                         }
                     }
                 }
-                catch (Exception)
-                {
-                    foreach (var key in keys)
-                    {
-                        this.Unlock(key);
-                    }
-
-                    throw;
-                }
-
-#if DEBUG
-                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
-#endif
-
-                return new KeyCollection(keys);
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-#if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-#endif
-
-                IList<Key> keys = new List<Key>();
-
-                try
+                else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
                 {
                     using (var rijndael = Rijndael.Create())
                     {
@@ -931,36 +1036,16 @@ namespace Library.Net.Amoeba
                         rijndael.Mode = CipherMode.CBC;
                         rijndael.Padding = PaddingMode.PKCS7;
 
-                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                        using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+                        using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
                         {
-                            Lzma.Compress(inStream, cs, _bufferManager);
+                            Lzma.Decompress(cs, outStream, _bufferManager);
                         }
                     }
                 }
-                catch (Exception)
+                else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
                 {
-                    foreach (var key in keys)
-                    {
-                        this.Unlock(key);
-                    }
-
-                    throw;
-                }
-
-#if DEBUG
-                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
-#endif
-
-                return new KeyCollection(keys);
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
-            {
-                IList<Key> keys = new List<Key>();
-
-                try
-                {
-                    using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
                     {
                         byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
 
@@ -968,7 +1053,7 @@ namespace Library.Net.Amoeba
                         {
                             int length = 0;
 
-                            while (0 < (length = inStream.Read(buffer, 0, buffer.Length)))
+                            while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
                             {
                                 outStream.Write(buffer, 0, length);
                             }
@@ -979,398 +1064,327 @@ namespace Library.Net.Amoeba
                         }
                     }
                 }
-                catch (Exception)
+                else
                 {
-                    foreach (var key in keys)
-                    {
-                        this.Unlock(key);
-                    }
-
-                    throw;
+                    throw new NotSupportedException();
                 }
-
-                return new KeyCollection(keys);
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        public void Decoding(Stream outStream,
-            CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, KeyCollection keys)
-        {
-            if (outStream == null) throw new ArgumentNullException("outStream");
-            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
-
-            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-                using (var rijndael = Rijndael.Create())
-                {
-                    rijndael.KeySize = 256;
-                    rijndael.BlockSize = 256;
-                    rijndael.Mode = CipherMode.CBC;
-                    rijndael.Padding = PaddingMode.PKCS7;
-
-                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                    {
-                        Xz.Decompress(cs, outStream, _bufferManager);
-                    }
-                }
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-                using (var rijndael = Rijndael.Create())
-                {
-                    rijndael.KeySize = 256;
-                    rijndael.BlockSize = 256;
-                    rijndael.Mode = CipherMode.CBC;
-                    rijndael.Padding = PaddingMode.PKCS7;
-
-                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                    {
-                        Lzma.Decompress(cs, outStream, _bufferManager);
-                    }
-                }
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
-            {
-                using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                {
-                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                    try
-                    {
-                        int length = 0;
-
-                        while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
-                        {
-                            outStream.Write(buffer, 0, length);
-                        }
-                    }
-                    finally
-                    {
-                        _bufferManager.ReturnBuffer(buffer);
-                    }
-                }
-            }
-            else
-            {
-                throw new NotSupportedException();
             }
         }
 
         public Group ParityEncoding(KeyCollection keys, HashAlgorithm hashAlgorithm, int blockLength, CorrectionAlgorithm correctionAlgorithm, WatchEventHandler watchEvent)
         {
-            if (correctionAlgorithm == CorrectionAlgorithm.None)
+            lock (_convertLock)
             {
-                Group group = new Group();
-                group.CorrectionAlgorithm = correctionAlgorithm;
-                group.InformationLength = keys.Count;
-                group.BlockLength = blockLength;
-                group.Length = keys.Sum(n => (long)this.GetLength(n));
-                group.Keys.AddRange(keys);
+                if (correctionAlgorithm == CorrectionAlgorithm.None)
+                {
+                    Group group = new Group();
+                    group.CorrectionAlgorithm = correctionAlgorithm;
+                    group.InformationLength = keys.Count;
+                    group.BlockLength = blockLength;
+                    group.Length = keys.Sum(n => (long)this.GetLength(n));
+                    group.Keys.AddRange(keys);
 
-                return group;
-            }
-            else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
-            {
+                    return group;
+                }
+                else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
+                {
 
 #if DEBUG
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 #endif
 
-                if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
+                    if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
 
-                var buffers = new ArraySegment<byte>[keys.Count];
-                var parityBuffers = new ArraySegment<byte>[keys.Count];
+                    var buffers = new ArraySegment<byte>[keys.Count];
+                    var parityBuffers = new ArraySegment<byte>[keys.Count];
 
-                int sumLength = 0;
+                    int sumLength = 0;
 
-                try
-                {
-                    for (int i = 0; i < buffers.Length; i++)
+                    try
                     {
-                        if (watchEvent(this)) throw new StopException();
-
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
+                        for (int i = 0; i < buffers.Length; i++)
                         {
-                            buffer = this[keys[i]];
-                            int bufferLength = buffer.Count;
+                            if (watchEvent(this)) throw new StopException();
 
-                            sumLength += bufferLength;
+                            ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                            if (bufferLength > blockLength)
-                            {
-                                throw new ArgumentOutOfRangeException("blockLength");
-                            }
-                            else if (bufferLength < blockLength)
-                            {
-                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                                Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                                buffer = tbuffer;
-                            }
-
-                            buffers[i] = buffer;
-                        }
-                        catch (Exception)
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-
-                            throw;
-                        }
-                    }
-
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        parityBuffers[i] = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                    }
-
-                    var indexes = new int[parityBuffers.Length];
-
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        indexes[i] = buffers.Length + i;
-                    }
-
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(buffers.Length, buffers.Length + parityBuffers.Length, _threadCount, _bufferManager))
-                    {
-                        Exception exception = null;
-
-                        Thread thread = new Thread(() =>
-                        {
                             try
                             {
-                                reedSolomon.Encode(buffers, parityBuffers, indexes, blockLength);
+                                buffer = this[keys[i]];
+                                int bufferLength = buffer.Count;
+
+                                sumLength += bufferLength;
+
+                                if (bufferLength > blockLength)
+                                {
+                                    throw new ArgumentOutOfRangeException("blockLength");
+                                }
+                                else if (bufferLength < blockLength)
+                                {
+                                    ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
+                                    Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                    Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                    buffer = tbuffer;
+                                }
+
+                                buffers[i] = buffer;
                             }
-                            catch (Exception e)
+                            catch (Exception)
                             {
-                                exception = e;
-                            }
-                        });
-                        thread.Priority = ThreadPriority.Lowest;
-                        thread.Name = "CacheManager_ReedSolomon.Encode";
-                        thread.Start();
+                                if (buffer.Array != null)
+                                {
+                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                }
 
-                        while (thread.IsAlive)
-                        {
-                            Thread.Sleep(1000);
-
-                            if (watchEvent(this))
-                            {
-                                reedSolomon.Cancel();
-                                thread.Join();
-
-                                throw new StopException();
+                                throw;
                             }
                         }
 
-                        if (exception != null) throw new StopException("Stop", exception);
-                    }
-
-                    KeyCollection parityKeys = new KeyCollection();
-
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        if (hashAlgorithm == HashAlgorithm.Sha512)
+                        for (int i = 0; i < parityBuffers.Length; i++)
                         {
-                            var key = new Key(Sha512.ComputeHash(parityBuffers[i]), hashAlgorithm);
+                            parityBuffers[i] = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
+                        }
 
-                            lock (this.ThisLock)
+                        var indexes = new int[parityBuffers.Length];
+
+                        for (int i = 0; i < parityBuffers.Length; i++)
+                        {
+                            indexes[i] = buffers.Length + i;
+                        }
+
+                        using (ReedSolomon8 reedSolomon = new ReedSolomon8(buffers.Length, buffers.Length + parityBuffers.Length, _threadCount, _bufferManager))
+                        {
+                            Exception exception = null;
+
+                            Thread thread = new Thread(() =>
                             {
-                                this.Lock(key);
-                                this[key] = parityBuffers[i];
+                                try
+                                {
+                                    reedSolomon.Encode(buffers, parityBuffers, indexes, blockLength);
+                                }
+                                catch (Exception e)
+                                {
+                                    exception = e;
+                                }
+                            });
+                            thread.Priority = ThreadPriority.Lowest;
+                            thread.Name = "CacheManager_ReedSolomon.Encode";
+                            thread.Start();
+
+                            while (thread.IsAlive)
+                            {
+                                Thread.Sleep(1000);
+
+                                if (watchEvent(this))
+                                {
+                                    reedSolomon.Cancel();
+                                    thread.Join();
+
+                                    throw new StopException();
+                                }
                             }
 
-                            parityKeys.Add(key);
+                            if (exception != null) throw new StopException("Stop", exception);
                         }
-                        else
-                        {
-                            throw new NotSupportedException();
-                        }
-                    }
 
-                    Group group = new Group();
-                    group.CorrectionAlgorithm = correctionAlgorithm;
-                    group.InformationLength = buffers.Length;
-                    group.BlockLength = blockLength;
-                    group.Length = sumLength;
-                    group.Keys.AddRange(keys);
-                    group.Keys.AddRange(parityKeys);
+                        KeyCollection parityKeys = new KeyCollection();
+
+                        for (int i = 0; i < parityBuffers.Length; i++)
+                        {
+                            if (hashAlgorithm == HashAlgorithm.Sha512)
+                            {
+                                var key = new Key(Sha512.ComputeHash(parityBuffers[i]), hashAlgorithm);
+
+                                lock (this.ThisLock)
+                                {
+                                    this.Lock(key);
+                                    this[key] = parityBuffers[i];
+                                }
+
+                                parityKeys.Add(key);
+                            }
+                            else
+                            {
+                                throw new NotSupportedException();
+                            }
+                        }
+
+                        Group group = new Group();
+                        group.CorrectionAlgorithm = correctionAlgorithm;
+                        group.InformationLength = buffers.Length;
+                        group.BlockLength = blockLength;
+                        group.Length = sumLength;
+                        group.Keys.AddRange(keys);
+                        group.Keys.AddRange(parityKeys);
 
 #if DEBUG
                     Debug.WriteLine(string.Format("CacheManager_ParityEncoding {0}", sw.Elapsed.ToString()));
 #endif
 
-                    return group;
-                }
-                finally
-                {
-                    for (int i = 0; i < buffers.Length; i++)
-                    {
-                        if (buffers[i].Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffers[i].Array);
-                        }
+                        return group;
                     }
+                    finally
+                    {
+                        for (int i = 0; i < buffers.Length; i++)
+                        {
+                            if (buffers[i].Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffers[i].Array);
+                            }
+                        }
 
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        if (parityBuffers[i].Array != null)
+                        for (int i = 0; i < parityBuffers.Length; i++)
                         {
-                            _bufferManager.ReturnBuffer(parityBuffers[i].Array);
+                            if (parityBuffers[i].Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(parityBuffers[i].Array);
+                            }
                         }
                     }
                 }
-            }
-            else
-            {
-                throw new NotSupportedException();
+                else
+                {
+                    throw new NotSupportedException();
+                }
             }
         }
 
         public KeyCollection ParityDecoding(Group group, WatchEventHandler watchEvent)
         {
-            if (group.BlockLength > 1024 * 1024 * 4) throw new ArgumentOutOfRangeException();
-
-            if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
+            lock (_convertLock)
             {
-                return new KeyCollection(group.Keys);
-            }
-            else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
-            {
-                var buffers = new ArraySegment<byte>[group.InformationLength];
+                if (group.BlockLength > 1024 * 1024 * 4) throw new ArgumentOutOfRangeException();
 
-                try
+                if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
                 {
-                    var indexes = new int[group.InformationLength];
+                    return new KeyCollection(group.Keys);
+                }
+                else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
+                {
+                    var buffers = new ArraySegment<byte>[group.InformationLength];
 
-                    int count = 0;
-
-                    for (int i = 0; i < group.Keys.Count && count < group.InformationLength; i++)
+                    try
                     {
-                        if (watchEvent(this)) throw new StopException();
+                        var indexes = new int[group.InformationLength];
 
-                        if (!this.Contains(group.Keys[i])) continue;
+                        int count = 0;
 
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
+                        for (int i = 0; i < group.Keys.Count && count < group.InformationLength; i++)
                         {
-                            buffer = this[group.Keys[i]];
-                            int bufferLength = buffer.Count;
+                            if (watchEvent(this)) throw new StopException();
 
-                            if (bufferLength > group.BlockLength)
-                            {
-                                throw new ArgumentOutOfRangeException("group.BlockLength");
-                            }
-                            else if (bufferLength < group.BlockLength)
-                            {
-                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
-                                Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                                buffer = tbuffer;
-                            }
+                            if (!this.Contains(group.Keys[i])) continue;
 
-                            indexes[count] = i;
-                            buffers[count] = buffer;
+                            ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                            count++;
-                        }
-                        catch (BlockNotFoundException)
-                        {
-
-                        }
-                        catch (Exception)
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-
-                            throw;
-                        }
-                    }
-
-                    if (count < group.InformationLength) throw new BlockNotFoundException();
-
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(group.InformationLength, group.Keys.Count, _threadCount, _bufferManager))
-                    {
-                        Exception exception = null;
-
-                        Thread thread = new Thread(() =>
-                        {
                             try
                             {
-                                reedSolomon.Decode(buffers, indexes, group.BlockLength);
+                                buffer = this[group.Keys[i]];
+                                int bufferLength = buffer.Count;
+
+                                if (bufferLength > group.BlockLength)
+                                {
+                                    throw new ArgumentOutOfRangeException("group.BlockLength");
+                                }
+                                else if (bufferLength < group.BlockLength)
+                                {
+                                    ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
+                                    Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                    Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                    buffer = tbuffer;
+                                }
+
+                                indexes[count] = i;
+                                buffers[count] = buffer;
+
+                                count++;
                             }
-                            catch (Exception e)
+                            catch (BlockNotFoundException)
                             {
-                                exception = e;
+
                             }
-                        });
-                        thread.Priority = ThreadPriority.Lowest;
-                        thread.Name = "CacheManager_ReedSolomon.Decode";
-                        thread.Start();
-
-                        while (thread.IsAlive)
-                        {
-                            Thread.Sleep(1000);
-
-                            if (watchEvent(this))
+                            catch (Exception)
                             {
-                                reedSolomon.Cancel();
-                                thread.Join();
+                                if (buffer.Array != null)
+                                {
+                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                }
 
-                                throw new StopException();
+                                throw;
                             }
                         }
 
-                        if (exception != null) throw new StopException("Stop", exception);
-                    }
+                        if (count < group.InformationLength) throw new BlockNotFoundException();
 
-                    long length = group.Length;
-
-                    for (int i = 0; i < group.InformationLength; length -= group.BlockLength, i++)
-                    {
-                        this[group.Keys[i]] = new ArraySegment<byte>(buffers[i].Array, buffers[i].Offset, (int)Math.Min(buffers[i].Count, length));
-                    }
-                }
-                finally
-                {
-                    for (int i = 0; i < buffers.Length; i++)
-                    {
-                        if (buffers[i].Array != null)
+                        using (ReedSolomon8 reedSolomon = new ReedSolomon8(group.InformationLength, group.Keys.Count, _threadCount, _bufferManager))
                         {
-                            _bufferManager.ReturnBuffer(buffers[i].Array);
+                            Exception exception = null;
+
+                            Thread thread = new Thread(() =>
+                            {
+                                try
+                                {
+                                    reedSolomon.Decode(buffers, indexes, group.BlockLength);
+                                }
+                                catch (Exception e)
+                                {
+                                    exception = e;
+                                }
+                            });
+                            thread.Priority = ThreadPriority.Lowest;
+                            thread.Name = "CacheManager_ReedSolomon.Decode";
+                            thread.Start();
+
+                            while (thread.IsAlive)
+                            {
+                                Thread.Sleep(1000);
+
+                                if (watchEvent(this))
+                                {
+                                    reedSolomon.Cancel();
+                                    thread.Join();
+
+                                    throw new StopException();
+                                }
+                            }
+
+                            if (exception != null) throw new StopException("Stop", exception);
+                        }
+
+                        long length = group.Length;
+
+                        for (int i = 0; i < group.InformationLength; length -= group.BlockLength, i++)
+                        {
+                            this[group.Keys[i]] = new ArraySegment<byte>(buffers[i].Array, buffers[i].Offset, (int)Math.Min(buffers[i].Count, length));
                         }
                     }
+                    finally
+                    {
+                        for (int i = 0; i < buffers.Length; i++)
+                        {
+                            if (buffers[i].Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffers[i].Array);
+                            }
+                        }
+                    }
+
+                    KeyCollection keys = new KeyCollection();
+
+                    for (int i = 0; i < group.InformationLength; i++)
+                    {
+                        keys.Add(group.Keys[i]);
+                    }
+
+                    return new KeyCollection(keys);
                 }
-
-                KeyCollection keys = new KeyCollection();
-
-                for (int i = 0; i < group.InformationLength; i++)
+                else
                 {
-                    keys.Add(group.Keys[i]);
+                    throw new NotSupportedException();
                 }
-
-                return new KeyCollection(keys);
-            }
-            else
-            {
-                throw new NotSupportedException();
             }
         }
 

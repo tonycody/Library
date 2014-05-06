@@ -141,7 +141,7 @@ namespace Library.Collections
         {
             lock (this.ThisLock)
             {
-                if (_capacity != null && _list.Count > _capacity.Value) throw new OverflowException();
+                if (_capacity != null && _list.Count + 1 > _capacity.Value) throw new OverflowException();
                 if (this.Filter(item)) return;
 
                 // 姑息な、メモリ消費量を減少させる策。

@@ -11,7 +11,7 @@ namespace Library.Io
         private List<byte[]> _buffers = new List<byte[]>();
         private long _position;
         private long _length;
-        private int _bufferSize = 4096;
+        private int _bufferSize = 256;
         private bool _disposed;
 
         public BufferStream(BufferManager bufferManager)

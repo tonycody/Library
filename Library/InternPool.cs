@@ -10,21 +10,21 @@ namespace Library
         private System.Threading.Timer _watchTimer;
         private volatile bool _isRefreshing = false;
 
-        private Dictionary<T, Info<T>> _dic;
+        private Dictionary<T, Info> _dic;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
         public InternPool()
         {
-            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 3, 0), new TimeSpan(0, 3, 0));
-            _dic = new Dictionary<T, Info<T>>();
+            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
+            _dic = new Dictionary<T, Info>();
         }
 
         public InternPool(IEqualityComparer<T> comparer)
         {
-            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 3, 0), new TimeSpan(0, 3, 0));
-            _dic = new Dictionary<T, Info<T>>(comparer);
+            _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
+            _dic = new Dictionary<T, Info>(comparer);
         }
 
         private void WatchTimer(object state)
@@ -52,7 +52,7 @@ namespace Library
             {
                 lock (this.ThisLock)
                 {
-                    LinkedList<T> list = null;
+                    List<T> list = null;
 
                     foreach (var pair in _dic)
                     {
@@ -62,9 +62,9 @@ namespace Library
                         if (info.Count == 0)
                         {
                             if (list == null)
-                                list = new LinkedList<T>();
+                                list = new List<T>();
 
-                            list.AddLast(key);
+                            list.Add(key);
                         }
                     }
 
@@ -87,11 +87,11 @@ namespace Library
         {
             lock (this.ThisLock)
             {
-                Info<T> info;
+                Info info;
 
                 if (!_dic.TryGetValue(value, out info))
                 {
-                    info = new Info<T>(value);
+                    info = new Info(value);
                     _dic[value] = info;
                 }
 
@@ -100,17 +100,17 @@ namespace Library
             }
         }
 
-        private class Info<TValue>
+        private class Info
         {
-            private LinkedList<WeakReference> _list = new LinkedList<WeakReference>();
-            private TValue _value;
+            private SimpleLinkedList<WeakReference> _list = new SimpleLinkedList<WeakReference>();
+            private T _value;
 
-            public Info(TValue value)
+            public Info(T value)
             {
                 _value = value;
             }
 
-            public TValue Value
+            public T Value
             {
                 get
                 {
@@ -130,26 +130,31 @@ namespace Library
 
             private void Refresh()
             {
-                var currentItem = _list.First;
+                List<WeakReference> tempList = null;
 
-                while (currentItem != null)
+                foreach (var weakReference in _list)
                 {
-                    if (!currentItem.Value.IsAlive)
+                    if (!weakReference.IsAlive)
                     {
-                        var removeNode = currentItem;
-                        currentItem = currentItem.Next;
-                        _list.Remove(removeNode);
+                        if (tempList == null)
+                            tempList = new List<WeakReference>();
+
+                        tempList.Add(weakReference);
                     }
-                    else
+                }
+
+                if (tempList != null)
+                {
+                    foreach (var weakReference in tempList)
                     {
-                        currentItem = currentItem.Next;
+                        _list.Remove(weakReference);
                     }
                 }
             }
 
             public void Add(object holder)
             {
-                _list.AddLast(new WeakReference(holder));
+                _list.Add(new WeakReference(holder));
             }
         }
 

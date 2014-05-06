@@ -297,7 +297,7 @@ namespace Library.Net.Amoeba
                         contexts.Add(new InformationContext("Id", messageManager.Id));
                         contexts.Add(new InformationContext("Node", connectionManager.Node));
                         contexts.Add(new InformationContext("Uri", _nodeToUri[connectionManager.Node]));
-                        contexts.Add(new InformationContext("Priority", (int)messageManager.Priority));
+                        contexts.Add(new InformationContext("Priority", (long)messageManager.Priority));
                         contexts.Add(new InformationContext("ReceivedByteCount", (long)messageManager.ReceivedByteCount + connectionManager.ReceivedByteCount));
                         contexts.Add(new InformationContext("SentByteCount", (long)messageManager.SentByteCount + connectionManager.SentByteCount));
                         contexts.Add(new InformationContext("Direction", connectionManager.Direction));
@@ -901,21 +901,9 @@ namespace Library.Net.Amoeba
                 {
                     checkSeedsStopwatch.Restart();
 
-#if DEBUG
-                    Stopwatch sw1 = new Stopwatch();
-                    sw1.Start();
-#endif
                     // キャッシュ済みSeedをデコードするのに必要なブロックが揃っているか確認。
                     _cacheManager.CheckSeeds();
-#if DEBUG
-                    sw1.Stop();
-                    Log.Information(string.Format("CheckSeeds: {0}", sw1.Elapsed.ToString()));
-#endif
 
-#if DEBUG
-                    Stopwatch sw2 = new Stopwatch();
-                    sw2.Start();
-#endif
                     // 電子署名を検証して破損しているSeedを検索し、削除。
                     {
                         var removeSignatures = new SortedSet<string>();
@@ -946,10 +934,6 @@ namespace Library.Net.Amoeba
 
                         _settings.RemoveSignatures(removeSignatures);
                     }
-#if DEBUG
-                    sw2.Stop();
-                    Log.Information(string.Format("Seeds VerifyCertificate: {0}", sw2.Elapsed.ToString()));
-#endif
                 }
 
                 if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalSeconds >= 30)
@@ -1747,7 +1731,7 @@ namespace Library.Net.Amoeba
                     }
 
                     // Check
-                    if ((int)messageManager.Priority < 0 && checkTime.Elapsed.TotalSeconds >= 5)
+                    if (messageManager.Priority < 0 && checkTime.Elapsed.TotalSeconds >= 5)
                     {
                         checkTime.Restart();
 
