@@ -869,11 +869,47 @@ namespace Library.Net.Amoeba
                 if (_isLoaded) throw new AmoebaManagerException("AmoebaManager was already loaded.");
                 _isLoaded = true;
 
+                // バージョンアップ処理。
+                {
+                    // ConnectionsManager
+                    {
+                        var oldPath = System.IO.Path.Combine(directoryPath, "ConnectionManager");
+
+                        if (System.IO.Directory.Exists(oldPath))
+                        {
+                            var newPath = System.IO.Path.Combine(directoryPath, "ConnectionsManager");
+
+                            if (System.IO.Directory.Exists(newPath))
+                            {
+                                try
+                                {
+                                    System.IO.Directory.Delete(oldPath, true);
+                                }
+                                catch (Exception)
+                                {
+
+                                }
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    System.IO.Directory.Move(oldPath, newPath);
+                                }
+                                catch (Exception)
+                                {
+
+                                }
+                            }
+                        }
+                    }
+                }
+
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _bitmapManager.Load(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
-                _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
+                _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionsManager"));
 
                 List<Task> tasks = new List<Task>();
 
@@ -904,7 +940,7 @@ namespace Library.Net.Amoeba
 
                 Task.WaitAll(tasks.ToArray());
 
-                _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
+                _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionsManager"));
                 _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _bitmapManager.Save(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));

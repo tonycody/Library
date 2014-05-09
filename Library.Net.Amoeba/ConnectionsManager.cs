@@ -1015,7 +1015,7 @@ namespace Library.Net.Amoeba
                     {
                         if (_settings.DiffusionBlocksRequest.Count > 10000)
                         {
-                            foreach (var key in _settings.DiffusionBlocksRequest.Randomize()
+                            foreach (var key in _settings.DiffusionBlocksRequest.ToArray().Randomize()
                                 .Take(_settings.DiffusionBlocksRequest.Count - 10000).ToList())
                             {
                                 _settings.DiffusionBlocksRequest.Remove(key);
