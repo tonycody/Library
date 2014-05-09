@@ -308,7 +308,7 @@ namespace Library.Io
                         var subCount = Math.Min(count, _current.Value.Count);
                         readSumLength += subCount;
 
-                        Native.Copy(_current.Value.Array, _current.Value.Offset, buffer, offset, subCount);
+                        Unsafe.Copy(_current.Value.Array, _current.Value.Offset, buffer, offset, subCount);
 
                         offset += subCount;
                         count -= subCount;
@@ -537,7 +537,7 @@ namespace Library.Io
                 try
                 {
                     var tempBuffer = _bufferManager.TakeBuffer(QueueStream.BlockSize);
-                    Native.Copy(buffer, offset, tempBuffer, 0, count);
+                    Unsafe.Copy(buffer, offset, tempBuffer, 0, count);
 
                     _queue.Enqueue(new ArraySegment<byte>(tempBuffer, 0, count));
 

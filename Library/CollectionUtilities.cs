@@ -11,20 +11,6 @@ namespace Library
             throw new NotImplementedException();
         }
 
-        public static IEnumerable<T> Unite<T>(params IEnumerable<T>[] items)
-        {
-            if (items == null) throw new ArgumentNullException("items");
-
-            return items.SelectMany(list => list);
-        }
-
-        public static IEnumerable<T> Unite<T>(IEnumerable<IEnumerable<T>> items)
-        {
-            if (items == null) throw new ArgumentNullException("items");
-
-            return items.SelectMany(list => list);
-        }
-
         public static bool Equals<T>(IList<T> source, IList<T> destination, IEqualityComparer<T> equalityComparer)
         {
             if (source == null) throw new ArgumentNullException("source");
@@ -123,7 +109,7 @@ namespace Library
 
                 if (x != null && y != null)
                 {
-                    return Native.Equals(x, y);
+                    return Unsafe.Equals(x, y);
                 }
             }
 
@@ -152,7 +138,7 @@ namespace Library
                     if (length > (source.Count - sourceIndex)) throw new ArgumentOutOfRangeException("length");
                     if (length > (destination.Count - destinationIndex)) throw new ArgumentOutOfRangeException("length");
 
-                    return Native.Equals(x, sourceIndex, y, destinationIndex, length);
+                    return Unsafe.Equals(x, sourceIndex, y, destinationIndex, length);
                 }
             }
 
@@ -279,7 +265,7 @@ namespace Library
 
                 if (x != null && y != null)
                 {
-                    return Native.Compare(x, y);
+                    return Unsafe.Compare(x, y);
                 }
             }
 
@@ -308,7 +294,7 @@ namespace Library
                     if (length > (source.Count - sourceIndex)) throw new ArgumentOutOfRangeException("length");
                     if (length > (destination.Count - destinationIndex)) throw new ArgumentOutOfRangeException("length");
 
-                    return Native.Compare(x, sourceIndex, y, destinationIndex, length);
+                    return Unsafe.Compare(x, sourceIndex, y, destinationIndex, length);
                 }
             }
 

@@ -15,7 +15,7 @@ namespace Library.Security
             Deflate = 1,
         }
 
-        private static BufferManager _bufferManager = BufferManager.Instance;
+        private static readonly BufferManager _bufferManager = BufferManager.Instance;
 
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
@@ -34,7 +34,7 @@ namespace Library.Security
 
                     try
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                        compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                         using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
@@ -142,7 +142,7 @@ namespace Library.Security
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {

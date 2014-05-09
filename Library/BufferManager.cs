@@ -25,7 +25,7 @@ namespace Library
         private int _maxBufferSize;
 
         private int[] _sizes;
-        private LinkedList<IReferenceInfo>[] _buffers;
+        private LinkedList<WeakReference>[] _buffers;
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -41,12 +41,12 @@ namespace Library
             _maxBufferSize = maxBufferSize;
 
             var sizes = new List<int>();
-            var buffers = new List<LinkedList<IReferenceInfo>>();
+            var buffers = new List<LinkedList<WeakReference>>();
 
             for (int i = 256; i < _maxBufferSize; i *= 2)
             {
                 sizes.Add(i);
-                buffers.Add(new LinkedList<IReferenceInfo>());
+                buffers.Add(new LinkedList<WeakReference>());
             }
 
             _sizes = sizes.ToArray();
@@ -114,9 +114,9 @@ namespace Library
                 {
                     long size = 0;
 
-                    foreach (var weakReference in CollectionUtilities.Unite(_buffers))
+                    foreach (var weakReference in _buffers.Extract())
                     {
-                        var buffer = weakReference.Target;
+                        byte[] buffer = weakReference.Target as byte[];
                         if (buffer == null) continue;
 
                         size += buffer.Length;
@@ -140,7 +140,7 @@ namespace Library
                         while (_buffers[i].Count > 0)
                         {
                             var weakReference = _buffers[i].First.Value;
-                            byte[] buffer = weakReference.Target;
+                            byte[] buffer = weakReference.Target as byte[];
                             _buffers[i].RemoveFirst();
 
                             if (buffer != null) return buffer;
@@ -167,14 +167,7 @@ namespace Library
                 {
                     if (buffer.Length == _sizes[i])
                     {
-                        if (buffer.Length <= 1024 * 64)
-                        {
-                            _buffers[i].AddFirst(new StrongReferenceInfo(buffer));
-                        }
-                        else
-                        {
-                            _buffers[i].AddFirst(new WeakReferenceInfo(buffer));
-                        }
+                        _buffers[i].AddFirst(new WeakReference(buffer));
 
                         break;
                     }
@@ -191,64 +184,6 @@ namespace Library
                 for (int i = 0; i < _buffers.Length; i++)
                 {
                     _buffers[i].Clear();
-                }
-            }
-        }
-
-        private interface IReferenceInfo
-        {
-            bool IsAlive { get; }
-            byte[] Target { get; }
-        }
-
-        private sealed class StrongReferenceInfo : IReferenceInfo
-        {
-            private byte[] _target;
-
-            public StrongReferenceInfo(byte[] target)
-            {
-                _target = target;
-            }
-
-            public bool IsAlive
-            {
-                get
-                {
-                    return true;
-                }
-            }
-
-            public byte[] Target
-            {
-                get
-                {
-                    return _target;
-                }
-            }
-        }
-
-        private sealed class WeakReferenceInfo : IReferenceInfo
-        {
-            private WeakReference _weakReference;
-
-            public WeakReferenceInfo(byte[] target)
-            {
-                _weakReference = new WeakReference(target);
-            }
-
-            public bool IsAlive
-            {
-                get
-                {
-                    return _weakReference.IsAlive;
-                }
-            }
-
-            public byte[] Target
-            {
-                get
-                {
-                    return _weakReference.Target as byte[];
                 }
             }
         }

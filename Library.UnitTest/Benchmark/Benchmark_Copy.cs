@@ -33,7 +33,7 @@ namespace Library.UnitTest
                     if (index == 0)
                     {
                         sw1.Start();
-                        Native.Copy(x, 0, y, 0, length);
+                        Unsafe.Copy(x, 0, y, 0, length);
                         sw1.Stop();
                     }
                     else if (index == 1)
@@ -47,7 +47,7 @@ namespace Library.UnitTest
 
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine("Native.Copy: " + sw1.Elapsed.ToString());
+            sb.AppendLine("Unsafe.Copy: " + sw1.Elapsed.ToString());
             sb.AppendLine("Array.Copy: " + sw2.Elapsed.ToString());
 
             Console.WriteLine(sb.ToString());

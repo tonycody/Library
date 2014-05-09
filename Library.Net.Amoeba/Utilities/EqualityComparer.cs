@@ -10,7 +10,7 @@ namespace Library.Net.Amoeba
             if ((x == null) != (y == null)) return false;
             if (object.ReferenceEquals(x, y)) return true;
 
-            return Native.Equals(x, y);
+            return Unsafe.Equals(x, y);
         }
 
         public int GetHashCode(byte[] value)

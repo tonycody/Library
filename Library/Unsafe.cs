@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Library
 {
-    public unsafe static class Native
+    public unsafe static class Unsafe
     {
 #if Mono
 
@@ -23,7 +23,7 @@ namespace Library
         private static XorDelegate _xor;
 #endif
 
-        static Native()
+        static Unsafe()
         {
 #if Mono
 
@@ -103,31 +103,7 @@ namespace Library
 
             fixed (byte* p_x = source1, p_y = source2)
             {
-                byte* t_x = p_x, t_y = p_y;
-
-                for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8)
-                {
-                    if (*((long*)t_x) != *((long*)t_y)) return false;
-                }
-
-                if ((length & 4) != 0)
-                {
-                    if (*((int*)t_x) != *((int*)t_y)) return false;
-                    t_x += 4; t_y += 4;
-                }
-
-                if ((length & 2) != 0)
-                {
-                    if (*((short*)t_x) != *((short*)t_y)) return false;
-                    t_x += 2; t_y += 2;
-                }
-
-                if ((length & 1) != 0)
-                {
-                    if (*((byte*)t_x) != *((byte*)t_y)) return false;
-                }
-
-                return true;
+                return _equals(p_x, p_y, length);
             }
         }
 
@@ -145,29 +121,7 @@ namespace Library
             {
                 byte* t_x = p_x + source1Index, t_y = p_y + source2Index;
 
-                for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8)
-                {
-                    if (*((long*)t_x) != *((long*)t_y)) return false;
-                }
-
-                if ((length & 4) != 0)
-                {
-                    if (*((int*)t_x) != *((int*)t_y)) return false;
-                    t_x += 4; t_y += 4;
-                }
-
-                if ((length & 2) != 0)
-                {
-                    if (*((short*)t_x) != *((short*)t_y)) return false;
-                    t_x += 2; t_y += 2;
-                }
-
-                if ((length & 1) != 0)
-                {
-                    if (*((byte*)t_x) != *((byte*)t_y)) return false;
-                }
-
-                return true;
+                return _equals(t_x, t_y, length);
             }
         }
 
@@ -274,50 +228,26 @@ namespace Library
 
                 if (destination.Length > targetRange)
                 {
-                    Native.Zero(destination, targetRange, destination.Length - targetRange);
+                    Unsafe.Zero(destination, targetRange, destination.Length - targetRange);
                 }
             }
 
             if (source1.Length > source2.Length && destination.Length > source2.Length)
             {
-                Native.Copy(source1, source2.Length, destination, source2.Length, Math.Min(source1.Length, destination.Length) - source2.Length);
+                Unsafe.Copy(source1, source2.Length, destination, source2.Length, Math.Min(source1.Length, destination.Length) - source2.Length);
             }
             else if (source2.Length > source1.Length && destination.Length > source1.Length)
             {
-                Native.Copy(source2, source1.Length, destination, source1.Length, Math.Min(source2.Length, destination.Length) - source1.Length);
+                Unsafe.Copy(source2, source1.Length, destination, source1.Length, Math.Min(source2.Length, destination.Length) - source1.Length);
             }
 
             int length = Math.Min(Math.Min(source1.Length, source2.Length), destination.Length);
 
             fixed (byte* p_x = source1, p_y = source2)
             {
-                byte* t_x = p_x, t_y = p_y;
-
                 fixed (byte* p_buffer = destination)
                 {
-                    byte* t_buffer = p_buffer;
-
-                    for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
-                    {
-                        *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
-                    }
-
-                    if ((length & 4) != 0)
-                    {
-                        *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
-                        t_x += 4; t_y += 4; t_buffer += 4;
-                    }
-
-                    if ((length & 2) != 0)
-                    {
-                        *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
-                        t_x += 2; t_y += 2; t_buffer += 2;
-                    }
-
-                    if ((length & 1) != 0)
-                    {
-                        *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
-                    }
+                    _xor(p_x, p_y, p_buffer, length);
                 }
             }
         }
@@ -341,29 +271,7 @@ namespace Library
 
                 fixed (byte* p_buffer = destination)
                 {
-                    byte* t_buffer = p_buffer;
-
-                    for (int i = (length / 8) - 1; i >= 0; i--, t_x += 8, t_y += 8, t_buffer += 8)
-                    {
-                        *((long*)t_buffer) = *((long*)t_x) ^ *((long*)t_y);
-                    }
-
-                    if ((length & 4) != 0)
-                    {
-                        *((int*)t_buffer) = *((int*)t_x) ^ *((int*)t_y);
-                        t_x += 4; t_y += 4; t_buffer += 4;
-                    }
-
-                    if ((length & 2) != 0)
-                    {
-                        *((short*)t_buffer) = (short)(*((short*)t_x) ^ *((short*)t_y));
-                        t_x += 2; t_y += 2; t_buffer += 2;
-                    }
-
-                    if ((length & 1) != 0)
-                    {
-                        *((byte*)t_buffer) = (byte)(*((byte*)t_x) ^ *((byte*)t_y));
-                    }
+                    _xor(t_x, t_y, p_buffer, length);
                 }
             }
         }

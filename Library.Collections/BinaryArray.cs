@@ -58,7 +58,7 @@ namespace Library.Collections
 
         public void Clear()
         {
-            Native.Zero(_buffer);
+            Unsafe.Zero(_buffer);
         }
 
         protected override void Dispose(bool disposing)

@@ -125,12 +125,12 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (!Native.Equals(this.PublicKey, other.PublicKey)) return false;
+                if (!Unsafe.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             if (this.PrivateKey != null && other.PrivateKey != null)
             {
-                if (!Native.Equals(this.PrivateKey, other.PrivateKey)) return false;
+                if (!Unsafe.Equals(this.PrivateKey, other.PrivateKey)) return false;
             }
 
             return true;

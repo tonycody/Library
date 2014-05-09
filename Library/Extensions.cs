@@ -40,6 +40,17 @@ namespace Library
 
             return list;
         }
+
+        public static IEnumerable<T> Extract<T>(this IEnumerable<IEnumerable<T>> source)
+        {
+            foreach (var collection in source)
+            {
+                foreach (var item in collection)
+                {
+                    yield return item;
+                }
+            }
+        }
     }
 
     public static class RandomExtensions

@@ -109,7 +109,7 @@ namespace Library.Net.Connections
                         OperatingSystem osInfo = Environment.OSVersion;
 
                         // Windows VistaˆÈãB
-                        if (osInfo.Platform == PlatformID.Win32NT && osInfo.Version.Major >= 6)
+                        if (osInfo.Platform == PlatformID.Win32NT && osInfo.Version >= new Version(6, 0))
                         {
                             {
                                 byte[] sessionId = new byte[64];
@@ -266,7 +266,7 @@ namespace Library.Net.Connections
                                         TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
 
-                                        if (!Native.Equals(connectionSignature.ProtocolHash, otherProtocolHash)) throw new ConnectionException();
+                                        if (!Unsafe.Equals(connectionSignature.ProtocolHash, otherProtocolHash)) throw new ConnectionException();
                                     }
 
                                     _certificate = connectionSignature.Certificate;
@@ -321,7 +321,7 @@ namespace Library.Net.Connections
                                         TimeSpan span = (now > connectionSignature.CreationTime) ? now - connectionSignature.CreationTime : connectionSignature.CreationTime - now;
                                         if (span > new TimeSpan(0, 30, 0)) throw new ConnectionException();
 
-                                        if (!Native.Equals(connectionSignature.ProtocolHash, otherProtocolHash)) throw new ConnectionException();
+                                        if (!Unsafe.Equals(connectionSignature.ProtocolHash, otherProtocolHash)) throw new ConnectionException();
                                     }
 
                                     _certificate = connectionSignature.Certificate;
@@ -354,7 +354,7 @@ namespace Library.Net.Connections
                             if (otherSeed == null) throw new ConnectionException();
 
                             seed = new byte[Math.Max(mySeed.Length, otherSeed.Length)];
-                            Native.Xor(mySeed, otherSeed, seed);
+                            Unsafe.Xor(mySeed, otherSeed, seed);
                         }
                         else
                         {
@@ -364,7 +364,7 @@ namespace Library.Net.Connections
                         if (keyDerivationFunctionAlgorithm.HasFlag(SecureVersion3.KeyDerivationAlgorithm.Pbkdf2))
                         {
                             byte[] xorSessionId = new byte[Math.Max(myProtocol3.SessionId.Length, otherProtocol3.SessionId.Length)];
-                            Native.Xor(myProtocol3.SessionId, otherProtocol3.SessionId, xorSessionId);
+                            Unsafe.Xor(myProtocol3.SessionId, otherProtocol3.SessionId, xorSessionId);
 
                             HMAC hmac = null;
 
@@ -517,7 +517,7 @@ namespace Library.Net.Connections
 
                                 byte[] myHmacBuff = HmacSha512.ComputeHash(stream, _informationVersion3.OtherHmacKey);
 
-                                if (!Native.Equals(otherHmacBuff, myHmacBuff)) throw new ConnectionException();
+                                if (!Unsafe.Equals(otherHmacBuff, myHmacBuff)) throw new ConnectionException();
 
                                 stream.Seek(8, SeekOrigin.Begin);
                             }
@@ -537,7 +537,7 @@ namespace Library.Net.Connections
 
                                 try
                                 {
-                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                                     //using (var aes = new AesCryptoServiceProvider())
                                     using (var aes = Aes.Create())
@@ -617,7 +617,7 @@ namespace Library.Net.Connections
 
                                     try
                                     {
-                                        sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                        sendBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                                         //using (var aes = new AesCryptoServiceProvider())
                                         using (var aes = Aes.Create())
@@ -720,6 +720,20 @@ namespace Library.Net.Connections
                     }
 
                     _connection = null;
+                }
+
+                if (_random != null)
+                {
+                    try
+                    {
+                        _random.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _random = null;
                 }
             }
         }

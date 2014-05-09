@@ -103,7 +103,7 @@ namespace Library.Security
 
             if (this.PublicKey != null && other.PublicKey != null)
             {
-                if (!Native.Equals(this.PublicKey, other.PublicKey)) return false;
+                if (!Unsafe.Equals(this.PublicKey, other.PublicKey)) return false;
             }
 
             return true;

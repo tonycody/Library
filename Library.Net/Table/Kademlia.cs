@@ -192,7 +192,7 @@ namespace Library.Net
             int linkIndex = 0;
 
             var baseItem = infoManager.GetInfo(InfoIndex++);
-            Native.Xor(targetId, baseId, baseItem.Xor);
+            Unsafe.Xor(targetId, baseId, baseItem.Xor);
 
             var firstItem = baseItem;
             var lastItem = baseItem;
@@ -202,14 +202,14 @@ namespace Library.Net
             foreach (var node in nodeList)
             {
                 var targetItem = infoManager.GetInfo(InfoIndex++);
-                Native.Xor(targetId, node.Id, targetItem.Xor);
+                Unsafe.Xor(targetId, node.Id, targetItem.Xor);
                 targetItem.Node = node;
 
                 var currentItem = lastItem;
 
                 while (currentItem != null)
                 {
-                    if (Native.Compare(currentItem.Xor, targetItem.Xor) <= 0) break;
+                    if (Unsafe.Compare(currentItem.Xor, targetItem.Xor) <= 0) break;
 
                     currentItem = currentItem.Previous;
                 }

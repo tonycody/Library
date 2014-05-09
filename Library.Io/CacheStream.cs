@@ -192,7 +192,7 @@ namespace Library.Io
             if ((_readerBuffer.Length - _readerBufferPosition) + _readerBuffer.Length < count)
             {
                 int length = Math.Min(_readerBufferLength - _readerBufferPosition, count);
-                Native.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
+                Unsafe.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
                 _readerBufferPosition += length;
                 offset += length;
                 count -= length;
@@ -230,7 +230,7 @@ namespace Library.Io
                     }
 
                     int length = Math.Min(_readerBufferLength - _readerBufferPosition, count);
-                    Native.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
+                    Unsafe.Copy(_readerBuffer, _readerBufferPosition, buffer, offset, length);
                     _readerBufferPosition += length;
                     offset += length;
                     count -= length;
@@ -291,7 +291,7 @@ namespace Library.Io
                 while (count > 0)
                 {
                     int length = Math.Min(_writerBlockBuffer.Length - _writerBufferPosition, count);
-                    Native.Copy(buffer, offset, _writerBlockBuffer, _writerBufferPosition, length);
+                    Unsafe.Copy(buffer, offset, _writerBlockBuffer, _writerBufferPosition, length);
                     _writerBufferPosition += length;
                     offset += length;
                     count -= length;

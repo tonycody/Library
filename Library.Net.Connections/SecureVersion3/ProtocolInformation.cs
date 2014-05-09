@@ -145,7 +145,7 @@ namespace Library.Net.Connections.SecureVersion3
 
             if (this.SessionId != null && other.SessionId != null)
             {
-                if (!Native.Equals(this.SessionId, other.SessionId)) return false;
+                if (!Unsafe.Equals(this.SessionId, other.SessionId)) return false;
             }
 
             return true;

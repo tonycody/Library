@@ -210,10 +210,10 @@ namespace Library.UnitTest
                     _random.NextBytes(value1);
                     _random.NextBytes(value2);
 
-                    Native.Xor(value1, value2, result1);
-                    Native.Xor(value1, 0, value2, 0, result2, 0, result2.Length);
+                    Unsafe.Xor(value1, value2, result1);
+                    Unsafe.Xor(value1, 0, value2, 0, result2, 0, result2.Length);
 
-                    Assert.IsTrue(Native.Equals(result1, result2));
+                    Assert.IsTrue(Unsafe.Equals(result1, result2));
                 }
             }
 
@@ -225,10 +225,10 @@ namespace Library.UnitTest
                 _random.NextBytes(result1);
                 byte[] result2 = new byte[1024];
 
-                Native.Xor(value1, value2, result1);
-                Native.Copy(value1, 0, result2, 0, value1.Length);
+                Unsafe.Xor(value1, value2, result1);
+                Unsafe.Copy(value1, 0, result2, 0, value1.Length);
 
-                Assert.IsTrue(Native.Equals(result1, result2));
+                Assert.IsTrue(Unsafe.Equals(result1, result2));
             }
 
             {
@@ -239,10 +239,10 @@ namespace Library.UnitTest
                 _random.NextBytes(result1);
                 byte[] result2 = new byte[1024];
 
-                Native.Xor(value1, value2, result1);
-                Native.Copy(value2, 0, result2, 0, value2.Length);
+                Unsafe.Xor(value1, value2, result1);
+                Unsafe.Copy(value2, 0, result2, 0, value2.Length);
 
-                Assert.IsTrue(Native.Equals(result1, result2));
+                Assert.IsTrue(Unsafe.Equals(result1, result2));
             }
 
             {
@@ -253,9 +253,9 @@ namespace Library.UnitTest
                 _random.NextBytes(result1);
                 byte[] result2 = new byte[] { 0x00, 0x01, 0x02 };
 
-                Native.Xor(value1, value2, result1);
+                Unsafe.Xor(value1, value2, result1);
 
-                Assert.IsTrue(Native.Equals(result1, result2));
+                Assert.IsTrue(Unsafe.Equals(result1, result2));
             }
         }
 

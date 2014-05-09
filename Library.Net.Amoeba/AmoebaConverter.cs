@@ -17,8 +17,8 @@ namespace Library.Net.Amoeba
             Deflate = 1,
         }
 
-        private static BufferManager _bufferManager = BufferManager.Instance;
-        private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly BufferManager _bufferManager = BufferManager.Instance;
+        private static readonly Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
@@ -37,7 +37,7 @@ namespace Library.Net.Amoeba
 
                     try
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                        compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                         using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
@@ -145,7 +145,7 @@ namespace Library.Net.Amoeba
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {

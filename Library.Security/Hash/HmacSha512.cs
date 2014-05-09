@@ -37,7 +37,7 @@ namespace Library.Security
 
             try
             {
-                buffer = bufferManager.TakeBuffer(1024 * 32);
+                buffer = bufferManager.TakeBuffer(1024 * 4);
 
                 using (var hashAlgorithm = SHA512.Create())
                 {
@@ -47,10 +47,10 @@ namespace Library.Security
                     }
 
                     var ixor = new byte[_blockLength];
-                    Native.Xor(_ipad, key, ixor);
+                    Unsafe.Xor(_ipad, key, ixor);
 
                     var oxor = new byte[_blockLength];
-                    Native.Xor(_opad, key, oxor);
+                    Unsafe.Xor(_opad, key, oxor);
 
                     byte[] ihash;
 

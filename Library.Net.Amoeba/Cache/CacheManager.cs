@@ -879,8 +879,8 @@ namespace Library.Net.Amoeba
                 if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
                 {
 #if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
 #endif
 
                     var keys = new KeyCollection();
@@ -912,7 +912,7 @@ namespace Library.Net.Amoeba
                     }
 
 #if DEBUG
-                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
+                    Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
 #endif
 
                     return keys;
@@ -920,8 +920,8 @@ namespace Library.Net.Amoeba
                 else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
                 {
 #if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
 #endif
 
                     var keys = new KeyCollection();
@@ -953,7 +953,7 @@ namespace Library.Net.Amoeba
                     }
 
 #if DEBUG
-                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
+                    Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
 #endif
 
                     return keys;
@@ -966,7 +966,7 @@ namespace Library.Net.Amoeba
                     {
                         using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
                         {
-                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
+                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
                             try
                             {
@@ -1047,7 +1047,7 @@ namespace Library.Net.Amoeba
                 {
                     using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
                     {
-                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
+                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
                         try
                         {
@@ -1090,8 +1090,8 @@ namespace Library.Net.Amoeba
                 {
 
 #if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
 #endif
 
                     if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
@@ -1123,8 +1123,8 @@ namespace Library.Net.Amoeba
                                 else if (bufferLength < blockLength)
                                 {
                                     ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                                    Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                    Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                    Unsafe.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                    Unsafe.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
                                     _bufferManager.ReturnBuffer(buffer.Array);
                                     buffer = tbuffer;
                                 }
@@ -1220,7 +1220,7 @@ namespace Library.Net.Amoeba
                         group.Keys.AddRange(parityKeys);
 
 #if DEBUG
-                    Debug.WriteLine(string.Format("CacheManager_ParityEncoding {0}", sw.Elapsed.ToString()));
+                        Debug.WriteLine(string.Format("CacheManager_ParityEncoding {0}", sw.Elapsed.ToString()));
 #endif
 
                         return group;
@@ -1291,8 +1291,8 @@ namespace Library.Net.Amoeba
                                 else if (bufferLength < group.BlockLength)
                                 {
                                     ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
-                                    Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                    Native.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
+                                    Unsafe.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
+                                    Unsafe.Zero(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
                                     _bufferManager.ReturnBuffer(buffer.Array);
                                     buffer = tbuffer;
                                 }
@@ -1442,7 +1442,7 @@ namespace Library.Net.Amoeba
 
                                 if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                 {
-                                    if (!Native.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
+                                    if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
                                     {
                                         this.Remove(key);
 
@@ -1489,7 +1489,7 @@ namespace Library.Net.Amoeba
 
                                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                     {
-                                        if (!Native.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
+                                        if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
                                         {
                                             foreach (var item in _ids.ToArray())
                                             {
@@ -1532,7 +1532,7 @@ namespace Library.Net.Amoeba
 
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        if (!Native.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
+                        if (!Unsafe.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
                     else
                     {

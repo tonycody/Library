@@ -8,8 +8,6 @@ namespace Library.Collections
     public class VolatileSortedSet<T> : ISetOperators<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private SortedDictionary<T, DateTime> _dic;
-
-        private DateTime _lastCheckTime = DateTime.MinValue;
         private readonly TimeSpan _survivalTime;
 
         private readonly object _thisLock = new object();
@@ -44,37 +42,32 @@ namespace Library.Collections
 
         private void CheckLifeTime()
         {
+            var now = DateTime.UtcNow;
+
             lock (this.ThisLock)
             {
-                var now = DateTime.UtcNow;
+                List<T> list = null;
 
-                if ((now - _lastCheckTime).TotalSeconds >= 10)
+                foreach (var pair in _dic)
                 {
-                    List<T> list = null;
+                    var key = pair.Key;
+                    var value = pair.Value;
 
-                    foreach (var pair in _dic)
+                    if ((now - value) > _survivalTime)
                     {
-                        var key = pair.Key;
-                        var value = pair.Value;
+                        if (list == null)
+                            list = new List<T>();
 
-                        if ((now - value) > _survivalTime)
-                        {
-                            if (list == null)
-                                list = new List<T>();
-
-                            list.Add(key);
-                        }
+                        list.Add(key);
                     }
+                }
 
-                    if (list != null)
+                if (list != null)
+                {
+                    foreach (var key in list)
                     {
-                        foreach (var key in list)
-                        {
-                            _dic.Remove(key);
-                        }
+                        _dic.Remove(key);
                     }
-
-                    _lastCheckTime = now;
                 }
             }
         }

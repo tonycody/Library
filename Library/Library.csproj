@@ -78,7 +78,7 @@
     <Compile Include="SafeInteger.cs" />
     <Compile Include="StateManagerBase.cs" />
     <Compile Include="NativeLibraryManager.cs" />
-    <Compile Include="Native.cs" />
+    <Compile Include="Unsafe.cs" />
     <Compile Include="Utilities\SimpleLinkedList.cs" />
   </ItemGroup>
   <ItemGroup>

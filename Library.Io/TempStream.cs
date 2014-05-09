@@ -2,17 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 
 namespace Library.Io
 {
     public class TempStream : Stream
     {
-        private static string _tempDirectory;
-
-        private FileStream _stream;
-
-        private bool _disposed;
+        private static readonly string _tempDirectory;
 
         static TempStream()
         {
@@ -50,13 +47,27 @@ namespace Library.Io
             }
         }
 
+        private FileStream _stream;
+
+        private bool _disposed;
+
         public TempStream()
         {
             _stream = TempStream.GetStream(_tempDirectory);
         }
 
-        private static Random _random = new Random();
-        private static ThreadLocal<byte[]> _threadLocalBuffer = new ThreadLocal<byte[]>(() => new byte[8]);
+        private static readonly ThreadLocal<Random> _threadLocalRandom = new ThreadLocal<Random>(() =>
+        {
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                var buffer = new byte[4];
+                rng.GetBytes(buffer);
+
+                return new Random(BitConverter.ToInt32(buffer, 0));
+            }
+        });
+
+        private static readonly ThreadLocal<byte[]> _threadLocalBuffer = new ThreadLocal<byte[]>(() => new byte[8]);
 
         private static FileStream GetStream(string directoryPath)
         {
@@ -64,7 +75,7 @@ namespace Library.Io
 
             for (; ; )
             {
-                _random.NextBytes(buffer);
+                _threadLocalRandom.Value.NextBytes(buffer);
 
                 string text = string.Format(
                     @"{0}\{1}",

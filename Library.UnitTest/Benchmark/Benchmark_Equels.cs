@@ -54,7 +54,7 @@ namespace Library.UnitTest
                         if (index == 0)
                         {
                             sw1.Start();
-                            result1 = Native.Equals(x, y);
+                            result1 = Unsafe.Equals(x, y);
                             sw1.Stop();
                         }
                         else if (index == 1)

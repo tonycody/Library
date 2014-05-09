@@ -110,7 +110,7 @@ namespace Library.Net.Amoeba
 
             if (this.Id != null && other.Id != null)
             {
-                if (!Native.Equals(this.Id, other.Id)) return false;
+                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             if (this.Uris != null && other.Uris != null)

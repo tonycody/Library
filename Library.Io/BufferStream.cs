@@ -152,7 +152,7 @@ namespace Library.Io
             {
                 int length = Math.Min(_buffers[index].Length - position, count);
 
-                Native.Copy(_buffers[index], position, buffer, offset, length);
+                Unsafe.Copy(_buffers[index], position, buffer, offset, length);
                 position = 0;
 
                 offset += length;
@@ -196,7 +196,7 @@ namespace Library.Io
             {
                 int length = Math.Min(_buffers[index].Length - position, count);
 
-                Native.Copy(buffer, offset, _buffers[index], position, length);
+                Unsafe.Copy(buffer, offset, _buffers[index], position, length);
                 position = 0;
 
                 offset += length;

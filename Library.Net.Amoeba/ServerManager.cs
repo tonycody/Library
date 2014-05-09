@@ -17,10 +17,11 @@ namespace Library.Net.Amoeba
         private BufferManager _bufferManager;
         private Settings _settings;
 
+        private Random _random = new Random();
+
         private Dictionary<string, TcpListener> _tcpListeners = new Dictionary<string, TcpListener>();
         private List<string> _urisHistory = new List<string>();
 
-        private static Random _random = new Random();
         private Regex _regex = new Regex(@"(.*?):(.*):(\d*)");
 
         private WatchTimer _watchTimer;

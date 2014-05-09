@@ -72,13 +72,13 @@ namespace Library.Correction
                 if (index[row] < _k)
                 {
                     // < k, systematic so direct copy.
-                    Native.Copy(src[index[row]], srcOff[index[row]], repair[row], repairOff[row], packetLength);
+                    Unsafe.Copy(src[index[row]], srcOff[index[row]], repair[row], repairOff[row], packetLength);
                 }
                 else
                 {
                     // index[row] >= k && index[row] < n
                     int pos = index[row] * _k;
-                    Native.Zero(repair[row], repairOff[row], packetLength);
+                    Unsafe.Zero(repair[row], repairOff[row], packetLength);
 
                     for (int col = 0; col < _k; col++)
                     {
@@ -128,7 +128,7 @@ namespace Library.Correction
                 if (index[row] >= _k)
                 {
                     tmpPkts[row] = _bufferManager.TakeBuffer(packetLength);
-                    Native.Zero(tmpPkts[row], 0, packetLength);
+                    Unsafe.Zero(tmpPkts[row], 0, packetLength);
 
                     for (int col = 0; col < _k; col++)
                     {
@@ -147,7 +147,7 @@ namespace Library.Correction
                 if (index[row] >= _k)
                 {
                     // only copy those actually decoded.
-                    Native.Copy(tmpPkts[row], 0, pkts[row], pktsOff[row], packetLength);
+                    Unsafe.Copy(tmpPkts[row], 0, pkts[row], pktsOff[row], packetLength);
                     index[row] = row;
                     _bufferManager.ReturnBuffer(tmpPkts[row]);
                 }
@@ -838,7 +838,7 @@ namespace Library.Correction
                 /*
                  * the upper matrix is I so do not bother with a slow multiply
                  */
-                Native.Zero(encMatrix, 0, k * k);
+                Unsafe.Zero(encMatrix, 0, k * k);
 
                 for (int i = 0, col = 0; col < k; col++, i += k + 1)
                 {
@@ -854,7 +854,7 @@ namespace Library.Correction
 
                 for (int i = 0, pos = 0; i < k; i++, pos += k)
                 {
-                    Native.Copy(encMatrix, index[i] * k, matrix, pos, k);
+                    Unsafe.Copy(encMatrix, index[i] * k, matrix, pos, k);
                 }
 
                 InvertMatrix(matrix, k);

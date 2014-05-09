@@ -59,25 +59,25 @@ namespace Library.UnitTest
                     if (index == 0)
                     {
                         sw1.Start();
-                        result1 = Native.Compare(x, y);
+                        result1 = Unsafe.Compare(x, y);
                         sw1.Stop();
                     }
                     else if (index == 1)
                     {
                         sw2.Start();
-                        result2 = Native.Compare2(x, y);
+                        result2 = Unsafe.Compare2(x, y);
                         sw2.Stop();
                     }
                     else if (index == 2)
                     {
                         sw3.Start();
-                        result3 = Native.Compare(x, 0, y, 0, maxLength);
+                        result3 = Unsafe.Compare(x, 0, y, 0, maxLength);
                         sw3.Stop();
                     }
                     else if (index == 3)
                     {
                         sw4.Start();
-                        result4 = Native.Compare2(x, 0, y, 0, maxLength);
+                        result4 = Unsafe.Compare2(x, 0, y, 0, maxLength);
                         sw4.Stop();
                     }
                 }

@@ -54,7 +54,7 @@ namespace Library.UnitTest
                     }
                 }
 
-                Assert.IsTrue(Native.Equals(result1, result2));
+                Assert.IsTrue(Unsafe.Equals(result1, result2));
             }
 
             StringBuilder sb = new StringBuilder();

@@ -152,7 +152,7 @@ namespace Library.Security
 
             if (this.Signature != null && other.Signature != null)
             {
-                if (!Native.Equals(this.Signature, other.Signature)) return false;
+                if (!Unsafe.Equals(this.Signature, other.Signature)) return false;
             }
 
             return true;

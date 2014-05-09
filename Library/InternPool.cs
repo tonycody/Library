@@ -130,22 +130,22 @@ namespace Library
 
             private void Refresh()
             {
-                List<WeakReference> tempList = null;
+                List<WeakReference> list = null;
 
                 foreach (var weakReference in _list)
                 {
                     if (!weakReference.IsAlive)
                     {
-                        if (tempList == null)
-                            tempList = new List<WeakReference>();
+                        if (list == null)
+                            list = new List<WeakReference>();
 
-                        tempList.Add(weakReference);
+                        list.Add(weakReference);
                     }
                 }
 
-                if (tempList != null)
+                if (list != null)
                 {
-                    foreach (var weakReference in tempList)
+                    foreach (var weakReference in list)
                     {
                         _list.Remove(weakReference);
                     }

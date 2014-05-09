@@ -144,12 +144,12 @@ namespace Library.Net.Connections.SecureVersion3
 
             if (this.ExchangeKey != null && other.ExchangeKey != null)
             {
-                if (!Native.Equals(this.ExchangeKey, other.ExchangeKey)) return false;
+                if (!Unsafe.Equals(this.ExchangeKey, other.ExchangeKey)) return false;
             }
 
             if (this.ProtocolHash != null && other.ProtocolHash != null)
             {
-                if (!Native.Equals(this.ProtocolHash, other.ProtocolHash)) return false;
+                if (!Unsafe.Equals(this.ProtocolHash, other.ProtocolHash)) return false;
             }
 
             return true;

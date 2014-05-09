@@ -181,7 +181,7 @@ namespace Library.Net.Connections
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {
@@ -274,7 +274,7 @@ namespace Library.Net.Connections
 
                                     try
                                     {
-                                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                        compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                                         using (DeflateStream deflateStream = new DeflateStream(deflateTempStream, CompressionMode.Compress, true))
                                         {

@@ -12,13 +12,18 @@ namespace Library.Net.Connections
 {
     static class ItemUtilities
     {
-        private static readonly byte[] _vector;
+        private static readonly BufferManager _bufferManager = BufferManager.Instance;
         private static readonly ThreadLocal<Encoding> _threadLocalEncoding = new ThreadLocal<Encoding>(() => new UTF8Encoding(false));
+        private static readonly byte[] _vector;
 
         static ItemUtilities()
         {
             _vector = new byte[4];
-            RandomNumberGenerator.Create().GetBytes(_vector);
+
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(_vector);
+            }
         }
 
         public static int GetHashCode(byte[] buffer)
@@ -35,8 +40,6 @@ namespace Library.Net.Connections
 
         public static void Write(Stream stream, byte type, Stream exportStream)
         {
-            BufferManager bufferManager = BufferManager.Instance;
-
             {
                 stream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                 stream.WriteByte(type);
@@ -45,7 +48,7 @@ namespace Library.Net.Connections
 
                 try
                 {
-                    buffer = bufferManager.TakeBuffer(1024 * 4);
+                    buffer = _bufferManager.TakeBuffer(1024 * 4);
                     int length = 0;
 
                     while ((length = exportStream.Read(buffer, 0, buffer.Length)) > 0)
@@ -57,7 +60,7 @@ namespace Library.Net.Connections
                 {
                     if (buffer != null)
                     {
-                        bufferManager.ReturnBuffer(buffer);
+                        _bufferManager.ReturnBuffer(buffer);
                     }
                 }
             }
@@ -65,14 +68,13 @@ namespace Library.Net.Connections
 
         public static void Write(Stream stream, byte type, string value)
         {
-            BufferManager bufferManager = BufferManager.Instance;
             Encoding encoding = _threadLocalEncoding.Value;
 
             byte[] buffer = null;
 
             try
             {
-                buffer = bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
+                buffer = _bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
                 var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
 
                 stream.Write(NetworkConverter.GetBytes(length), 0, 4);
@@ -83,7 +85,7 @@ namespace Library.Net.Connections
             {
                 if (buffer != null)
                 {
-                    bufferManager.ReturnBuffer(buffer);
+                    _bufferManager.ReturnBuffer(buffer);
                 }
             }
         }
@@ -118,7 +120,6 @@ namespace Library.Net.Connections
 
         public static string GetString(Stream stream)
         {
-            BufferManager bufferManager = BufferManager.Instance;
             Encoding encoding = _threadLocalEncoding.Value;
 
             byte[] buffer = null;
@@ -126,7 +127,7 @@ namespace Library.Net.Connections
             try
             {
                 var length = (int)stream.Length;
-                buffer = bufferManager.TakeBuffer(length);
+                buffer = _bufferManager.TakeBuffer(length);
 
                 stream.Read(buffer, 0, length);
 
@@ -136,7 +137,7 @@ namespace Library.Net.Connections
             {
                 if (buffer != null)
                 {
-                    bufferManager.ReturnBuffer(buffer);
+                    _bufferManager.ReturnBuffer(buffer);
                 }
             }
         }
@@ -145,12 +146,11 @@ namespace Library.Net.Connections
         {
             if (stream.Length != 4) throw new ArgumentException();
 
-            BufferManager bufferManager = BufferManager.Instance;
             byte[] buffer = null;
 
             try
             {
-                buffer = bufferManager.TakeBuffer(4);
+                buffer = _bufferManager.TakeBuffer(4);
 
                 stream.Read(buffer, 0, 4);
 
@@ -160,7 +160,7 @@ namespace Library.Net.Connections
             {
                 if (buffer != null)
                 {
-                    bufferManager.ReturnBuffer(buffer);
+                    _bufferManager.ReturnBuffer(buffer);
                 }
             }
         }
@@ -169,12 +169,11 @@ namespace Library.Net.Connections
         {
             if (stream.Length != 8) throw new ArgumentException();
 
-            BufferManager bufferManager = BufferManager.Instance;
             byte[] buffer = null;
 
             try
             {
-                buffer = bufferManager.TakeBuffer(8);
+                buffer = _bufferManager.TakeBuffer(8);
 
                 stream.Read(buffer, 0, 8);
 
@@ -184,7 +183,7 @@ namespace Library.Net.Connections
             {
                 if (buffer != null)
                 {
-                    bufferManager.ReturnBuffer(buffer);
+                    _bufferManager.ReturnBuffer(buffer);
                 }
             }
         }

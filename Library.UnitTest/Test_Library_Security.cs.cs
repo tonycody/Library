@@ -169,7 +169,7 @@ namespace Library.UnitTest
                 {
                     using (HMACSHA512 hmacSha512 = new HMACSHA512(key))
                     {
-                        Assert.IsTrue(Native.Equals(hmacSha512.ComputeHash(stream1), HmacSha512.ComputeHash(stream2, key)));
+                        Assert.IsTrue(Unsafe.Equals(hmacSha512.ComputeHash(stream1), HmacSha512.ComputeHash(stream2, key)));
                     }
                 }
             }

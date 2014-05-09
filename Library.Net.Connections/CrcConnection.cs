@@ -120,7 +120,7 @@ namespace Library.Net.Connections
                         crcStream.Read(orignalCrc, 0, orignalCrc.Length);
                     }
 
-                    if (!Native.Equals(verifyCrc, orignalCrc)) throw new ArgumentException("Crc Error");
+                    if (!Unsafe.Equals(verifyCrc, orignalCrc)) throw new ArgumentException("Crc Error");
 
                     dataStream.Seek(0, SeekOrigin.Begin);
                     return dataStream;

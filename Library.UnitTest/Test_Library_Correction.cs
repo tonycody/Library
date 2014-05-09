@@ -17,13 +17,16 @@ namespace Library.UnitTest
         [Test]
         public void Test_ReedSolomon8()
         {
+            for (int c = 1; c <= 8; c++)
             {
-                ReedSolomon8 reedSolomon8 = new ReedSolomon8(128, 256, 4, _bufferManager);
+                int blockLength = _random.Next(1024, 1024 * 32);
+
+                ReedSolomon8 reedSolomon8 = new ReedSolomon8(128, 256, c, _bufferManager);
 
                 var buffList = new ArraySegment<byte>[128];
                 for (int i = 0; i < 128; i++)
                 {
-                    var buffer = new byte[1024 * 32];
+                    var buffer = new byte[blockLength];
                     _random.NextBytes(buffer);
 
                     buffList[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
@@ -32,7 +35,7 @@ namespace Library.UnitTest
                 var buffList2 = new ArraySegment<byte>[256];
                 for (int i = 0; i < 256; i++)
                 {
-                    var buffer = new byte[1024 * 32];
+                    var buffer = new byte[blockLength];
 
                     buffList2[i] = new ArraySegment<byte>(buffer, 0, buffer.Length);
                 }
@@ -43,7 +46,7 @@ namespace Library.UnitTest
                     intList[i] = i;
                 }
 
-                reedSolomon8.Encode(buffList, buffList2, intList, 1024 * 32);
+                reedSolomon8.Encode(buffList, buffList2, intList, blockLength);
 
                 var buffList3 = new ArraySegment<byte>[128];
                 {
@@ -90,11 +93,11 @@ namespace Library.UnitTest
                     }
                 }
 
-                reedSolomon8.Decode(buffList3, intList2, 1024 * 32);
+                reedSolomon8.Decode(buffList3, intList2, blockLength);
 
                 for (int i = 0; i < buffList.Length; i++)
                 {
-                    Assert.IsTrue(CollectionUtilities.Equals(buffList[i].Array, buffList[i].Offset, buffList3[i].Array, buffList3[i].Offset, 1024 * 32), "ReedSolomon");
+                    Assert.IsTrue(CollectionUtilities.Equals(buffList[i].Array, buffList[i].Offset, buffList3[i].Array, buffList3[i].Offset, blockLength), "ReedSolomon");
                 }
             }
 

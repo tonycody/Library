@@ -184,7 +184,7 @@ namespace Library.Net.Amoeba
 
                 if (x.Hash != null && y.Hash != null)
                 {
-                    c = Native.Compare(x.Hash, y.Hash);
+                    c = Unsafe.Compare(x.Hash, y.Hash);
                     if (c != 0) return c;
                 }
 

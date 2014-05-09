@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Xml;
-using Library.Io;
-using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Xml;
 using Library.Collections;
+using Library.Io;
 
 namespace Library.Configuration
 {
@@ -92,6 +92,26 @@ namespace Library.Configuration
             sw.Start();
 
             if (!Directory.Exists(directoryPath)) Directory.CreateDirectory(directoryPath);
+
+            // Tempファイルを削除する。
+            {
+                foreach (var path in Directory.GetFiles(directoryPath, "*", SearchOption.TopDirectoryOnly))
+                {
+                    var ext = Path.GetExtension(path);
+
+                    if (ext == ".temp" || ext == ".tmp")
+                    {
+                        try
+                        {
+                            File.Delete(path);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                    }
+                }
+            }
 
             LockedHashSet<string> successNames = new LockedHashSet<string>();
 
@@ -188,25 +208,11 @@ namespace Library.Configuration
 
                     string uniquePath = null;
 
-                    using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, name + ".temp")))
+                    using (FileStream stream = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, name + ".tmp")))
                     using (CacheStream cacheStream = new CacheStream(stream, _cacheSize, BufferManager.Instance))
                     {
                         uniquePath = stream.Name;
 
-#if !true
-                        using (FileStream stream2 = SettingsBase.GetUniqueFileStream(Path.Combine(directoryPath, name + ".txt")))
-                        using (XmlDictionaryWriter xml = XmlDictionaryWriter.CreateTextWriter(stream2, new UTF8Encoding(false)))
-                        {
-                            var serializer = new DataContractSerializer(type);
-
-                            serializer.WriteStartObject(xml, value);
-                            xml.WriteAttributeString("xmlns", "xa", "http://www.w3.org/2000/xmlns/", "http://schemas.microsoft.com/2003/10/Serialization/");
-                            xml.WriteAttributeString("xmlns", "xc", "http://www.w3.org/2000/xmlns/", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
-                            xml.WriteAttributeString("xmlns", "xb", "http://www.w3.org/2000/xmlns/", "http://www.w3.org/2001/XMLSchema");
-                            serializer.WriteObjectContent(xml, value);
-                            serializer.WriteEndObject(xml);
-                        }
-#endif
                         using (GZipStream compressStream = new GZipStream(cacheStream, CompressionMode.Compress))
                         using (XmlDictionaryWriter xml = XmlDictionaryWriter.CreateBinaryWriter(compressStream))
                         {

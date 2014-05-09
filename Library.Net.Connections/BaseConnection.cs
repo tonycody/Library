@@ -208,7 +208,7 @@ namespace Library.Net.Connections
 
                         try
                         {
-                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                             do
                             {
@@ -279,7 +279,7 @@ namespace Library.Net.Connections
 
                         try
                         {
-                            sendBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                            sendBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                             using (Stream dataStream = new UniteStream(headerStream, new WrapperStream(targetStream, true)))
                             {

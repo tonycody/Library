@@ -8,8 +8,6 @@ namespace Library.Collections
     public class VolatileSortedDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IDictionary, ICollection, IEnumerable, IThisLock
     {
         private SortedDictionary<TKey, Info<TValue>> _dic;
-
-        private DateTime _lastCheckTime = DateTime.MinValue;
         private readonly TimeSpan _survivalTime;
 
         private readonly object _thisLock = new object();
@@ -39,7 +37,7 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 var array = new KeyValuePair<TKey, TValue>[_dic.Count];
-                ((IDictionary<TKey, TValue>)_dic).CopyTo(array, 0);
+                ((IDictionary<TKey, TValue>)this).CopyTo(array, 0);
 
                 return array;
             }
@@ -47,37 +45,32 @@ namespace Library.Collections
 
         private void CheckLifeTime()
         {
+            var now = DateTime.UtcNow;
+
             lock (this.ThisLock)
             {
-                var now = DateTime.UtcNow;
+                List<TKey> list = null;
 
-                if ((now - _lastCheckTime).TotalSeconds >= 10)
+                foreach (var pair in _dic)
                 {
-                    List<TKey> list = null;
+                    var key = pair.Key;
+                    var info = pair.Value;
 
-                    foreach (var pair in _dic)
+                    if ((now - info.UpdateTime) > _survivalTime)
                     {
-                        var key = pair.Key;
-                        var info = pair.Value;
+                        if (list == null)
+                            list = new List<TKey>();
 
-                        if ((now - info.UpdateTime) > _survivalTime)
-                        {
-                            if (list == null)
-                                list = new List<TKey>();
-
-                            list.Add(key);
-                        }
+                        list.Add(key);
                     }
+                }
 
-                    if (list != null)
+                if (list != null)
+                {
+                    foreach (var key in list)
                     {
-                        foreach (var key in list)
-                        {
-                            _dic.Remove(key);
-                        }
+                        _dic.Remove(key);
                     }
-
-                    _lastCheckTime = now;
                 }
             }
         }

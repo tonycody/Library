@@ -327,7 +327,12 @@ namespace Library.Net.Amoeba
                         _sendUpdateTime = DateTime.UtcNow;
 
                         _pingHash = new byte[64];
-                        RandomNumberGenerator.Create().GetBytes(_pingHash);
+
+                        using (var rng = RandomNumberGenerator.Create())
+                        {
+                            rng.GetBytes(_pingHash);
+                        }
+
                         _responseStopwatch.Start();
                         this.Ping(_pingHash);
 
