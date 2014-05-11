@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Library.Compression;
 using Library.Security;
@@ -27,12 +29,12 @@ namespace Library.Net.Amoeba
         private BackgroundUploadManager _backgroundUploadManager;
 
         private volatile ManagerState _state = ManagerState.Stop;
-        private ManagerState _encodeState = ManagerState.Stop;
-        private ManagerState _decodeState = ManagerState.Stop;
+        private volatile ManagerState _encodeState = ManagerState.Stop;
+        private volatile ManagerState _decodeState = ManagerState.Stop;
 
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
-        private CheckUriEventHandler _uriFilterEvent;
+        private CheckUriEventHandler _checkUriEvent;
 
         private bool _isLoaded = false;
 
@@ -79,9 +81,9 @@ namespace Library.Net.Amoeba
 
             _clientManager.CheckUriEvent = (object sender, string uri) =>
             {
-                if (_uriFilterEvent != null)
+                if (_checkUriEvent != null)
                 {
-                    return _uriFilterEvent(this, uri);
+                    return _checkUriEvent(this, uri);
                 }
 
                 return true;
@@ -89,9 +91,9 @@ namespace Library.Net.Amoeba
 
             _serverManager.CheckUriEvent = (object sender, string uri) =>
             {
-                if (_uriFilterEvent != null)
+                if (_checkUriEvent != null)
                 {
-                    return _uriFilterEvent(this, uri);
+                    return _checkUriEvent(this, uri);
                 }
 
                 return true;
@@ -126,7 +128,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    _uriFilterEvent = value;
+                    _checkUriEvent = value;
                 }
             }
         }
@@ -745,10 +747,7 @@ namespace Library.Net.Amoeba
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
                 if (!_isLoaded) throw new AmoebaManagerException("AmoebaManager is not loaded.");
 
-                lock (this.ThisLock)
-                {
-                    return _encodeState;
-                }
+                return _encodeState;
             }
         }
 
@@ -759,10 +758,7 @@ namespace Library.Net.Amoeba
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
                 if (!_isLoaded) throw new AmoebaManagerException("AmoebaManager is not loaded.");
 
-                lock (this.ThisLock)
-                {
-                    return _decodeState;
-                }
+                return _decodeState;
             }
         }
 
@@ -868,42 +864,6 @@ namespace Library.Net.Amoeba
             {
                 if (_isLoaded) throw new AmoebaManagerException("AmoebaManager was already loaded.");
                 _isLoaded = true;
-
-                // バージョンアップ処理。
-                {
-                    // ConnectionsManager
-                    {
-                        var oldPath = System.IO.Path.Combine(directoryPath, "ConnectionManager");
-
-                        if (System.IO.Directory.Exists(oldPath))
-                        {
-                            var newPath = System.IO.Path.Combine(directoryPath, "ConnectionsManager");
-
-                            if (System.IO.Directory.Exists(newPath))
-                            {
-                                try
-                                {
-                                    System.IO.Directory.Delete(oldPath, true);
-                                }
-                                catch (Exception)
-                                {
-
-                                }
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    System.IO.Directory.Move(oldPath, newPath);
-                                }
-                                catch (Exception)
-                                {
-
-                                }
-                            }
-                        }
-                    }
-                }
 
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));

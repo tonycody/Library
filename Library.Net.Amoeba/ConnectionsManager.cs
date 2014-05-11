@@ -451,11 +451,13 @@ namespace Library.Net.Amoeba
 
         private double GetPriority(Node node)
         {
+            const int average = 128;
+
             lock (this.ThisLock)
             {
                 var priority = (long)_messagesManager[node].Priority;
 
-                return ((double)Math.Max(Math.Min(priority + 64, 128), 0)) / 128;
+                return ((double)(priority + average)) / (average * 2);
             }
         }
 
@@ -1097,7 +1099,8 @@ namespace Library.Net.Amoeba
                             {
                                 var requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Sort(baseNode.Id, key.Hash, otherNodes, 1))
+                                // 自分より距離が2～3番目に遠いノードにもアップロードを試みる。
+                                foreach (var node in Kademlia<Node>.Search(key.Hash, otherNodes, 2))
                                 {
                                     if (messageManagers[node].StockBlocks.Contains(key)) continue;
                                     requestNodes.Add(node);
@@ -1394,9 +1397,8 @@ namespace Library.Net.Amoeba
                             {
                                 var requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Sort(baseNode.Id, key.Hash, otherNodes, 1))
+                                foreach (var node in Kademlia<Node>.Search(baseNode.Id, key.Hash, otherNodes, 1))
                                 {
-                                    if (messageManagers[node].PullBlocksLink.Contains(key)) continue;
                                     requestNodes.Add(node);
                                 }
 
@@ -1437,7 +1439,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        var pushBlocksRequestDictionary = new Dictionary<Node, List<Key>>();
+                        var pushBlocksRequestDictionary = new Dictionary<Node, SortedSet<Key>>();
 
                         foreach (var key in pushBlocksRequestList)
                         {
@@ -1445,12 +1447,15 @@ namespace Library.Net.Amoeba
                             {
                                 List<Node> requestNodes = new List<Node>();
 
+                                foreach (var node in Kademlia<Node>.Search(baseNode.Id, key.Hash, otherNodes, 1))
+                                {
+                                    requestNodes.Add(node);
+                                }
+
                                 foreach (var pair in messageManagers)
                                 {
                                     var node = pair.Key;
                                     var messageManager = pair.Value;
-
-                                    if (messageManager.PullBlocksRequest.Contains(key)) continue;
 
                                     if (messageManager.PullBlocksLink.Contains(key))
                                     {
@@ -1458,26 +1463,13 @@ namespace Library.Net.Amoeba
                                     }
                                 }
 
-                                if (requestNodes.Count != 0)
+                                for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    _random.Shuffle(requestNodes);
-                                }
-                                else
-                                {
-                                    foreach (var node in Kademlia<Node>.Sort(baseNode.Id, key.Hash, otherNodes, 1))
-                                    {
-                                        if (messageManagers[node].PullBlocksRequest.Contains(key)) continue;
-                                        requestNodes.Add(node);
-                                    }
-                                }
-
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
-                                {
-                                    List<Key> collection;
+                                    SortedSet<Key> collection;
 
                                     if (!pushBlocksRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new List<Key>();
+                                        collection = new SortedSet<Key>(new Key.Comparer());
                                         pushBlocksRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1536,7 +1528,7 @@ namespace Library.Net.Amoeba
                         {
                             var requestNodes = new List<Node>();
 
-                            foreach (var node in Kademlia<Node>.Sort(baseNode.Id, Signature.GetSignatureHash(signature), otherNodes, 2))
+                            foreach (var node in Kademlia<Node>.Search(baseNode.Id, Signature.GetSignatureHash(signature), otherNodes, 2))
                             {
                                 requestNodes.Add(node);
                             }
@@ -1670,7 +1662,7 @@ namespace Library.Net.Amoeba
                             {
                                 var requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Sort(baseNode.Id, Signature.GetSignatureHash(signature), otherNodes, 2))
+                                foreach (var node in Kademlia<Node>.Search(baseNode.Id, Signature.GetSignatureHash(signature), otherNodes, 2))
                                 {
                                     requestNodes.Add(node);
                                 }

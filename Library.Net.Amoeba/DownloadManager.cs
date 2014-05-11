@@ -668,7 +668,7 @@ namespace Library.Net.Amoeba
                                         _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
                                         _settings.DownloadedSeeds.Add(item.Seed.Clone());
 
-                                        if (item.Seed != null)
+                                        if (item.Seed.Key != null)
                                         {
                                             _cacheManager.Unlock(item.Seed.Key);
                                         }
@@ -888,7 +888,7 @@ namespace Library.Net.Amoeba
                                         _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
                                         _settings.DownloadedSeeds.Add(item.Seed.Clone());
 
-                                        if (item.Seed != null)
+                                        if (item.Seed.Key != null)
                                         {
                                             _cacheManager.Unlock(item.Seed.Key);
                                         }
@@ -987,8 +987,12 @@ namespace Library.Net.Amoeba
             string path,
             int priority)
         {
+            if (seed == null) return;
+
             lock (this.ThisLock)
             {
+                if (seed.Key == null) return;
+
                 if (_settings.DownloadItems.Any(n => n.Seed == seed && n.Path == path)) return;
 
                 DownloadItem item = new DownloadItem();
@@ -999,7 +1003,7 @@ namespace Library.Net.Amoeba
                 item.State = DownloadState.Downloading;
                 item.Priority = priority;
 
-                if (item.Seed != null)
+                if (item.Seed.Key != null)
                 {
                     _cacheManager.Lock(item.Seed.Key);
                 }
@@ -1017,7 +1021,7 @@ namespace Library.Net.Amoeba
 
                 if (item.State != DownloadState.Completed)
                 {
-                    if (item.Seed != null)
+                    if (item.Seed.Key != null)
                     {
                         _cacheManager.Unlock(item.Seed.Key);
                     }
@@ -1166,7 +1170,7 @@ namespace Library.Net.Amoeba
                 {
                     if (item.State != DownloadState.Completed)
                     {
-                        if (item.Seed != null)
+                        if (item.Seed.Key != null)
                         {
                             _cacheManager.Lock(item.Seed.Key);
                         }

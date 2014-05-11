@@ -176,7 +176,7 @@ namespace Library.Net
 
         private static readonly ThreadLocal<InfoManager> _threadLocalInfoManager = new ThreadLocal<InfoManager>(() => new InfoManager());
 
-        public static IEnumerable<T> Sort(byte[] baseId, byte[] targetId, IEnumerable<T> nodeList, int count)
+        public static IEnumerable<T> Search(byte[] baseId, byte[] targetId, IEnumerable<T> nodeList, int count)
         {
             if (baseId == null) throw new ArgumentNullException("baseId");
             if (targetId == null) throw new ArgumentNullException("targetId");
@@ -191,12 +191,19 @@ namespace Library.Net
 
             int linkIndex = 0;
 
+            Info firstItem = null;
+            Info lastItem = null;
+
             var baseItem = infoManager.GetInfo(InfoIndex++);
             Unsafe.Xor(targetId, baseId, baseItem.Xor);
 
-            var firstItem = baseItem;
-            var lastItem = baseItem;
-            linkIndex++;
+            // 初期化。
+            {
+                firstItem = baseItem;
+                lastItem = baseItem;
+
+                linkIndex++;
+            }
 
             // 挿入ソート（countが小さい場合、countで比較範囲を狭めた挿入ソートが高速。）
             foreach (var node in nodeList)
@@ -259,6 +266,91 @@ namespace Library.Net
                 // baseItem以上に距離が近いノードのみ許可する。
                 if (currentItem == baseItem) yield break;
 
+                yield return currentItem.Node;
+            }
+        }
+
+        public static IEnumerable<T> Search(byte[] targetId, IEnumerable<T> nodeList, int count)
+        {
+            if (targetId == null) throw new ArgumentNullException("targetId");
+            if (nodeList == null) throw new ArgumentNullException("nodeList");
+
+            if (count == 0) yield break;
+
+            int InfoIndex = 0;
+
+            var infoManager = _threadLocalInfoManager.Value;
+            infoManager.SetBufferSize(targetId.Length);
+
+            int linkIndex = 0;
+
+            Info firstItem = null;
+            Info lastItem = null;
+
+            // 挿入ソート（countが小さい場合、countで比較範囲を狭めた挿入ソートが高速。）
+            foreach (var node in nodeList)
+            {
+                var targetItem = infoManager.GetInfo(InfoIndex++);
+                Unsafe.Xor(targetId, node.Id, targetItem.Xor);
+                targetItem.Node = node;
+
+                var currentItem = lastItem;
+
+                while (currentItem != null)
+                {
+                    if (Unsafe.Compare(currentItem.Xor, targetItem.Xor) <= 0) break;
+
+                    currentItem = currentItem.Previous;
+                }
+
+                // 初期化。
+                if (firstItem == null && lastItem == null)
+                {
+                    firstItem = targetItem;
+                    lastItem = targetItem;
+                }
+                //　最前列に挿入。
+                else if (currentItem == null)
+                {
+                    firstItem.Previous = targetItem;
+                    targetItem.Next = firstItem;
+                    firstItem = targetItem;
+                }
+                // 最後尾に挿入。
+                else if (lastItem == currentItem)
+                {
+                    currentItem.Next = targetItem;
+                    targetItem.Previous = currentItem;
+                    lastItem = targetItem;
+                }
+                // 中間に挿入。
+                else
+                {
+                    var swapItem = currentItem.Next;
+
+                    currentItem.Next = targetItem;
+                    targetItem.Previous = currentItem;
+
+                    targetItem.Next = swapItem;
+                    swapItem.Previous = targetItem;
+                }
+
+                linkIndex++;
+
+                // count数を超えている場合はlastItemを削除する。
+                if (linkIndex > count)
+                {
+                    var previousItem = lastItem.Previous;
+
+                    previousItem.Next = null;
+                    lastItem = previousItem;
+
+                    linkIndex--;
+                }
+            }
+
+            for (var currentItem = firstItem; currentItem != null; currentItem = currentItem.Next)
+            {
                 yield return currentItem.Node;
             }
         }
@@ -392,7 +484,7 @@ namespace Library.Net
 
             lock (this.ThisLock)
             {
-                return Kademlia<T>.Sort(_baseNode.Id, targetId, this.ToArray(), count);
+                return Kademlia<T>.Search(_baseNode.Id, targetId, this.ToArray(), count);
             }
         }
 
