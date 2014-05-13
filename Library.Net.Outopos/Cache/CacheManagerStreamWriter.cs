@@ -15,12 +15,12 @@ namespace Library.Net.Outopos
         private HashAlgorithm _hashAlgorithm;
         private BufferManager _bufferManager;
 
-        private LockedList<Key> _keyList = new LockedList<Key>();
+        private KeyCollection _keyList = new KeyCollection();
         private long _length;
 
         private volatile bool _disposed;
 
-        public CacheManagerStreamWriter(out IList<Key> keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
+        public CacheManagerStreamWriter(out KeyCollection keys, int blockLength, HashAlgorithm hashAlgorithm, CacheManager cacheManager, BufferManager bufferManager)
         {
             keys = _keyList;
             _hashAlgorithm = hashAlgorithm;
@@ -118,7 +118,7 @@ namespace Library.Net.Outopos
             while (count > 0)
             {
                 int length = Math.Min(_blockBufferLength - _blockBufferPosition, count);
-                Native.Copy(buffer, offset, _blockBuffer, _blockBufferPosition, length);
+                Unsafe.Copy(buffer, offset, _blockBuffer, _blockBufferPosition, length);
                 _blockBufferPosition += length;
                 offset += length;
                 count -= length;

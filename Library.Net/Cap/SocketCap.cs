@@ -8,6 +8,8 @@ namespace Library.Net
     {
         private Socket _socket;
 
+        private Stopwatch _receiveStopwatch = new Stopwatch();
+
         private readonly object _sendLock = new object();
         private readonly object _receiveLock = new object();
         private readonly object _thisLock = new object();
@@ -17,7 +19,14 @@ namespace Library.Net
 
         public SocketCap(Socket socket)
         {
+            if (socket == null) throw new ArgumentNullException("socket");
+            if (!socket.Connected) throw new ArgumentException("Socket is not connected.");
+
             _socket = socket;
+            _socket.Blocking = true;
+            _socket.ReceiveBufferSize = 1024 * 32;
+            _socket.SendBufferSize = 1024 * 32;
+
             _connect = true;
         }
 
@@ -29,7 +38,7 @@ namespace Library.Net
             }
         }
 
-        public override int Receive(byte[] buffer, int offset, int size, TimeSpan timeout)
+        public override void Receive(byte[] buffer, int offset, int size, TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new CapException("Closed");
@@ -38,18 +47,25 @@ namespace Library.Net
             {
                 lock (_receiveLock)
                 {
-                    _socket.ReceiveTimeout = (int)Math.Min(int.MaxValue, timeout.TotalMilliseconds);
+                    _receiveStopwatch.Restart();
 
-                    var i = _socket.Receive(buffer, offset, size, SocketFlags.None);
-
-                    if (i == 0)
+                    do
                     {
-                        _connect = false;
+                        var time = SocketCap.CheckTimeout(_receiveStopwatch.Elapsed, timeout);
+                        _socket.ReceiveTimeout = (int)Math.Min(int.MaxValue, time.TotalMilliseconds);
 
-                        throw new CapException("Closed");
-                    }
+                        int receiveLength;
 
-                    return i;
+                        if ((receiveLength = _socket.Receive(buffer, offset, size, SocketFlags.None)) == 0)
+                        {
+                            _connect = false;
+
+                            throw new CapException("Closed");
+                        }
+
+                        offset += receiveLength;
+                        size -= receiveLength;
+                    } while (size > 0);
                 }
             }
             catch (CapException)

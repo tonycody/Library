@@ -19,26 +19,26 @@ namespace Library.Net
             }
         }
 
-        public abstract int Receive(byte[] buffer, int offset, int size, TimeSpan timeout);
+        public abstract void Receive(byte[] buffer, int offset, int size, TimeSpan timeout);
 
-        public virtual Task<int> ReceiveAsync(byte[] buffer, int offset, int size, TimeSpan timeout)
+        public virtual Task ReceiveAsync(byte[] buffer, int offset, int size, TimeSpan timeout)
         {
             return Task.Factory.StartNew(() =>
             {
-                return this.Receive(buffer, offset, size, timeout);
+                this.Receive(buffer, offset, size, timeout);
             });
         }
 
-        public virtual int Receive(byte[] buffer, TimeSpan timeout)
+        public virtual void Receive(byte[] buffer, TimeSpan timeout)
         {
-            return this.Receive(buffer, 0, buffer.Length, timeout);
+            this.Receive(buffer, 0, buffer.Length, timeout);
         }
 
-        public virtual Task<int> ReceiveAsync(byte[] buffer, TimeSpan timeout)
+        public virtual Task ReceiveAsync(byte[] buffer, TimeSpan timeout)
         {
             return Task.Factory.StartNew(() =>
             {
-                return this.Receive(buffer, timeout);
+                this.Receive(buffer, timeout);
             });
         }
 

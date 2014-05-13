@@ -131,6 +131,7 @@ namespace Library.Net.Connections
                 byte[] buffer = new byte[4];
 
                 _cap.Send(buffer, 0, buffer.Length, _sendTimeSpan);
+
                 _aliveStopwatch.Restart();
                 _sentByteCount.Add(4);
             }
@@ -182,7 +183,8 @@ namespace Library.Net.Connections
                         var time = BaseConnection.CheckTimeout(_receiveStopwatch.Elapsed, timeout);
                         time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
-                        if (_cap.Receive(lengthbuffer, time) != lengthbuffer.Length) throw new ConnectionException();
+                        _cap.Receive(lengthbuffer, time);
+
                         _receivedByteCount.Add(4);
 
                         length = NetworkConverter.ToInt32(lengthbuffer);
@@ -222,10 +224,11 @@ namespace Library.Net.Connections
                                 var time = BaseConnection.CheckTimeout(_receiveStopwatch.Elapsed, timeout);
                                 time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
-                                receiveLength = _cap.Receive(receiveBuffer, 0, receiveLength, time);
+                                _cap.Receive(receiveBuffer, 0, receiveLength, time);
 
                                 _receivedByteCount.Add(receiveLength);
                                 tempStream.Write(receiveBuffer, 0, receiveLength);
+                               
                                 length -= receiveLength;
                             } while (length > 0);
                         }
