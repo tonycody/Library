@@ -167,10 +167,10 @@ namespace Library.Net.Amoeba
     {
         private int _id;
         private byte[] _sessionId;
-        private SafeInteger _priority;
+        private readonly SafeInteger _priority;
 
-        private SafeInteger _receivedByteCount;
-        private SafeInteger _sentByteCount;
+        private readonly SafeInteger _receivedByteCount;
+        private readonly SafeInteger _sentByteCount;
 
         private DateTime _lastPullTime = DateTime.UtcNow;
 
@@ -194,6 +194,7 @@ namespace Library.Net.Amoeba
             _id = id;
 
             _priority = new SafeInteger();
+
             _receivedByteCount = new SafeInteger();
             _sentByteCount = new SafeInteger();
 

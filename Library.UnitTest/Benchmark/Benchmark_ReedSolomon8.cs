@@ -19,7 +19,7 @@ namespace Library.UnitTest
 
             const int blockSize = 1024 * 1024;
 
-            for (int c = 1; c <= 2; c++)
+            for (int c = 1; c <= 4; c++)
             {
                 ReedSolomon8 pc = new ReedSolomon8(128, 256, c, _bufferManager);
 

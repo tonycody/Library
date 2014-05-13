@@ -176,10 +176,10 @@ namespace Library.Net
 
         private static readonly ThreadLocal<InfoManager> _threadLocalInfoManager = new ThreadLocal<InfoManager>(() => new InfoManager());
 
-        public static IEnumerable<T> Search(byte[] baseId, byte[] targetId, IEnumerable<T> nodeList, int count)
+        public static IEnumerable<T> Search(byte[] targetId, byte[] baseId, IEnumerable<T> nodeList, int count)
         {
-            if (baseId == null) throw new ArgumentNullException("baseId");
             if (targetId == null) throw new ArgumentNullException("targetId");
+            if (baseId == null) throw new ArgumentNullException("baseId");
             if (nodeList == null) throw new ArgumentNullException("nodeList");
 
             if (count == 0) yield break;
@@ -484,7 +484,7 @@ namespace Library.Net
 
             lock (this.ThisLock)
             {
-                return Kademlia<T>.Search(_baseNode.Id, targetId, this.ToArray(), count);
+                return Kademlia<T>.Search(targetId, _baseNode.Id, this.ToArray(), count);
             }
         }
 

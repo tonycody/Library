@@ -972,7 +972,7 @@ namespace Library.Net.Amoeba
                             {
                                 int length = 0;
 
-                                while (0 < (length = inStream.Read(buffer, 0, buffer.Length)))
+                                while ((length = inStream.Read(buffer, 0, buffer.Length)) > 0)
                                 {
                                     outStream.Write(buffer, 0, length);
                                 }

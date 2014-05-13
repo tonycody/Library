@@ -10,8 +10,6 @@ namespace Library.Collections
         private List<T> _list;
         private int? _capacity;
 
-        private readonly object _thisLock = new object();
-
         public SmallList()
         {
             _list = new List<T>();

@@ -991,25 +991,27 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                if (seed.Key == null) return;
-
                 if (_settings.DownloadItems.Any(n => n.Seed == seed && n.Path == path)) return;
 
-                DownloadItem item = new DownloadItem();
-
-                item.Rank = 1;
-                item.Seed = seed;
-                item.Path = path;
-                item.State = DownloadState.Downloading;
-                item.Priority = priority;
-
-                if (item.Seed.Key != null)
                 {
-                    _cacheManager.Lock(item.Seed.Key);
-                }
+                    if (seed.Key == null) return;
 
-                _settings.DownloadItems.Add(item);
-                _ids.Add(_id++, item);
+                    DownloadItem item = new DownloadItem();
+
+                    item.Rank = 1;
+                    item.Seed = seed;
+                    item.Path = path;
+                    item.State = DownloadState.Downloading;
+                    item.Priority = priority;
+
+                    if (item.Seed.Key != null)
+                    {
+                        _cacheManager.Lock(item.Seed.Key);
+                    }
+
+                    _settings.DownloadItems.Add(item);
+                    _ids.Add(_id++, item);
+                }
             }
         }
 

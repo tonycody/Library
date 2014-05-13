@@ -31,7 +31,7 @@ namespace Library.Net.Amoeba
         private AcceptCapEventHandler _acceptConnectionEvent;
         private CheckUriEventHandler _uriFilterEvent;
 
-        private SafeInteger _blockedCount = new SafeInteger();
+        private readonly SafeInteger _blockedCount = new SafeInteger();
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();

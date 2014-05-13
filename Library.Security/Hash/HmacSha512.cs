@@ -61,7 +61,7 @@ namespace Library.Security
                         {
                             int length = 0;
 
-                            while (0 < (length = inputStream.Read(buffer, 0, buffer.Length)))
+                            while ((length = inputStream.Read(buffer, 0, buffer.Length)) > 0)
                             {
                                 hashAlgorithm.TransformBlock(buffer, 0, length, buffer, 0);
                             }

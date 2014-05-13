@@ -10,15 +10,14 @@ namespace Library.Net.Connections
     public class BaseConnection : ConnectionBase, IThisLock
     {
         private CapBase _cap;
+        private BandwidthLimit _bandwidthLimit;
         private int _maxReceiveCount;
         private BufferManager _bufferManager;
 
-        private BandwidthLimit _bandwidthLimit;
+        private readonly SafeInteger _receivedByteCount = new SafeInteger();
+        private readonly SafeInteger _sentByteCount = new SafeInteger();
 
-        private SafeInteger _receivedByteCount = new SafeInteger();
-        private SafeInteger _sentByteCount = new SafeInteger();
-
-        private DateTime _sendUpdateTime;
+        private readonly SafeDateTime _sendUpdateTime = new SafeDateTime();
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 6, 0);
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 6, 0);
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 3, 0);
@@ -45,7 +44,7 @@ namespace Library.Net.Connections
             if (_bandwidthLimit != null) _bandwidthLimit.Join(this);
 
             _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 30, 1000 * 30);
-            _sendUpdateTime = DateTime.UtcNow;
+            _sendUpdateTime.Exchange(DateTime.UtcNow);
 
             _connect = true;
         }
@@ -132,7 +131,7 @@ namespace Library.Net.Connections
                 byte[] buffer = new byte[4];
 
                 _cap.Send(buffer, 0, buffer.Length, _sendTimeSpan);
-                _sendUpdateTime = DateTime.UtcNow;
+                _sendUpdateTime.Exchange(DateTime.UtcNow);
                 _sentByteCount.Add(4);
             }
         }
@@ -302,7 +301,7 @@ namespace Library.Net.Connections
                                     time = (time < _sendTimeSpan) ? time : _sendTimeSpan;
 
                                     _cap.Send(sendBuffer, 0, i, time);
-                                    _sendUpdateTime = DateTime.UtcNow;
+                                    _sendUpdateTime.Exchange(DateTime.UtcNow);
                                     _sentByteCount.Add(i);
                                 }
                             }

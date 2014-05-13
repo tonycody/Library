@@ -100,7 +100,7 @@ namespace Library.Net.Amoeba
 
         private ConnectDirection _direction;
 
-        private DateTime _sendUpdateTime;
+        private readonly SafeDateTime _sendUpdateTime = new SafeDateTime();
         private bool _onClose;
 
         private byte[] _pingHash;
@@ -324,7 +324,7 @@ namespace Library.Net.Amoeba
                             _otherNode = Node.Import(stream, _bufferManager);
                         }
 
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _sendUpdateTime.Exchange(DateTime.UtcNow);
 
                         _pingHash = new byte[64];
 
@@ -404,7 +404,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _sendUpdateTime.Exchange(DateTime.UtcNow);
                     }
                 }
                 catch (ConnectionException)
@@ -439,7 +439,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _sendUpdateTime.Exchange(DateTime.UtcNow);
                     }
                 }
                 catch (ConnectionException)
@@ -471,7 +471,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _sendUpdateTime.Exchange(DateTime.UtcNow);
                     }
                 }
                 catch (ConnectionException)
@@ -686,7 +686,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _sendUpdateTime.Exchange(DateTime.UtcNow);
                 }
                 catch (ConnectionException)
                 {
@@ -723,7 +723,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _sendUpdateTime.Exchange(DateTime.UtcNow);
                 }
                 catch (ConnectionException)
                 {
@@ -760,7 +760,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _sendUpdateTime.Exchange(DateTime.UtcNow);
                 }
                 catch (ConnectionException)
                 {
@@ -801,7 +801,7 @@ namespace Library.Net.Amoeba
 
                     _connection.Send(stream, _sendTimeSpan, new Information(contexts));
                     //_connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _sendUpdateTime.Exchange(DateTime.UtcNow);
                 }
                 catch (ConnectionException)
                 {
@@ -838,7 +838,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _sendUpdateTime.Exchange(DateTime.UtcNow);
                 }
                 catch (ConnectionException)
                 {
@@ -875,7 +875,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _sendUpdateTime.Exchange(DateTime.UtcNow);
                 }
                 catch (ConnectionException)
                 {
@@ -909,7 +909,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _sendUpdateTime.Exchange(DateTime.UtcNow);
                     }
                 }
                 catch (ConnectionException)

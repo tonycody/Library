@@ -209,7 +209,7 @@ namespace Library.Io
             }
             else
             {
-                while (0 < count)
+                while (count > 0)
                 {
                     if (_readerBufferLength == _readerBufferPosition)
                     {

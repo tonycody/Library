@@ -64,6 +64,7 @@
   <ItemGroup>
     <Compile Include="BufferManager.cs" />
     <Compile Include="CollectionUtilities.cs" />
+    <Compile Include="SafeDateTime.cs" />
     <Compile Include="DeadlockMonitor.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="ICloneable.cs" />

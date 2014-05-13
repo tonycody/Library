@@ -101,7 +101,7 @@ namespace Library.Security
 
             fixed (byte* p_buffer = buffer)
             {
-                while (0 < (length = inputStream.Read(buffer, 0, buffer.Length)))
+                while ((length = inputStream.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     x = _compute(x, p_buffer, length);
                 }

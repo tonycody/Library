@@ -7,10 +7,8 @@ using System.Threading;
 
 namespace Library
 {
-    [DataContract(Name = "SafeInteger", Namespace = "http://Library")]
     public class SafeInteger : IEquatable<SafeInteger>
     {
-        [DataMember(Name = "Value")]
         private long _value;
 
         public SafeInteger()
@@ -87,7 +85,7 @@ namespace Library
             return x.Value >= y.Value;
         }
 
-        // explicit
+        // implicit
         public static implicit operator SafeInteger(long i) { return new SafeInteger(i); }
         public static implicit operator long(SafeInteger safeInteger) { return safeInteger.Value; }
 

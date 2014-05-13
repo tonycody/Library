@@ -73,25 +73,25 @@ namespace Library.Net.Amoeba
         private long _receivedByteCount;
         private long _sentByteCount;
 
-        private SafeInteger _pushNodeCount = new SafeInteger();
-        private SafeInteger _pushBlockLinkCount = new SafeInteger();
-        private SafeInteger _pushBlockRequestCount = new SafeInteger();
-        private SafeInteger _pushBlockCount = new SafeInteger();
-        private SafeInteger _pushSeedRequestCount = new SafeInteger();
-        private SafeInteger _pushSeedCount = new SafeInteger();
+        private readonly SafeInteger _pushNodeCount = new SafeInteger();
+        private readonly SafeInteger _pushBlockLinkCount = new SafeInteger();
+        private readonly SafeInteger _pushBlockRequestCount = new SafeInteger();
+        private readonly SafeInteger _pushBlockCount = new SafeInteger();
+        private readonly SafeInteger _pushSeedRequestCount = new SafeInteger();
+        private readonly SafeInteger _pushSeedCount = new SafeInteger();
 
-        private SafeInteger _pullNodeCount = new SafeInteger();
-        private SafeInteger _pullBlockLinkCount = new SafeInteger();
-        private SafeInteger _pullBlockRequestCount = new SafeInteger();
-        private SafeInteger _pullBlockCount = new SafeInteger();
-        private SafeInteger _pullSeedRequestCount = new SafeInteger();
-        private SafeInteger _pullSeedCount = new SafeInteger();
+        private readonly SafeInteger _pullNodeCount = new SafeInteger();
+        private readonly SafeInteger _pullBlockLinkCount = new SafeInteger();
+        private readonly SafeInteger _pullBlockRequestCount = new SafeInteger();
+        private readonly SafeInteger _pullBlockCount = new SafeInteger();
+        private readonly SafeInteger _pullSeedRequestCount = new SafeInteger();
+        private readonly SafeInteger _pullSeedCount = new SafeInteger();
 
         private VolatileHashSet<Key> _relayBlocks;
-        private SafeInteger _relayBlockCount = new SafeInteger();
+        private readonly SafeInteger _relayBlockCount = new SafeInteger();
 
-        private SafeInteger _connectConnectionCount = new SafeInteger();
-        private SafeInteger _acceptConnectionCount = new SafeInteger();
+        private readonly SafeInteger _connectConnectionCount = new SafeInteger();
+        private readonly SafeInteger _acceptConnectionCount = new SafeInteger();
 
         private GetSignaturesEventHandler _getLockSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
@@ -1397,7 +1397,7 @@ namespace Library.Net.Amoeba
                             {
                                 var requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Search(baseNode.Id, key.Hash, otherNodes, 1))
+                                foreach (var node in Kademlia<Node>.Search(key.Hash, baseNode.Id, otherNodes, 1))
                                 {
                                     requestNodes.Add(node);
                                 }
@@ -1447,7 +1447,7 @@ namespace Library.Net.Amoeba
                             {
                                 List<Node> requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Search(baseNode.Id, key.Hash, otherNodes, 1))
+                                foreach (var node in Kademlia<Node>.Search(key.Hash, baseNode.Id, otherNodes, 1))
                                 {
                                     requestNodes.Add(node);
                                 }
@@ -1528,7 +1528,7 @@ namespace Library.Net.Amoeba
                         {
                             var requestNodes = new List<Node>();
 
-                            foreach (var node in Kademlia<Node>.Search(baseNode.Id, Signature.GetSignatureHash(signature), otherNodes, 2))
+                            foreach (var node in Kademlia<Node>.Search(Signature.GetSignatureHash(signature), baseNode.Id, otherNodes, 2))
                             {
                                 requestNodes.Add(node);
                             }
@@ -1662,7 +1662,7 @@ namespace Library.Net.Amoeba
                             {
                                 var requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Search(baseNode.Id, Signature.GetSignatureHash(signature), otherNodes, 2))
+                                foreach (var node in Kademlia<Node>.Search(Signature.GetSignatureHash(signature), baseNode.Id, otherNodes, 2))
                                 {
                                     requestNodes.Add(node);
                                 }
