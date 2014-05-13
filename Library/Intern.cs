@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Library
 {
-    public class InternPool<T> : ManagerBase, IThisLock
+    public class Intern<T> : ManagerBase, IThisLock
     {
         private System.Threading.Timer _watchTimer;
         private volatile bool _isRefreshing = false;
@@ -15,13 +15,13 @@ namespace Library
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
 
-        public InternPool()
+        public Intern()
         {
             _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
             _dic = new Dictionary<T, Info>();
         }
 
-        public InternPool(IEqualityComparer<T> comparer)
+        public Intern(IEqualityComparer<T> comparer)
         {
             _watchTimer = new System.Threading.Timer(this.WatchTimer, null, new TimeSpan(0, 1, 0), new TimeSpan(0, 1, 0));
             _dic = new Dictionary<T, Info>(comparer);

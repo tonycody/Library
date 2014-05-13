@@ -20,10 +20,10 @@ namespace Library.Security
             Signature = 3,
         }
 
-        private static InternPool<string> _nicknameCache = new InternPool<string>();
+        private static Intern<string> _nicknameCache = new Intern<string>();
         private volatile string _nickname;
         private volatile DigitalSignatureAlgorithm _digitalSignatureAlgorithm = 0;
-        private static InternPool<byte[]> _publicKeyCache = new InternPool<byte[]>(new ByteArrayEqualityComparer());
+        private static Intern<byte[]> _publicKeyCache = new Intern<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _publicKey;
         private volatile byte[] _signature;
 

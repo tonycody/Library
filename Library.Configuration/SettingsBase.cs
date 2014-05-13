@@ -14,8 +14,8 @@ namespace Library.Configuration
 {
     public interface ISettingContent
     {
-        Type Type { get; }
         string Name { get; }
+        Type Type { get; }
         object Value { get; set; }
     }
 
@@ -28,7 +28,9 @@ namespace Library.Configuration
 
         public T Value { get; set; }
 
-        #region IContext
+        #region ISettingContent
+
+        public string Name { get; set; }
 
         public Type Type
         {
@@ -37,8 +39,6 @@ namespace Library.Configuration
                 return typeof(T);
             }
         }
-
-        public string Name { get; set; }
 
         object ISettingContent.Value
         {
@@ -99,7 +99,7 @@ namespace Library.Configuration
                 {
                     var ext = Path.GetExtension(path);
 
-                    if (ext == ".temp" || ext == ".tmp")
+                    if (ext == ".tmp")
                     {
                         try
                         {

@@ -42,26 +42,26 @@ namespace Library.Net
             });
         }
 
-        public abstract int Send(byte[] buffer, int offset, int size, TimeSpan timeout);
+        public abstract void Send(byte[] buffer, int offset, int size, TimeSpan timeout);
 
-        public virtual Task<int> SendAsync(byte[] buffer, int offset, int size, TimeSpan timeout)
+        public virtual Task SendAsync(byte[] buffer, int offset, int size, TimeSpan timeout)
         {
             return Task.Factory.StartNew(() =>
             {
-                return this.Send(buffer, offset, size, timeout);
+                this.Send(buffer, offset, size, timeout);
             });
         }
 
-        public virtual int Send(byte[] buffer, TimeSpan timeout)
+        public virtual void Send(byte[] buffer, TimeSpan timeout)
         {
-            return this.Send(buffer, 0, buffer.Length, timeout);
+            this.Send(buffer, 0, buffer.Length, timeout);
         }
 
-        public virtual Task<int> SendAsync(byte[] buffer, TimeSpan timeout)
+        public virtual Task SendAsync(byte[] buffer, TimeSpan timeout)
         {
             return Task.Factory.StartNew(() =>
             {
-                return this.Send(buffer, timeout);
+                this.Send(buffer, timeout);
             });
         }
     }

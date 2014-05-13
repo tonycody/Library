@@ -17,11 +17,11 @@ namespace Library.UnitTest
         [Test]
         public void Test_ReedSolomon8()
         {
-            for (int c = 1; c <= 8; c++)
+            for (int count = 128 - 1; count >= 0; count--)
             {
-                int blockLength = _random.Next(1024, 1024 * 32);
+                int blockLength = _random.Next(32, 1024);
 
-                ReedSolomon8 reedSolomon8 = new ReedSolomon8(128, 256, c, _bufferManager);
+                ReedSolomon8 reedSolomon8 = new ReedSolomon8(128, 256, 2, _bufferManager);
 
                 var buffList = new ArraySegment<byte>[128];
                 for (int i = 0; i < 128; i++)

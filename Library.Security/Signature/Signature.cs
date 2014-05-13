@@ -11,12 +11,12 @@ using Library.Io;
 
 namespace Library.Security
 {
-    public unsafe static class Signature
+    public static class Signature
     {
         private static readonly BufferManager _bufferManager = BufferManager.Instance;
         private static readonly ThreadLocal<Encoding> _threadLocalEncoding = new ThreadLocal<Encoding>(() => new UTF8Encoding(false));
 
-        private static InternPool<string> _signatureCache = new InternPool<string>();
+        private static Intern<string> _signatureCache = new Intern<string>();
 
         private static ConditionalWeakTable<string, byte[]> _signatureHashCache = new ConditionalWeakTable<string, byte[]>();
         private static readonly object _signatureHashCacheLockObject = new object();

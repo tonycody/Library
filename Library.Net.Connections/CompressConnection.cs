@@ -252,7 +252,7 @@ namespace Library.Net.Connections
 
             if (options != null)
             {
-                if (options.Contains("isCompress")) isCompress = (bool)options["isCompress"];
+                if (options.Contains("IsCompress")) isCompress = (bool)options["IsCompress"];
             }
 
             lock (_sendLock)

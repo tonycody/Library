@@ -32,30 +32,39 @@ namespace Library.Net
         public override int Receive(byte[] buffer, int offset, int size, TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_connect) throw new CapException();
+            if (!_connect) throw new CapException("Closed");
 
             try
             {
                 lock (_receiveLock)
                 {
-                    _socket.ReceiveTimeout = (int)timeout.TotalMilliseconds;
+                    _socket.ReceiveTimeout = (int)Math.Min(int.MaxValue, timeout.TotalMilliseconds);
 
                     var i = _socket.Receive(buffer, offset, size, SocketFlags.None);
-                    if (i == 0) _connect = false;
+
+                    if (i == 0)
+                    {
+                        _connect = false;
+
+                        throw new CapException("Closed");
+                    }
 
                     return i;
                 }
             }
+            catch (CapException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 _connect = false;
-                Debug.WriteLine(e);
 
                 throw new CapException("Receive", e);
             }
         }
 
-        public override int Send(byte[] buffer, int offset, int size, TimeSpan timeout)
+        public override void Send(byte[] buffer, int offset, int size, TimeSpan timeout)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_connect) throw new CapException();
@@ -64,15 +73,18 @@ namespace Library.Net
             {
                 lock (_sendLock)
                 {
-                    _socket.SendTimeout = (int)timeout.TotalMilliseconds;
+                    _socket.SendTimeout = (int)Math.Min(int.MaxValue, timeout.TotalMilliseconds);
 
-                    return _socket.Send(buffer, offset, size, SocketFlags.None);
+                    _socket.Send(buffer, offset, size, SocketFlags.None);
                 }
+            }
+            catch (CapException)
+            {
+                throw;
             }
             catch (Exception e)
             {
                 _connect = false;
-                Debug.WriteLine(e);
 
                 throw new CapException("Send", e);
             }

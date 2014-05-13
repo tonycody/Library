@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "ReedSolomon8.h"
 
 // 32bit Test
@@ -51,7 +51,7 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
         *dst++ ^= mulc[*src++];
     }
 
-    for (int32_t range = ((len - (128 - 1)) / 128) * 128; i < range; i += 128)
+    for (int32_t count = ((len - i) / 128) - 1; count >= 0 ; count--)
     {
         xmm0 = _mm_set_epi8
         (
@@ -272,6 +272,8 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
         _mm_store_si128((__m128i*)(dst + (16 * 7)), xmm7);
     
         dst += 128;
+
+        i += 128;
     }
 
     for( ; i < len; i++)

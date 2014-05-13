@@ -14,9 +14,9 @@ namespace Library
         private static NativeLibraryManager _nativeLibraryManager;
 
         [return: MarshalAs(UnmanagedType.U1)]
-        private unsafe delegate bool EqualsDelegate(byte* source1, byte* source2, int len);
-        private unsafe delegate int CompareDelegate(byte* source1, byte* source2, int len);
-        private unsafe delegate void XorDelegate(byte* source1, byte* source2, byte* result, int len);
+        private delegate bool EqualsDelegate(byte* source1, byte* source2, int len);
+        private delegate int CompareDelegate(byte* source1, byte* source2, int len);
+        private delegate void XorDelegate(byte* source1, byte* source2, byte* result, int len);
 
         private static EqualsDelegate _equals;
         private static CompareDelegate _compare;
@@ -67,24 +67,24 @@ namespace Library
 
         public static void Copy(byte[] source1, int source1Index, byte[] source2, int source2Index, int length)
         {
-            if (source1 == null) throw new ArgumentNullException("source1");
-            if (source2 == null) throw new ArgumentNullException("source2");
+            //if (source1 == null) throw new ArgumentNullException("source1");
+            //if (source2 == null) throw new ArgumentNullException("source2");
 
-            if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
-            if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
-            if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
-            if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
+            //if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
+            //if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
+            //if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
+            //if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
 
-            if (length == 0) return;
+            //if (length == 0) return;
 
-            fixed (byte* p_x = source1)
-            {
-                byte* t_x = p_x + source1Index;
+            //fixed (byte* p_x = source1)
+            //{
+            //    byte* t_x = p_x + source1Index;
 
-                Marshal.Copy(new IntPtr((void*)t_x), source2, source2Index, length);
-            }
+            //    Marshal.Copy(new IntPtr((void*)t_x), source2, source2Index, length);
+            //}
 
-            //Array.Copy(source1, source1Index, source2, source2Index, length);
+            Array.Copy(source1, source1Index, source2, source2Index, length);
         }
 
         // Copyright (c) 2008-2013 Hafthor Stefansson
@@ -271,7 +271,9 @@ namespace Library
 
                 fixed (byte* p_buffer = destination)
                 {
-                    _xor(t_x, t_y, p_buffer, length);
+                    byte* t_buffer = p_buffer + destinationIndex;
+
+                    _xor(t_x, t_y, t_buffer, length);
                 }
             }
         }

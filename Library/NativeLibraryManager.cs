@@ -17,10 +17,10 @@ namespace Library
 
         static class NativeMethods
         {
-            [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
             public static extern IntPtr LoadLibrary(string lpFileName);
 
-            [DllImport("kernel32", CharSet = CharSet.Ansi, SetLastError = true)]
+            [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
             public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
 
             [DllImport("kernel32.dll", SetLastError = true)]

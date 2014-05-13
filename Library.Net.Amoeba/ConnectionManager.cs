@@ -100,7 +100,6 @@ namespace Library.Net.Amoeba
 
         private ConnectDirection _direction;
 
-        private readonly SafeDateTime _sendUpdateTime = new SafeDateTime();
         private bool _onClose;
 
         private byte[] _pingHash;
@@ -111,6 +110,7 @@ namespace Library.Net.Amoeba
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 6, 0);
 
         private WatchTimer _aliveTimer;
+        private Stopwatch _aliveStopwatch = new Stopwatch();
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -324,7 +324,7 @@ namespace Library.Net.Amoeba
                             _otherNode = Node.Import(stream, _bufferManager);
                         }
 
-                        _sendUpdateTime.Exchange(DateTime.UtcNow);
+                        _aliveStopwatch.Restart();
 
                         _pingHash = new byte[64];
 
@@ -378,7 +378,7 @@ namespace Library.Net.Amoeba
 
             try
             {
-                if ((DateTime.UtcNow - _sendUpdateTime) > _aliveTimeSpan)
+                if (_aliveStopwatch.Elapsed > _aliveTimeSpan)
                 {
                     this.Alive();
                 }
@@ -404,7 +404,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime.Exchange(DateTime.UtcNow);
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)
@@ -439,7 +439,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime.Exchange(DateTime.UtcNow);
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)
@@ -471,7 +471,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime.Exchange(DateTime.UtcNow);
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)
@@ -686,7 +686,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime.Exchange(DateTime.UtcNow);
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -723,7 +723,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime.Exchange(DateTime.UtcNow);
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -760,7 +760,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime.Exchange(DateTime.UtcNow);
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -797,11 +797,10 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     var contexts = new List<InformationContext>();
-                    contexts.Add(new InformationContext("isCompress", false));
+                    contexts.Add(new InformationContext("IsCompress", false));
 
                     _connection.Send(stream, _sendTimeSpan, new Information(contexts));
-                    //_connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime.Exchange(DateTime.UtcNow);
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -838,7 +837,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime.Exchange(DateTime.UtcNow);
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -875,7 +874,7 @@ namespace Library.Net.Amoeba
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime.Exchange(DateTime.UtcNow);
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -909,7 +908,7 @@ namespace Library.Net.Amoeba
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime.Exchange(DateTime.UtcNow);
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)

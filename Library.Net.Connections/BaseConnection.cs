@@ -17,12 +17,12 @@ namespace Library.Net.Connections
         private readonly SafeInteger _receivedByteCount = new SafeInteger();
         private readonly SafeInteger _sentByteCount = new SafeInteger();
 
-        private readonly SafeDateTime _sendUpdateTime = new SafeDateTime();
         private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 6, 0);
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 6, 0);
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 3, 0);
 
         private System.Threading.Timer _aliveTimer;
+        private Stopwatch _aliveStopwatch = new Stopwatch();
 
         private Stopwatch _sendStopwatch = new Stopwatch();
         private Stopwatch _receiveStopwatch = new Stopwatch();
@@ -43,8 +43,8 @@ namespace Library.Net.Connections
 
             if (_bandwidthLimit != null) _bandwidthLimit.Join(this);
 
-            _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 30, 1000 * 30);
-            _sendUpdateTime.Exchange(DateTime.UtcNow);
+            _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 60, 1000 * 60);
+            _aliveStopwatch.Start();
 
             _connect = true;
         }
@@ -106,7 +106,7 @@ namespace Library.Net.Connections
 
                 try
                 {
-                    if ((DateTime.UtcNow - _sendUpdateTime) > _aliveTimeSpan)
+                    if (_aliveStopwatch.Elapsed > _aliveTimeSpan)
                     {
                         this.Alive();
                     }
@@ -131,7 +131,7 @@ namespace Library.Net.Connections
                 byte[] buffer = new byte[4];
 
                 _cap.Send(buffer, 0, buffer.Length, _sendTimeSpan);
-                _sendUpdateTime.Exchange(DateTime.UtcNow);
+                _aliveStopwatch.Restart();
                 _sentByteCount.Add(4);
             }
         }
@@ -222,11 +222,11 @@ namespace Library.Net.Connections
                                 var time = BaseConnection.CheckTimeout(_receiveStopwatch.Elapsed, timeout);
                                 time = (time < _receiveTimeSpan) ? time : _receiveTimeSpan;
 
-                                int i = _cap.Receive(receiveBuffer, 0, receiveLength, time);
+                                receiveLength = _cap.Receive(receiveBuffer, 0, receiveLength, time);
 
-                                _receivedByteCount.Add(i);
-                                tempStream.Write(receiveBuffer, 0, i);
-                                length -= i;
+                                _receivedByteCount.Add(receiveLength);
+                                tempStream.Write(receiveBuffer, 0, receiveLength);
+                                length -= receiveLength;
                             } while (length > 0);
                         }
                         finally
@@ -237,7 +237,9 @@ namespace Library.Net.Connections
                     catch (Exception e)
                     {
                         if (tempStream != null)
+                        {
                             tempStream.Dispose();
+                        }
 
                         throw e;
                     }
@@ -282,12 +284,10 @@ namespace Library.Net.Connections
 
                             using (Stream dataStream = new UniteStream(headerStream, new WrapperStream(targetStream, true)))
                             {
-                                int i = -1;
-
                                 for (; ; )
                                 {
                                     int sendLength = (int)Math.Min(dataStream.Length - dataStream.Position, sendBuffer.Length);
-                                    if (sendLength <= 0) break;
+                                    if (sendLength == 0) break;
 
                                     if (_bandwidthLimit != null)
                                     {
@@ -295,14 +295,15 @@ namespace Library.Net.Connections
                                         if (sendLength < 0) throw new ConnectionException();
                                     }
 
-                                    if ((i = dataStream.Read(sendBuffer, 0, sendLength)) < 0) break;
+                                    dataStream.Read(sendBuffer, 0, sendLength);
 
                                     var time = BaseConnection.CheckTimeout(_sendStopwatch.Elapsed, timeout);
                                     time = (time < _sendTimeSpan) ? time : _sendTimeSpan;
 
-                                    _cap.Send(sendBuffer, 0, i, time);
-                                    _sendUpdateTime.Exchange(DateTime.UtcNow);
-                                    _sentByteCount.Add(i);
+                                    _cap.Send(sendBuffer, 0, sendLength, time);
+
+                                    _aliveStopwatch.Restart();
+                                    _sentByteCount.Add(sendLength);
                                 }
                             }
                         }
