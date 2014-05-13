@@ -102,7 +102,7 @@ namespace Library.Net.Connections
 
             try
             {
-                Thread.CurrentThread.Name = "CapConnection_AliveTimer";
+                Thread.CurrentThread.Name = "BaseConnection_AliveTimer";
 
                 try
                 {
@@ -228,7 +228,7 @@ namespace Library.Net.Connections
 
                                 _receivedByteCount.Add(receiveLength);
                                 tempStream.Write(receiveBuffer, 0, receiveLength);
-                               
+
                                 length -= receiveLength;
                             } while (length > 0);
                         }
