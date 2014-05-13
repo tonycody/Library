@@ -178,7 +178,7 @@ namespace Library.UnitTest
         public void Test_InternPool()
         {
             //var w = new WeakReference(new object());
-            InternPool<object> rt = new InternPool<object>();
+            Intern<object> rt = new Intern<object>();
 
             {
                 var target1 = rt.GetValue(new Uri("http://127.0.0.1/"), new object()); // Set
