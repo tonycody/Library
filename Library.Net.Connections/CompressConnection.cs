@@ -225,12 +225,12 @@ namespace Library.Net.Connections
                         throw new ArgumentException("ArgumentException");
                     }
                 }
-                catch (ConnectionException ex)
+                catch (ConnectionException e)
                 {
                     if (stream != null) stream.Dispose();
                     if (dataStream != null) dataStream.Dispose();
 
-                    throw ex;
+                    throw e;
                 }
                 catch (Exception e)
                 {
@@ -268,9 +268,11 @@ namespace Library.Net.Connections
                         {
                             if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
                             {
+                                TempStream deflateTempStream = null;
+
                                 try
                                 {
-                                    TempStream deflateTempStream = new TempStream();
+                                    deflateTempStream = new TempStream();
                                     byte[] compressBuffer = null;
 
                                     try
@@ -303,9 +305,11 @@ namespace Library.Net.Connections
                                         deflateTempStream.Dispose();
                                     }
                                 }
-                                catch (Exception)
+                                catch (Exception e)
                                 {
-                                    throw;
+                                    deflateTempStream.Dispose();
+
+                                    throw e;
                                 }
                             }
                         }
@@ -340,9 +344,9 @@ namespace Library.Net.Connections
                             _connection.Send(dataStream, timeout, options);
                         }
                     }
-                    catch (ConnectionException ex)
+                    catch (ConnectionException e)
                     {
-                        throw ex;
+                        throw e;
                     }
                     catch (Exception e)
                     {

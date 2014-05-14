@@ -56,7 +56,7 @@ namespace Library.Net.Connections
             {
                 while (!_disposed)
                 {
-                    Thread.Sleep(((int)Math.Max(1, 1000 - sw.ElapsedMilliseconds)) / 2);
+                    Thread.Sleep(((int)Math.Max(2, 1000 - sw.ElapsedMilliseconds)) / 2);
                     if (sw.ElapsedMilliseconds < 1000) continue;
 
                     sw.Restart();

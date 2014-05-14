@@ -447,13 +447,13 @@ namespace Library.Net.Connections
                         throw new ConnectionException();
                     }
                 }
-                catch (ConnectionException ex)
+                catch (ConnectionException e)
                 {
-                    throw ex;
+                    throw e;
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
-                    throw new ConnectionException(ex.Message, ex);
+                    throw new ConnectionException(e.Message, e);
                 }
 
                 _connect = true;
@@ -577,13 +577,13 @@ namespace Library.Net.Connections
                         throw new ConnectionException();
                     }
                 }
-                catch (ConnectionException ex)
+                catch (ConnectionException e)
                 {
-                    throw ex;
+                    throw e;
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
-                    throw new ConnectionException(ex.Message, ex);
+                    throw new ConnectionException(e.Message, e);
                 }
             }
         }
@@ -679,13 +679,13 @@ namespace Library.Net.Connections
                         }
                     }
                 }
-                catch (ConnectionException ex)
+                catch (ConnectionException e)
                 {
-                    throw ex;
+                    throw e;
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
-                    throw new ConnectionException(ex.Message, ex);
+                    throw new ConnectionException(e.Message, e);
                 }
             }
         }

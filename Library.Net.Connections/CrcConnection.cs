@@ -126,12 +126,12 @@ namespace Library.Net.Connections
                     dataStream.Seek(0, SeekOrigin.Begin);
                     return dataStream;
                 }
-                catch (ConnectionException ex)
+                catch (ConnectionException e)
                 {
                     if (stream != null) stream.Dispose();
                     if (dataStream != null) dataStream.Dispose();
 
-                    throw ex;
+                    throw e;
                 }
                 catch (Exception e)
                 {
@@ -162,9 +162,9 @@ namespace Library.Net.Connections
                             _connection.Send(dataStream, timeout, options);
                         }
                     }
-                    catch (ConnectionException ex)
+                    catch (ConnectionException e)
                     {
-                        throw ex;
+                        throw e;
                     }
                     catch (Exception e)
                     {
