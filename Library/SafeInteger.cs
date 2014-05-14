@@ -86,7 +86,6 @@ namespace Library
         }
 
         // implicit
-        public static implicit operator SafeInteger(long i) { return new SafeInteger(i); }
         public static implicit operator long(SafeInteger safeInteger) { return safeInteger.Value; }
 
         public long Increment()

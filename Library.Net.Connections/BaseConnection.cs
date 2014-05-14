@@ -43,7 +43,7 @@ namespace Library.Net.Connections
 
             if (_bandwidthLimit != null) _bandwidthLimit.Join(this);
 
-            _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 60, 1000 * 60);
+            _aliveTimer = new System.Threading.Timer(this.AliveTimer, null, 1000 * 30, 1000 * 30);
             _aliveStopwatch.Start();
 
             _connect = true;

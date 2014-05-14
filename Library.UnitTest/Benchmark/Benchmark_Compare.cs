@@ -16,6 +16,9 @@ namespace Library.UnitTest
         {
             Random random = new Random();
 
+            Stopwatch totalStopwatch = new Stopwatch();
+            totalStopwatch.Start();
+
             Stopwatch sw1 = new Stopwatch();
             Stopwatch sw2 = new Stopwatch();
             Stopwatch sw3 = new Stopwatch();
@@ -84,6 +87,8 @@ namespace Library.UnitTest
 
                 Assert.IsTrue(result1 == result2);
                 Assert.IsTrue(result3 == result4);
+
+                if (totalStopwatch.ElapsedMilliseconds > 1000 * 60) break;
             }
 
             StringBuilder sb = new StringBuilder();

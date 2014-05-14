@@ -20,11 +20,11 @@ namespace Library.Compression
                 {
                     if (System.Environment.Is64BitProcess)
                     {
-                        info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
+                        info = new ProcessStartInfo("Assembly/xz_x64.exe");
                     }
                     else
                     {
-                        info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                        info = new ProcessStartInfo("Assembly/xz_x86.exe");
                     }
                 }
             }
@@ -127,11 +127,11 @@ namespace Library.Compression
                 {
                     if (System.Environment.Is64BitProcess)
                     {
-                        info = new ProcessStartInfo("Assembly/xz_x86-64.exe");
+                        info = new ProcessStartInfo("Assembly/xz_x64.exe");
                     }
                     else
                     {
-                        info = new ProcessStartInfo("Assembly/xz_i486.exe");
+                        info = new ProcessStartInfo("Assembly/xz_x86.exe");
                     }
                 }
             }

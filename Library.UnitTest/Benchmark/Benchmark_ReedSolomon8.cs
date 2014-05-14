@@ -14,7 +14,6 @@ namespace Library.UnitTest
         [Test]
         public void ReedSolomon8()
         {
-            StringBuilder sb = new StringBuilder();
             Random random = new Random();
 
             const int blockSize = 1024 * 1024;
@@ -69,10 +68,10 @@ namespace Library.UnitTest
                     _bufferManager.ReturnBuffer(buffList2[i].Array);
                 }
 
-                sb.AppendLine(string.Format("ReedSolomon8 Parallel {0}: ", c) + sw.Elapsed.ToString());
+                Console.WriteLine(string.Format("ReedSolomon8 Parallel {0}: ", c) + sw.Elapsed.ToString());
             }
 
-            Console.WriteLine(sb.ToString());
+            Console.WriteLine();
         }
     }
 }

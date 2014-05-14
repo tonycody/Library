@@ -79,10 +79,10 @@
     <Content Include="Properties\Library.Compression.Readme">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assembly\xz_i486.exe">
+    <Content Include="Assembly\xz_x86.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assembly\xz_x86-64.exe">
+    <Content Include="Assembly\xz_x64.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

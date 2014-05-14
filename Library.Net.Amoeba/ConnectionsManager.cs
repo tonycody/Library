@@ -2663,7 +2663,7 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisLock)
                 {
-                    var signatures = new SortedSet<string>();
+                    var signatures = new HashSet<string>();
                     signatures.UnionWith(this.LinkSeeds.Keys);
                     signatures.UnionWith(this.StoreSeeds.Keys);
 
