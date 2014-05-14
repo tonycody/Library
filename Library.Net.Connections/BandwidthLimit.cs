@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
@@ -16,7 +17,7 @@ namespace Library.Net.Connections
     [DataContract(Name = "BandwidthLimit", Namespace = "http://Library/Net/Connection")]
     public sealed class BandwidthLimit : ManagerBase, IEquatable<BandwidthLimit>, ICloneable<BandwidthLimit>, IThisLock
     {
-        private System.Timers.Timer _refreshTimer = new System.Timers.Timer();
+        private Thread _watchThread;
 
         private ManualResetEvent _outResetEvent = new ManualResetEvent(false);
         private ManualResetEvent _inResetEvent = new ManualResetEvent(false);
@@ -33,32 +34,49 @@ namespace Library.Net.Connections
         private volatile int _out;
         private volatile int _in;
 
-        private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
+        private volatile object _thisLock;
 
         private volatile bool _disposed;
 
         public BandwidthLimit()
         {
-            _refreshTimer = new System.Timers.Timer();
-            _refreshTimer.Elapsed += _refreshTimer_Elapsed;
-            _refreshTimer.Interval = 1000;
-            _refreshTimer.AutoReset = true;
-            _refreshTimer.Start();
+            _watchThread = new Thread(this.WatchThread);
+            _watchThread.Priority = ThreadPriority.Highest;
+            _watchThread.Name = "BandwidthLimit_WatchThread";
+            _watchThread.Start();
         }
 
-        private void _refreshTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void WatchThread()
         {
-            lock (_outLockObject)
-            {
-                _totalOutSize = 0;
-                _outResetEvent.Set();
-            }
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
 
-            lock (_inLockObject)
+            try
             {
-                _totalInSize = 0;
-                _inResetEvent.Set();
+                while (!_disposed)
+                {
+                    Thread.Sleep(((int)Math.Max(1, 1000 - sw.ElapsedMilliseconds)) / 2);
+                    if (sw.ElapsedMilliseconds < 1000) continue;
+
+                    sw.Restart();
+
+                    lock (_outLockObject)
+                    {
+                        _totalOutSize = 0;
+                        _outResetEvent.Set();
+                    }
+
+                    lock (_inLockObject)
+                    {
+                        _totalInSize = 0;
+                        _inResetEvent.Set();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error(e);
             }
         }
 
@@ -296,18 +314,18 @@ namespace Library.Net.Connections
 
             if (disposing)
             {
-                if (_refreshTimer != null)
+                if (_watchThread != null)
                 {
                     try
                     {
-                        _refreshTimer.Dispose();
+                        _watchThread.Join();
                     }
                     catch (Exception)
                     {
 
                     }
 
-                    _refreshTimer = null;
+                    _watchThread = null;
                 }
 
                 if (_outResetEvent != null)

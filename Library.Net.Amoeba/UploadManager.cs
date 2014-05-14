@@ -33,8 +33,8 @@ namespace Library.Net.Amoeba
         private WaitQueue<Key> _uploadedKeys = new WaitQueue<Key>();
         private WaitQueue<string> _removeSharePaths = new WaitQueue<string>();
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public UploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {

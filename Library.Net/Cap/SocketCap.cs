@@ -15,6 +15,7 @@ namespace Library.Net
         private readonly object _thisLock = new object();
 
         private volatile bool _connect;
+
         private volatile bool _disposed;
 
         public SocketCap(Socket socket)

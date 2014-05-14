@@ -12,8 +12,8 @@ namespace Library
 
         private Dictionary<T, Info> _dic;
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public Intern()
         {

@@ -96,8 +96,8 @@ namespace Library.Net.Amoeba
         private GetSignaturesEventHandler _getLockSignaturesEvent;
         private UploadedEventHandler _uploadedEvent;
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         private const int _maxNodeCount = 128;
         private const int _maxBlockLinkCount = 8192;
@@ -2908,6 +2908,20 @@ namespace Library.Net.Amoeba
                     }
 
                     _messagesManager = null;
+                }
+
+                if (_bandwidthLimit != null)
+                {
+                    try
+                    {
+                        _bandwidthLimit.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _bandwidthLimit = null;
                 }
             }
         }

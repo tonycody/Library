@@ -32,8 +32,8 @@ namespace Library.Net.Amoeba
         private WaitQueue<Key> _setKeys = new WaitQueue<Key>();
         private WaitQueue<Key> _removeKeys = new WaitQueue<Key>();
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public BackgroundDownloadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {

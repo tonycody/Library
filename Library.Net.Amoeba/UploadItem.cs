@@ -67,8 +67,8 @@ namespace Library.Net.Amoeba
         private SortedSet<Key> _uploadedKeys;
         private IndexCollection _indexes;
 
-        private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
+        private volatile object _thisLock;
 
         private object ThisLock
         {

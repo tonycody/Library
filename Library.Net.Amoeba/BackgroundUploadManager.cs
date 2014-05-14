@@ -27,8 +27,8 @@ namespace Library.Net.Amoeba
 
         private WaitQueue<Key> _uploadedKeys = new WaitQueue<Key>();
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public BackgroundUploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {

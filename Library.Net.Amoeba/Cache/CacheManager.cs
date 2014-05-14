@@ -52,8 +52,8 @@ namespace Library.Net.Amoeba
 
         private readonly object _convertLock = new object();
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public static readonly int SectorSize = 1024 * 32;
         public static readonly int SpaceSectorCount = 32 * 1024; // 1MB * 1024 = 1024MB

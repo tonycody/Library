@@ -17,8 +17,8 @@ namespace Library.Net.Amoeba
         private WatchTimer _refreshTimer;
         private volatile bool _checkedFlag = false;
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public GetLockNodesEventHandler GetLockNodesEvent;
 

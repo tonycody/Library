@@ -18,8 +18,8 @@ namespace Library.Correction
 
         private volatile bool _cancel;
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public ReedSolomon8(int k, int n, int threadCount, BufferManager bufferManager)
         {

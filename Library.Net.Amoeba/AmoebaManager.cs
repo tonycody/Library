@@ -38,8 +38,8 @@ namespace Library.Net.Amoeba
 
         private bool _isLoaded = false;
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public AmoebaManager(string bitmapPath, string cachePath, BufferManager bufferManager)
         {

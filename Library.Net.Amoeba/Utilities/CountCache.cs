@@ -14,8 +14,8 @@ namespace Library.Net.Amoeba
         private ConditionalWeakTable<Group, GroupManager> _table = new ConditionalWeakTable<Group, GroupManager>();
         private List<WeakReference> _groupManagers = new List<WeakReference>();
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public CountCache()
         {

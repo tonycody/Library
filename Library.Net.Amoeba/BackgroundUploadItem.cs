@@ -48,8 +48,8 @@ namespace Library.Net.Amoeba
         private SortedSet<Key> _uploadKeys;
         private SortedSet<Key> _uploadedKeys;
 
-        private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
+        private volatile object _thisLock;
 
         [DataMember(Name = "Type")]
         public BackgroundItemType Type

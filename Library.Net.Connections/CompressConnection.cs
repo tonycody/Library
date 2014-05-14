@@ -28,6 +28,7 @@ namespace Library.Net.Connections
         private readonly object _thisLock = new object();
 
         private volatile bool _connect;
+
         private volatile bool _disposed;
 
         public CompressConnection(ConnectionBase connection, int maxReceiveCount, BufferManager bufferManager)

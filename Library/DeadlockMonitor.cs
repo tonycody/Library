@@ -10,11 +10,11 @@ namespace Library
 {
     public class DeadlockMonitor
     {
-        //^{( )*}lock.*\({.*}\){(.*)}{(\n+)}{(.*)}\{
-        //\1using (DeadlockMonitor.Lock(\2))\3\4\5{
+        //^(\s*)lock\s*\((.*)\)(.*)\n(.*)\{
+        //$1using (DeadlockMonitor.Lock($2))$3\n$4{
 
-        //using \(DeadlockMonitor.Lock\({.*}\)\)
-        //lock (\1)
+        //using \(DeadlockMonitor.Lock\((.*)\)\)
+        //lock ($1)
 
         /// <summary>Lock used to protected private static state in DdMonitor.</summary>
         private static object _globalLock = new object();

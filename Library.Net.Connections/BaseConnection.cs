@@ -32,6 +32,7 @@ namespace Library.Net.Connections
         private readonly object _thisLock = new object();
 
         private volatile bool _connect;
+
         private volatile bool _disposed;
 
         public BaseConnection(CapBase cap, BandwidthLimit bandwidthLimit, int maxReceiveCount, BufferManager bufferManager)
