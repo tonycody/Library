@@ -23,8 +23,8 @@ namespace Library.Net.Outopos
         private byte[] _cacheBuffer;
         private int _cacheBufferCount = 0;
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public static readonly int SectorSize = 1024 * 4;
 

@@ -123,7 +123,7 @@
     <Compile Include="UploadItem.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />
-    <Compile Include="Utilities\KeyComparer.cs" />
+    <Compile Include="Utilities\Comparer.cs" />
     <Compile Include="Utilities\WatchTimer.cs" />
   </ItemGroup>
   <ItemGroup>

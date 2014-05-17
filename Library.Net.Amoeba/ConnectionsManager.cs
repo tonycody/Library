@@ -451,7 +451,7 @@ namespace Library.Net.Amoeba
 
         private double GetPriority(Node node)
         {
-            const int average = 1024;
+            const int average = 256;
 
             lock (this.ThisLock)
             {
@@ -843,7 +843,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 1)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 5)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -853,14 +853,11 @@ namespace Library.Net.Amoeba
                     {
                         foreach (var connectionManager in _connectionManagers)
                         {
-                            if ((this.GetPriority(connectionManager.Node) * 100) < 5)
+                            nodeSortItems.Add(new NodeSortItem()
                             {
-                                nodeSortItems.Add(new NodeSortItem()
-                                {
-                                    Node = connectionManager.Node,
-                                    Priority = _messagesManager[connectionManager.Node].Priority,
-                                });
-                            }
+                                Node = connectionManager.Node,
+                                Priority = _messagesManager[connectionManager.Node].Priority,
+                            });
                         }
                     }
 

@@ -1,12 +1,6 @@
 Library.Net.Outopos\Cache\BitmapManager.cs
 Library.Net.Amoeba\Cache\BitmapManager.cs
 
-Library.Net.Outopos\Cache\CacheManagerStreamReader.cs
-Library.Net.Amoeba\Cache\CacheManagerStreamReader.cs
-
-Library.Net.Outopos\Cache\CacheManagerStreamWriter.cs
-Library.Net.Amoeba\Cache\CacheManagerStreamWriter.cs
-
 Library.Net.Outopos\Node.cs
 Library.Net.Amoeba\Node.cs
 
@@ -18,6 +12,9 @@ Library.Net.Amoeba\UriCollection.cs
 
 Library.Net.Outopos\Utilities\EqualityComparer.cs
 Library.Net.Amoeba\Utilities\EqualityComparer.cs
+
+Library.Net.Outopos\Utilities\Comparer.cs
+Library.Net.Amoeba\Utilities\Comparer.cs
 
 Library.Net.Outopos\Utilities\WatchTimer.cs
 Library.Net.Amoeba\Utilities\WatchTimer.cs

@@ -21,6 +21,7 @@ namespace Library.Net.Outopos
             Certificate = 3,
         }
 
+        private static Intern<Tag> _tagCache = new Intern<Tag>();
         private volatile Tag _tag;
         private DateTime _creationTime;
         private volatile Key _key;
@@ -192,7 +193,21 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                _tag = value;
+                if (value != null)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    if (value != null)
+                    {
+                        _tag = _tagCache.GetValue(value, this);
+                    }
+                    else
+                    {
+                        _tag = null;
+                    }
+                }
             }
         }
 

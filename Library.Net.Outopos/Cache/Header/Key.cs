@@ -18,7 +18,6 @@ namespace Library.Net.Outopos
             HashAlgorithm = 1,
         }
 
-        private static Intern<byte[]> _hashCache = new Intern<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _hash;
 
         private volatile HashAlgorithm _hashAlgorithm = 0;
@@ -127,8 +126,7 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _hash = _hashCache.GetValue(value, this);
-                    //_hash = value;
+                    _hash = value;
                 }
 
                 if (value != null)
@@ -167,28 +165,5 @@ namespace Library.Net.Outopos
         }
 
         #endregion
-
-        internal class Comparer : IComparer<Key>
-        {
-            public int Compare(Key x, Key y)
-            {
-                int c = x._hashCode.CompareTo(y._hashCode);
-                if (c != 0) return c;
-
-                c = x.HashAlgorithm.CompareTo(y.HashAlgorithm);
-                if (c != 0) return c;
-
-                c = ((x.Hash == null) ? 0 : 1) - ((y.Hash == null) ? 0 : 1);
-                if (c != 0) return c;
-
-                if (x.Hash != null && y.Hash != null)
-                {
-                    c = Native.Compare(x.Hash, y.Hash);
-                    if (c != 0) return c;
-                }
-
-                return 0;
-            }
-        }
     }
 }

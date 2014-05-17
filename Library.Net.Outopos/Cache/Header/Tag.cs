@@ -19,11 +19,8 @@ namespace Library.Net.Outopos
             Id = 2,
         }
 
-        private static InternPool<string> _typeCache = new InternPool<string>();
         private volatile string _type;
-        private static InternPool<string> _nameCache = new InternPool<string>();
         private volatile string _name;
-        private static InternPool<byte[]> _idCache = new InternPool<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _id;
 
         private volatile int _hashCode;
@@ -108,11 +105,16 @@ namespace Library.Net.Outopos
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (!object.ReferenceEquals(this.Type, other.Type)
-                || !object.ReferenceEquals(this.Name, other.Name)
-                || !object.ReferenceEquals(this.Id, other.Id))
+            if (this.Type != other.Type
+                || this.Name != other.Name
+                || (this.Id == null) != (other.Id == null))
             {
                 return false;
+            }
+
+            if (this.Id != null && other.Id != null)
+            {
+                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;
@@ -135,7 +137,7 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _type = _typeCache.GetValue(value, this);
+                    _type = value;
                 }
             }
         }
@@ -155,7 +157,7 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _name = _nameCache.GetValue(value, this);
+                    _name = value;
                 }
             }
         }
@@ -175,12 +177,12 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _id = _idCache.GetValue(value, this);
+                    _id = value;
                 }
 
                 if (value != null)
                 {
-                    _hashCode = RuntimeHelpers.GetHashCode(_id);
+                    _hashCode = ItemUtilities.GetHashCode(_id);
                 }
                 else
                 {
