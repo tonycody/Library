@@ -143,7 +143,6 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
-                    contexts.AddRange(_clientManager.Information);
                     contexts.AddRange(_serverManager.Information);
                     contexts.AddRange(_connectionsManager.Information);
                     contexts.AddRange(_cacheManager.Information);

@@ -20,7 +20,7 @@ namespace Library.Net.Amoeba
         private Random _random = new Random();
 
         private Dictionary<string, TcpListener> _tcpListeners = new Dictionary<string, TcpListener>();
-        private List<string> _urisHistory = new List<string>();
+        private List<string> _oldListenUris = new List<string>();
 
         private Regex _regex = new Regex(@"(.*?):(.*):(\d*)");
 
@@ -28,7 +28,7 @@ namespace Library.Net.Amoeba
 
         private volatile ManagerState _state = ManagerState.Stop;
 
-        private AcceptCapEventHandler _acceptConnectionEvent;
+        private AcceptCapEventHandler _acceptCapEvent;
         private CheckUriEventHandler _uriFilterEvent;
 
         private readonly SafeInteger _blockedCount = new SafeInteger();
@@ -57,7 +57,7 @@ namespace Library.Net.Amoeba
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
 
-                    contexts.Add(new InformationContext("AcceptBlockedCount", (long)_blockedCount));
+                    contexts.Add(new InformationContext("BlockedConnectionCount", (long)_blockedCount));
 
                     return new Information(contexts);
                 }
@@ -70,7 +70,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    _acceptConnectionEvent = value;
+                    _acceptCapEvent = value;
                 }
             }
         }
@@ -101,9 +101,9 @@ namespace Library.Net.Amoeba
         {
             uri = null;
 
-            if (_acceptConnectionEvent != null)
+            if (_acceptCapEvent != null)
             {
-                return _acceptConnectionEvent(this, out uri);
+                return _acceptCapEvent(this, out uri);
             }
 
             return null;
@@ -145,9 +145,8 @@ namespace Library.Net.Amoeba
 
                                     {
                                         var remoteEndPoint = (IPEndPoint)socket.RemoteEndPoint;
-                                        var localEndpoint = (IPEndPoint)item.Value.LocalEndpoint;
 
-                                        uri = string.Format("tcp:{0}:{1}", remoteEndPoint.Address, localEndpoint.Port);
+                                        uri = string.Format("tcp:{0}:{1}", remoteEndPoint.Address, remoteEndPoint.Port);
                                     }
 
                                     if (!this.OnCheckUriEvent(uri))
@@ -168,6 +167,7 @@ namespace Library.Net.Amoeba
                     }
                     else if (type == 1)
                     {
+                        // Overlay network
                         var cap = this.OnAcceptCapEvent(out uri);
                         if (cap == null) continue;
 
@@ -182,7 +182,7 @@ namespace Library.Net.Amoeba
 
                 if (connection == null) return null;
 
-                var secureConnection = new SecureConnection(SecureConnectionType.In, SecureConnectionVersion.Version3, connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionVersion.Version3, SecureConnectionType.Accept, connection, null, _bufferManager);
                 garbages.Add(secureConnection);
 
                 secureConnection.Connect(new TimeSpan(0, 0, 30));
@@ -212,7 +212,7 @@ namespace Library.Net.Amoeba
                 if (this.State == ManagerState.Stop) return;
 
                 // 差分を更新。
-                if (!CollectionUtilities.Equals(_urisHistory, this.ListenUris))
+                if (!CollectionUtilities.Equals(_oldListenUris, this.ListenUris))
                 {
                     foreach (var item in _tcpListeners.ToArray())
                     {
@@ -244,8 +244,8 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    _urisHistory.Clear();
-                    _urisHistory.AddRange(this.ListenUris);
+                    _oldListenUris.Clear();
+                    _oldListenUris.AddRange(this.ListenUris);
                 }
             }
         }
@@ -295,7 +295,7 @@ namespace Library.Net.Amoeba
                     }
 
                     _tcpListeners.Clear();
-                    _urisHistory.Clear();
+                    _oldListenUris.Clear();
                 }
             }
         }

@@ -44,12 +44,12 @@
     <Compile Include="SamV3Bridge.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Properties\Library.I2p.License">
+    <Content Include="Properties\Library.Net.I2p.License">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Properties\Library.I2p.Readme">
+    <Content Include="Properties\Library.Net.I2p.Readme">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

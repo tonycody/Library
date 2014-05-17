@@ -39,7 +39,7 @@ namespace Library.Net.Connections
 
         private volatile bool _disposed;
 
-        public SecureConnection(SecureConnectionType type, SecureConnectionVersion version, ConnectionBase connection, DigitalSignature digitalSignature, BufferManager bufferManager)
+        public SecureConnection(SecureConnectionVersion version, SecureConnectionType type, ConnectionBase connection, DigitalSignature digitalSignature, BufferManager bufferManager)
         {
             _type = type;
             _connection = connection;
@@ -409,14 +409,14 @@ namespace Library.Net.Connections
 
                             using (MemoryStream stream = new MemoryStream(pbkdf2.GetBytes((cryptoKeyLength + hmacKeyLength) * 2)))
                             {
-                                if (_type == SecureConnectionType.Out)
+                                if (_type == SecureConnectionType.Connect)
                                 {
                                     stream.Read(myCryptoKey, 0, myCryptoKey.Length);
                                     stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
                                     stream.Read(myHmacKey, 0, myHmacKey.Length);
                                     stream.Read(otherHmacKey, 0, otherHmacKey.Length);
                                 }
-                                else if (_type == SecureConnectionType.In)
+                                else if (_type == SecureConnectionType.Accept)
                                 {
                                     stream.Read(otherCryptoKey, 0, otherCryptoKey.Length);
                                     stream.Read(myCryptoKey, 0, myCryptoKey.Length);

@@ -206,7 +206,6 @@ namespace Library.Security
                 else
                 {
                     _nickname = _nicknameCache.GetValue(value, this);
-                    //_nickname = value;
                 }
             }
         }
@@ -247,7 +246,6 @@ namespace Library.Security
                 else
                 {
                     _publicKey = _publicKeyCache.GetValue(value, this);
-                    //_publicKey = value;
                 }
 
                 if (value != null)

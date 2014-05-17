@@ -8,16 +8,16 @@ namespace Library.Net.Amoeba
 {
     // パフォーマンス上の理由から仕方なく、これは高速化にかなり貢献してる
 
-    sealed class CountCache : ManagerBase, IThisLock
+    sealed class ExistManager : ManagerBase, IThisLock
     {
         private WatchTimer _watchTimer;
         private ConditionalWeakTable<Group, GroupManager> _table = new ConditionalWeakTable<Group, GroupManager>();
-        private List<WeakReference> _groupManagers = new List<WeakReference>();
+        private LinkedList<WeakReference> _groupManagers = new LinkedList<WeakReference>();
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
-        public CountCache()
+        public ExistManager()
         {
             _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 1, 0));
         }
@@ -31,26 +31,52 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                for (int i = 0; i < _groupManagers.Count; )
+                List<WeakReference> list = null;
+
+                foreach (var weakReference in _groupManagers)
                 {
-                    if (!_groupManagers[i].IsAlive) _groupManagers.RemoveAt(i);
-                    else i++;
+                    if (!weakReference.IsAlive)
+                    {
+                        if (list == null)
+                            list = new List<WeakReference>();
+
+                        list.Add(weakReference);
+                    }
+                }
+
+                if (list != null)
+                {
+                    foreach (var weakReference in list)
+                    {
+                        _groupManagers.Remove(weakReference);
+                    }
                 }
             }
         }
 
-        public void SetGroup(Group group)
+        public void Add(Group group)
         {
             lock (this.ThisLock)
             {
-                var groupManager = new GroupManager(group);
+                _table.GetValue(group, (key) =>
+                {
+                    var value = new GroupManager(key);
+                    _groupManagers.AddLast(new WeakReference(value));
 
-                _table.Add(group, groupManager);
-                _groupManagers.Add(new WeakReference(groupManager));
+                    return value;
+                });
             }
         }
 
-        public void SetState(Key key, bool state)
+        public void Remove(Group group)
+        {
+            lock (this.ThisLock)
+            {
+                _table.Remove(group);
+            }
+        }
+
+        public void Set(Key key, bool state)
         {
             lock (this.ThisLock)
             {
@@ -59,7 +85,7 @@ namespace Library.Net.Amoeba
                     var groupManager = weakReference.Target as GroupManager;
                     if (groupManager == null) continue;
 
-                    groupManager.SetState(key, state);
+                    groupManager.Set(key, state);
                 }
             }
         }
@@ -101,7 +127,7 @@ namespace Library.Net.Amoeba
             {
                 _group = group;
 
-                _dic = new SortedDictionary<Key, bool>(new Key.Comparer());
+                _dic = new SortedDictionary<Key, bool>(new KeyComparer());
                 //_dic = new Dictionary<Key, bool>();
 
                 foreach (var key in group.Keys)
@@ -114,7 +140,7 @@ namespace Library.Net.Amoeba
                 _cacheFalseKeys = new List<Key>();
             }
 
-            public void SetState(Key key, bool state)
+            public void Set(Key key, bool state)
             {
                 if (!_dic.ContainsKey(key)) return;
                 _dic[key] = state;
@@ -128,8 +154,20 @@ namespace Library.Net.Amoeba
             {
                 if (!_isCached)
                 {
-                    _cacheTrueKeys.AddRange(_group.Keys.Where(n => _dic[n]));
-                    _cacheFalseKeys.AddRange(_group.Keys.Where(n => !_dic[n]));
+                    foreach (var key in _group.Keys)
+                    {
+                        bool flag = _dic[key];
+
+                        if (flag)
+                        {
+                            _cacheTrueKeys.Add(key);
+                        }
+                        else
+                        {
+                            _cacheFalseKeys.Add(key);
+                        }
+                    }
+
                     _isCached = true;
                 }
 
@@ -141,8 +179,20 @@ namespace Library.Net.Amoeba
             {
                 if (!_isCached)
                 {
-                    _cacheTrueKeys.AddRange(_group.Keys.Where(n => _dic[n]));
-                    _cacheFalseKeys.AddRange(_group.Keys.Where(n => !_dic[n]));
+                    foreach (var key in _group.Keys)
+                    {
+                        bool flag = _dic[key];
+
+                        if (flag)
+                        {
+                            _cacheTrueKeys.Add(key);
+                        }
+                        else
+                        {
+                            _cacheFalseKeys.Add(key);
+                        }
+                    }
+
                     _isCached = true;
                 }
 

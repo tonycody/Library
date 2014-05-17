@@ -89,7 +89,7 @@
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />
     <Compile Include="ConnectionsManager.cs" />
-    <Compile Include="Utilities\CountCache.cs" />
+    <Compile Include="Utilities\ExistManager.cs" />
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
@@ -123,6 +123,7 @@
     <Compile Include="UploadItem.cs" />
     <Compile Include="UploadManager.cs" />
     <Compile Include="UriCollection.cs" />
+    <Compile Include="Utilities\KeyComparer.cs" />
     <Compile Include="Utilities\WatchTimer.cs" />
   </ItemGroup>
   <ItemGroup>

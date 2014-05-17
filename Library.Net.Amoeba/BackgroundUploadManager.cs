@@ -145,220 +145,219 @@ namespace Library.Net.Amoeba
                     return;
                 }
 
+                if (item == null) continue;
+
                 try
                 {
-                    if (item != null)
+                    if (item.Groups.Count == 0 && item.Keys.Count == 0)
                     {
-                        if (item.Groups.Count == 0 && item.Keys.Count == 0)
+                        Stream stream = null;
+
+                        try
                         {
-                            Stream stream = null;
-
-                            try
+                            if (item.Type == BackgroundItemType.Link)
                             {
-                                if (item.Type == BackgroundItemType.Link)
-                                {
-                                    var link = item.Value as Link;
-                                    if (link == null) throw new FormatException();
+                                var link = item.Value as Link;
+                                if (link == null) throw new FormatException();
 
-                                    stream = link.Export(_bufferManager);
-                                }
-                                else if (item.Type == BackgroundItemType.Store)
-                                {
-                                    var store = item.Value as Store;
-                                    if (store == null) throw new FormatException();
+                                stream = link.Export(_bufferManager);
+                            }
+                            else if (item.Type == BackgroundItemType.Store)
+                            {
+                                var store = item.Value as Store;
+                                if (store == null) throw new FormatException();
 
-                                    stream = store.Export(_bufferManager);
-                                }
-                                else
-                                {
-                                    throw new FormatException();
-                                }
+                                stream = store.Export(_bufferManager);
+                            }
+                            else
+                            {
+                                throw new FormatException();
+                            }
 
-                                if (stream.Length == 0)
+                            if (stream.Length == 0)
+                            {
+                                lock (this.ThisLock)
                                 {
-                                    lock (this.ThisLock)
+                                    item.Seed.Rank = 0;
+
+                                    if (item.DigitalSignature != null)
                                     {
-                                        item.Seed.Rank = 0;
+                                        item.Seed.CreateCertificate(item.DigitalSignature);
+                                    }
 
-                                        if (item.DigitalSignature != null)
+                                    _connectionsManager.Upload(item.Seed);
+
+                                    item.State = BackgroundUploadState.Completed;
+                                }
+                            }
+                            else
+                            {
+                                KeyCollection keys = null;
+                                byte[] cryptoKey = null;
+
+                                try
+                                {
+                                    using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    {
+                                        isStop = (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
+                                    }, 1024 * 1024, true))
+                                    {
+                                        item.Seed.Length = stream.Length;
+
+                                        if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
+
+                                        if (item.HashAlgorithm == HashAlgorithm.Sha512)
                                         {
-                                            item.Seed.CreateCertificate(item.DigitalSignature);
+                                            cryptoKey = Sha512.ComputeHash(encodingProgressStream);
                                         }
 
-                                        _connectionsManager.Upload(item.Seed);
+                                        encodingProgressStream.Seek(0, SeekOrigin.Begin);
 
-                                        item.State = BackgroundUploadState.Completed;
+                                        item.State = BackgroundUploadState.Encoding;
+                                        keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                                     }
                                 }
-                                else
+                                catch (StopIoException)
                                 {
-                                    KeyCollection keys = null;
-                                    byte[] cryptoKey = null;
+                                    continue;
+                                }
 
-                                    try
+                                lock (this.ThisLock)
+                                {
+                                    foreach (var key in keys)
                                     {
-                                        using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                        {
-                                            isStop = (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
-                                        }, 1024 * 1024, true))
-                                        {
-                                            item.Seed.Length = stream.Length;
-
-                                            if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
-
-                                            if (item.HashAlgorithm == HashAlgorithm.Sha512)
-                                            {
-                                                cryptoKey = Sha512.ComputeHash(encodingProgressStream);
-                                            }
-
-                                            encodingProgressStream.Seek(0, SeekOrigin.Begin);
-
-                                            item.State = BackgroundUploadState.Encoding;
-                                            keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
-                                        }
-                                    }
-                                    catch (StopIoException)
-                                    {
-                                        continue;
+                                        item.UploadKeys.Add(key);
+                                        item.LockedKeys.Add(key);
                                     }
 
-                                    lock (this.ThisLock)
-                                    {
-                                        foreach (var key in keys)
-                                        {
-                                            item.UploadKeys.Add(key);
-                                            item.LockedKeys.Add(key);
-                                        }
-
-                                        item.CryptoKey = cryptoKey;
-                                        item.Keys.AddRange(keys);
-                                    }
-                                }
-                            }
-                            finally
-                            {
-                                if (stream != null) stream.Dispose();
-                            }
-                        }
-                        else if (item.Groups.Count == 0 && item.Keys.Count == 1)
-                        {
-                            lock (this.ThisLock)
-                            {
-                                item.Seed.Rank = item.Rank;
-                                item.Seed.Key = item.Keys[0];
-                                item.Keys.Clear();
-
-                                item.Seed.CompressionAlgorithm = item.CompressionAlgorithm;
-
-                                item.Seed.CryptoAlgorithm = item.CryptoAlgorithm;
-                                item.Seed.CryptoKey = item.CryptoKey;
-
-                                if (item.DigitalSignature != null)
-                                {
-                                    item.Seed.CreateCertificate(item.DigitalSignature);
-                                }
-
-                                item.UploadKeys.Add(item.Seed.Key);
-
-                                foreach (var key in item.UploadKeys)
-                                {
-                                    _connectionsManager.Upload(key);
-                                }
-
-                                this.SetKeyCount(item);
-
-                                foreach (var key in item.LockedKeys)
-                                {
-                                    _cacheManager.Unlock(key);
-                                }
-
-                                item.LockedKeys.Clear();
-
-                                item.State = BackgroundUploadState.Uploading;
-                            }
-                        }
-                        else if (item.Keys.Count > 0)
-                        {
-                            var length = Math.Min(item.Keys.Count, 128);
-                            var keys = new KeyCollection(item.Keys.Take(length));
-                            Group group = null;
-
-                            try
-                            {
-                                group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
-                                {
-                                    return (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
-                                });
-                            }
-                            catch (StopException)
-                            {
-                                continue;
-                            }
-
-                            lock (this.ThisLock)
-                            {
-                                foreach (var key in group.Keys.Skip(group.InformationLength))
-                                {
-                                    item.UploadKeys.Add(key);
-                                    item.LockedKeys.Add(key);
-                                }
-
-                                item.Groups.Add(group);
-
-                                for (int i = 0; i < length; i++)
-                                {
-                                    item.Keys.RemoveAt(0);
+                                    item.CryptoKey = cryptoKey;
+                                    item.Keys.AddRange(keys);
                                 }
                             }
                         }
-                        else if (item.Groups.Count > 0 && item.Keys.Count == 0)
+                        finally
                         {
-                            var index = new Index();
-                            index.Groups.AddRange(item.Groups);
-                            index.CompressionAlgorithm = item.CompressionAlgorithm;
-                            index.CryptoAlgorithm = item.CryptoAlgorithm;
-                            index.CryptoKey = item.CryptoKey;
+                            if (stream != null) stream.Dispose();
+                        }
+                    }
+                    else if (item.Groups.Count == 0 && item.Keys.Count == 1)
+                    {
+                        lock (this.ThisLock)
+                        {
+                            item.Seed.Rank = item.Rank;
+                            item.Seed.Key = item.Keys[0];
+                            item.Keys.Clear();
 
-                            byte[] cryptoKey = null;
-                            KeyCollection keys = null;
+                            item.Seed.CompressionAlgorithm = item.CompressionAlgorithm;
 
-                            try
+                            item.Seed.CryptoAlgorithm = item.CryptoAlgorithm;
+                            item.Seed.CryptoKey = item.CryptoKey;
+
+                            if (item.DigitalSignature != null)
                             {
-                                using (var stream = index.Export(_bufferManager))
-                                using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
-                                {
-                                    isStop = (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
-                                }, 1024 * 1024, true))
-                                {
-                                    if (item.HashAlgorithm == HashAlgorithm.Sha512)
-                                    {
-                                        cryptoKey = Sha512.ComputeHash(encodingProgressStream);
-                                    }
+                                item.Seed.CreateCertificate(item.DigitalSignature);
+                            }
 
-                                    encodingProgressStream.Seek(0, SeekOrigin.Begin);
+                            item.UploadKeys.Add(item.Seed.Key);
 
-                                    item.State = BackgroundUploadState.Encoding;
-                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                            foreach (var key in item.UploadKeys)
+                            {
+                                _connectionsManager.Upload(key);
+                            }
+
+                            this.SetKeyCount(item);
+
+                            foreach (var key in item.LockedKeys)
+                            {
+                                _cacheManager.Unlock(key);
+                            }
+
+                            item.LockedKeys.Clear();
+
+                            item.State = BackgroundUploadState.Uploading;
+                        }
+                    }
+                    else if (item.Keys.Count > 0)
+                    {
+                        var length = Math.Min(item.Keys.Count, 128);
+                        var keys = new KeyCollection(item.Keys.Take(length));
+                        Group group = null;
+
+                        try
+                        {
+                            group = _cacheManager.ParityEncoding(keys, item.HashAlgorithm, item.BlockLength, item.CorrectionAlgorithm, (object state2) =>
+                            {
+                                return (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
+                            });
+                        }
+                        catch (StopException)
+                        {
+                            continue;
+                        }
+
+                        lock (this.ThisLock)
+                        {
+                            foreach (var key in group.Keys.Skip(group.InformationLength))
+                            {
+                                item.UploadKeys.Add(key);
+                                item.LockedKeys.Add(key);
+                            }
+
+                            item.Groups.Add(group);
+
+                            for (int i = 0; i < length; i++)
+                            {
+                                item.Keys.RemoveAt(0);
+                            }
+                        }
+                    }
+                    else if (item.Groups.Count > 0 && item.Keys.Count == 0)
+                    {
+                        var index = new Index();
+                        index.Groups.AddRange(item.Groups);
+                        index.CompressionAlgorithm = item.CompressionAlgorithm;
+                        index.CryptoAlgorithm = item.CryptoAlgorithm;
+                        index.CryptoKey = item.CryptoKey;
+
+                        byte[] cryptoKey = null;
+                        KeyCollection keys = null;
+
+                        try
+                        {
+                            using (var stream = index.Export(_bufferManager))
+                            using (ProgressStream encodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                            {
+                                isStop = (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
+                            }, 1024 * 1024, true))
+                            {
+                                if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                {
+                                    cryptoKey = Sha512.ComputeHash(encodingProgressStream);
                                 }
+
+                                encodingProgressStream.Seek(0, SeekOrigin.Begin);
+
+                                item.State = BackgroundUploadState.Encoding;
+                                keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
                             }
-                            catch (StopIoException)
+                        }
+                        catch (StopIoException)
+                        {
+                            continue;
+                        }
+
+                        lock (this.ThisLock)
+                        {
+                            foreach (var key in keys)
                             {
-                                continue;
+                                item.UploadKeys.Add(key);
+                                item.LockedKeys.Add(key);
                             }
 
-                            lock (this.ThisLock)
-                            {
-                                foreach (var key in keys)
-                                {
-                                    item.UploadKeys.Add(key);
-                                    item.LockedKeys.Add(key);
-                                }
-
-                                item.CryptoKey = cryptoKey;
-                                item.Keys.AddRange(keys);
-                                item.Rank++;
-                                item.Groups.Clear();
-                            }
+                            item.CryptoKey = cryptoKey;
+                            item.Keys.AddRange(keys);
+                            item.Rank++;
+                            item.Groups.Clear();
                         }
                     }
                 }
@@ -557,6 +556,14 @@ namespace Library.Net.Amoeba
             {
                 _settings.Load(directoryPath);
 
+                foreach (var item in _settings.BackgroundUploadItems)
+                {
+                    foreach (var key in item.LockedKeys)
+                    {
+                        _cacheManager.Lock(key);
+                    }
+                }
+
                 foreach (var item in _settings.BackgroundUploadItems.ToArray())
                 {
                     try
@@ -566,14 +573,6 @@ namespace Library.Net.Amoeba
                     catch (Exception)
                     {
                         _settings.BackgroundUploadItems.Remove(item);
-                    }
-                }
-
-                foreach (var item in _settings.BackgroundUploadItems)
-                {
-                    foreach (var key in item.LockedKeys)
-                    {
-                        _cacheManager.Lock(key);
                     }
                 }
             }

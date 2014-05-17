@@ -91,6 +91,31 @@ namespace Library.Net.Connections
             throw new NotSupportedException();
         }
 
+        public override void Close(TimeSpan timeout, Information options)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+            if (!_connect) throw new ConnectionException();
+
+            lock (this.ThisLock)
+            {
+                if (_cap != null)
+                {
+                    try
+                    {
+                        _cap.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _cap = null;
+                }
+
+                _connect = false;
+            }
+        }
+
         private bool _aliveSending;
 
         private void AliveTimer(object state)
@@ -135,31 +160,6 @@ namespace Library.Net.Connections
 
                 _aliveStopwatch.Restart();
                 _sentByteCount.Add(4);
-            }
-        }
-
-        public override void Close(TimeSpan timeout, Information options)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_connect) throw new ConnectionException();
-
-            lock (this.ThisLock)
-            {
-                if (_cap != null)
-                {
-                    try
-                    {
-                        _cap.Dispose();
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    _cap = null;
-                }
-
-                _connect = false;
             }
         }
 

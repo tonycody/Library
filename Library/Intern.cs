@@ -6,6 +6,7 @@ using System.Text;
 namespace Library
 {
     public class Intern<T> : ManagerBase, IThisLock
+        where T : class
     {
         private System.Threading.Timer _watchTimer;
         private volatile bool _isRefreshing = false;
@@ -85,6 +86,8 @@ namespace Library
 
         public T GetValue(T value, object holder)
         {
+            if (value == null) return null;
+
             lock (this.ThisLock)
             {
                 Info info;

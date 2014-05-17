@@ -22,10 +22,8 @@ namespace Library.Net.Amoeba
         private Regex _regex = new Regex(@"(.*?):(.*):(\d*)", RegexOptions.Compiled);
         private Regex _regex2 = new Regex(@"(.*?):(.*)", RegexOptions.Compiled);
 
-        private CreateCapEventHandler _createConnectionEvent;
-        private CheckUriEventHandler _uriFilterEvent;
-
-        private readonly SafeInteger _blockedCount = new SafeInteger();
+        private CreateCapEventHandler _createCapEvent;
+        private CheckUriEventHandler _checkUriEvent;
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -39,30 +37,13 @@ namespace Library.Net.Amoeba
             _settings = new Settings(this.ThisLock);
         }
 
-        public Information Information
-        {
-            get
-            {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                lock (this.ThisLock)
-                {
-                    List<InformationContext> contexts = new List<InformationContext>();
-
-                    contexts.Add(new InformationContext("ConnectBlockedCount", (long)_blockedCount));
-
-                    return new Information(contexts);
-                }
-            }
-        }
-
         public CreateCapEventHandler CreateCapEvent
         {
             set
             {
                 lock (this.ThisLock)
                 {
-                    _createConnectionEvent = value;
+                    _createCapEvent = value;
                 }
             }
         }
@@ -73,7 +54,7 @@ namespace Library.Net.Amoeba
             {
                 lock (this.ThisLock)
                 {
-                    _uriFilterEvent = value;
+                    _checkUriEvent = value;
                 }
             }
         }
@@ -91,9 +72,9 @@ namespace Library.Net.Amoeba
 
         protected virtual CapBase OnCreateCapEvent(string uri)
         {
-            if (_createConnectionEvent != null)
+            if (_createCapEvent != null)
             {
-                return _createConnectionEvent(this, uri);
+                return _createCapEvent(this, uri);
             }
 
             return null;
@@ -101,15 +82,15 @@ namespace Library.Net.Amoeba
 
         protected virtual bool OnCheckUriEvent(string uri)
         {
-            if (_uriFilterEvent != null)
+            if (_checkUriEvent != null)
             {
-                return _uriFilterEvent(this, uri);
+                return _checkUriEvent(this, uri);
             }
 
             return true;
         }
 
-        private static IEnumerable<KeyValuePair<string, string>> DecodeCommand(string option)
+        private static IEnumerable<KeyValuePair<string, string>> Decode(string option)
         {
             try
             {
@@ -275,9 +256,9 @@ namespace Library.Net.Amoeba
             {
                 ConnectionBase connection = null;
 
-                // Overlay network
                 if (connection == null)
                 {
+                    // Overlay network
                     var cap = this.OnCreateCapEvent(uri);
                     if (cap == null) goto End;
 
@@ -343,7 +324,7 @@ namespace Library.Net.Amoeba
 
                     if (!string.IsNullOrWhiteSpace(connectionFilter.Option))
                     {
-                        options = ClientManager.DecodeCommand(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
+                        options = ClientManager.Decode(connectionFilter.Option).OfType<KeyValuePair<string, string>>().ToList();
                     }
 
                     if (connectionFilter.ConnectionType == ConnectionType.Tcp)
@@ -356,8 +337,6 @@ namespace Library.Net.Amoeba
 
                         if (!this.OnCheckUriEvent(uri))
                         {
-                            _blockedCount.Increment();
-
                             return null;
                         }
 
@@ -424,8 +403,6 @@ namespace Library.Net.Amoeba
                     {
                         if (!this.OnCheckUriEvent(uri))
                         {
-                            _blockedCount.Increment();
-
                             return null;
                         }
 
@@ -509,7 +486,7 @@ namespace Library.Net.Amoeba
 
                 if (connection == null) return null;
 
-                var secureConnection = new SecureConnection(SecureConnectionType.Out, SecureConnectionVersion.Version3, connection, null, _bufferManager);
+                var secureConnection = new SecureConnection(SecureConnectionVersion.Version3, SecureConnectionType.Connect, connection, null, _bufferManager);
                 garbages.Add(secureConnection);
 
                 secureConnection.Connect(new TimeSpan(0, 0, 30));

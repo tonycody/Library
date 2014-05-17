@@ -332,7 +332,7 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_uploadKeys == null)
-                        _uploadKeys = new SortedSet<Key>(new Key.Comparer());
+                        _uploadKeys = new SortedSet<Key>(new KeyComparer());
 
                     return _uploadKeys;
                 }
@@ -347,7 +347,7 @@ namespace Library.Net.Amoeba
                 lock (this.ThisLock)
                 {
                     if (_uploadedKeys == null)
-                        _uploadedKeys = new SortedSet<Key>(new Key.Comparer());
+                        _uploadedKeys = new SortedSet<Key>(new KeyComparer());
 
                     return _uploadedKeys;
                 }

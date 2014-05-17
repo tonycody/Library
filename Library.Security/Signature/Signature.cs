@@ -52,7 +52,6 @@ namespace Library.Security
                     using (BufferStream bufferStream = new BufferStream(_bufferManager))
                     {
                         Signature.WriteString(bufferStream, digitalSignature.Nickname);
-
                         bufferStream.Write(digitalSignature.PublicKey, 0, digitalSignature.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 
@@ -81,7 +80,6 @@ namespace Library.Security
                     using (BufferStream bufferStream = new BufferStream(_bufferManager))
                     {
                         Signature.WriteString(bufferStream, certificate.Nickname);
-
                         bufferStream.Write(certificate.PublicKey, 0, certificate.PublicKey.Length);
                         bufferStream.Seek(0, SeekOrigin.Begin);
 

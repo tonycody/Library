@@ -57,12 +57,12 @@ namespace Library.Net.Amoeba
         private LockedHashDictionary<string, DateTime> _seedLastAccessTimes = new LockedHashDictionary<string, DateTime>();
 
         private volatile Thread _connectionsManagerThread;
-        private volatile Thread _createClientConnection1Thread;
-        private volatile Thread _createClientConnection2Thread;
-        private volatile Thread _createClientConnection3Thread;
-        private volatile Thread _createServerConnection1Thread;
-        private volatile Thread _createServerConnection2Thread;
-        private volatile Thread _createServerConnection3Thread;
+        private volatile Thread _createConnection1Thread;
+        private volatile Thread _createConnection2Thread;
+        private volatile Thread _createConnection3Thread;
+        private volatile Thread _acceptConnection1Thread;
+        private volatile Thread _acceptConnection2Thread;
+        private volatile Thread _acceptConnection3Thread;
 
         private volatile ManagerState _state = ManagerState.Stop;
 
@@ -335,7 +335,7 @@ namespace Library.Net.Amoeba
                     contexts.Add(new InformationContext("PullSeedRequestCount", (long)_pullSeedRequestCount));
                     contexts.Add(new InformationContext("PullSeedCount", (long)_pullSeedCount));
 
-                    contexts.Add(new InformationContext("ConnectConnectionCount", (long)_connectConnectionCount));
+                    contexts.Add(new InformationContext("CreateConnectionCount", (long)_connectConnectionCount));
                     contexts.Add(new InformationContext("AcceptConnectionCount", (long)_acceptConnectionCount));
 
                     contexts.Add(new InformationContext("OtherNodeCount", _routeTable.Count));
@@ -451,7 +451,7 @@ namespace Library.Net.Amoeba
 
         private double GetPriority(Node node)
         {
-            const int average = 128;
+            const int average = 1024;
 
             lock (this.ThisLock)
             {
@@ -624,7 +624,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void CreateClientConnectionThread()
+        private void CreateConnectionThread()
         {
             for (; ; )
             {
@@ -753,7 +753,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void CreateServerConnectionThread()
+        private void AcceptConnectionThread()
         {
             for (; ; )
             {
@@ -799,7 +799,7 @@ namespace Library.Net.Amoeba
         private class NodeSortItem
         {
             public Node Node { get; set; }
-            public TimeSpan ResponseTime { get; set; }
+            public long Priority { get; set; }
         }
 
         private class SignatureSortItem
@@ -843,7 +843,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 10)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 1)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -853,53 +853,51 @@ namespace Library.Net.Amoeba
                     {
                         foreach (var connectionManager in _connectionManagers)
                         {
-                            nodeSortItems.Add(new NodeSortItem()
+                            if ((this.GetPriority(connectionManager.Node) * 100) < 5)
                             {
-                                Node = connectionManager.Node,
-                                ResponseTime = connectionManager.ResponseTime,
-                            });
+                                nodeSortItems.Add(new NodeSortItem()
+                                {
+                                    Node = connectionManager.Node,
+                                    Priority = _messagesManager[connectionManager.Node].Priority,
+                                });
+                            }
                         }
                     }
 
                     nodeSortItems.Sort((x, y) =>
                     {
-                        return y.ResponseTime.CompareTo(x.ResponseTime);
+                        return x.Priority.CompareTo(y.Priority);
                     });
 
-                    if (nodeSortItems.Count != 0)
+                    foreach (var node in nodeSortItems.Select(n => n.Node).Take(3))
                     {
-                        for (int i = 0; i < nodeSortItems.Count; i++)
+                        ConnectionManager connectionManager = null;
+
+                        lock (this.ThisLock)
                         {
-                            ConnectionManager connectionManager = null;
+                            connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == node);
+                        }
 
-                            lock (this.ThisLock)
+                        if (connectionManager != null)
+                        {
+                            try
                             {
-                                connectionManager = _connectionManagers.FirstOrDefault(n => n.Node == nodeSortItems[i].Node);
-                            }
-
-                            if (connectionManager != null)
-                            {
-                                try
+                                lock (this.ThisLock)
                                 {
-                                    lock (this.ThisLock)
-                                    {
-                                        _removeNodes.Add(connectionManager.Node);
-                                        _routeTable.Remove(connectionManager.Node);
-                                    }
-
-                                    connectionManager.PushCancel();
-
-                                    Debug.WriteLine("ConnectionManager: Push Cancel");
-                                }
-                                catch (Exception)
-                                {
-
+                                    _removeNodes.Add(connectionManager.Node);
+                                    _routeTable.Remove(connectionManager.Node);
                                 }
 
-                                this.RemoveConnectionManager(connectionManager);
+                                connectionManager.PushCancel();
 
-                                break;
+                                Debug.WriteLine("ConnectionManager: Push Cancel");
                             }
+                            catch (Exception)
+                            {
+
+                            }
+
+                            this.RemoveConnectionManager(connectionManager);
                         }
                     }
                 }
@@ -1067,7 +1065,7 @@ namespace Library.Net.Amoeba
                             var array = _settings.UploadBlocksRequest.ToArray();
                             _random.Shuffle(array);
 
-                            int count = 2048;
+                            int count = 8192;
 
                             for (int i = 0; i < count && i < array.Length; i++)
                             {
@@ -1079,7 +1077,7 @@ namespace Library.Net.Amoeba
                             var array = _settings.DiffusionBlocksRequest.ToArray();
                             _random.Shuffle(array);
 
-                            int count = 2048;
+                            int count = 8192;
 
                             for (int i = 0; i < count && i < array.Length; i++)
                             {
@@ -1122,7 +1120,7 @@ namespace Library.Net.Amoeba
 
                                     if (!diffusionBlocksDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new Key.Comparer());
+                                        collection = new SortedSet<Key>(new KeyComparer());
                                         diffusionBlocksDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1402,13 +1400,13 @@ namespace Library.Net.Amoeba
                                     requestNodes.Add(node);
                                 }
 
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < requestNodes.Count; i++)
                                 {
                                     SortedSet<Key> collection;
 
                                     if (!pushBlocksLinkDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new Key.Comparer());
+                                        collection = new SortedSet<Key>(new KeyComparer());
                                         pushBlocksLinkDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1447,7 +1445,7 @@ namespace Library.Net.Amoeba
                             {
                                 List<Node> requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Search(key.Hash, baseNode.Id, otherNodes, 1))
+                                foreach (var node in Kademlia<Node>.Search(key.Hash, baseNode.Id, otherNodes, 2))
                                 {
                                     requestNodes.Add(node);
                                 }
@@ -1469,7 +1467,7 @@ namespace Library.Net.Amoeba
 
                                     if (!pushBlocksRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new Key.Comparer());
+                                        collection = new SortedSet<Key>(new KeyComparer());
                                         pushBlocksRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -2501,30 +2499,30 @@ namespace Library.Net.Amoeba
 
                     _serverManager.Start();
 
-                    _createClientConnection1Thread = new Thread(this.CreateClientConnectionThread);
-                    _createClientConnection1Thread.Name = "ConnectionsManager_CreateClientConnection1Thread";
-                    _createClientConnection1Thread.Priority = ThreadPriority.Lowest;
-                    _createClientConnection1Thread.Start();
-                    _createClientConnection2Thread = new Thread(this.CreateClientConnectionThread);
-                    _createClientConnection2Thread.Name = "ConnectionsManager_CreateClientConnection2Thread";
-                    _createClientConnection2Thread.Priority = ThreadPriority.Lowest;
-                    _createClientConnection2Thread.Start();
-                    _createClientConnection3Thread = new Thread(this.CreateClientConnectionThread);
-                    _createClientConnection3Thread.Name = "ConnectionsManager_CreateClientConnection3Thread";
-                    _createClientConnection3Thread.Priority = ThreadPriority.Lowest;
-                    _createClientConnection3Thread.Start();
-                    _createServerConnection1Thread = new Thread(this.CreateServerConnectionThread);
-                    _createServerConnection1Thread.Name = "ConnectionsManager_CreateServerConnection1Thread";
-                    _createServerConnection1Thread.Priority = ThreadPriority.Lowest;
-                    _createServerConnection1Thread.Start();
-                    _createServerConnection2Thread = new Thread(this.CreateServerConnectionThread);
-                    _createServerConnection2Thread.Name = "ConnectionsManager_CreateServerConnection2Thread";
-                    _createServerConnection2Thread.Priority = ThreadPriority.Lowest;
-                    _createServerConnection2Thread.Start();
-                    _createServerConnection3Thread = new Thread(this.CreateServerConnectionThread);
-                    _createServerConnection3Thread.Name = "ConnectionsManager_CreateServerConnection3Thread";
-                    _createServerConnection3Thread.Priority = ThreadPriority.Lowest;
-                    _createServerConnection3Thread.Start();
+                    _createConnection1Thread = new Thread(this.CreateConnectionThread);
+                    _createConnection1Thread.Name = "ConnectionsManager_CreateConnection1Thread";
+                    _createConnection1Thread.Priority = ThreadPriority.Lowest;
+                    _createConnection1Thread.Start();
+                    _createConnection2Thread = new Thread(this.CreateConnectionThread);
+                    _createConnection2Thread.Name = "ConnectionsManager_CreateConnection2Thread";
+                    _createConnection2Thread.Priority = ThreadPriority.Lowest;
+                    _createConnection2Thread.Start();
+                    _createConnection3Thread = new Thread(this.CreateConnectionThread);
+                    _createConnection3Thread.Name = "ConnectionsManager_CreateConnection3Thread";
+                    _createConnection3Thread.Priority = ThreadPriority.Lowest;
+                    _createConnection3Thread.Start();
+                    _acceptConnection1Thread = new Thread(this.AcceptConnectionThread);
+                    _acceptConnection1Thread.Name = "ConnectionsManager_AcceptConnection1Thread";
+                    _acceptConnection1Thread.Priority = ThreadPriority.Lowest;
+                    _acceptConnection1Thread.Start();
+                    _acceptConnection2Thread = new Thread(this.AcceptConnectionThread);
+                    _acceptConnection2Thread.Name = "ConnectionsManager_AcceptConnection2Thread";
+                    _acceptConnection2Thread.Priority = ThreadPriority.Lowest;
+                    _acceptConnection2Thread.Start();
+                    _acceptConnection3Thread = new Thread(this.AcceptConnectionThread);
+                    _acceptConnection3Thread.Name = "ConnectionsManager_AcceptConnection3Thread";
+                    _acceptConnection3Thread.Priority = ThreadPriority.Lowest;
+                    _acceptConnection3Thread.Start();
                     _connectionsManagerThread = new Thread(this.ConnectionsManagerThread);
                     _connectionsManagerThread.Name = "ConnectionsManager_ConnectionsManagerThread";
                     _connectionsManagerThread.Priority = ThreadPriority.Lowest;
@@ -2547,18 +2545,18 @@ namespace Library.Net.Amoeba
                     _serverManager.Stop();
                 }
 
-                _createClientConnection1Thread.Join();
-                _createClientConnection1Thread = null;
-                _createClientConnection2Thread.Join();
-                _createClientConnection2Thread = null;
-                _createClientConnection3Thread.Join();
-                _createClientConnection3Thread = null;
-                _createServerConnection1Thread.Join();
-                _createServerConnection1Thread = null;
-                _createServerConnection2Thread.Join();
-                _createServerConnection2Thread = null;
-                _createServerConnection3Thread.Join();
-                _createServerConnection3Thread = null;
+                _createConnection1Thread.Join();
+                _createConnection1Thread = null;
+                _createConnection2Thread.Join();
+                _createConnection2Thread = null;
+                _createConnection3Thread.Join();
+                _createConnection3Thread = null;
+                _acceptConnection1Thread.Join();
+                _acceptConnection1Thread = null;
+                _acceptConnection2Thread.Join();
+                _acceptConnection2Thread = null;
+                _acceptConnection3Thread.Join();
+                _acceptConnection3Thread = null;
                 _connectionsManagerThread.Join();
                 _connectionsManagerThread = null;
 

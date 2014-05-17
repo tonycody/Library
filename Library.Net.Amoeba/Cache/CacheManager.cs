@@ -84,7 +84,7 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    var usingKeys = new SortedSet<Key>(new Key.Comparer());
+                    var usingKeys = new SortedSet<Key>(new KeyComparer());
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
                     foreach (var seedInfo in _settings.SeedsInformation)
@@ -357,7 +357,7 @@ namespace Library.Net.Amoeba
                 this.CheckSpace(sectorCount);
                 if (sectorCount <= _spaceSectors.Count) return;
 
-                var usingKeys = new SortedSet<Key>(new Key.Comparer());
+                var usingKeys = new SortedSet<Key>(new KeyComparer());
                 usingKeys.UnionWith(_lockedKeys.Keys);
 
                 foreach (var info in _settings.SeedsInformation)
@@ -1849,7 +1849,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_indexes == null)
-                        _indexes = new SortedDictionary<Key, int>(new Key.Comparer());
+                        _indexes = new SortedDictionary<Key, int>(new KeyComparer());
 
                     return _indexes;
                 }

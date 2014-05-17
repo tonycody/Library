@@ -33,9 +33,7 @@ namespace Library.Net.Upnp
                 try
                 {
 #if Mono
-                    string hostname = Dns.GetHostName();
-
-                    foreach (var machineIp in Dns.GetHostEntry(hostname).AddressList)
+                    foreach (var machineIp in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
                     {
                         if (machineIp.AddressFamily != AddressFamily.InterNetwork) continue;
 
@@ -116,7 +114,7 @@ namespace Library.Net.Upnp
                 {
                     try
                     {
-                        socket.Bind(new IPEndPoint(localIp, random.Next(1024, 60000)));
+                        socket.Bind(new IPEndPoint(localIp, random.Next(1024, ushort.MaxValue + 1)));
                         break;
                     }
                     catch (Exception)
@@ -130,7 +128,7 @@ namespace Library.Net.Upnp
                 socket.ReceiveTimeout = (int)timeout.TotalMilliseconds;
                 socket.SendTimeout = (int)timeout.TotalMilliseconds;
 
-                for (int j = 0; j < 2; j++)
+                for (int count = 0; count < 2; count++)
                 {
                     for (int i = 0; i < querys.Count; i++)
                     {
@@ -194,7 +192,7 @@ namespace Library.Net.Upnp
 
         private static string GetExternalIpAddressFromService(string services, string serviceType, string gatewayIp, int gatewayPort, TimeSpan timeout)
         {
-            if (services == null || services == "" || !services.Contains(serviceType)) return null;
+            if (services == null || !services.Contains(serviceType)) return null;
 
             try
             {
@@ -255,7 +253,7 @@ namespace Library.Net.Upnp
 
         private static bool OpenPortFromService(string services, string serviceType, string gatewayIp, int gatewayPort, UpnpProtocolType protocol, string machineIp, int externalPort, int internalPort, string description, TimeSpan timeout)
         {
-            if (services == null || services == "" || !services.Contains(serviceType)) return false;
+            if (services == null || !services.Contains(serviceType)) return false;
 
             try
             {
@@ -329,7 +327,7 @@ namespace Library.Net.Upnp
 
         private static bool ClosePortFromService(string services, string serviceType, string gatewayIp, int gatewayPort, UpnpProtocolType protocol, int externalPort, TimeSpan timeout)
         {
-            if (services == null || services == "" || !services.Contains(serviceType)) return false;
+            if (services == null || !services.Contains(serviceType)) return false;
 
             try
             {
@@ -398,7 +396,7 @@ namespace Library.Net.Upnp
 
         private static string GetPortEntryFromService(string services, string serviceType, string gatewayIp, int gatewayPort, int index, TimeSpan timeout)
         {
-            if (services == null || services == "" || !services.Contains(serviceType)) return null;
+            if (services == null || !services.Contains(serviceType)) return null;
 
             try
             {

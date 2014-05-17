@@ -18,7 +18,7 @@ namespace Library.Net.Outopos
             HashAlgorithm = 1,
         }
 
-        private static InternPool<byte[]> _hashCache = new InternPool<byte[]>(new ByteArrayEqualityComparer());
+        private static Intern<byte[]> _hashCache = new Intern<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _hash;
 
         private volatile HashAlgorithm _hashAlgorithm = 0;
