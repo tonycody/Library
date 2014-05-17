@@ -800,6 +800,7 @@ namespace Library.Net.Amoeba
         {
             public Node Node { get; set; }
             public long Priority { get; set; }
+            public DateTime LastPullTime { get; set; }
         }
 
         private class SignatureSortItem
@@ -843,7 +844,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 5)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 10)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -857,16 +858,20 @@ namespace Library.Net.Amoeba
                             {
                                 Node = connectionManager.Node,
                                 Priority = _messagesManager[connectionManager.Node].Priority,
+                                LastPullTime = _messagesManager[connectionManager.Node].LastPullTime,
                             });
                         }
                     }
 
                     nodeSortItems.Sort((x, y) =>
                     {
-                        return x.Priority.CompareTo(y.Priority);
+                        int c = x.Priority.CompareTo(y.Priority);
+                        if (c != 0) return c;
+                        
+                        return x.LastPullTime.CompareTo(y.LastPullTime);
                     });
 
-                    foreach (var node in nodeSortItems.Select(n => n.Node).Take(3))
+                    foreach (var node in nodeSortItems.Select(n => n.Node).Take(1))
                     {
                         ConnectionManager connectionManager = null;
 

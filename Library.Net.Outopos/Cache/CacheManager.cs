@@ -16,12 +16,6 @@ namespace Library.Net.Outopos
 {
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
 
-    delegate void SetKeyEventHandler(object sender, IEnumerable<Key> keys);
-    delegate void RemoveKeyEventHandler(object sender, IEnumerable<Key> keys);
-    delegate void RemoveShareEventHandler(object sender, string path);
-
-    delegate bool WatchEventHandler(object sender);
-
     class CacheManager : ManagerBase, Library.Configuration.ISettings, ISetOperators<Key>, IEnumerable<Key>, IThisLock
     {
         private FileStream _fileStream;
@@ -33,28 +27,18 @@ namespace Library.Net.Outopos
         private bool _spaceSectorsInitialized;
         private SortedSet<long> _spaceSectors = new SortedSet<long>();
 
-        private SortedDictionary<int, string> _ids = new SortedDictionary<int, string>();
-        private int _id;
-
-        private bool _shareIndexLinkInitialized;
-        private Dictionary<Key, string> _shareIndexLink = new Dictionary<Key, string>();
-
         private long _lockSpace;
         private long _freeSpace;
 
         private Dictionary<Key, int> _lockedKeys = new Dictionary<Key, int>();
 
-        private SetKeyEventHandler _setKeyEvent;
-        private RemoveShareEventHandler _removeShareEvent;
-        private RemoveKeyEventHandler _removeKeyEvent;
-
         private WatchTimer _watchTimer;
 
-        private volatile bool _disposed;
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
-        public static readonly int SectorSize = 1024 * 32;
-        public static readonly int SpaceSectorCount = 32 * 1024; // 1MB * 1024 = 1024MB
+        public static readonly int SectorSize = 1024 * 8;
+        public static readonly int SpaceSectorCount = 128 * 1024; // 1MB * 1024 = 1024MB
 
         private int _threadCount = 2;
 
@@ -82,24 +66,8 @@ namespace Library.Net.Outopos
             {
                 try
                 {
-                    var usingKeys = new SortedSet<Key>(new Key.Comparer());
+                    var usingKeys = new SortedSet<Key>(new KeyComparer());
                     usingKeys.UnionWith(_lockedKeys.Keys);
-
-                    foreach (var seedInfo in _settings.SeedsInformation)
-                    {
-                        usingKeys.Add(seedInfo.Seed.Key);
-
-                        foreach (var index in seedInfo.Indexes)
-                        {
-                            foreach (var group in index.Groups)
-                            {
-                                usingKeys.UnionWith(group.Keys
-                                    .Where(n => this.Contains(n))
-                                    .Reverse()
-                                    .Take(group.InformationLength));
-                            }
-                        }
-                    }
 
                     long size = 0;
 
@@ -123,73 +91,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        public event SetKeyEventHandler SetKeyEvent
-        {
-            add
-            {
-                lock (this.ThisLock)
-                {
-                    _setKeyEvent += value;
-                }
-            }
-            remove
-            {
-                lock (this.ThisLock)
-                {
-                    _setKeyEvent -= value;
-                }
-            }
-        }
-
-        public event RemoveShareEventHandler RemoveShareEvent
-        {
-            add
-            {
-                lock (this.ThisLock)
-                {
-                    _removeShareEvent += value;
-                }
-            }
-            remove
-            {
-                lock (this.ThisLock)
-                {
-                    _removeShareEvent -= value;
-                }
-            }
-        }
-
-        public event RemoveKeyEventHandler RemoveKeyEvent
-        {
-            add
-            {
-                lock (this.ThisLock)
-                {
-                    _removeKeyEvent += value;
-                }
-            }
-            remove
-            {
-                lock (this.ThisLock)
-                {
-                    _removeKeyEvent -= value;
-                }
-            }
-        }
-
-        public IEnumerable<Seed> CacheSeeds
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _settings.SeedsInformation
-                        .Select(n => n.Seed)
-                        .ToArray();
-                }
-            }
-        }
-
         public Information Information
         {
             get
@@ -198,39 +99,11 @@ namespace Library.Net.Outopos
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
 
-                    contexts.Add(new InformationContext("SeedCount", _settings.SeedsInformation.Count));
-                    contexts.Add(new InformationContext("ShareCount", _settings.ShareIndex.Count));
                     contexts.Add(new InformationContext("UsingSpace", _fileStream.Length));
                     contexts.Add(new InformationContext("LockSpace", _lockSpace));
                     contexts.Add(new InformationContext("FreeSpace", _freeSpace));
 
                     return new Information(contexts);
-                }
-            }
-        }
-
-        public IEnumerable<Information> ShareInformation
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    List<Information> list = new List<Information>();
-
-                    foreach (var item in _ids)
-                    {
-                        List<InformationContext> contexts = new List<InformationContext>();
-
-                        contexts.Add(new InformationContext("Id", item.Key));
-                        contexts.Add(new InformationContext("Path", item.Value));
-
-                        var shareInfo = _settings.ShareIndex[item.Value];
-                        contexts.Add(new InformationContext("BlockCount", shareInfo.Indexes.Count));
-
-                        list.Add(new Information(contexts));
-                    }
-
-                    return list;
                 }
             }
         }
@@ -252,66 +125,8 @@ namespace Library.Net.Outopos
             {
                 lock (this.ThisLock)
                 {
-                    return _settings.ClusterIndex.Count + _settings.ShareIndex.Sum(n => n.Value.Indexes.Count);
+                    return _settings.ClusterIndex.Count;
                 }
-            }
-        }
-
-        public void CheckSeeds()
-        {
-            lock (this.ThisLock)
-            {
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-
-                var pathList = new HashSet<string>();
-
-                pathList.UnionWith(_settings.ShareIndex.Keys);
-
-                for (int i = 0; i < _settings.SeedsInformation.Count; i++)
-                {
-                    var seedInfo = _settings.SeedsInformation[i];
-                    bool flag = true;
-
-                    if (seedInfo.Path != null)
-                    {
-                        if (!(flag = pathList.Contains(seedInfo.Path))) goto Break;
-                    }
-
-                    if (!(flag = this.Contains(seedInfo.Seed.Key))) goto Break;
-
-                    foreach (var index in seedInfo.Indexes)
-                    {
-                        foreach (var group in index.Groups)
-                        {
-                            int count = 0;
-
-                            foreach (var key in group.Keys)
-                            {
-                                if (!this.Contains(key)) continue;
-
-                                count++;
-                                if (count >= group.InformationLength) goto End;
-                            }
-
-                            flag = false;
-                            goto Break;
-
-                        End: ;
-                        }
-                    }
-
-                Break: ;
-
-                    if (!flag)
-                    {
-                        _settings.SeedsInformation.RemoveAt(i);
-                        i--;
-                    }
-                }
-
-                sw.Stop();
-                Debug.WriteLine("CheckSeeds {0}", sw.ElapsedMilliseconds);
             }
         }
 
@@ -355,24 +170,8 @@ namespace Library.Net.Outopos
                 this.CheckSpace(sectorCount);
                 if (sectorCount <= _spaceSectors.Count) return;
 
-                var usingKeys = new SortedSet<Key>(new Key.Comparer());
+                var usingKeys = new SortedSet<Key>(new KeyComparer());
                 usingKeys.UnionWith(_lockedKeys.Keys);
-
-                foreach (var info in _settings.SeedsInformation)
-                {
-                    usingKeys.Add(info.Seed.Key);
-
-                    foreach (var index in info.Indexes)
-                    {
-                        foreach (var group in index.Groups)
-                        {
-                            usingKeys.UnionWith(group.Keys
-                                .Where(n => this.Contains(n))
-                                .Reverse()
-                                .Take(group.InformationLength));
-                        }
-                    }
-                }
 
                 var removePairs = _settings.ClusterIndex
                     .Where(n => !usingKeys.Contains(n.Key))
@@ -429,30 +228,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        protected virtual void OnSetKeyEvent(IEnumerable<Key> keys)
-        {
-            if (_setKeyEvent != null)
-            {
-                _setKeyEvent(this, keys);
-            }
-        }
-
-        protected virtual void OnRemoveShareEvent(string path)
-        {
-            if (_removeShareEvent != null)
-            {
-                _removeShareEvent(this, path);
-            }
-        }
-
-        protected virtual void OnRemoveKeyEvent(IEnumerable<Key> keys)
-        {
-            if (_removeKeyEvent != null)
-            {
-                _removeKeyEvent(this, keys);
-            }
-        }
-
         public int GetLength(Key key)
         {
             lock (this.ThisLock)
@@ -460,17 +235,6 @@ namespace Library.Net.Outopos
                 if (_settings.ClusterIndex.ContainsKey(key))
                 {
                     return _settings.ClusterIndex[key].Length;
-                }
-
-                foreach (var item in _settings.ShareIndex)
-                {
-                    int i = -1;
-
-                    if (item.Value.Indexes.TryGetValue(key, out i))
-                    {
-                        var fileLength = new FileInfo(item.Key).Length;
-                        return (int)Math.Min(fileLength - ((long)item.Value.BlockLength * i), item.Value.BlockLength);
-                    }
                 }
 
                 throw new KeyNotFoundException();
@@ -486,13 +250,6 @@ namespace Library.Net.Outopos
                     return true;
                 }
 
-                _shareIndexLinkUpdate();
-
-                if (_shareIndexLink.ContainsKey(key))
-                {
-                    return true;
-                }
-
                 return false;
             }
         }
@@ -501,11 +258,9 @@ namespace Library.Net.Outopos
         {
             lock (this.ThisLock)
             {
-                _shareIndexLinkUpdate();
-
                 foreach (var key in collection)
                 {
-                    if (_settings.ClusterIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key))
+                    if (_settings.ClusterIndex.ContainsKey(key))
                     {
                         yield return key;
                     }
@@ -517,11 +272,9 @@ namespace Library.Net.Outopos
         {
             lock (this.ThisLock)
             {
-                _shareIndexLinkUpdate();
-
                 foreach (var key in collection)
                 {
-                    if (!(_settings.ClusterIndex.ContainsKey(key) || _shareIndexLink.ContainsKey(key)))
+                    if (!_settings.ClusterIndex.ContainsKey(key))
                     {
                         yield return key;
                     }
@@ -544,8 +297,6 @@ namespace Library.Net.Outopos
                         _bitmapManager.Set(sector, false);
                         if (_spaceSectors.Count < CacheManager.SpaceSectorCount) _spaceSectors.Add(sector);
                     }
-
-                    this.OnRemoveKeyEvent(new Key[] { key });
                 }
             }
         }
@@ -574,59 +325,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void SetSeed(Seed seed, IEnumerable<Index> indexes)
-        {
-            lock (this.ThisLock)
-            {
-                this.SetSeed(seed, null, indexes);
-            }
-        }
-
-        public void SetSeed(Seed seed, string path, IEnumerable<Index> indexes)
-        {
-            lock (this.ThisLock)
-            {
-                if (_settings.SeedsInformation.Any(n => n.Seed == seed))
-                    return;
-
-                var info = new SeedInfo();
-                info.Seed = seed;
-                info.Path = path;
-                info.Indexes.AddRange(indexes);
-
-                _settings.SeedsInformation.Add(info);
-            }
-        }
-
-        public void RemoveCache(Seed seed)
-        {
-            lock (this.ThisLock)
-            {
-                for (int i = 0; i < _settings.SeedsInformation.Count; i++)
-                {
-                    var info = _settings.SeedsInformation[i];
-                    if (seed != info.Seed) continue;
-
-                    if (info.Path != null)
-                    {
-                        foreach (var item in _ids.ToArray())
-                        {
-                            if (item.Value == info.Path)
-                            {
-                                this.RemoveShare(item.Key);
-
-                                break;
-                            }
-                        }
-                    }
-
-                    _settings.SeedsInformation.RemoveAt(i);
-                    i--;
-                }
-            }
-        }
-
-        public void CheckInternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
             // 重複するセクタを確保したブロックを検出しRemoveする。
             lock (this.ThisLock)
@@ -658,7 +357,6 @@ namespace Library.Net.Outopos
                 foreach (var key in keys)
                 {
                     _settings.ClusterIndex.Remove(key);
-                    this.OnRemoveKeyEvent(new Key[] { key });
                 }
 
                 _spaceSectors.Clear();
@@ -711,666 +409,6 @@ namespace Library.Net.Outopos
                 }
 
                 getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-            }
-        }
-
-        public void CheckExternalBlocks(CheckBlocksProgressEventHandler getProgressEvent)
-        {
-            // 読めないブロックを検出しRemoveする。
-            {
-                List<Key> list = null;
-
-                lock (this.ThisLock)
-                {
-                    list = new List<Key>();
-
-                    foreach (var item in _settings.ShareIndex.Randomize())
-                    {
-                        list.AddRange(item.Value.Indexes.Keys);
-                    }
-                }
-
-                int badBlockCount = 0;
-                int checkedBlockCount = 0;
-                int blockCount = list.Count;
-                bool isStop;
-
-                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-                if (isStop) return;
-
-                foreach (var item in list)
-                {
-                    checkedBlockCount++;
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = this[item];
-                    }
-                    catch (Exception)
-                    {
-                        badBlockCount++;
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-
-                    if (checkedBlockCount % 8 == 0)
-                        getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-                    if (isStop) return;
-                }
-
-                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-            }
-        }
-
-        private void _shareIndexLinkUpdate()
-        {
-            lock (this.ThisLock)
-            {
-                if (!_shareIndexLinkInitialized)
-                {
-                    _shareIndexLink.Clear();
-
-                    foreach (var pair in _settings.ShareIndex)
-                    {
-                        var path = pair.Key;
-                        var shareInfo = pair.Value;
-
-                        foreach (var key in shareInfo.Indexes.Keys)
-                        {
-                            _shareIndexLink[key] = path;
-                        }
-                    }
-
-                    _shareIndexLinkInitialized = true;
-                }
-            }
-        }
-
-        public KeyCollection Share(Stream inStream, string path, HashAlgorithm hashAlgorithm, int blockLength)
-        {
-            if (inStream == null) throw new ArgumentNullException("inStream");
-
-            byte[] buffer = _bufferManager.TakeBuffer(blockLength);
-
-            KeyCollection keys = new KeyCollection();
-            ShareInfo shareInfo = new ShareInfo();
-            shareInfo.BlockLength = blockLength;
-
-            while (inStream.Position < inStream.Length)
-            {
-                int length = (int)Math.Min(inStream.Length - inStream.Position, blockLength);
-                inStream.Read(buffer, 0, length);
-
-                Key key = null;
-
-                if (hashAlgorithm == HashAlgorithm.Sha512)
-                {
-                    key = new Key(Sha512.ComputeHash(buffer, 0, length), HashAlgorithm.Sha512);
-                }
-
-                if (!shareInfo.Indexes.ContainsKey(key))
-                    shareInfo.Indexes.Add(key, keys.Count);
-
-                keys.Add(key);
-            }
-
-            lock (this.ThisLock)
-            {
-                // 既にShareされている場合は、新しいShareInfoで置き換える。
-                if (_settings.ShareIndex.ContainsKey(path))
-                {
-                    _settings.ShareIndex[path] = shareInfo;
-
-                    _shareIndexLinkInitialized = false;
-                }
-                else
-                {
-                    _settings.ShareIndex.Add(path, shareInfo);
-                    _ids.Add(_id++, path);
-
-                    _shareIndexLinkInitialized = false;
-                }
-            }
-
-            this.OnSetKeyEvent(keys);
-
-            return keys;
-        }
-
-        public void RemoveShare(int id)
-        {
-            lock (this.ThisLock)
-            {
-                string path = _ids[id];
-
-                List<Key> keys = new List<Key>();
-                keys.AddRange(_settings.ShareIndex[path].Indexes.Keys);
-
-                _settings.ShareIndex.Remove(path);
-                _ids.Remove(id);
-
-                _shareIndexLinkInitialized = false;
-
-                this.OnRemoveShareEvent(path);
-                this.OnRemoveKeyEvent(keys);
-            }
-        }
-
-        public KeyCollection Encoding(Stream inStream,
-            CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, HashAlgorithm hashAlgorithm, int blockLength)
-        {
-            if (inStream == null) throw new ArgumentNullException("inStream");
-            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(HashAlgorithm), hashAlgorithm)) throw new ArgumentException("HashAlgorithm に存在しない列挙");
-
-            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-#if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-#endif
-
-                IList<Key> keys = new List<Key>();
-
-                try
-                {
-                    using (var rijndael = Rijndael.Create())
-                    {
-                        rijndael.KeySize = 256;
-                        rijndael.BlockSize = 256;
-                        rijndael.Mode = CipherMode.CBC;
-                        rijndael.Padding = PaddingMode.PKCS7;
-
-                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
-                        {
-                            Xz.Compress(inStream, cs, _bufferManager);
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    foreach (var key in keys)
-                    {
-                        this.Unlock(key);
-                    }
-
-                    throw;
-                }
-
-#if DEBUG
-                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
-#endif
-
-                return new KeyCollection(keys);
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-#if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-#endif
-
-                IList<Key> keys = new List<Key>();
-
-                try
-                {
-                    using (var rijndael = Rijndael.Create())
-                    {
-                        rijndael.KeySize = 256;
-                        rijndael.BlockSize = 256;
-                        rijndael.Mode = CipherMode.CBC;
-                        rijndael.Padding = PaddingMode.PKCS7;
-
-                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
-                        {
-                            Lzma.Compress(inStream, cs, _bufferManager);
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    foreach (var key in keys)
-                    {
-                        this.Unlock(key);
-                    }
-
-                    throw;
-                }
-
-#if DEBUG
-                Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
-#endif
-
-                return new KeyCollection(keys);
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
-            {
-                IList<Key> keys = new List<Key>();
-
-                try
-                {
-                    using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                    {
-                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 < (length = inStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                outStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            _bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    foreach (var key in keys)
-                    {
-                        this.Unlock(key);
-                    }
-
-                    throw;
-                }
-
-                return new KeyCollection(keys);
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        public void Decoding(Stream outStream,
-            CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, KeyCollection keys)
-        {
-            if (outStream == null) throw new ArgumentNullException("outStream");
-            if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
-            if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
-
-            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-                using (var rijndael = Rijndael.Create())
-                {
-                    rijndael.KeySize = 256;
-                    rijndael.BlockSize = 256;
-                    rijndael.Mode = CipherMode.CBC;
-                    rijndael.Padding = PaddingMode.PKCS7;
-
-                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                    {
-                        Xz.Decompress(cs, outStream, _bufferManager);
-                    }
-                }
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-                using (var rijndael = Rijndael.Create())
-                {
-                    rijndael.KeySize = 256;
-                    rijndael.BlockSize = 256;
-                    rijndael.Mode = CipherMode.CBC;
-                    rijndael.Padding = PaddingMode.PKCS7;
-
-                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
-                    {
-                        Lzma.Decompress(cs, outStream, _bufferManager);
-                    }
-                }
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
-            {
-                using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                {
-                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 32);
-
-                    try
-                    {
-                        int length = 0;
-
-                        while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
-                        {
-                            outStream.Write(buffer, 0, length);
-                        }
-                    }
-                    finally
-                    {
-                        _bufferManager.ReturnBuffer(buffer);
-                    }
-                }
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        public Group ParityEncoding(KeyCollection keys, HashAlgorithm hashAlgorithm, int blockLength, CorrectionAlgorithm correctionAlgorithm, WatchEventHandler watchEvent)
-        {
-            if (correctionAlgorithm == CorrectionAlgorithm.None)
-            {
-                Group group = new Group();
-                group.CorrectionAlgorithm = correctionAlgorithm;
-                group.InformationLength = keys.Count;
-                group.BlockLength = blockLength;
-                group.Length = keys.Sum(n => (long)this.GetLength(n));
-                group.Keys.AddRange(keys);
-
-                return group;
-            }
-            else if (correctionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
-            {
-
-#if DEBUG
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-#endif
-
-                if (keys.Count > 128) throw new ArgumentOutOfRangeException("keys");
-
-                var buffers = new ArraySegment<byte>[keys.Count];
-                var parityBuffers = new ArraySegment<byte>[keys.Count];
-
-                int sumLength = 0;
-
-                try
-                {
-                    for (int i = 0; i < buffers.Length; i++)
-                    {
-                        if (watchEvent(this)) throw new StopException();
-
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = this[keys[i]];
-                            int bufferLength = buffer.Count;
-
-                            sumLength += bufferLength;
-
-                            if (bufferLength > blockLength)
-                            {
-                                throw new ArgumentOutOfRangeException("blockLength");
-                            }
-                            else if (bufferLength < blockLength)
-                            {
-                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                                Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                                buffer = tbuffer;
-                            }
-
-                            buffers[i] = buffer;
-                        }
-                        catch (Exception)
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-
-                            throw;
-                        }
-                    }
-
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        parityBuffers[i] = new ArraySegment<byte>(_bufferManager.TakeBuffer(blockLength), 0, blockLength);
-                    }
-
-                    var indexes = new int[parityBuffers.Length];
-
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        indexes[i] = buffers.Length + i;
-                    }
-
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(buffers.Length, buffers.Length + parityBuffers.Length, _threadCount, _bufferManager))
-                    {
-                        Exception exception = null;
-
-                        Thread thread = new Thread(() =>
-                        {
-                            try
-                            {
-                                reedSolomon.Encode(buffers, parityBuffers, indexes, blockLength);
-                            }
-                            catch (Exception e)
-                            {
-                                exception = e;
-                            }
-                        });
-                        thread.Priority = ThreadPriority.Lowest;
-                        thread.Name = "CacheManager_ReedSolomon.Encode";
-                        thread.Start();
-
-                        while (thread.IsAlive)
-                        {
-                            Thread.Sleep(1000);
-
-                            if (watchEvent(this))
-                            {
-                                reedSolomon.Cancel();
-                                thread.Join();
-
-                                throw new StopException();
-                            }
-                        }
-
-                        if (exception != null) throw new StopException("Stop", exception);
-                    }
-
-                    KeyCollection parityKeys = new KeyCollection();
-
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        if (hashAlgorithm == HashAlgorithm.Sha512)
-                        {
-                            var key = new Key(Sha512.ComputeHash(parityBuffers[i]), hashAlgorithm);
-
-                            lock (this.ThisLock)
-                            {
-                                this.Lock(key);
-                                this[key] = parityBuffers[i];
-                            }
-
-                            parityKeys.Add(key);
-                        }
-                        else
-                        {
-                            throw new NotSupportedException();
-                        }
-                    }
-
-                    Group group = new Group();
-                    group.CorrectionAlgorithm = correctionAlgorithm;
-                    group.InformationLength = buffers.Length;
-                    group.BlockLength = blockLength;
-                    group.Length = sumLength;
-                    group.Keys.AddRange(keys);
-                    group.Keys.AddRange(parityKeys);
-
-#if DEBUG
-                    Debug.WriteLine(string.Format("CacheManager_ParityEncoding {0}", sw.Elapsed.ToString()));
-#endif
-
-                    return group;
-                }
-                finally
-                {
-                    for (int i = 0; i < buffers.Length; i++)
-                    {
-                        if (buffers[i].Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffers[i].Array);
-                        }
-                    }
-
-                    for (int i = 0; i < parityBuffers.Length; i++)
-                    {
-                        if (parityBuffers[i].Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(parityBuffers[i].Array);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        public KeyCollection ParityDecoding(Group group, WatchEventHandler watchEvent)
-        {
-            if (group.BlockLength > 1024 * 1024 * 4) throw new ArgumentOutOfRangeException();
-
-            if (group.CorrectionAlgorithm == CorrectionAlgorithm.None)
-            {
-                return new KeyCollection(group.Keys);
-            }
-            else if (group.CorrectionAlgorithm == CorrectionAlgorithm.ReedSolomon8)
-            {
-                var buffers = new ArraySegment<byte>[group.InformationLength];
-
-                try
-                {
-                    var indexes = new int[group.InformationLength];
-
-                    int count = 0;
-
-                    for (int i = 0; i < group.Keys.Count && count < group.InformationLength; i++)
-                    {
-                        if (watchEvent(this)) throw new StopException();
-
-                        if (!this.Contains(group.Keys[i])) continue;
-
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = this[group.Keys[i]];
-                            int bufferLength = buffer.Count;
-
-                            if (bufferLength > group.BlockLength)
-                            {
-                                throw new ArgumentOutOfRangeException("group.BlockLength");
-                            }
-                            else if (bufferLength < group.BlockLength)
-                            {
-                                ArraySegment<byte> tbuffer = new ArraySegment<byte>(_bufferManager.TakeBuffer(group.BlockLength), 0, group.BlockLength);
-                                Native.Copy(buffer.Array, buffer.Offset, tbuffer.Array, tbuffer.Offset, buffer.Count);
-                                Array.Clear(tbuffer.Array, tbuffer.Offset + buffer.Count, tbuffer.Count - buffer.Count);
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                                buffer = tbuffer;
-                            }
-
-                            indexes[count] = i;
-                            buffers[count] = buffer;
-
-                            count++;
-                        }
-                        catch (BlockNotFoundException)
-                        {
-
-                        }
-                        catch (Exception)
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-
-                            throw;
-                        }
-                    }
-
-                    if (count < group.InformationLength) throw new BlockNotFoundException();
-
-                    using (ReedSolomon8 reedSolomon = new ReedSolomon8(group.InformationLength, group.Keys.Count, _threadCount, _bufferManager))
-                    {
-                        Exception exception = null;
-
-                        Thread thread = new Thread(() =>
-                        {
-                            try
-                            {
-                                reedSolomon.Decode(buffers, indexes, group.BlockLength);
-                            }
-                            catch (Exception e)
-                            {
-                                exception = e;
-                            }
-                        });
-                        thread.Priority = ThreadPriority.Lowest;
-                        thread.Name = "CacheManager_ReedSolomon.Decode";
-                        thread.Start();
-
-                        while (thread.IsAlive)
-                        {
-                            Thread.Sleep(1000);
-
-                            if (watchEvent(this))
-                            {
-                                reedSolomon.Cancel();
-                                thread.Join();
-
-                                throw new StopException();
-                            }
-                        }
-
-                        if (exception != null) throw new StopException("Stop", exception);
-                    }
-
-                    long length = group.Length;
-
-                    for (int i = 0; i < group.InformationLength; length -= group.BlockLength, i++)
-                    {
-                        this[group.Keys[i]] = new ArraySegment<byte>(buffers[i].Array, buffers[i].Offset, (int)Math.Min(buffers[i].Count, length));
-                    }
-                }
-                finally
-                {
-                    for (int i = 0; i < buffers.Length; i++)
-                    {
-                        if (buffers[i].Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffers[i].Array);
-                        }
-                    }
-                }
-
-                KeyCollection keys = new KeyCollection();
-
-                for (int i = 0; i < group.InformationLength; i++)
-                {
-                    keys.Add(group.Keys[i]);
-                }
-
-                return new KeyCollection(keys);
-            }
-            else
-            {
-                throw new NotSupportedException();
             }
         }
 
@@ -1428,7 +466,7 @@ namespace Library.Net.Outopos
 
                                 if (key.HashAlgorithm == HashAlgorithm.Sha512)
                                 {
-                                    if (!Native.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
+                                    if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
                                     {
                                         this.Remove(key);
 
@@ -1451,62 +489,6 @@ namespace Library.Net.Outopos
                         }
                     }
 
-                    {
-                        string path = null;
-
-                        _shareIndexLinkUpdate();
-
-                        if (_shareIndexLink.TryGetValue(key, out path))
-                        {
-                            var shareInfo = _settings.ShareIndex[path];
-
-                            byte[] buffer = _bufferManager.TakeBuffer(shareInfo.BlockLength);
-
-                            try
-                            {
-                                using (Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                {
-                                    int i = shareInfo.Indexes[key];
-
-                                    stream.Seek((long)shareInfo.BlockLength * i, SeekOrigin.Begin);
-
-                                    int length = (int)Math.Min(stream.Length - stream.Position, shareInfo.BlockLength);
-                                    stream.Read(buffer, 0, length);
-
-                                    if (key.HashAlgorithm == HashAlgorithm.Sha512)
-                                    {
-                                        if (!Native.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
-                                        {
-                                            foreach (var item in _ids.ToArray())
-                                            {
-                                                if (item.Value == path)
-                                                {
-                                                    this.RemoveShare(item.Key);
-
-                                                    break;
-                                                }
-                                            }
-
-                                            throw new BlockNotFoundException();
-                                        }
-                                    }
-                                    else
-                                    {
-                                        throw new FormatException();
-                                    }
-
-                                    return new ArraySegment<byte>(buffer, 0, length);
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                _bufferManager.ReturnBuffer(buffer);
-
-                                throw new BlockNotFoundException();
-                            }
-                        }
-                    }
-
                     throw new BlockNotFoundException();
                 }
             }
@@ -1518,7 +500,7 @@ namespace Library.Net.Outopos
 
                     if (key.HashAlgorithm == HashAlgorithm.Sha512)
                     {
-                        if (!Native.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
+                        if (!Unsafe.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
                     else
                     {
@@ -1568,7 +550,7 @@ namespace Library.Net.Outopos
                             }
 
                             int length = Math.Min(remain, CacheManager.SectorSize);
-                            _fileStream.Write(value.Array, CacheManager.SectorSize * i, length);
+                            _fileStream.Write(value.Array, value.Offset + (CacheManager.SectorSize * i), length);
                         }
 
                         _fileStream.Flush();
@@ -1591,8 +573,6 @@ namespace Library.Net.Outopos
                     clusterInfo.Length = value.Count;
                     clusterInfo.UpdateTime = DateTime.UtcNow;
                     _settings.ClusterIndex[key] = clusterInfo;
-
-                    this.OnSetKeyEvent(new Key[] { key });
                 }
             }
         }
@@ -1604,16 +584,6 @@ namespace Library.Net.Outopos
             lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
-
-                _ids.Clear();
-                _id = 0;
-
-                foreach (var item in _settings.ShareIndex)
-                {
-                    _ids.Add(_id++, item.Key);
-                }
-
-                _shareIndexLinkInitialized = false;
             }
         }
 
@@ -1631,29 +601,7 @@ namespace Library.Net.Outopos
         {
             lock (this.ThisLock)
             {
-                int count = 0;
-
-                {
-                    count += _settings.ClusterIndex.Keys.Count;
-
-                    foreach (var shareInfo in _settings.ShareIndex.Values)
-                    {
-                        count += shareInfo.Indexes.Keys.Count;
-                    }
-                }
-
-                var list = new List<Key>(count);
-
-                {
-                    list.AddRange(_settings.ClusterIndex.Keys);
-
-                    foreach (var shareInfo in _settings.ShareIndex.Values)
-                    {
-                        list.AddRange(shareInfo.Indexes.Keys);
-                    }
-                }
-
-                return list.ToArray();
+                return _settings.ClusterIndex.Keys.ToArray();
             }
         }
 
@@ -1666,14 +614,6 @@ namespace Library.Net.Outopos
                 foreach (var key in _settings.ClusterIndex.Keys)
                 {
                     yield return key;
-                }
-
-                foreach (var shareInfo in _settings.ShareIndex.Values)
-                {
-                    foreach (var key in shareInfo.Indexes.Keys)
-                    {
-                        yield return key;
-                    }
                 }
             }
         }
@@ -1698,10 +638,8 @@ namespace Library.Net.Outopos
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
-                    new Library.Configuration.SettingContent<LockedHashDictionary<Key, ClusterInfo>>() { Name = "ClustersIndex", Value = new LockedHashDictionary<Key, ClusterInfo>() },
-                    new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
-                    new Library.Configuration.SettingContent<LockedSortedDictionary<string, ShareInfo>>() { Name = "ShareIndex", Value = new LockedSortedDictionary<string, ShareInfo>() },
-                    new Library.Configuration.SettingContent<LockedList<SeedInfo>>() { Name = "SeedInformation", Value = new LockedList<SeedInfo>() },
+                    new Library.Configuration.SettingContent<LockedHashDictionary<Key, ClusterInfo>>() { Name = "ClusterIndex", Value = new LockedHashDictionary<Key, ClusterInfo>() },
+                    new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 8 },
                 })
             {
                 _thisLock = lockObject;
@@ -1729,7 +667,7 @@ namespace Library.Net.Outopos
                 {
                     lock (_thisLock)
                     {
-                        return (LockedHashDictionary<Key, ClusterInfo>)this["ClustersIndex"];
+                        return (LockedHashDictionary<Key, ClusterInfo>)this["ClusterIndex"];
                     }
                 }
             }
@@ -1751,38 +689,16 @@ namespace Library.Net.Outopos
                     }
                 }
             }
-
-            public LockedSortedDictionary<string, ShareInfo> ShareIndex
-            {
-                get
-                {
-                    lock (_thisLock)
-                    {
-                        return (LockedSortedDictionary<string, ShareInfo>)this["ShareIndex"];
-                    }
-                }
-            }
-
-            public LockedList<SeedInfo> SeedsInformation
-            {
-                get
-                {
-                    lock (_thisLock)
-                    {
-                        return (LockedList<SeedInfo>)this["SeedInformation"];
-                    }
-                }
-            }
         }
 
-        [DataContract(Name = "Clusters", Namespace = "http://Library/Net/Amoeba/CacheManager")]
+        [DataContract(Name = "ClusterInfo", Namespace = "http://Library/Net/Outopos/CacheManager")]
         private class ClusterInfo
         {
             private long[] _indexes;
             private int _length;
-            private DateTime _updateTime = DateTime.UtcNow;
+            private DateTime _updateTime;
 
-            [DataMember(Name = "Indexs")]
+            [DataMember(Name = "Indexes")]
             public long[] Indexes
             {
                 get
@@ -1817,85 +733,8 @@ namespace Library.Net.Outopos
                 }
                 set
                 {
-                    _updateTime = value;
-                }
-            }
-        }
-
-        [DataContract(Name = "ShareIndex", Namespace = "http://Library/Net/Amoeba/CacheManager")]
-        private class ShareInfo
-        {
-            private SortedDictionary<Key, int> _indexes;
-            private int _blockLength;
-
-            [DataMember(Name = "KeyAndCluster")]
-            public SortedDictionary<Key, int> Indexes
-            {
-                get
-                {
-                    if (_indexes == null)
-                        _indexes = new SortedDictionary<Key, int>(new Key.Comparer());
-
-                    return _indexes;
-                }
-            }
-
-            [DataMember(Name = "BlockLength")]
-            public int BlockLength
-            {
-                get
-                {
-                    return _blockLength;
-                }
-                set
-                {
-                    _blockLength = value;
-                }
-            }
-        }
-
-        [DataContract(Name = "SeedInformation", Namespace = "http://Library/Net/Amoeba/CacheManager")]
-        private class SeedInfo
-        {
-            private Seed _seed;
-            private IndexCollection _indexes;
-            private string _path;
-
-            [DataMember(Name = "Seed")]
-            public Seed Seed
-            {
-                get
-                {
-                    return _seed;
-                }
-                set
-                {
-                    _seed = value;
-                }
-            }
-
-            [DataMember(Name = "Indexs")]
-            public IndexCollection Indexes
-            {
-                get
-                {
-                    if (_indexes == null)
-                        _indexes = new IndexCollection();
-
-                    return _indexes;
-                }
-            }
-
-            [DataMember(Name = "Path")]
-            public string Path
-            {
-                get
-                {
-                    return _path;
-                }
-                set
-                {
-                    _path = value;
+                    var utc = value.ToUniversalTime();
+                    _updateTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
                 }
             }
         }

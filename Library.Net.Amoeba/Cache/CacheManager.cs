@@ -1582,7 +1582,7 @@ namespace Library.Net.Amoeba
                             }
 
                             int length = Math.Min(remain, CacheManager.SectorSize);
-                            _fileStream.Write(value.Array, CacheManager.SectorSize * i, length);
+                            _fileStream.Write(value.Array, value.Offset + (CacheManager.SectorSize * i), length);
                         }
 
                         _fileStream.Flush();
