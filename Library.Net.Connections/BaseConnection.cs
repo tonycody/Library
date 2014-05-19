@@ -201,11 +201,11 @@ namespace Library.Net.Connections
                         throw new ConnectionException();
                     }
 
-                    TempStream tempStream = null;
+                    BufferStream bufferStream = null;
 
                     try
                     {
-                        tempStream = new TempStream();
+                        bufferStream = new BufferStream(_bufferManager);
                         byte[] receiveBuffer = null;
 
                         try
@@ -228,7 +228,7 @@ namespace Library.Net.Connections
                                 _cap.Receive(receiveBuffer, 0, receiveLength, time);
 
                                 _receivedByteCount.Add(receiveLength);
-                                tempStream.Write(receiveBuffer, 0, receiveLength);
+                                bufferStream.Write(receiveBuffer, 0, receiveLength);
 
                                 length -= receiveLength;
                             } while (length > 0);
@@ -240,16 +240,16 @@ namespace Library.Net.Connections
                     }
                     catch (Exception e)
                     {
-                        if (tempStream != null)
+                        if (bufferStream != null)
                         {
-                            tempStream.Dispose();
+                            bufferStream.Dispose();
                         }
 
                         throw e;
                     }
 
-                    tempStream.Seek(0, SeekOrigin.Begin);
-                    return tempStream;
+                    bufferStream.Seek(0, SeekOrigin.Begin);
+                    return bufferStream;
                 }
                 catch (ConnectionException e)
                 {

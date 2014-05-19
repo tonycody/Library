@@ -9,7 +9,7 @@ namespace Library.Security
 {
     internal static class Converter
     {
-        private enum CompressionAlgorithm
+        enum ConvertCompressionAlgorithm : byte
         {
             None = 0,
             Deflate = 1,
@@ -25,7 +25,7 @@ namespace Library.Security
             try
             {
                 stream = item.Export(_bufferManager);
-                List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
+                List<KeyValuePair<byte, Stream>> list = new List<KeyValuePair<byte, Stream>>();
 
                 try
                 {
@@ -53,31 +53,27 @@ namespace Library.Security
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
-                    if (deflateBufferStream.Length < stream.Length)
-                    {
-                        list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
-                    }
-                    else
-                    {
-                        deflateBufferStream.Dispose();
-                    }
+                    list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>(0, stream));
+                list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {
-                    return x.Value.Length.CompareTo(y.Value.Length);
+                    int c = x.Value.Length.CompareTo(y.Value.Length);
+                    if (c != 0) return c;
+
+                    return x.Key.CompareTo(y.Key);
                 });
 
 #if DEBUG
                 if (list[0].Value.Length != stream.Length)
                 {
-                    Debug.WriteLine("OutoposConverter ToStream : {0}→{1} {2}",
+                    Debug.WriteLine("AmoebaConverter ToStream : {0}→{1} {2}",
                         NetworkConverter.ToSizeString(stream.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length),
                         NetworkConverter.ToSizeString(list[0].Value.Length - stream.Length));
@@ -126,15 +122,15 @@ namespace Library.Security
                 }
 
                 stream.Seek(0, SeekOrigin.Begin);
-                byte version = (byte)stream.ReadByte();
+                byte type = (byte)stream.ReadByte();
 
                 using (Stream dataStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position - 4, true))
                 {
-                    if (version == (byte)CompressionAlgorithm.None)
+                    if (type == (byte)ConvertCompressionAlgorithm.None)
                     {
                         return ItemBase<T>.Import(dataStream, _bufferManager);
                     }
-                    else if (version == (byte)CompressionAlgorithm.Deflate)
+                    else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
                     {
                         using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
                         {
@@ -160,7 +156,7 @@ namespace Library.Security
                             }
 
 #if DEBUG
-                            Debug.WriteLine("OutoposConverter FromStream : {0}→{1} {2}",
+                            Debug.WriteLine("AmoebaConverter FromStream : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));

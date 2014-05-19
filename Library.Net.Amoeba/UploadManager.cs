@@ -312,7 +312,7 @@ namespace Library.Net.Amoeba
                                     item.EncodingBytes = 0;
 
                                     item.State = UploadState.Encoding;
-                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.BlockLength, item.HashAlgorithm);
                                 }
                             }
                             catch (StopIoException)
@@ -493,7 +493,7 @@ namespace Library.Net.Amoeba
                                     item.EncodingBytes = 0;
 
                                     item.State = UploadState.Encoding;
-                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.BlockLength, item.HashAlgorithm);
                                 }
                             }
                             catch (StopIoException)
@@ -745,7 +745,7 @@ namespace Library.Net.Amoeba
                                     item.EncodingBytes = 0;
 
                                     item.State = UploadState.Encoding;
-                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                                    keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.BlockLength, item.HashAlgorithm);
                                 }
                             }
                             catch (StopIoException)

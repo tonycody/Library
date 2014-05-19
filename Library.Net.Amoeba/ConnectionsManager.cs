@@ -877,7 +877,7 @@ namespace Library.Net.Amoeba
                 }
 
                 if (connectionCount > ((this.ConnectionCountLimit / 3) * 1)
-                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 10)
+                    && connectionCheckStopwatch.Elapsed.TotalMinutes >= 30)
                 {
                     connectionCheckStopwatch.Restart();
 
@@ -1740,7 +1740,7 @@ namespace Library.Net.Amoeba
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime).TotalMinutes >= 30)
+                        if ((DateTime.UtcNow - messageManager.LastPullTime).TotalMinutes >= 10)
                         {
                             lock (this.ThisLock)
                             {
@@ -2357,7 +2357,7 @@ namespace Library.Net.Amoeba
         public void SetBaseNode(Node baseNode)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (ConnectionsManager.Check(baseNode)) throw new ArgumentException("baseNode");
+            if (!ConnectionsManager.Check(baseNode)) throw new ArgumentException("baseNode");
 
             lock (this.ThisLock)
             {
@@ -2624,7 +2624,7 @@ namespace Library.Net.Amoeba
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
                     new Library.Configuration.SettingContent<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
-                    new Library.Configuration.SettingContent<int>() { Name = "ConnectionCountLimit", Value = 25 },
+                    new Library.Configuration.SettingContent<int>() { Name = "ConnectionCountLimit", Value = 32 },
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },

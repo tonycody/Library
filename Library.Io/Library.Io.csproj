@@ -53,7 +53,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TempStream.cs" />
     <Compile Include="QueueStream.cs" />
     <Compile Include="Utilities\StreamMode.cs" />
     <Compile Include="WrapperStream.cs" />

@@ -869,7 +869,7 @@ namespace Library.Net.Amoeba
         }
 
         public KeyCollection Encoding(Stream inStream,
-            CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, HashAlgorithm hashAlgorithm, int blockLength)
+            CompressionAlgorithm compressionAlgorithm, CryptoAlgorithm cryptoAlgorithm, byte[] cryptoKey, int blockLength, HashAlgorithm hashAlgorithm)
         {
             lock (_convertLock)
             {
@@ -880,11 +880,6 @@ namespace Library.Net.Amoeba
 
                 if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
                 {
-#if DEBUG
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-#endif
-
                     var keys = new KeyCollection();
 
                     try
@@ -913,19 +908,10 @@ namespace Library.Net.Amoeba
                         throw;
                     }
 
-#if DEBUG
-                    Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
-#endif
-
                     return keys;
                 }
                 else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
                 {
-#if DEBUG
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-#endif
-
                     var keys = new KeyCollection();
 
                     try
@@ -953,10 +939,6 @@ namespace Library.Net.Amoeba
 
                         throw;
                     }
-
-#if DEBUG
-                    Debug.WriteLine(string.Format("CacheManager_Encoding {0}", sw.Elapsed.ToString()));
-#endif
 
                     return keys;
                 }

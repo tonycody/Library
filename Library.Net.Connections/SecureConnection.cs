@@ -527,7 +527,7 @@ namespace Library.Net.Connections
                                 throw new ConnectionException();
                             }
 
-                            TempStream tempStream = new TempStream();
+                            BufferStream bufferStream = new BufferStream(_bufferManager);
 
                             if (_informationVersion3.CryptoAlgorithm.HasFlag(SecureVersion3.CryptoAlgorithm.Aes256))
                             {
@@ -547,7 +547,7 @@ namespace Library.Net.Connections
                                         aes.Mode = CipherMode.CBC;
                                         aes.Padding = PaddingMode.PKCS7;
 
-                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(tempStream, true), aes.CreateDecryptor(_informationVersion3.OtherCryptoKey, iv), CryptoStreamMode.Write))
+                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(bufferStream, true), aes.CreateDecryptor(_informationVersion3.OtherCryptoKey, iv), CryptoStreamMode.Write))
                                         {
                                             int i = -1;
 
@@ -568,8 +568,8 @@ namespace Library.Net.Connections
                                 throw new ConnectionException();
                             }
 
-                            tempStream.Seek(0, SeekOrigin.Begin);
-                            return tempStream;
+                            bufferStream.Seek(0, SeekOrigin.Begin);
+                            return bufferStream;
                         }
                     }
                     else
@@ -603,16 +603,16 @@ namespace Library.Net.Connections
                     {
                         if (_version.HasFlag(SecureConnectionVersion.Version3))
                         {
-                            using (TempStream tempStream = new TempStream())
+                            using (BufferStream bufferStream = new BufferStream(_bufferManager))
                             {
-                                tempStream.SetLength(8);
-                                tempStream.Seek(8, SeekOrigin.Begin);
+                                bufferStream.SetLength(8);
+                                bufferStream.Seek(8, SeekOrigin.Begin);
 
                                 if (_informationVersion3.CryptoAlgorithm.HasFlag(SecureVersion3.CryptoAlgorithm.Aes256))
                                 {
                                     byte[] iv = new byte[16];
                                     _random.GetBytes(iv);
-                                    tempStream.Write(iv, 0, iv.Length);
+                                    bufferStream.Write(iv, 0, iv.Length);
 
                                     byte[] sendBuffer = null;
 
@@ -627,7 +627,7 @@ namespace Library.Net.Connections
                                             aes.Mode = CipherMode.CBC;
                                             aes.Padding = PaddingMode.PKCS7;
 
-                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(tempStream, true), aes.CreateEncryptor(_informationVersion3.MyCryptoKey, iv), CryptoStreamMode.Write))
+                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(bufferStream, true), aes.CreateEncryptor(_informationVersion3.MyCryptoKey, iv), CryptoStreamMode.Write))
                                             {
                                                 int i = -1;
 
@@ -648,29 +648,29 @@ namespace Library.Net.Connections
                                     throw new ConnectionException();
                                 }
 
-                                _totalSendSize += (tempStream.Length - 8);
+                                _totalSendSize += (bufferStream.Length - 8);
 
-                                tempStream.Seek(0, SeekOrigin.Begin);
+                                bufferStream.Seek(0, SeekOrigin.Begin);
 
                                 byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
-                                tempStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
+                                bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
 
                                 if (_informationVersion3.HashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
                                 {
-                                    tempStream.Seek(0, SeekOrigin.Begin);
-                                    byte[] hmacBuff = HmacSha512.ComputeHash(tempStream, _informationVersion3.MyHmacKey);
+                                    bufferStream.Seek(0, SeekOrigin.Begin);
+                                    byte[] hmacBuff = HmacSha512.ComputeHash(bufferStream, _informationVersion3.MyHmacKey);
 
-                                    tempStream.Seek(0, SeekOrigin.End);
-                                    tempStream.Write(hmacBuff, 0, hmacBuff.Length);
+                                    bufferStream.Seek(0, SeekOrigin.End);
+                                    bufferStream.Write(hmacBuff, 0, hmacBuff.Length);
                                 }
                                 else
                                 {
                                     throw new ConnectionException();
                                 }
 
-                                tempStream.Seek(0, SeekOrigin.Begin);
+                                bufferStream.Seek(0, SeekOrigin.Begin);
 
-                                _connection.Send(tempStream, timeout, options);
+                                _connection.Send(bufferStream, timeout, options);
                             }
                         }
                         else

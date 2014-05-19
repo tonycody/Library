@@ -11,7 +11,7 @@ namespace Library.Net.Amoeba
 {
     public static class AmoebaConverter
     {
-        private enum ConvertCompressionAlgorithm
+        enum ConvertCompressionAlgorithm : byte
         {
             None = 0,
             Deflate = 1,
@@ -28,7 +28,7 @@ namespace Library.Net.Amoeba
             try
             {
                 stream = item.Export(_bufferManager);
-                List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
+                List<KeyValuePair<byte, Stream>> list = new List<KeyValuePair<byte, Stream>>();
 
                 try
                 {
@@ -56,25 +56,21 @@ namespace Library.Net.Amoeba
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
-                    if (deflateBufferStream.Length < stream.Length)
-                    {
-                        list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
-                    }
-                    else
-                    {
-                        deflateBufferStream.Dispose();
-                    }
+                    list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.None, stream));
+                list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {
-                    return x.Value.Length.CompareTo(y.Value.Length);
+                    int c = x.Value.Length.CompareTo(y.Value.Length);
+                    if (c != 0) return c;
+
+                    return x.Key.CompareTo(y.Key);
                 });
 
 #if DEBUG

@@ -465,12 +465,9 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
-                if (this.State == ManagerState.Start)
+                if (this.EncodeState == ManagerState.Start)
                 {
-                    _downloadManager.Stop();
-                    _uploadManager.Stop();
-                    _backgroundDownloadManager.Stop();
-                    _backgroundUploadManager.Stop();
+                    _uploadManager.EncodeStop();
                 }
 
                 if (this.DecodeState == ManagerState.Start)
@@ -478,9 +475,12 @@ namespace Library.Net.Amoeba
                     _downloadManager.DecodeStop();
                 }
 
-                if (this.EncodeState == ManagerState.Start)
+                if (this.State == ManagerState.Start)
                 {
-                    _uploadManager.EncodeStop();
+                    _backgroundUploadManager.Stop();
+                    _backgroundDownloadManager.Stop();
+                    _uploadManager.Stop();
+                    _downloadManager.Stop();
                 }
 
                 _cacheManager.Resize(size);

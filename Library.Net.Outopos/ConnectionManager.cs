@@ -967,19 +967,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Nodes
                 foreach (var value in this.Nodes)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Node, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Node, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public NodesMessage Clone()
@@ -1057,19 +1057,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Keys
                 foreach (var value in this.Keys)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlocksLinkMessage Clone()
@@ -1147,19 +1147,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Keys
                 foreach (var value in this.Keys)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlocksRequestMessage Clone()
@@ -1266,26 +1266,26 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Key
                 if (this.Key != null)
                 {
                     using (var stream = this.Key.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
                 // Value
                 if (this.Value.Array != null)
                 {
-                    tempStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
-                    tempStream.WriteByte((byte)SerializeId.Value);
-                    tempStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Value);
+                    bufferStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlockMessage Clone()
@@ -1362,19 +1362,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Tags
                 foreach (var value in this.Tags)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Tag, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public HeadersRequestMessage Clone()
@@ -1452,19 +1452,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Headers
                 foreach (var value in this.Headers)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Header, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Header, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public HeadersMessage Clone()

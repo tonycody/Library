@@ -8,6 +8,6 @@ namespace Library.Net.Connections.SecureVersion3
     enum CryptoAlgorithm
     {
         [EnumMember(Value = "Aes256")]
-        Aes256 = 0x02,
+        Aes256 = 0x01,
     }
 }

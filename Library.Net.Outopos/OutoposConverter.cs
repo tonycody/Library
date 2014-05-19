@@ -11,14 +11,14 @@ namespace Library.Net.Outopos
 {
     public static class OutoposConverter
     {
-        private enum ConvertCompressionAlgorithm
+        enum ConvertCompressionAlgorithm : byte
         {
             None = 0,
             Deflate = 1,
         }
 
-        private static BufferManager _bufferManager = BufferManager.Instance;
-        private static Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly BufferManager _bufferManager = BufferManager.Instance;
+        private static readonly Regex _base64Regex = new Regex(@"^([a-zA-Z0-9\-_]*).*?$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static Stream ToStream<T>(ItemBase<T> item)
                 where T : ItemBase<T>
@@ -28,7 +28,7 @@ namespace Library.Net.Outopos
             try
             {
                 stream = item.Export(_bufferManager);
-                List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
+                List<KeyValuePair<byte, Stream>> list = new List<KeyValuePair<byte, Stream>>();
 
                 try
                 {
@@ -37,7 +37,7 @@ namespace Library.Net.Outopos
 
                     try
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                        compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                         using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
@@ -56,25 +56,21 @@ namespace Library.Net.Outopos
 
                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
-                    if (deflateBufferStream.Length < stream.Length)
-                    {
-                        list.Add(new KeyValuePair<int, Stream>(1, deflateBufferStream));
-                    }
-                    else
-                    {
-                        deflateBufferStream.Dispose();
-                    }
+                    list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
 
                 }
 
-                list.Add(new KeyValuePair<int, Stream>((int)ConvertCompressionAlgorithm.None, stream));
+                list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.None, stream));
 
                 list.Sort((x, y) =>
                 {
-                    return x.Value.Length.CompareTo(y.Value.Length);
+                    int c = x.Value.Length.CompareTo(y.Value.Length);
+                    if (c != 0) return c;
+
+                    return x.Key.CompareTo(y.Key);
                 });
 
 #if DEBUG
@@ -124,7 +120,7 @@ namespace Library.Net.Outopos
                         crcStream.Read(orignalCrc, 0, orignalCrc.Length);
                     }
 
-                    if (!Collection.Equals(verifyCrc, orignalCrc))
+                    if (!CollectionUtilities.Equals(verifyCrc, orignalCrc))
                         throw new ArgumentException("Crc Error");
                 }
 
@@ -145,7 +141,7 @@ namespace Library.Net.Outopos
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 32);
+                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {

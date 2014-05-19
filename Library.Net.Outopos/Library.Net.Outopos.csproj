@@ -98,17 +98,17 @@
   <ItemGroup>
     <Compile Include="Cache\BitmapManager.cs" />
     <Compile Include="Cache\CacheManager.cs" />
+    <Compile Include="Cache\CacheManagerStreamReader.cs" />
+    <Compile Include="Cache\CacheManagerStreamWriter.cs" />
     <Compile Include="Cache\Header\HeaderCollection.cs" />
-    <Compile Include="Cache\Header\Index.cs" />
-    <Compile Include="Cache\Header\IndexCollection.cs" />
     <Compile Include="Cache\Header\TagCollection.cs" />
     <Compile Include="Cache\Header\Header.cs" />
     <Compile Include="Cache\Header\Tag.cs" />
     <Compile Include="Cache\Header\Key.cs" />
     <Compile Include="Cache\Header\KeyCollection.cs" />
     <Compile Include="Cache\_Interface\Header\IComputeHash.cs" />
-    <Compile Include="Cache\_Interface\Header\IIndex.cs" />
     <Compile Include="ClientManager.cs" />
+    <Compile Include="DownloadItem.cs" />
     <Compile Include="OutoposConverter.cs" />
     <Compile Include="Cache\_Interface\Header\ITag.cs" />
     <Compile Include="Cache\_Interface\IHashAlgorithm.cs" />
@@ -118,9 +118,7 @@
     <Compile Include="OutoposManager.cs" />
     <Compile Include="ServerManager.cs" />
     <Compile Include="UploadItem.cs" />
-    <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
-    <Compile Include="EqualityComparer.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionFilterCollection.cs" />
     <Compile Include="ConnectionFilter.cs" />

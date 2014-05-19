@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Threading;
+using System.Linq;
 using Library.Collections;
 using Library.Security;
+using Library.Io;
 
 namespace Library.Net.Outopos
 {
@@ -14,13 +17,11 @@ namespace Library.Net.Outopos
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private VolatileDictionary<byte[], DownloadItem> _downloadItems;
+        private VolatileHashDictionary<Header, DownloadItem> _downloadItems;
 
         private volatile Thread _downloadManagerThread;
 
-        private ManagerState _state = ManagerState.Stop;
-
-        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
+        private volatile ManagerState _state = ManagerState.Stop;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -31,7 +32,7 @@ namespace Library.Net.Outopos
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
 
-            _downloadItems = new VolatileDictionary<byte[], DownloadItem>(new TimeSpan(0, 12, 0), new ByteArrayEqualityComparer());
+            _downloadItems = new VolatileHashDictionary<Header, DownloadItem>(new TimeSpan(0, 12, 0));
         }
 
         private void DownloadThread()
@@ -43,603 +44,136 @@ namespace Library.Net.Outopos
                 Thread.Sleep(1000 * 1);
                 if (this.State == ManagerState.Stop) return;
 
+                _downloadItems.TrimExcess();
+
                 if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalSeconds >= 20)
                 {
                     refreshStopwatch.Restart();
 
-                    foreach (var item in _downloadItems.Values.ToArray())
+                    foreach (var pair in _downloadItems.ToArray())
                     {
                         if (this.State == ManagerState.Stop) return;
+
+                        var header = pair.Key;
+                        var item = pair.Value;
 
                         try
                         {
                             if (item.State != DownloadState.Downloading) continue;
 
-                            ArraySegment<byte> binaryContent = new ArraySegment<byte>();
-
-                            try
                             {
-                                if (!_cacheManager.Contains(item.Key))
-                                {
-                                    _connectionsManager.Download(item.Key);
+                                bool flag = false;
 
-                                    continue;
-                                }
-                                else
+                                foreach (var key in item.Keys.ToArray())
                                 {
-                                    try
-                                    {
-                                        binaryContent = _cacheManager[item.Key];
-                                    }
-                                    catch (BlockNotFoundException)
-                                    {
-                                        continue;
-                                    }
+                                    if (_cacheManager.Contains(key)) continue;
+                                    _connectionsManager.Download(key);
+
+                                    flag = true;
                                 }
 
-                                if (item.Type == "SectionProfile")
-                                {
-                                    item.SectionProfileContent = ContentConverter.FromSectionProfileContentBlock(binaryContent);
-                                }
-                                else if (item.Type == "SectionMessage")
-                                {
-                                    item.SectionMessageContent = ContentConverter.FromSectionMessageContentBlock(binaryContent, item.ExchangePrivateKey);
-                                }
-                                else if (item.Type == "WikiDocument")
-                                {
-                                    item.WikiPageContent = ContentConverter.FromWikiPageContentBlock(binaryContent);
-                                }
-                                else if (item.Type == "WikiVote")
-                                {
-                                    item.WikiVoteContent = ContentConverter.FromWikiVoteContentBlock(binaryContent);
-                                }
-                                else if (item.Type == "ChatTopic")
-                                {
-                                    item.ChatTopicContent = ContentConverter.FromChatTopicContentBlock(binaryContent);
-                                }
-                                else if (item.Type == "ChatMessage")
-                                {
-                                    item.ChatMessageContent = ContentConverter.FromChatMessageContentBlock(binaryContent);
-                                }
-
-                                item.State = DownloadState.Completed;
+                                if (flag) continue;
                             }
-                            finally
+
                             {
-                                if (binaryContent.Array != null)
+                                BufferStream bufferStream = null;
+
+                                try
                                 {
-                                    _bufferManager.ReturnBuffer(binaryContent.Array);
+                                    bufferStream = new BufferStream(_bufferManager);
+
+                                    using (var wrapperStream = new WrapperStream(bufferStream, true))
+                                    {
+                                        _cacheManager.Decoding(wrapperStream, item.Keys);
+                                    }
+
+                                    bufferStream.Seek(0, SeekOrigin.Begin);
+
+                                    int version;
+                                    {
+                                        byte[] versionBuffer = new byte[4];
+                                        if (bufferStream.Read(versionBuffer, 0, versionBuffer.Length) != versionBuffer.Length) return;
+                                        version = NetworkConverter.ToInt32(versionBuffer);
+                                    }
+
+                                    if (version == 0)
+                                    {
+                                        byte type;
+                                        {
+                                            type = (byte)bufferStream.ReadByte();
+                                        }
+
+                                        if (type == 0)
+                                        {
+                                            var tempKeys = ContentConverter.StreamToCollection<Key>(bufferStream);
+                                            bufferStream.Dispose();
+
+                                            lock (this.ThisLock)
+                                            {
+                                                item.Keys.Clear();
+                                                item.Keys.AddRange(tempKeys);
+                                            }
+
+                                            continue;
+                                        }
+                                        else if (type == 1)
+                                        {
+                                            item.Stream = new RangeStream(bufferStream, bufferStream.Position, bufferStream.Length - bufferStream.Position);
+                                        }
+                                        else
+                                        {
+                                            throw new NotSupportedException();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        throw new NotSupportedException();
+                                    }
+                                }
+                                catch (Exception)
+                                {
+                                    if (bufferStream != null)
+                                    {
+                                        bufferStream.Dispose();
+                                    }
                                 }
                             }
+
+                            item.Keys.Clear();
+                            item.State = DownloadState.Completed;
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
+                            item.Keys.Clear();
                             item.State = DownloadState.Error;
 
-                            continue;
+                            Log.Error(e);
                         }
                     }
                 }
             }
         }
 
-        public IEnumerable<SectionProfile> GetSectionProfiles(Section tag, IEnumerable<string> trustSignatures)
+        public Stream Download(Header header)
         {
-            var hashset = new HashSet<string>(trustSignatures);
-            var items = new List<SectionProfile>();
-
-            foreach (var header in _connectionsManager.GetSectionProfileHeaders(tag))
-            {
-                if (!hashset.Contains(header.Certificate.ToString())) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new SectionProfile(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Comment,
-                    content.ExchangePublicKey,
-                    content.TrustSignatures,
-                    content.Wikis,
-                    content.Chats));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<SectionProfile> GetSectionProfiles(Section tag)
-        {
-            var items = new List<SectionProfile>();
-
-            foreach (var header in _connectionsManager.GetSectionProfileHeaders(tag))
-            {
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new SectionProfile(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Comment,
-                    content.ExchangePublicKey,
-                    content.TrustSignatures,
-                    content.Wikis,
-                    content.Chats));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<SectionMessage> GetSectionMessages(Section tag, IEnumerable<string> trustSignatures, ExchangePrivateKey exchangePrivateKey)
-        {
-            var hashset = new HashSet<string>(trustSignatures);
-            var items = new List<SectionMessage>();
-
-            foreach (var header in _connectionsManager.GetSectionMessageHeaders(tag))
-            {
-                if (!hashset.Contains(header.Certificate.ToString())) continue;
-
-                var content = this.Download(header, exchangePrivateKey);
-                if (content == null) continue;
-
-                items.Add(new SectionMessage(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Comment,
-                    content.Anchor));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<SectionMessage> GetSectionMessages(Section tag, ExchangePrivateKey exchangePrivateKey)
-        {
-            var items = new List<SectionMessage>();
-
-            foreach (var header in _connectionsManager.GetSectionMessageHeaders(tag))
-            {
-                var content = this.Download(header, exchangePrivateKey);
-                if (content == null) continue;
-
-                items.Add(new SectionMessage(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Comment,
-                    content.Anchor));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<WikiPage> GetWikiPages(Wiki tag, IEnumerable<string> trustSignatures)
-        {
-            var hashset = new HashSet<string>(trustSignatures);
-            var items = new List<WikiPage>();
-
-            foreach (var header in _connectionsManager.GetWikiPageHeaders(tag))
-            {
-                if (!hashset.Contains(header.Certificate.ToString())) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new WikiPage(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.FormatType,
-                    content.Hypertext));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<WikiPage> GetWikiPages(Wiki tag)
-        {
-            var items = new List<WikiPage>();
-
-            foreach (var header in _connectionsManager.GetWikiPageHeaders(tag))
-            {
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new WikiPage(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.FormatType,
-                    content.Hypertext));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<WikiVote> GetWikiVotes(Wiki tag, IEnumerable<string> trustSignatures)
-        {
-            var hashset = new HashSet<string>(trustSignatures);
-            var items = new List<WikiVote>();
-
-            foreach (var header in _connectionsManager.GetWikiVoteHeaders(tag))
-            {
-                if (!hashset.Contains(header.Certificate.ToString())) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new WikiVote(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Goods,
-                    content.Bads));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<WikiVote> GetWikiVotes(Wiki tag)
-        {
-            var items = new List<WikiVote>();
-
-            foreach (var header in _connectionsManager.GetWikiVoteHeaders(tag))
-            {
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new WikiVote(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Goods,
-                    content.Bads));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<ChatTopic> GetChatTopics(Chat tag, IEnumerable<string> trustSignatures)
-        {
-            var hashset = new HashSet<string>(trustSignatures);
-            var items = new List<ChatTopic>();
-
-            foreach (var header in _connectionsManager.GetChatTopicHeaders(tag))
-            {
-                if (!hashset.Contains(header.Certificate.ToString())) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new ChatTopic(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.FormatType,
-                    content.Hypertext));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<ChatTopic> GetChatTopics(Chat tag)
-        {
-            var items = new List<ChatTopic>();
-
-            foreach (var header in _connectionsManager.GetChatTopicHeaders(tag))
-            {
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new ChatTopic(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.FormatType,
-                    content.Hypertext));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<ChatMessage> GetChatMessages(Chat tag, IEnumerable<string> trustSignatures)
-        {
-            var hashset = new HashSet<string>(trustSignatures);
-            var items = new List<ChatMessage>();
-
-            foreach (var header in _connectionsManager.GetChatMessageHeaders(tag))
-            {
-                if (!hashset.Contains(header.Certificate.ToString())) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new ChatMessage(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Comment,
-                    content.Anchors));
-            }
-
-            return items;
-        }
-
-        public IEnumerable<ChatMessage> GetChatMessages(Chat tag)
-        {
-            var items = new List<ChatMessage>();
-
-            foreach (var header in _connectionsManager.GetChatMessageHeaders(tag))
-            {
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                items.Add(new ChatMessage(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Comment,
-                    content.Anchors));
-            }
-
-            return items;
-        }
-
-        public SectionProfile GetSectionProfile(Section tag, string targetSignatures)
-        {
-            foreach (var header in _connectionsManager.GetSectionProfileHeaders(tag))
-            {
-                if (header.Certificate.ToString() != targetSignatures) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                return new SectionProfile(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Comment,
-                    content.ExchangePublicKey,
-                    content.TrustSignatures,
-                    content.Wikis,
-                    content.Chats);
-            }
-
-            return null;
-        }
-
-        public WikiVote GetWikiVote(Wiki tag, string targetSignatures)
-        {
-            foreach (var header in _connectionsManager.GetWikiVoteHeaders(tag))
-            {
-                if (header.Certificate.ToString() != targetSignatures) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                return new WikiVote(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.Goods,
-                    content.Bads);
-            }
-
-            return null;
-        }
-
-        public ChatTopic GetChatTopic(Chat tag, string targetSignatures)
-        {
-            foreach (var header in _connectionsManager.GetChatTopicHeaders(tag))
-            {
-                if (header.Certificate.ToString() != targetSignatures) continue;
-
-                var content = this.Download(header);
-                if (content == null) continue;
-
-                return new ChatTopic(header.Tag,
-                    header.Certificate.ToString(),
-                    header.CreationTime,
-                    content.FormatType,
-                    content.Hypertext);
-            }
-
-            return null;
-        }
-
-        private SectionProfileContent Download(SectionProfileHeader header)
-        {
-            if (header == null) throw new ArgumentNullException("header");
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                var hash = header.GetHash(_hashAlgorithm);
+                if (this.State == ManagerState.Stop) return null;
 
                 DownloadItem item;
 
-                if (!_downloadItems.TryGetValue(hash, out item))
+                if (!_downloadItems.TryGetValue(header, out item))
                 {
                     item = new DownloadItem();
-                    item.Type = "SectionProfile";
-                    item.Key = header.Key;
+                    item.Keys.Add(header.Key);
+                    item.State = DownloadState.Downloading;
 
-                    _downloadItems.Add(hash, item);
-                }
-                else
-                {
-                    _downloadItems.Refresh(hash);
+                    _downloadItems[header] = item;
                 }
 
-                if (item.State == DownloadState.Completed)
-                {
-                    return item.SectionProfileContent;
-                }
-
-                return null;
-            }
-        }
-
-        private SectionMessageContent Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
-        {
-            if (header == null) throw new ArgumentNullException("header");
-            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
-
-            lock (this.ThisLock)
-            {
-                byte[] hash;
-
-                using (MemoryStream memoryStream = new MemoryStream())
-                {
-                    var buffer = header.GetHash(_hashAlgorithm);
-                    memoryStream.Write(buffer, 0, buffer.Length);
-
-                    using (var stream = exchangePrivateKey.Export(_bufferManager))
-                    {
-                        var buffer2 = Sha512.ComputeHash(stream);
-                        memoryStream.Write(buffer2, 0, buffer2.Length);
-                    }
-
-                    hash = memoryStream.ToArray();
-                }
-
-                DownloadItem item;
-
-                if (!_downloadItems.TryGetValue(hash, out item))
-                {
-                    item = new DownloadItem();
-                    item.Type = "SectionMessage";
-                    item.Key = header.Key;
-                    item.ExchangePrivateKey = exchangePrivateKey;
-
-                    _downloadItems.Add(hash, item);
-                }
-                else
-                {
-                    _downloadItems.Refresh(hash);
-                }
-
-                if (item.State == DownloadState.Completed)
-                {
-                    return item.SectionMessageContent;
-                }
-
-                return null;
-            }
-        }
-
-        private WikiPageContent Download(WikiPageHeader header)
-        {
-            if (header == null) throw new ArgumentNullException("header");
-
-            lock (this.ThisLock)
-            {
-                var hash = header.GetHash(_hashAlgorithm);
-
-                DownloadItem item;
-
-                if (!_downloadItems.TryGetValue(hash, out item))
-                {
-                    item = new DownloadItem();
-                    item.Type = "WikiDocument";
-                    item.Key = header.Key;
-
-                    _downloadItems.Add(hash, item);
-                }
-                else
-                {
-                    _downloadItems.Refresh(hash);
-                }
-
-                if (item.State == DownloadState.Completed)
-                {
-                    return item.WikiPageContent;
-                }
-
-                return null;
-            }
-        }
-
-        private WikiVoteContent Download(WikiVoteHeader header)
-        {
-            if (header == null) throw new ArgumentNullException("header");
-
-            lock (this.ThisLock)
-            {
-                var hash = header.GetHash(_hashAlgorithm);
-
-                DownloadItem item;
-
-                if (!_downloadItems.TryGetValue(hash, out item))
-                {
-                    item = new DownloadItem();
-                    item.Type = "WikiVote";
-                    item.Key = header.Key;
-
-                    _downloadItems.Add(hash, item);
-                }
-                else
-                {
-                    _downloadItems.Refresh(hash);
-                }
-
-                if (item.State == DownloadState.Completed)
-                {
-                    return item.WikiVoteContent;
-                }
-
-                return null;
-            }
-        }
-
-        private ChatTopicContent Download(ChatTopicHeader header)
-        {
-            if (header == null) throw new ArgumentNullException("header");
-
-            lock (this.ThisLock)
-            {
-                var hash = header.GetHash(_hashAlgorithm);
-
-                DownloadItem item;
-
-                if (!_downloadItems.TryGetValue(hash, out item))
-                {
-                    item = new DownloadItem();
-                    item.Type = "ChatTopic";
-                    item.Key = header.Key;
-
-                    _downloadItems.Add(hash, item);
-                }
-                else
-                {
-                    _downloadItems.Refresh(hash);
-                }
-
-                if (item.State == DownloadState.Completed)
-                {
-                    return item.ChatTopicContent;
-                }
-
-                return null;
-            }
-        }
-
-        private ChatMessageContent Download(ChatMessageHeader header)
-        {
-            if (header == null) throw new ArgumentNullException("header");
-
-            lock (this.ThisLock)
-            {
-                var hash = header.GetHash(_hashAlgorithm);
-
-                DownloadItem item;
-
-                if (!_downloadItems.TryGetValue(hash, out item))
-                {
-                    item = new DownloadItem();
-                    item.Type = "ChatMessage";
-                    item.Key = header.Key;
-
-                    _downloadItems.Add(hash, item);
-                }
-                else
-                {
-                    _downloadItems.Refresh(hash);
-                }
-
-                if (item.State == DownloadState.Completed)
-                {
-                    return item.ChatMessageContent;
-                }
-
-                return null;
+                return item.Stream;
             }
         }
 
@@ -647,10 +181,7 @@ namespace Library.Net.Outopos
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
+                return _state;
             }
         }
 

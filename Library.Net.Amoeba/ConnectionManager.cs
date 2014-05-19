@@ -967,19 +967,19 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Nodes
                 foreach (var value in this.Nodes)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Node, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Node, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public NodesMessage Clone()
@@ -1057,19 +1057,19 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Keys
                 foreach (var value in this.Keys)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlocksLinkMessage Clone()
@@ -1147,19 +1147,19 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Keys
                 foreach (var value in this.Keys)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlocksRequestMessage Clone()
@@ -1266,26 +1266,26 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Key
                 if (this.Key != null)
                 {
                     using (var stream = this.Key.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
                 // Value
                 if (this.Value.Array != null)
                 {
-                    tempStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
-                    tempStream.WriteByte((byte)SerializeId.Value);
-                    tempStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
+                    bufferStream.WriteByte((byte)SerializeId.Value);
+                    bufferStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public BlockMessage Clone()
@@ -1362,16 +1362,16 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Signatures
                 foreach (var value in this.Signatures)
                 {
-                    ItemUtilities.Write(tempStream, (byte)SerializeId.Signature, value);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, value);
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public SeedsRequestMessage Clone()
@@ -1449,19 +1449,19 @@ namespace Library.Net.Amoeba
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                TempStream tempStream = new TempStream();
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
                 // Seeds
                 foreach (var value in this.Seeds)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(tempStream, (byte)SerializeId.Seed, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Seed, stream);
                     }
                 }
 
-                tempStream.Seek(0, SeekOrigin.Begin);
-                return tempStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
             }
 
             public SeedsMessage Clone()

@@ -77,7 +77,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public override Stream Export(BufferManager bufferManager, int count)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 
@@ -145,7 +145,7 @@ namespace Library.Net.Outopos
             return true;
         }
 
-        public override void CreateCertificate(DigitalSignature digitalSignature)
+        protected override void CreateCertificate(DigitalSignature digitalSignature)
         {
             base.CreateCertificate(digitalSignature);
         }

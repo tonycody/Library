@@ -8,6 +8,6 @@ namespace Library.Net.Connections.SecureVersion3
     enum HashAlgorithm
     {
         [EnumMember(Value = "Sha512")]
-        Sha512 = 0x02,
+        Sha512 = 0x01,
     }
 }

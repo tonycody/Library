@@ -2418,13 +2418,13 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Header GetHeader(Tag tag)
+        public IEnumerable<Header> GetHeaders(Tag tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetHeader(tag);
+                return _settings.GetHeaders(tag);
             }
         }
 
@@ -2596,7 +2596,7 @@ namespace Library.Net.Outopos
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<Node>() { Name = "BaseNode", Value = new Node(new byte[0], null)},
                     new Library.Configuration.SettingContent<NodeCollection>() { Name = "OtherNodes", Value = new NodeCollection() },
-                    new Library.Configuration.SettingContent<int>() { Name = "ConnectionCountLimit", Value = 25 },
+                    new Library.Configuration.SettingContent<int>() { Name = "ConnectionCountLimit", Value = 32 },
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },

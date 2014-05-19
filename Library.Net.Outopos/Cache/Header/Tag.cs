@@ -36,6 +36,11 @@ namespace Library.Net.Outopos
             this.Id = id;
         }
 
+        protected override void Initialize()
+        {
+
+        }
+
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
             byte[] lengthBuffer = new byte[4];
@@ -64,7 +69,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public override Stream Export(BufferManager bufferManager, int count)
+        protected override Stream Export(BufferManager bufferManager, int count)
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 

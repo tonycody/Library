@@ -214,7 +214,7 @@ namespace Library.Net.Amoeba
                                         encodingProgressStream.Seek(0, SeekOrigin.Begin);
 
                                         item.State = BackgroundUploadState.Encoding;
-                                        keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                                        keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.BlockLength, item.HashAlgorithm);
                                     }
                                 }
                                 catch (StopIoException)
@@ -338,7 +338,7 @@ namespace Library.Net.Amoeba
                                 encodingProgressStream.Seek(0, SeekOrigin.Begin);
 
                                 item.State = BackgroundUploadState.Encoding;
-                                keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.HashAlgorithm, item.BlockLength);
+                                keys = _cacheManager.Encoding(encodingProgressStream, item.CompressionAlgorithm, item.CryptoAlgorithm, cryptoKey, item.BlockLength, item.HashAlgorithm);
                             }
                         }
                         catch (StopIoException)

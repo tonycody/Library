@@ -173,11 +173,11 @@ namespace Library.Net.Connections
                     }
                     else if (version == (byte)1)
                     {
-                        TempStream deflateTempStream = null;
+                        BufferStream deflateBufferStream = null;
 
                         try
                         {
-                            deflateTempStream = new TempStream();
+                            deflateBufferStream = new BufferStream(_bufferManager);
                             byte[] decompressBuffer = null;
 
                             try
@@ -190,9 +190,9 @@ namespace Library.Net.Connections
 
                                     while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
                                     {
-                                        deflateTempStream.Write(decompressBuffer, 0, i);
+                                        deflateBufferStream.Write(decompressBuffer, 0, i);
 
-                                        if (deflateTempStream.Length > _maxReceiveCount) throw new ConnectionException();
+                                        if (deflateBufferStream.Length > _maxReceiveCount) throw new ConnectionException();
                                     }
                                 }
                             }
@@ -203,7 +203,7 @@ namespace Library.Net.Connections
                         }
                         catch (Exception e)
                         {
-                            deflateTempStream.Dispose();
+                            deflateBufferStream.Dispose();
 
                             throw e;
                         }
@@ -211,14 +211,14 @@ namespace Library.Net.Connections
 #if DEBUG
                         Debug.WriteLine("Receive : {0}→{1} {2}",
                             NetworkConverter.ToSizeString(stream.Length),
-                            NetworkConverter.ToSizeString(deflateTempStream.Length),
-                            NetworkConverter.ToSizeString(stream.Length - deflateTempStream.Length));
+                            NetworkConverter.ToSizeString(deflateBufferStream.Length),
+                            NetworkConverter.ToSizeString(stream.Length - deflateBufferStream.Length));
 #endif
 
-                        deflateTempStream.Seek(0, SeekOrigin.Begin);
+                        deflateBufferStream.Seek(0, SeekOrigin.Begin);
                         dataStream.Dispose();
 
-                        return deflateTempStream;
+                        return deflateBufferStream;
                     }
                     else
                     {
@@ -262,24 +262,24 @@ namespace Library.Net.Connections
                 {
                     try
                     {
-                        List<KeyValuePair<int, Stream>> list = new List<KeyValuePair<int, Stream>>();
+                        List<KeyValuePair<byte, Stream>> list = new List<KeyValuePair<byte, Stream>>();
 
                         if (isCompress)
                         {
                             if (_otherCompressAlgorithm.HasFlag(CompressAlgorithm.Deflate))
                             {
-                                TempStream deflateTempStream = null;
+                                BufferStream deflateBufferStream = null;
 
                                 try
                                 {
-                                    deflateTempStream = new TempStream();
+                                    deflateBufferStream = new BufferStream(_bufferManager);
                                     byte[] compressBuffer = null;
 
                                     try
                                     {
                                         compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
-                                        using (DeflateStream deflateStream = new DeflateStream(deflateTempStream, CompressionMode.Compress, true))
+                                        using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                                         {
                                             int i = -1;
 
@@ -294,31 +294,27 @@ namespace Library.Net.Connections
                                         _bufferManager.ReturnBuffer(compressBuffer);
                                     }
 
-                                    deflateTempStream.Seek(0, SeekOrigin.Begin);
+                                    deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
-                                    if (deflateTempStream.Length < targetStream.Length)
-                                    {
-                                        list.Add(new KeyValuePair<int, Stream>(1, deflateTempStream));
-                                    }
-                                    else
-                                    {
-                                        deflateTempStream.Dispose();
-                                    }
+                                    list.Add(new KeyValuePair<byte, Stream>((byte)1, deflateBufferStream));
                                 }
                                 catch (Exception e)
                                 {
-                                    deflateTempStream.Dispose();
+                                    deflateBufferStream.Dispose();
 
                                     throw e;
                                 }
                             }
                         }
 
-                        list.Add(new KeyValuePair<int, Stream>(0, new WrapperStream(targetStream, true)));
+                        list.Add(new KeyValuePair<byte, Stream>((byte)0, new WrapperStream(targetStream, true)));
 
                         list.Sort((x, y) =>
                         {
-                            return x.Value.Length.CompareTo(y.Value.Length);
+                            int c = x.Value.Length.CompareTo(y.Value.Length);
+                            if (c != 0) return c;
+
+                            return x.Key.CompareTo(y.Key);
                         });
 
 #if DEBUG

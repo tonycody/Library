@@ -14,6 +14,11 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
+    enum CompressionAlgorithm : byte
+    {
+        Xz = 0,
+    }
+
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
 
     class CacheManager : ManagerBase, Library.Configuration.ISettings, ISetOperators<Key>, IEnumerable<Key>, IThisLock
@@ -409,6 +414,75 @@ namespace Library.Net.Outopos
                 }
 
                 getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+            }
+        }
+
+        public KeyCollection Encoding(Stream inStream, int blockLength, HashAlgorithm hashAlgorithm)
+        {
+            if (inStream == null) throw new ArgumentNullException("inStream");
+
+            var keys = new KeyCollection();
+
+            try
+            {
+                using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                {
+                    // Version
+                    outStream.Write(NetworkConverter.GetBytes(0), 0, 4);
+
+                    // CompressionAlgorithm
+                    outStream.WriteByte((byte)CompressionAlgorithm.Xz);
+
+                    // Content
+                    Xz.Compress(inStream, outStream, _bufferManager);
+                }
+            }
+            catch (Exception)
+            {
+                foreach (var key in keys)
+                {
+                    this.Unlock(key);
+                }
+
+                throw;
+            }
+
+            return keys;
+        }
+
+        public void Decoding(Stream outStream, KeyCollection keys)
+        {
+            if (outStream == null) throw new ArgumentNullException("outStream");
+
+            using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+            {
+                int version;
+                {
+                    byte[] versionBuffer = new byte[4];
+                    if (inStream.Read(versionBuffer, 0, versionBuffer.Length) != versionBuffer.Length) return;
+                    version = NetworkConverter.ToInt32(versionBuffer);
+                }
+
+                if (version == 0)
+                {
+                    CompressionAlgorithm compressionAlgorithm;
+                    {
+                        compressionAlgorithm = (CompressionAlgorithm)((byte)inStream.ReadByte());
+                    }
+
+                    if (compressionAlgorithm == CompressionAlgorithm.Xz)
+                    {
+                        Xz.Decompress(inStream, outStream, _bufferManager);
+                    }
+                    else
+                    {
+                        throw new NotSupportedException();
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException();
+                }
             }
         }
 
