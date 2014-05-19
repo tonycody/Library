@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    public sealed class ConnectionFilterCollection : FilterList<ConnectionFilter>, IEnumerable<ConnectionFilter>
+    public sealed class ConnectionFilterCollection : LockedList<ConnectionFilter>
     {
         public ConnectionFilterCollection() : base() { }
         public ConnectionFilterCollection(int capacity) : base(capacity) { }

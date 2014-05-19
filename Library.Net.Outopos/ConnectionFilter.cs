@@ -36,8 +36,8 @@ namespace Library.Net.Outopos
         private string _proxyUri;
         private string _option;
 
-        private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
+        private volatile object _thisLock;
 
         public static bool operator ==(ConnectionFilter x, ConnectionFilter y)
         {
@@ -223,8 +223,8 @@ namespace Library.Net.Outopos
         private string _value;
         private Regex _regex;
 
-        private volatile object _thisLock;
         private static readonly object _initializeLock = new object();
+        private volatile object _thisLock;
 
         public static bool operator ==(UriCondition x, UriCondition y)
         {

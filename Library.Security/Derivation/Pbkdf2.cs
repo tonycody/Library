@@ -49,7 +49,6 @@ namespace Library.Security
             this.IterationCount = iterations;
 
             _blockSize = this.Algorithm.HashSize / 8;
-            _bufferBytes = new byte[_blockSize];
         }
 
         /// <summary>
@@ -83,13 +82,13 @@ namespace Library.Security
             { //if there is some data in buffer
                 if (count < bufferCount)
                 { //if there is enough data in buffer
-                    Buffer.BlockCopy(_bufferBytes, _bufferStartIndex, result, 0, count);
+                    Unsafe.Copy(_bufferBytes, _bufferStartIndex, result, 0, count);
                     _bufferStartIndex += count;
 
                     return result;
                 }
 
-                Buffer.BlockCopy(_bufferBytes, _bufferStartIndex, result, 0, bufferCount);
+                Unsafe.Copy(_bufferBytes, _bufferStartIndex, result, 0, bufferCount);
                 _bufferStartIndex = _bufferEndIndex = 0;
                 resultOffset += bufferCount;
             }
@@ -97,16 +96,16 @@ namespace Library.Security
             while (resultOffset < count)
             {
                 int needCount = count - resultOffset;
-                _bufferBytes = this.Func();
+                _bufferBytes = this.Function();
 
                 if (needCount > _blockSize)
                 { //we one (or more) additional passes
-                    Buffer.BlockCopy(_bufferBytes, 0, result, resultOffset, _blockSize);
+                    Unsafe.Copy(_bufferBytes, 0, result, resultOffset, _blockSize);
                     resultOffset += _blockSize;
                 }
                 else
                 {
-                    Buffer.BlockCopy(_bufferBytes, 0, result, resultOffset, needCount);
+                    Unsafe.Copy(_bufferBytes, 0, result, resultOffset, needCount);
                     _bufferStartIndex = needCount;
                     _bufferEndIndex = _blockSize;
 
@@ -116,7 +115,7 @@ namespace Library.Security
             return result;
         }
 
-        private byte[] Func()
+        private byte[] Function()
         {
             if (_blockIndex == uint.MaxValue) { throw new InvalidOperationException("Derived key too long."); }
 
@@ -137,44 +136,8 @@ namespace Library.Security
             for (int i = 2; i <= this.IterationCount; i++)
             {
                 currentHash = this.Algorithm.ComputeHash(currentHash, 0, currentHash.Length);
-
-                {
-                    //for (int j = 0; j < this.BlockSize; j++)
-                    //{
-                    //    finalHash[j] = (byte)(finalHash[j] ^ hash1[j]);
-                    //}
-                }
-
-                {
-                    int length = _blockSize;
-
-                    fixed (byte* p_x = finalHash, p_y = currentHash)
-                    {
-                        byte* t_x = p_x, t_y = p_y;
-
-                        for (int j = (length / 8) - 1; j >= 0; j--, t_x += 8, t_y += 8)
-                        {
-                            *((long*)t_x) ^= *((long*)t_y);
-                        }
-
-                        if ((length & 4) != 0)
-                        {
-                            *((int*)t_x) ^= *((int*)t_y);
-                            t_x += 4; t_y += 4;
-                        }
-
-                        if ((length & 2) != 0)
-                        {
-                            *((short*)t_x) ^= *((short*)t_y);
-                            t_x += 2; t_y += 2; ;
-                        }
-
-                        if ((length & 1) != 0)
-                        {
-                            *((byte*)t_x) ^= *((byte*)t_y);
-                        }
-                    }
-                }
+                
+                Unsafe.Xor(finalHash, currentHash, finalHash);
             }
 
             return finalHash;

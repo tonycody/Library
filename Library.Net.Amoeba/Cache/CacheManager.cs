@@ -259,7 +259,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void CheckSeeds()
+        private void CheckSeeds()
         {
             lock (this.ThisLock)
             {
@@ -573,6 +573,8 @@ namespace Library.Net.Amoeba
 
                 _spaceSectors.Clear();
                 _spaceSectorsInitialized = false;
+
+                this.CheckSeeds();
             }
         }
 

@@ -372,7 +372,7 @@ namespace Library.Net.Connections
                             if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
                             {
                                 hmac = new HMACSHA512();
-                                hmac.HashName = "System.Security.Cryptography.SHA512";
+                                hmac.HashName = "SHA512";
                             }
                             else
                             {

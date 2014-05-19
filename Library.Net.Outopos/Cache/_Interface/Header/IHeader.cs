@@ -2,7 +2,7 @@ using System;
 
 namespace Library.Net.Outopos
 {
-    interface IHeader<TTag, TKey>
+    public interface IHeader<TTag, TKey> : IComputeHash
         where TTag : ITag
         where TKey : IKey
     {

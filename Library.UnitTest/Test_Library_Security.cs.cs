@@ -20,7 +20,7 @@ namespace Library.UnitTest
             {
                 var signature = Signature.GetSignature(new DigitalSignature("123", a));
 
-                Assert.IsTrue(Signature.HasSignature(signature));
+                Assert.IsTrue(Signature.IsSignature(signature));
                 Assert.AreEqual(Signature.GetSignatureNickname(signature), "123");
                 Assert.IsTrue(Signature.GetSignatureHash(signature).Length == 64);
             }
@@ -35,7 +35,7 @@ namespace Library.UnitTest
                     signature = Signature.GetSignature(DigitalSignature.CreateCertificate(new DigitalSignature("123", a), stream));
                 }
 
-                Assert.IsTrue(Signature.HasSignature(signature));
+                Assert.IsTrue(Signature.IsSignature(signature));
                 Assert.AreEqual(Signature.GetSignatureNickname(signature), "123");
                 Assert.IsTrue(Signature.GetSignatureHash(signature).Length == 64);
             }
@@ -91,8 +91,8 @@ namespace Library.UnitTest
                 Assert.IsTrue(CollectionUtilities.Equals(pbkdf2.GetBytes(1024), rfc2898DeriveBytes.GetBytes(1024)), "Pbkdf2 #1");
             }
 
-            _random.NextBytes(password);
-            _random.NextBytes(salt);
+            //_random.NextBytes(password);
+            //_random.NextBytes(salt);
 
             //using (var hmac = new System.Security.Cryptography.HMACSHA512())
             //{

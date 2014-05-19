@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    sealed class KeyCollection : LockedList<Key>
+    public sealed class KeyCollection : LockedList<Key>
     {
         public KeyCollection() : base() { }
         public KeyCollection(int capacity) : base(capacity) { }

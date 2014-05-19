@@ -397,17 +397,20 @@ namespace Library.Net.Amoeba
 
         private static bool Check(Node node)
         {
-            return !(node == null || node.Id == null || node.Id.Length == 0);
+            return !(node == null
+                || node.Id == null || node.Id.Length == 0);
         }
 
         private static bool Check(Key key)
         {
-            return !(key == null || key.Hash == null || key.Hash.Length == 0 || key.HashAlgorithm != HashAlgorithm.Sha512);
+            return !(key == null
+                || key.Hash == null || key.Hash.Length == 0
+                || key.HashAlgorithm != HashAlgorithm.Sha512);
         }
 
         private static bool Check(string signature)
         {
-            return !(signature == null || !Signature.HasSignature(signature));
+            return !(signature == null || !Signature.IsSignature(signature));
         }
 
         private void UpdateSessionId()
@@ -816,7 +819,6 @@ namespace Library.Net.Amoeba
             Stopwatch connectionCheckStopwatch = new Stopwatch();
             connectionCheckStopwatch.Start();
 
-            Stopwatch checkSeedsStopwatch = new Stopwatch();
             Stopwatch refreshStopwatch = new Stopwatch();
 
             Stopwatch pushBlockDiffusionStopwatch = new Stopwatch();
@@ -830,6 +832,37 @@ namespace Library.Net.Amoeba
             pushSeedUploadStopwatch.Start();
             Stopwatch pushSeedDownloadStopwatch = new Stopwatch();
             pushSeedDownloadStopwatch.Start();
+
+            // 電子署名を検証して破損しているSeedを検索し、削除。
+            {
+                var removeSignatures = new SortedSet<string>();
+
+                {
+                    var signatures = _settings.GetSignatures().ToArray();
+
+                    // Link
+                    _random.Shuffle(signatures);
+                    foreach (var signature in signatures)
+                    {
+                        Seed tempSeed = _settings.GetLinkSeed(signature);
+                        if (tempSeed == null) continue;
+
+                        if (!tempSeed.VerifyCertificate()) removeSignatures.Add(signature);
+                    }
+
+                    // Store
+                    _random.Shuffle(signatures);
+                    foreach (var signature in signatures)
+                    {
+                        Seed tempSeed = _settings.GetStoreSeed(signature);
+                        if (tempSeed == null) continue;
+
+                        if (!tempSeed.VerifyCertificate()) removeSignatures.Add(signature);
+                    }
+                }
+
+                _settings.RemoveSignatures(removeSignatures);
+            }
 
             for (; ; )
             {
@@ -867,7 +900,7 @@ namespace Library.Net.Amoeba
                     {
                         int c = x.Priority.CompareTo(y.Priority);
                         if (c != 0) return c;
-                        
+
                         return x.LastPullTime.CompareTo(y.LastPullTime);
                     });
 
@@ -901,45 +934,6 @@ namespace Library.Net.Amoeba
 
                             this.RemoveConnectionManager(connectionManager);
                         }
-                    }
-                }
-
-                if (!checkSeedsStopwatch.IsRunning || checkSeedsStopwatch.Elapsed.TotalHours >= 3)
-                {
-                    checkSeedsStopwatch.Restart();
-
-                    // キャッシュ済みSeedをデコードするのに必要なブロックが揃っているか確認。
-                    _cacheManager.CheckSeeds();
-
-                    // 電子署名を検証して破損しているSeedを検索し、削除。
-                    {
-                        var removeSignatures = new SortedSet<string>();
-
-                        {
-                            var signatures = _settings.GetSignatures().ToArray();
-
-                            // Link
-                            _random.Shuffle(signatures);
-                            foreach (var signature in signatures)
-                            {
-                                Seed tempSeed = _settings.GetLinkSeed(signature);
-                                if (tempSeed == null) continue;
-
-                                if (!tempSeed.VerifyCertificate()) removeSignatures.Add(signature);
-                            }
-
-                            // Store
-                            _random.Shuffle(signatures);
-                            foreach (var signature in signatures)
-                            {
-                                Seed tempSeed = _settings.GetStoreSeed(signature);
-                                if (tempSeed == null) continue;
-
-                                if (!tempSeed.VerifyCertificate()) removeSignatures.Add(signature);
-                            }
-                        }
-
-                        _settings.RemoveSignatures(removeSignatures);
                     }
                 }
 
@@ -1746,7 +1740,7 @@ namespace Library.Net.Amoeba
                     {
                         checkTime.Restart();
 
-                        if ((DateTime.UtcNow - messageManager.LastPullTime).TotalMinutes >= 10)
+                        if ((DateTime.UtcNow - messageManager.LastPullTime).TotalMinutes >= 30)
                         {
                             lock (this.ThisLock)
                             {
@@ -2052,7 +2046,7 @@ namespace Library.Net.Amoeba
                     {
                         seedUpdateTime.Restart();
 
-                        // PushSeed
+                        // PushSeeds
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
                         {
                             var signatures = messageManager.PullSeedsRequest.ToArray();
@@ -2363,9 +2357,7 @@ namespace Library.Net.Amoeba
         public void SetBaseNode(Node baseNode)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (baseNode == null) throw new ArgumentNullException("baseNode");
-            if (baseNode.Id == null) throw new ArgumentNullException("baseNode.Id");
-            if (baseNode.Id.Length == 0) throw new ArgumentException("baseNode.Id.Length");
+            if (ConnectionsManager.Check(baseNode)) throw new ArgumentException("baseNode");
 
             lock (this.ThisLock)
             {
@@ -2636,8 +2628,8 @@ namespace Library.Net.Amoeba
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingContent<LockedHashDictionary<string, Seed>>() { Name = "LinkSeeds", Value = new LockedHashDictionary<string, Seed>() },
-                    new Library.Configuration.SettingContent<LockedHashDictionary<string, Seed>>() { Name = "StoreSeeds", Value = new LockedHashDictionary<string, Seed>() },
+                    new Library.Configuration.SettingContent<Dictionary<string, Seed>>() { Name = "LinkSeeds", Value = new Dictionary<string, Seed>() },
+                    new Library.Configuration.SettingContent<Dictionary<string, Seed>>() { Name = "StoreSeeds", Value = new Dictionary<string, Seed>() },
                 })
             {
                 _thisLock = lockObject;
@@ -2687,8 +2679,6 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisLock)
                 {
-                    if (!Signature.HasSignature(signature)) return null;
-
                     Seed seed;
 
                     if (this.LinkSeeds.TryGetValue(signature, out seed))
@@ -2704,8 +2694,6 @@ namespace Library.Net.Amoeba
             {
                 lock (_thisLock)
                 {
-                    if (!Signature.HasSignature(signature)) return null;
-
                     Seed seed;
 
                     if (this.StoreSeeds.TryGetValue(signature, out seed))
@@ -2721,9 +2709,13 @@ namespace Library.Net.Amoeba
             {
                 var now = DateTime.UtcNow;
 
-                if (seed == null || seed.Name != null || seed.Comment != null
+                if (seed == null
+                    || seed.Name != null
+                    || seed.Comment != null
                     || seed.Keywords.Count != 1 || seed.Keywords[0] != ConnectionsManager.Keyword_Link
                     || (seed.CreationTime - now).Minutes > 30) return false;
+
+                if (seed.Certificate == null) throw new CertificateException();
 
                 var signature = seed.Certificate.ToString();
 
@@ -2735,7 +2727,7 @@ namespace Library.Net.Amoeba
                     if (!this.LinkSeeds.TryGetValue(signature, out tempSeed)
                         || seed.CreationTime > tempSeed.CreationTime)
                     {
-                        if (seed.Certificate == null || !seed.VerifyCertificate()) throw new CertificateException();
+                        if (!seed.VerifyCertificate()) throw new CertificateException();
 
                         this.LinkSeeds[signature] = seed;
                     }
@@ -2748,9 +2740,13 @@ namespace Library.Net.Amoeba
             {
                 var now = DateTime.UtcNow;
 
-                if (seed == null || seed.Name != null || seed.Comment != null
+                if (seed == null
+                    || seed.Name != null
+                    || seed.Comment != null
                     || seed.Keywords.Count != 1 || seed.Keywords[0] != ConnectionsManager.Keyword_Store
                     || (seed.CreationTime - now).Minutes > 30) return false;
+
+                if (seed.Certificate == null) throw new CertificateException();
 
                 var signature = seed.Certificate.ToString();
 
@@ -2762,7 +2758,7 @@ namespace Library.Net.Amoeba
                     if (!this.StoreSeeds.TryGetValue(signature, out tempSeed)
                         || seed.CreationTime > tempSeed.CreationTime)
                     {
-                        if (seed.Certificate == null || !seed.VerifyCertificate()) throw new CertificateException();
+                        if (!seed.VerifyCertificate()) throw new CertificateException();
 
                         this.StoreSeeds[signature] = seed;
                     }
@@ -2858,19 +2854,19 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            private LockedHashDictionary<string, Seed> LinkSeeds
+            private Dictionary<string, Seed> LinkSeeds
             {
                 get
                 {
-                    return (LockedHashDictionary<string, Seed>)this["LinkSeeds"];
+                    return (Dictionary<string, Seed>)this["LinkSeeds"];
                 }
             }
 
-            private LockedHashDictionary<string, Seed> StoreSeeds
+            private Dictionary<string, Seed> StoreSeeds
             {
                 get
                 {
-                    return (LockedHashDictionary<string, Seed>)this["StoreSeeds"];
+                    return (Dictionary<string, Seed>)this["StoreSeeds"];
                 }
             }
         }

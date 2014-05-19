@@ -11,7 +11,7 @@ namespace Library.Security
 
         protected override bool Filter(string item)
         {
-            if (item == null || !Signature.HasSignature(item)) return true;
+            if (item == null || !Signature.IsSignature(item)) return true;
 
             return false;
         }

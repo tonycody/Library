@@ -118,7 +118,7 @@ namespace Library.Security
             }
         }
 
-        public static bool HasSignature(string item)
+        public static bool IsSignature(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
 

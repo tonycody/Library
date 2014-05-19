@@ -10,7 +10,7 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "Header", Namespace = "http://Library/Net/Outopos")]
-    sealed class Header : ImmutableCertificateItemBase<Header>, IHeader<Tag, Key>
+    public sealed class Header : ImmutableCertificateItemBase<Header>, IHeader<Tag, Key>
     {
         private enum SerializeId : byte
         {
@@ -242,6 +242,35 @@ namespace Library.Net.Outopos
             {
                 _key = value;
             }
+        }
+
+        #endregion
+
+        #region IComputeHash
+
+        private volatile byte[] _sha512_hash;
+
+        public byte[] GetHash(HashAlgorithm hashAlgorithm)
+        {
+            if (_sha512_hash == null)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    _sha512_hash = Sha512.ComputeHash(stream);
+                }
+            }
+
+            if (hashAlgorithm == HashAlgorithm.Sha512)
+            {
+                return _sha512_hash;
+            }
+
+            return null;
+        }
+
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        {
+            return Unsafe.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion

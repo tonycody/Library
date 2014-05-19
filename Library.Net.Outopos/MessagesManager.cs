@@ -8,95 +8,78 @@ namespace Library.Net.Outopos
 {
     delegate IEnumerable<Node> GetLockNodesEventHandler(object sender);
 
-    sealed class MessagesManager : IThisLock
+    sealed class MessagesManager : ManagerBase, IThisLock
     {
         private Dictionary<Node, MessageManager> _messageManagerDictionary = new Dictionary<Node, MessageManager>();
         private Dictionary<Node, DateTime> _updateTimeDictionary = new Dictionary<Node, DateTime>();
         private int _id;
-        private DateTime _lastCircularTime = DateTime.UtcNow;
+
+        private WatchTimer _refreshTimer;
+        private volatile bool _checkedFlag = false;
+
         private readonly object _thisLock = new object();
+        private volatile bool _disposed;
 
         public GetLockNodesEventHandler GetLockNodesEvent;
 
-        private void Circular()
+        public MessagesManager()
+        {
+            _refreshTimer = new WatchTimer(this.RefreshTimer, new TimeSpan(0, 0, 30));
+        }
+
+        private void RefreshTimer()
         {
             lock (this.ThisLock)
             {
-                bool flag = false;
-                var now = DateTime.UtcNow;
-
-                if ((now - _lastCircularTime) > new TimeSpan(0, 1, 0))
+                foreach (var messageManager in _messageManagerDictionary.Values.ToArray())
                 {
-                    if (_messageManagerDictionary.Count > 128)
-                    {
-                        flag = true;
-                    }
+                    messageManager.StockBlocks.TrimExcess();
+                    messageManager.StockHeaders.TrimExcess();
 
-                    foreach (var node in _messageManagerDictionary.Keys.ToArray())
-                    {
-                        var messageManager = _messageManagerDictionary[node];
+                    messageManager.PushBlocksLink.TrimExcess();
+                    messageManager.PullBlocksLink.TrimExcess();
 
-                        messageManager.StockBlocks.TrimExcess();
-                        messageManager.StockSectionProfileHeaders.TrimExcess();
-                        messageManager.StockSectionMessageHeaders.TrimExcess();
-                        messageManager.StockWikiPageHeaders.TrimExcess();
-                        messageManager.StockWikiVoteHeaders.TrimExcess();
-                        messageManager.StockChatTopicHeaders.TrimExcess();
-                        messageManager.StockChatMessageHeaders.TrimExcess();
+                    messageManager.PushBlocksRequest.TrimExcess();
+                    messageManager.PullBlocksRequest.TrimExcess();
 
-                        messageManager.PushBlocksLink.TrimExcess();
-                        messageManager.PullBlocksLink.TrimExcess();
-
-                        messageManager.PushBlocksRequest.TrimExcess();
-                        messageManager.PullBlocksRequest.TrimExcess();
-
-                        messageManager.PushSectionsRequest.TrimExcess();
-                        messageManager.PullSectionsRequest.TrimExcess();
-
-                        messageManager.PushWikisRequest.TrimExcess();
-                        messageManager.PullWikisRequest.TrimExcess();
-
-                        messageManager.PushChatsRequest.TrimExcess();
-                        messageManager.PullChatsRequest.TrimExcess();
-                    }
-
-                    _lastCircularTime = now;
+                    messageManager.PushHeadersRequest.TrimExcess();
+                    messageManager.PullHeadersRequest.TrimExcess();
                 }
 
-                if (flag)
+                if (_messageManagerDictionary.Count > 128)
                 {
+                    if (_checkedFlag) return;
+                    _checkedFlag = true;
+
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
-                        List<Node> lockedNodes = new List<Node>();
+                        var lockedNodes = new HashSet<Node>();
 
                         if (this.GetLockNodesEvent != null)
                         {
-                            lockedNodes.AddRange(this.GetLockNodesEvent(this));
+                            lockedNodes.UnionWith(this.GetLockNodesEvent(this));
                         }
 
                         lock (this.ThisLock)
                         {
                             if (_messageManagerDictionary.Count > 128)
                             {
-                                var nodes = _messageManagerDictionary.Keys.ToList();
+                                var pairs = _updateTimeDictionary.Where(n => !lockedNodes.Contains(n.Key)).ToList();
 
-                                foreach (var node in lockedNodes)
+                                pairs.Sort((x, y) =>
                                 {
-                                    nodes.Remove(node);
-                                }
-
-                                nodes.Sort((x, y) =>
-                                {
-                                    return _updateTimeDictionary[x].CompareTo(_updateTimeDictionary[y]);
+                                    return x.Value.CompareTo(y.Value);
                                 });
 
-                                foreach (var node in nodes.Take(_messageManagerDictionary.Count - 128))
+                                foreach (var node in pairs.Select(n => n.Key).Take(_messageManagerDictionary.Count - 128))
                                 {
                                     _messageManagerDictionary.Remove(node);
                                     _updateTimeDictionary.Remove(node);
                                 }
                             }
                         }
+
+                        _checkedFlag = false;
                     });
                 }
             }
@@ -108,8 +91,6 @@ namespace Library.Net.Outopos
             {
                 lock (this.ThisLock)
                 {
-                    this.Circular();
-
                     MessageManager messageManager = null;
 
                     if (!_messageManagerDictionary.TryGetValue(node, out messageManager))
@@ -145,6 +126,29 @@ namespace Library.Net.Outopos
             }
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
+            {
+                if (_refreshTimer != null)
+                {
+                    try
+                    {
+                        _refreshTimer.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _refreshTimer = null;
+                }
+            }
+        }
+
         #region IThisLock
 
         public object ThisLock
@@ -162,35 +166,24 @@ namespace Library.Net.Outopos
     {
         private int _id;
         private byte[] _sessionId;
-        private int _priority;
+        private readonly SafeInteger _priority;
 
-        private long _receivedByteCount;
-        private long _sentByteCount;
+        private readonly SafeInteger _receivedByteCount;
+        private readonly SafeInteger _sentByteCount;
 
         private DateTime _lastPullTime = DateTime.UtcNow;
 
-        private VolatileCollection<Key> _stockBlocks;
-        private VolatileCollection<byte[]> _stockSectionProfileHeaders;
-        private VolatileCollection<byte[]> _stockSectionMessageHeaders;
-        private VolatileCollection<byte[]> _stockWikiPageHeaders;
-        private VolatileCollection<byte[]> _stockWikiVoteHeaders;
-        private VolatileCollection<byte[]> _stockChatTopicHeaders;
-        private VolatileCollection<byte[]> _stockChatMessageHeaders;
+        private VolatileHashSet<Key> _stockBlocks;
+        private VolatileHashSet<byte[]> _stockHeaders;
 
-        private VolatileCollection<Key> _pushBlocksLink;
-        private VolatileCollection<Key> _pullBlocksLink;
+        private VolatileHashSet<Key> _pushBlocksLink;
+        private VolatileHashSet<Key> _pullBlocksLink;
 
-        private VolatileCollection<Key> _pushBlocksRequest;
-        private VolatileCollection<Key> _pullBlocksRequest;
+        private VolatileHashSet<Key> _pushBlocksRequest;
+        private VolatileHashSet<Key> _pullBlocksRequest;
 
-        private VolatileCollection<Section> _pushSectionsRequest;
-        private VolatileCollection<Section> _pullSectionsRequest;
-
-        private VolatileCollection<Wiki> _pushWikisRequest;
-        private VolatileCollection<Wiki> _pullWikisRequest;
-
-        private VolatileCollection<Chat> _pushChatsRequest;
-        private VolatileCollection<Chat> _pullChatsRequest;
+        private VolatileHashSet<Tag> _pushHeadersRequest;
+        private VolatileHashSet<Tag> _pullHeadersRequest;
 
         private readonly object _thisLock = new object();
 
@@ -198,28 +191,22 @@ namespace Library.Net.Outopos
         {
             _id = id;
 
-            _stockBlocks = new VolatileCollection<Key>(new TimeSpan(1, 0, 0, 0));
-            _stockSectionProfileHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockSectionMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockWikiPageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockWikiVoteHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockChatTopicHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockChatMessageHeaders = new VolatileCollection<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _priority = new SafeInteger();
 
-            _pushBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
-            _pullBlocksLink = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _receivedByteCount = new SafeInteger();
+            _sentByteCount = new SafeInteger();
 
-            _pushBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
-            _pullBlocksRequest = new VolatileCollection<Key>(new TimeSpan(0, 30, 0));
+            _stockBlocks = new VolatileHashSet<Key>(new TimeSpan(1, 0, 0, 0));
+            _stockHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayEqualityComparer());
 
-            _pushSectionsRequest = new VolatileCollection<Section>(new TimeSpan(0, 30, 0));
-            _pullSectionsRequest = new VolatileCollection<Section>(new TimeSpan(0, 30, 0));
+            _pushBlocksLink = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
+            _pullBlocksLink = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
 
-            _pushWikisRequest = new VolatileCollection<Wiki>(new TimeSpan(0, 30, 0));
-            _pullWikisRequest = new VolatileCollection<Wiki>(new TimeSpan(0, 30, 0));
+            _pushBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
+            _pullBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
 
-            _pushChatsRequest = new VolatileCollection<Chat>(new TimeSpan(0, 30, 0));
-            _pullChatsRequest = new VolatileCollection<Chat>(new TimeSpan(0, 30, 0));
+            _pushHeadersRequest = new VolatileHashSet<Tag>(new TimeSpan(0, 30, 0));
+            _pullHeadersRequest = new VolatileHashSet<Tag>(new TimeSpan(0, 30, 0));
         }
 
         public int Id
@@ -251,57 +238,27 @@ namespace Library.Net.Outopos
             }
         }
 
-        public int Priority
+        public SafeInteger Priority
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _priority;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _priority = value;
-                }
+                return _priority;
             }
         }
 
-        public long ReceivedByteCount
+        public SafeInteger ReceivedByteCount
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _receivedByteCount;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _receivedByteCount = value;
-                }
+                return _receivedByteCount;
             }
         }
 
-        public long SentByteCount
+        public SafeInteger SentByteCount
         {
             get
             {
-                lock (this.ThisLock)
-                {
-                    return _sentByteCount;
-                }
-            }
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _sentByteCount = value;
-                }
+                return _sentByteCount;
             }
         }
 
@@ -323,7 +280,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileCollection<Key> StockBlocks
+        public VolatileHashSet<Key> StockBlocks
         {
             get
             {
@@ -334,73 +291,18 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileCollection<byte[]> StockSectionProfileHeaders
+        public VolatileHashSet<byte[]> StockHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _stockSectionProfileHeaders;
+                    return _stockHeaders;
                 }
             }
         }
 
-        public VolatileCollection<byte[]> StockSectionMessageHeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _stockSectionMessageHeaders;
-                }
-            }
-        }
-
-        public VolatileCollection<byte[]> StockWikiPageHeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _stockWikiPageHeaders;
-                }
-            }
-        }
-
-        public VolatileCollection<byte[]> StockWikiVoteHeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _stockWikiVoteHeaders;
-                }
-            }
-        }
-
-        public VolatileCollection<byte[]> StockChatTopicHeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _stockChatTopicHeaders;
-                }
-            }
-        }
-
-        public VolatileCollection<byte[]> StockChatMessageHeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _stockChatMessageHeaders;
-                }
-            }
-        }
-
-        public VolatileCollection<Key> PushBlocksLink
+        public VolatileHashSet<Key> PushBlocksLink
         {
             get
             {
@@ -411,7 +313,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileCollection<Key> PullBlocksLink
+        public VolatileHashSet<Key> PullBlocksLink
         {
             get
             {
@@ -422,7 +324,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileCollection<Key> PushBlocksRequest
+        public VolatileHashSet<Key> PushBlocksRequest
         {
             get
             {
@@ -433,7 +335,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileCollection<Key> PullBlocksRequest
+        public VolatileHashSet<Key> PullBlocksRequest
         {
             get
             {
@@ -444,68 +346,24 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileCollection<Section> PushSectionsRequest
+        public VolatileHashSet<Tag> PushHeadersRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSectionsRequest;
+                    return _pushHeadersRequest;
                 }
             }
         }
 
-        public VolatileCollection<Section> PullSectionsRequest
+        public VolatileHashSet<Tag> PullHeadersRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullSectionsRequest;
-                }
-            }
-        }
-
-        public VolatileCollection<Wiki> PushWikisRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushWikisRequest;
-                }
-            }
-        }
-
-        public VolatileCollection<Wiki> PullWikisRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullWikisRequest;
-                }
-            }
-        }
-
-        public VolatileCollection<Chat> PushChatsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushChatsRequest;
-                }
-            }
-        }
-
-        public VolatileCollection<Chat> PullChatsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullChatsRequest;
+                    return _pullHeadersRequest;
                 }
             }
         }

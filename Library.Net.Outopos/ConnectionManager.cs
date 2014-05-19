@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.Serialization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Xml;
 using Library.Io;
 using Library.Net.Connections;
-using System.Collections.ObjectModel;
-using Library.Collections;
+using Library.Security;
 
 namespace Library.Net.Outopos
 {
@@ -36,19 +37,12 @@ namespace Library.Net.Outopos
 
     class PullHeadersRequestEventArgs : EventArgs
     {
-        public IEnumerable<Section> Sections { get; set; }
-        public IEnumerable<Wiki> Wikis { get; set; }
-        public IEnumerable<Chat> Chats { get; set; }
+        public IEnumerable<Tag> Tags { get; set; }
     }
 
     class PullHeadersEventArgs : EventArgs
     {
-        public IEnumerable<SectionProfileHeader> SectionProfileHeaders { get; set; }
-        public IEnumerable<SectionMessageHeader> SectionMessageHeaders { get; set; }
-        public IEnumerable<WikiPageHeader> WikiPageHeaders { get; set; }
-        public IEnumerable<WikiVoteHeader> WikiVoteHeaders { get; set; }
-        public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
-        public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
+        public IEnumerable<Header> Headers { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -64,10 +58,14 @@ namespace Library.Net.Outopos
 
     delegate void CloseEventHandler(object sender, EventArgs e);
 
-    enum ConnectionManagerType
+    [DataContract(Name = "ConnectDirection", Namespace = "http://Library/Net/Outopos")]
+    public enum ConnectDirection
     {
-        Client,
-        Server,
+        [EnumMember(Value = "In")]
+        In = 0,
+
+        [EnumMember(Value = "Out")]
+        Out = 1,
     }
 
     class ConnectionManager : ManagerBase, IThisLock
@@ -100,9 +98,8 @@ namespace Library.Net.Outopos
         private Node _otherNode;
         private BufferManager _bufferManager;
 
-        private ConnectionManagerType _type;
+        private ConnectDirection _direction;
 
-        private DateTime _sendUpdateTime;
         private bool _onClose;
 
         private byte[] _pingHash;
@@ -112,7 +109,8 @@ namespace Library.Net.Outopos
         private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 12, 0);
         private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 6, 0);
 
-        private System.Threading.Timer _aliveTimer;
+        private WatchTimer _aliveTimer;
+        private Stopwatch _aliveStopwatch = new Stopwatch();
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -136,15 +134,15 @@ namespace Library.Net.Outopos
 
         public event CloseEventHandler CloseEvent;
 
-        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectionManagerType type, BufferManager bufferManager)
+        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectDirection direction, BufferManager bufferManager)
         {
             _connection = connection;
             _mySessionId = mySessionId;
             _baseNode = baseNode;
-            _type = type;
+            _direction = direction;
             _bufferManager = bufferManager;
 
-            _myProtocolVersion = ProtocolVersion.Version3;
+            _myProtocolVersion = ProtocolVersion.Version1;
         }
 
         public byte[] SesstionId
@@ -173,7 +171,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ConnectionManagerType Type
+        public ConnectDirection Direction
         {
             get
             {
@@ -181,7 +179,7 @@ namespace Library.Net.Outopos
 
                 lock (this.ThisLock)
                 {
-                    return _type;
+                    return _direction;
                 }
             }
         }
@@ -262,10 +260,10 @@ namespace Library.Net.Outopos
 
                         xml.WriteStartElement("Protocol");
 
-                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version3))
+                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version1))
                         {
                             xml.WriteStartElement("Outopos");
-                            xml.WriteAttributeString("Version", "3");
+                            xml.WriteAttributeString("Version", "1");
                             xml.WriteEndElement(); //Protocol
                         }
 
@@ -290,9 +288,9 @@ namespace Library.Net.Outopos
                                 {
                                     var version = xml.GetAttribute("Version");
 
-                                    if (version == "3")
+                                    if (version == "1")
                                     {
-                                        _otherProtocolVersion |= ProtocolVersion.Version3;
+                                        _otherProtocolVersion |= ProtocolVersion.Version1;
                                     }
                                 }
                             }
@@ -301,7 +299,7 @@ namespace Library.Net.Outopos
 
                     _protocolVersion = _myProtocolVersion & _otherProtocolVersion;
 
-                    if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
                     {
                         using (Stream stream = new MemoryStream(_mySessionId))
                         {
@@ -326,15 +324,20 @@ namespace Library.Net.Outopos
                             _otherNode = Node.Import(stream, _bufferManager);
                         }
 
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _aliveStopwatch.Restart();
 
                         _pingHash = new byte[64];
-                        (new System.Security.Cryptography.RNGCryptoServiceProvider()).GetBytes(_pingHash);
+
+                        using (var rng = RandomNumberGenerator.Create())
+                        {
+                            rng.GetBytes(_pingHash);
+                        }
+
                         _responseStopwatch.Start();
                         this.Ping(_pingHash);
 
                         ThreadPool.QueueUserWorkItem(this.Pull);
-                        _aliveTimer = new Timer(this.AliveTimer, null, 1000 * 10, 1000 * 10);
+                        _aliveTimer = new WatchTimer(this.AliveTimer, new TimeSpan(0, 0, 30));
                     }
                     else
                     {
@@ -367,38 +370,22 @@ namespace Library.Net.Outopos
             }
         }
 
-        private bool _aliveSending;
-
-        private void AliveTimer(object state)
+        private void AliveTimer()
         {
+            if (_disposed) return;
+
+            Thread.CurrentThread.Name = "ConnectionManager_AliveTimer";
+
             try
             {
-                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-                if (_aliveSending) return;
-                _aliveSending = true;
-
-                Thread.CurrentThread.Name = "ConnectionManager_AliveTimer";
-
-                try
+                if (_aliveStopwatch.Elapsed > _aliveTimeSpan)
                 {
-                    if ((DateTime.UtcNow - _sendUpdateTime) > _aliveTimeSpan)
-                    {
-                        this.Alive();
-                    }
-                }
-                catch (Exception)
-                {
-                    this.OnClose(new EventArgs());
-                }
-                finally
-                {
-                    _aliveSending = false;
+                    this.Alive();
                 }
             }
             catch (Exception)
             {
-
+                this.OnClose(new EventArgs());
             }
         }
 
@@ -406,7 +393,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -417,7 +404,7 @@ namespace Library.Net.Outopos
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)
@@ -440,7 +427,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -452,7 +439,7 @@ namespace Library.Net.Outopos
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)
@@ -472,7 +459,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -484,7 +471,7 @@ namespace Library.Net.Outopos
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)
@@ -503,6 +490,7 @@ namespace Library.Net.Outopos
         private void Pull(object state)
         {
             Thread.CurrentThread.Name = "ConnectionManager_Pull";
+            Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
             try
             {
@@ -514,7 +502,7 @@ namespace Library.Net.Outopos
 
                     sw.Restart();
 
-                    if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
                     {
                         using (Stream stream = _connection.Receive(_receiveTimeSpan))
                         {
@@ -524,76 +512,70 @@ namespace Library.Net.Outopos
 
                             using (Stream stream2 = new RangeStream(stream, 1, stream.Length - 1, true))
                             {
-                                if (type == (byte)SerializeId.Alive)
+                                try
                                 {
-
-                                }
-                                else if (type == (byte)SerializeId.Cancel)
-                                {
-                                    this.OnPullCancel(new EventArgs());
-                                }
-                                else if (type == (byte)SerializeId.Ping)
-                                {
-                                    if (stream2.Length > 64) throw new ConnectionManagerException();
-
-                                    var buffer = new byte[stream2.Length];
-                                    stream2.Read(buffer, 0, buffer.Length);
-
-                                    this.Pong(buffer);
-                                }
-                                else if (type == (byte)SerializeId.Pong)
-                                {
-                                    if (stream2.Length > 64) throw new ConnectionManagerException();
-
-                                    var buffer = new byte[stream2.Length];
-                                    stream2.Read(buffer, 0, buffer.Length);
-
-                                    if (!Collection.Equals(buffer, _pingHash)) throw new ConnectionManagerException();
-
-                                    _responseStopwatch.Stop();
-                                }
-                                else if (type == (byte)SerializeId.Nodes)
-                                {
-                                    var message = NodesMessage.Import(stream2, _bufferManager);
-                                    this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
-                                }
-                                else if (type == (byte)SerializeId.BlocksLink)
-                                {
-                                    var message = BlocksLinkMessage.Import(stream2, _bufferManager);
-                                    this.OnPullBlocksLink(new PullBlocksLinkEventArgs() { Keys = message.Keys });
-                                }
-                                else if (type == (byte)SerializeId.BlocksRequest)
-                                {
-                                    var message = BlocksRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullBlocksRequest(new PullBlocksRequestEventArgs() { Keys = message.Keys });
-                                }
-                                else if (type == (byte)SerializeId.Block)
-                                {
-                                    var message = BlockMessage.Import(stream2, _bufferManager);
-                                    this.OnPullBlock(new PullBlockEventArgs() { Key = message.Key, Value = message.Value });
-                                }
-                                else if (type == (byte)SerializeId.HeadersRequest)
-                                {
-                                    var message = HeadersRequestMessage.Import(stream2, _bufferManager);
-                                    this.OnPullHeadersRequest(new PullHeadersRequestEventArgs()
+                                    if (type == (byte)SerializeId.Alive)
                                     {
-                                        Sections = message.Sections,
-                                        Wikis = message.Wikis,
-                                        Chats = message.Chats,
-                                    });
-                                }
-                                else if (type == (byte)SerializeId.Headers)
-                                {
-                                    var message = HeadersMessage.Import(stream2, _bufferManager);
-                                    this.OnPullHeaders(new PullHeadersEventArgs()
+
+                                    }
+                                    else if (type == (byte)SerializeId.Cancel)
                                     {
-                                        SectionProfileHeaders = message.SectionProfileHeaders,
-                                        SectionMessageHeaders = message.SectionMessageHeaders,
-                                        WikiPageHeaders = message.WikiPageHeaders,
-                                        WikiVoteHeaders = message.WikiVoteHeaders,
-                                        ChatTopicHeaders = message.ChatTopicHeaders,
-                                        ChatMessageHeaders = message.ChatMessageHeaders,
-                                    });
+                                        this.OnPullCancel(new EventArgs());
+                                    }
+                                    else if (type == (byte)SerializeId.Ping)
+                                    {
+                                        if (stream2.Length > 64) continue;
+
+                                        var buffer = new byte[stream2.Length];
+                                        stream2.Read(buffer, 0, buffer.Length);
+
+                                        this.Pong(buffer);
+                                    }
+                                    else if (type == (byte)SerializeId.Pong)
+                                    {
+                                        if (stream2.Length > 64) continue;
+
+                                        var buffer = new byte[stream2.Length];
+                                        stream2.Read(buffer, 0, buffer.Length);
+
+                                        if (!CollectionUtilities.Equals(buffer, _pingHash)) continue;
+
+                                        _responseStopwatch.Stop();
+                                    }
+                                    else if (type == (byte)SerializeId.Nodes)
+                                    {
+                                        var message = NodesMessage.Import(stream2, _bufferManager);
+                                        this.OnPullNodes(new PullNodesEventArgs() { Nodes = message.Nodes });
+                                    }
+                                    else if (type == (byte)SerializeId.BlocksLink)
+                                    {
+                                        var message = BlocksLinkMessage.Import(stream2, _bufferManager);
+                                        this.OnPullBlocksLink(new PullBlocksLinkEventArgs() { Keys = message.Keys });
+                                    }
+                                    else if (type == (byte)SerializeId.BlocksRequest)
+                                    {
+                                        var message = BlocksRequestMessage.Import(stream2, _bufferManager);
+                                        this.OnPullBlocksRequest(new PullBlocksRequestEventArgs() { Keys = message.Keys });
+                                    }
+                                    else if (type == (byte)SerializeId.Block)
+                                    {
+                                        var message = BlockMessage.Import(stream2, _bufferManager);
+                                        this.OnPullBlock(new PullBlockEventArgs() { Key = message.Key, Value = message.Value });
+                                    }
+                                    else if (type == (byte)SerializeId.HeadersRequest)
+                                    {
+                                        var message = HeadersRequestMessage.Import(stream2, _bufferManager);
+                                        this.OnPullHeadersRequest(new PullHeadersRequestEventArgs() { Tags = message.Tags });
+                                    }
+                                    else if (type == (byte)SerializeId.Headers)
+                                    {
+                                        var message = HeadersMessage.Import(stream2, _bufferManager);
+                                        this.OnPullHeaders(new PullHeadersEventArgs() { Headers = message.Headers });
+                                    }
+                                }
+                                catch (Exception)
+                                {
+
                                 }
                             }
                         }
@@ -605,28 +587,18 @@ namespace Library.Net.Outopos
 
                     sw.Stop();
 
-                    if (100 > sw.ElapsedMilliseconds) Thread.Sleep(100 - (int)sw.ElapsedMilliseconds);
+                    if (300 > sw.ElapsedMilliseconds) Thread.Sleep(300 - (int)sw.ElapsedMilliseconds);
                 }
             }
-#if DEBUG
             catch (Exception e)
             {
-                Log.Information(e);
+                Debug.WriteLine(e);
 
                 if (!_disposed)
                 {
                     this.OnClose(new EventArgs());
                 }
             }
-#else
-            catch (Exception)
-            {
-                if (!_disposed)
-                {
-                    this.OnClose(new EventArgs());
-                }
-            }
-#endif
         }
 
         protected virtual void OnPullNodes(PullNodesEventArgs e)
@@ -700,7 +672,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -714,7 +686,7 @@ namespace Library.Net.Outopos
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -737,7 +709,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -751,7 +723,7 @@ namespace Library.Net.Outopos
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -774,7 +746,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -788,7 +760,7 @@ namespace Library.Net.Outopos
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -811,7 +783,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -824,8 +796,11 @@ namespace Library.Net.Outopos
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
-                    _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    var contexts = new List<InformationContext>();
+                    contexts.Add(new InformationContext("IsCompress", false));
+
+                    _connection.Send(stream, _sendTimeSpan, new Information(contexts));
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -844,13 +819,11 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushHeadersRequest(IEnumerable<Section> sections,
-                IEnumerable<Wiki> wikis,
-                IEnumerable<Chat> chats)
+        public void PushHeadersRequest(IEnumerable<Tag> tags)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -859,12 +832,12 @@ namespace Library.Net.Outopos
                     stream.WriteByte((byte)SerializeId.HeadersRequest);
                     stream.Flush();
 
-                    var message = new HeadersRequestMessage(sections, wikis, chats);
+                    var message = new HeadersRequestMessage(tags);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -883,16 +856,11 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushHeaders(IEnumerable<SectionProfileHeader> sectionProfileHeaders,
-                IEnumerable<SectionMessageHeader> sectionMessageHeaders,
-                IEnumerable<WikiPageHeader> wikiPageHeaders,
-                IEnumerable<WikiVoteHeader> wikiVoteHeaders,
-                IEnumerable<ChatTopicHeader> chatTopicHeaders,
-                IEnumerable<ChatMessageHeader> chatMessageHeaders)
+        public void PushHeaders(IEnumerable<Header> headers)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -901,17 +869,12 @@ namespace Library.Net.Outopos
                     stream.WriteByte((byte)SerializeId.Headers);
                     stream.Flush();
 
-                    var message = new HeadersMessage(sectionProfileHeaders,
-                        sectionMessageHeaders,
-                        wikiPageHeaders,
-                        wikiVoteHeaders,
-                        chatTopicHeaders,
-                        chatMessageHeaders);
+                    var message = new HeadersMessage(headers);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
                     _connection.Send(stream, _sendTimeSpan);
-                    _sendUpdateTime = DateTime.UtcNow;
+                    _aliveStopwatch.Restart();
                 }
                 catch (ConnectionException)
                 {
@@ -934,7 +897,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version3))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
             {
                 try
                 {
@@ -945,7 +908,7 @@ namespace Library.Net.Outopos
                         stream.Seek(0, SeekOrigin.Begin);
 
                         _connection.Send(stream, _sendTimeSpan);
-                        _sendUpdateTime = DateTime.UtcNow;
+                        _aliveStopwatch.Restart();
                     }
                 }
                 catch (ConnectionException)
@@ -977,9 +940,13 @@ namespace Library.Net.Outopos
                 if (nodes != null) this.ProtectedNodes.AddRange(nodes);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1000,22 +967,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                TempStream tempStream = new TempStream();
 
                 // Nodes
-                foreach (var n in this.Nodes)
+                foreach (var value in this.Nodes)
                 {
-                    Stream exportStream = n.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Node);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(tempStream, (byte)SerializeId.Node, stream);
+                    }
                 }
 
-                return new UniteStream(streams);
+                tempStream.Seek(0, SeekOrigin.Begin);
+                return tempStream;
             }
 
             public NodesMessage Clone()
@@ -1066,9 +1030,13 @@ namespace Library.Net.Outopos
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1089,22 +1057,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                TempStream tempStream = new TempStream();
 
                 // Keys
-                foreach (var k in this.Keys)
+                foreach (var value in this.Keys)
                 {
-                    Stream exportStream = k.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                    }
                 }
 
-                return new UniteStream(streams);
+                tempStream.Seek(0, SeekOrigin.Begin);
+                return tempStream;
             }
 
             public BlocksLinkMessage Clone()
@@ -1155,9 +1120,13 @@ namespace Library.Net.Outopos
                 if (keys != null) this.ProtectedKeys.AddRange(keys);
             }
 
+            protected override void Initialize()
+            {
+
+            }
+
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1178,22 +1147,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                TempStream tempStream = new TempStream();
 
                 // Keys
-                foreach (var k in this.Keys)
+                foreach (var value in this.Keys)
                 {
-                    Stream exportStream = k.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                    }
                 }
 
-                return new UniteStream(streams);
+                tempStream.Seek(0, SeekOrigin.Begin);
+                return tempStream;
             }
 
             public BlocksRequestMessage Clone()
@@ -1243,75 +1209,83 @@ namespace Library.Net.Outopos
 
             public BlockMessage(Key key, ArraySegment<byte> value)
             {
-                _key = key;
-                _value = value;
+                this.Key = key;
+                this.Value = value;
+            }
+
+            protected override void Initialize()
+            {
+
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                try
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
                 {
-                    Encoding encoding = new UTF8Encoding(false);
-                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    for (; ; )
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                        int length = NetworkConverter.ToInt32(lengthBuffer);
-                        byte id = (byte)stream.ReadByte();
-
-                        using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                        if (id == (byte)SerializeId.Key)
                         {
-                            if (id == (byte)SerializeId.Key)
-                            {
-                                _key = Key.Import(rangeStream, bufferManager);
-                            }
-                            else if (id == (byte)SerializeId.Value)
-                            {
-                                byte[] buff = bufferManager.TakeBuffer((int)rangeStream.Length);
-                                rangeStream.Read(buff, 0, (int)rangeStream.Length);
-
-                                _value = new ArraySegment<byte>(buff, 0, (int)rangeStream.Length);
-                            }
+                            this.Key = Key.Import(rangeStream, bufferManager);
                         }
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (_value.Array != null)
-                    {
-                        bufferManager.ReturnBuffer(_value.Array);
+                        else if (id == (byte)SerializeId.Value)
+                        {
+                            if (this.Value.Array != null)
+                            {
+                                bufferManager.ReturnBuffer(this.Value.Array);
+                            }
+
+                            byte[] buffer = null;
+
+                            try
+                            {
+                                buffer = bufferManager.TakeBuffer((int)rangeStream.Length);
+                                rangeStream.Read(buffer, 0, (int)rangeStream.Length);
+                            }
+                            catch (Exception e)
+                            {
+                                if (buffer != null)
+                                {
+                                    bufferManager.ReturnBuffer(buffer);
+                                }
+
+                                throw e;
+                            }
+
+                            this.Value = new ArraySegment<byte>(buffer, 0, (int)rangeStream.Length);
+                        }
                     }
                 }
             }
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
+                TempStream tempStream = new TempStream();
 
                 // Key
                 if (this.Key != null)
                 {
-                    Stream exportStream = this.Key.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Key);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = this.Key.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(tempStream, (byte)SerializeId.Key, stream);
+                    }
                 }
                 // Value
                 if (this.Value.Array != null)
                 {
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Value);
-                    bufferStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
-
-                    streams.Add(bufferStream);
+                    tempStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
+                    tempStream.WriteByte((byte)SerializeId.Value);
+                    tempStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
                 }
 
-                return new UniteStream(streams);
+                tempStream.Seek(0, SeekOrigin.Begin);
+                return tempStream;
             }
 
             public BlockMessage Clone()
@@ -1328,6 +1302,10 @@ namespace Library.Net.Outopos
                 {
                     return _key;
                 }
+                private set
+                {
+                    _key = value;
+                }
             }
 
             public ArraySegment<byte> Value
@@ -1336,6 +1314,10 @@ namespace Library.Net.Outopos
                 {
                     return _value;
                 }
+                private set
+                {
+                    _value = value;
+                }
             }
         }
 
@@ -1343,27 +1325,23 @@ namespace Library.Net.Outopos
         {
             private enum SerializeId : byte
             {
-                Section = 0,
-                Wiki = 1,
-                Chat = 2,
+                Tag = 0,
             }
 
-            private SectionCollection _sections;
-            private WikiCollection _wikis;
-            private ChatCollection _chats;
+            private TagCollection _tags;
 
-            public HeadersRequestMessage(IEnumerable<Section> sections,
-                IEnumerable<Wiki> wikis,
-                IEnumerable<Chat> chats)
+            public HeadersRequestMessage(IEnumerable<Tag> tags)
             {
-                if (sections != null) this.ProtectedSections.AddRange(sections);
-                if (wikis != null) this.ProtectedWikis.AddRange(wikis);
-                if (chats != null) this.ProtectedChats.AddRange(chats);
+                if (tags != null) this.ProtectedTags.AddRange(tags);
+            }
+
+            protected override void Initialize()
+            {
+
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1374,17 +1352,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Section)
+                        if (id == (byte)SerializeId.Tag)
                         {
-                            this.ProtectedSections.Add(Section.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.Wiki)
-                        {
-                            this.ProtectedWikis.Add(Wiki.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.Chat)
-                        {
-                            this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
+                            this.ProtectedTags.Add(Tag.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1392,44 +1362,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                TempStream tempStream = new TempStream();
 
-                // Sections
-                foreach (var s in this.Sections)
+                // Tags
+                foreach (var value in this.Tags)
                 {
-                    Stream exportStream = s.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Section);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
-                }
-                // Wikis
-                foreach (var a in this.Wikis)
-                {
-                    Stream exportStream = a.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Wiki);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
-                }
-                // Chats
-                foreach (var c in this.Chats)
-                {
-                    Stream exportStream = c.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Chat);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(tempStream, (byte)SerializeId.Tag, stream);
+                    }
                 }
 
-                return new UniteStream(streams);
+                tempStream.Seek(0, SeekOrigin.Begin);
+                return tempStream;
             }
 
             public HeadersRequestMessage Clone()
@@ -1440,78 +1385,28 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private volatile ReadOnlyCollection<Section> _readOnlySections;
+            private volatile ReadOnlyCollection<Tag> _readOnlyTags;
 
-            public IEnumerable<Section> Sections
+            public IEnumerable<Tag> Tags
             {
                 get
                 {
-                    if (_readOnlySections == null)
-                        _readOnlySections = new ReadOnlyCollection<Section>(this.ProtectedSections);
+                    if (_readOnlyTags == null)
+                        _readOnlyTags = new ReadOnlyCollection<Tag>(this.ProtectedTags);
 
-                    return _readOnlySections;
+                    return _readOnlyTags;
                 }
             }
 
-            [DataMember(Name = "Sections")]
-            private SectionCollection ProtectedSections
+            [DataMember(Name = "Tags")]
+            private TagCollection ProtectedTags
             {
                 get
                 {
-                    if (_sections == null)
-                        _sections = new SectionCollection(_maxHeaderCount);
+                    if (_tags == null)
+                        _tags = new TagCollection(_maxHeaderRequestCount);
 
-                    return _sections;
-                }
-            }
-
-            private volatile ReadOnlyCollection<Wiki> _readOnlyWikis;
-
-            public IEnumerable<Wiki> Wikis
-            {
-                get
-                {
-                    if (_readOnlyWikis == null)
-                        _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis);
-
-                    return _readOnlyWikis;
-                }
-            }
-
-            [DataMember(Name = "Wikis")]
-            private WikiCollection ProtectedWikis
-            {
-                get
-                {
-                    if (_wikis == null)
-                        _wikis = new WikiCollection(_maxHeaderCount);
-
-                    return _wikis;
-                }
-            }
-
-            private volatile ReadOnlyCollection<Chat> _readOnlyChats;
-
-            public IEnumerable<Chat> Chats
-            {
-                get
-                {
-                    if (_readOnlyChats == null)
-                        _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats);
-
-                    return _readOnlyChats;
-                }
-            }
-
-            [DataMember(Name = "Chats")]
-            private ChatCollection ProtectedChats
-            {
-                get
-                {
-                    if (_chats == null)
-                        _chats = new ChatCollection(_maxHeaderCount);
-
-                    return _chats;
+                    return _tags;
                 }
             }
         }
@@ -1520,39 +1415,23 @@ namespace Library.Net.Outopos
         {
             private enum SerializeId : byte
             {
-                SectionProfileHeader = 0,
-                SectionMessageHeader = 1,
-                WikiPageHeader = 2,
-                WikiVoteHeader = 3,
-                ChatTopicHeader = 4,
-                ChatMessageHeader = 5,
+                Header = 0,
             }
 
-            private LockedList<SectionProfileHeader> _sectionProfileHeaders;
-            private LockedList<SectionMessageHeader> _sectionMessageHeaders;
-            private LockedList<WikiPageHeader> _wikiPageHeaders;
-            private LockedList<WikiVoteHeader> _wikiVoteHeaders;
-            private LockedList<ChatTopicHeader> _chatTopicHeaders;
-            private LockedList<ChatMessageHeader> _chatMessageHeaders;
+            private HeaderCollection _headers;
 
-            public HeadersMessage(IEnumerable<SectionProfileHeader> sectionProfileHeaders,
-                IEnumerable<SectionMessageHeader> sectionMessageHeaders,
-                IEnumerable<WikiPageHeader> wikiPageHeaders,
-                IEnumerable<WikiVoteHeader> wikiVoteHeaders,
-                IEnumerable<ChatTopicHeader> chatTopicHeaders,
-                IEnumerable<ChatMessageHeader> chatMessageHeaders)
+            public HeadersMessage(IEnumerable<Header> headers)
             {
-                if (sectionProfileHeaders != null) this.ProtectedSectionProfileHeaders.AddRange(sectionProfileHeaders);
-                if (sectionMessageHeaders != null) this.ProtectedSectionMessageHeaders.AddRange(sectionMessageHeaders);
-                if (wikiPageHeaders != null) this.ProtectedWikiPageHeaders.AddRange(wikiPageHeaders);
-                if (wikiVoteHeaders != null) this.ProtectedWikiVoteHeaders.AddRange(wikiVoteHeaders);
-                if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
-                if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
+                if (headers != null) this.ProtectedHeaders.AddRange(headers);
+            }
+
+            protected override void Initialize()
+            {
+
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                Encoding encoding = new UTF8Encoding(false);
                 byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
@@ -1563,29 +1442,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.SectionProfileHeader)
+                        if (id == (byte)SerializeId.Header)
                         {
-                            this.ProtectedSectionProfileHeaders.Add(SectionProfileHeader.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.SectionMessageHeader)
-                        {
-                            this.ProtectedSectionMessageHeaders.Add(SectionMessageHeader.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.WikiPageHeader)
-                        {
-                            this.ProtectedWikiPageHeaders.Add(WikiPageHeader.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.WikiVoteHeader)
-                        {
-                            this.ProtectedWikiVoteHeaders.Add(WikiVoteHeader.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.ChatTopicHeader)
-                        {
-                            this.ProtectedChatTopicHeaders.Add(ChatTopicHeader.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.ChatMessageHeader)
-                        {
-                            this.ProtectedChatMessageHeaders.Add(ChatMessageHeader.Import(rangeStream, bufferManager));
+                            this.ProtectedHeaders.Add(Header.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1593,77 +1452,19 @@ namespace Library.Net.Outopos
 
             protected override Stream Export(BufferManager bufferManager, int count)
             {
-                List<Stream> streams = new List<Stream>();
-                Encoding encoding = new UTF8Encoding(false);
+                TempStream tempStream = new TempStream();
 
-                // SectionProfileHeaders
-                foreach (var h in this.SectionProfileHeaders)
+                // Headers
+                foreach (var value in this.Headers)
                 {
-                    Stream exportStream = h.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.SectionProfileHeader);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
-                }
-                // SectionMessageHeaders
-                foreach (var h in this.SectionMessageHeaders)
-                {
-                    Stream exportStream = h.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.SectionMessageHeader);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
-                }
-                // WikiPageHeaders
-                foreach (var h in this.WikiPageHeaders)
-                {
-                    Stream exportStream = h.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.WikiPageHeader);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
-                }
-                // WikiVoteHeaders
-                foreach (var h in this.WikiVoteHeaders)
-                {
-                    Stream exportStream = h.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.WikiVoteHeader);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
-                }
-                // ChatTopicHeaders
-                foreach (var h in this.ChatTopicHeaders)
-                {
-                    Stream exportStream = h.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.ChatTopicHeader);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
-                }
-                // ChatMessageHeaders
-                foreach (var h in this.ChatMessageHeaders)
-                {
-                    Stream exportStream = h.Export(bufferManager);
-
-                    BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.ChatMessageHeader);
-
-                    streams.Add(new UniteStream(bufferStream, exportStream));
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(tempStream, (byte)SerializeId.Header, stream);
+                    }
                 }
 
-                return new UniteStream(streams);
+                tempStream.Seek(0, SeekOrigin.Begin);
+                return tempStream;
             }
 
             public HeadersMessage Clone()
@@ -1674,153 +1475,28 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private volatile ReadOnlyCollection<SectionProfileHeader> _readOnlySectionProfileHeaders;
+            private volatile ReadOnlyCollection<Header> _readOnlyHeaders;
 
-            public IEnumerable<SectionProfileHeader> SectionProfileHeaders
+            public IEnumerable<Header> Headers
             {
                 get
                 {
-                    if (_readOnlySectionProfileHeaders == null)
-                        _readOnlySectionProfileHeaders = new ReadOnlyCollection<SectionProfileHeader>(this.ProtectedSectionProfileHeaders);
+                    if (_readOnlyHeaders == null)
+                        _readOnlyHeaders = new ReadOnlyCollection<Header>(this.ProtectedHeaders);
 
-                    return _readOnlySectionProfileHeaders;
+                    return _readOnlyHeaders;
                 }
             }
 
-            [DataMember(Name = "SectionProfileHeaders")]
-            private LockedList<SectionProfileHeader> ProtectedSectionProfileHeaders
+            [DataMember(Name = "Headers")]
+            private HeaderCollection ProtectedHeaders
             {
                 get
                 {
-                    if (_sectionProfileHeaders == null)
-                        _sectionProfileHeaders = new LockedList<SectionProfileHeader>(_maxHeaderCount);
+                    if (_headers == null)
+                        _headers = new HeaderCollection(_maxHeaderCount);
 
-                    return _sectionProfileHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<SectionMessageHeader> _readOnlySectionMessageHeaders;
-
-            public IEnumerable<SectionMessageHeader> SectionMessageHeaders
-            {
-                get
-                {
-                    if (_readOnlySectionMessageHeaders == null)
-                        _readOnlySectionMessageHeaders = new ReadOnlyCollection<SectionMessageHeader>(this.ProtectedSectionMessageHeaders);
-
-                    return _readOnlySectionMessageHeaders;
-                }
-            }
-
-            [DataMember(Name = "SectionMessageHeaders")]
-            private LockedList<SectionMessageHeader> ProtectedSectionMessageHeaders
-            {
-                get
-                {
-                    if (_sectionMessageHeaders == null)
-                        _sectionMessageHeaders = new LockedList<SectionMessageHeader>(_maxHeaderCount);
-
-                    return _sectionMessageHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<WikiPageHeader> _readOnlyWikiPageHeaders;
-
-            public IEnumerable<WikiPageHeader> WikiPageHeaders
-            {
-                get
-                {
-                    if (_readOnlyWikiPageHeaders == null)
-                        _readOnlyWikiPageHeaders = new ReadOnlyCollection<WikiPageHeader>(this.ProtectedWikiPageHeaders);
-
-                    return _readOnlyWikiPageHeaders;
-                }
-            }
-
-            [DataMember(Name = "WikiPageHeaders")]
-            private LockedList<WikiPageHeader> ProtectedWikiPageHeaders
-            {
-                get
-                {
-                    if (_wikiPageHeaders == null)
-                        _wikiPageHeaders = new LockedList<WikiPageHeader>(_maxHeaderCount);
-
-                    return _wikiPageHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<WikiVoteHeader> _readOnlyWikiVoteHeaders;
-
-            public IEnumerable<WikiVoteHeader> WikiVoteHeaders
-            {
-                get
-                {
-                    if (_readOnlyWikiVoteHeaders == null)
-                        _readOnlyWikiVoteHeaders = new ReadOnlyCollection<WikiVoteHeader>(this.ProtectedWikiVoteHeaders);
-
-                    return _readOnlyWikiVoteHeaders;
-                }
-            }
-
-            [DataMember(Name = "WikiVoteHeaders")]
-            private LockedList<WikiVoteHeader> ProtectedWikiVoteHeaders
-            {
-                get
-                {
-                    if (_wikiVoteHeaders == null)
-                        _wikiVoteHeaders = new LockedList<WikiVoteHeader>(_maxHeaderCount);
-
-                    return _wikiVoteHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<ChatTopicHeader> _readOnlyChatTopicHeaders;
-
-            public IEnumerable<ChatTopicHeader> ChatTopicHeaders
-            {
-                get
-                {
-                    if (_readOnlyChatTopicHeaders == null)
-                        _readOnlyChatTopicHeaders = new ReadOnlyCollection<ChatTopicHeader>(this.ProtectedChatTopicHeaders);
-
-                    return _readOnlyChatTopicHeaders;
-                }
-            }
-
-            [DataMember(Name = "ChatTopicHeaders")]
-            private LockedList<ChatTopicHeader> ProtectedChatTopicHeaders
-            {
-                get
-                {
-                    if (_chatTopicHeaders == null)
-                        _chatTopicHeaders = new LockedList<ChatTopicHeader>(_maxHeaderCount);
-
-                    return _chatTopicHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<ChatMessageHeader> _readOnlyChatMessageHeaders;
-
-            public IEnumerable<ChatMessageHeader> ChatMessageHeaders
-            {
-                get
-                {
-                    if (_readOnlyChatMessageHeaders == null)
-                        _readOnlyChatMessageHeaders = new ReadOnlyCollection<ChatMessageHeader>(this.ProtectedChatMessageHeaders);
-
-                    return _readOnlyChatMessageHeaders;
-                }
-            }
-
-            [DataMember(Name = "ChatMessageHeaders")]
-            private LockedList<ChatMessageHeader> ProtectedChatMessageHeaders
-            {
-                get
-                {
-                    if (_chatMessageHeaders == null)
-                        _chatMessageHeaders = new LockedList<ChatMessageHeader>(_maxHeaderCount);
-
-                    return _chatMessageHeaders;
+                    return _headers;
                 }
             }
         }

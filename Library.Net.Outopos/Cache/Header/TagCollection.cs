@@ -3,7 +3,7 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    sealed class TagCollection : LockedList<Tag>
+    public sealed class TagCollection : LockedList<Tag>
     {
         public TagCollection() : base() { }
         public TagCollection(int capacity) : base(capacity) { }

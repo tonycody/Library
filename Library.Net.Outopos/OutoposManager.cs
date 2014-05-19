@@ -5,6 +5,8 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
+    public delegate bool CheckUriEventHandler(object sender, string uri);
+
     public sealed class OutoposManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private string _cachePath;
