@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Derivation\Pbkdf2.cs" />
+    <Compile Include="Hash\Hashcash1.cs" />
     <Compile Include="Hash\HmacSha512.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
     <Compile Include="Exchange\ExchangePrivateKey.cs" />
@@ -99,6 +100,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assembly\Hashcash_x64.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assembly\Hashcash_x86.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assembly\Library_Security_x64.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

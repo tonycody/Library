@@ -123,8 +123,8 @@ namespace Library.Security
 
             {
                 var input = new byte[this.Salt.Length + 4];
-                Buffer.BlockCopy(this.Salt, 0, input, 0, this.Salt.Length);
-                Buffer.BlockCopy(NetworkConverter.GetBytes(_blockIndex), 0, input, this.Salt.Length, 4);
+                Unsafe.Copy(this.Salt, 0, input, 0, this.Salt.Length);
+                Unsafe.Copy(NetworkConverter.GetBytes(_blockIndex), 0, input, this.Salt.Length, 4);
 
                 _blockIndex++;
 

@@ -13,11 +13,13 @@ namespace Library
 #else
         private static NativeLibraryManager _nativeLibraryManager;
 
+        private delegate void CopyDelegate(byte* source, byte* destination, int len);
         [return: MarshalAs(UnmanagedType.U1)]
         private delegate bool EqualsDelegate(byte* source1, byte* source2, int len);
         private delegate int CompareDelegate(byte* source1, byte* source2, int len);
         private delegate void XorDelegate(byte* source1, byte* source2, byte* result, int len);
 
+        private static CopyDelegate _copy;
         private static EqualsDelegate _equals;
         private static CompareDelegate _compare;
         private static XorDelegate _xor;
@@ -39,6 +41,7 @@ namespace Library
                     _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_x86.dll");
                 }
 
+                _copy = _nativeLibraryManager.GetMethod<CopyDelegate>("copy");
                 _equals = _nativeLibraryManager.GetMethod<EqualsDelegate>("equals");
                 _compare = _nativeLibraryManager.GetMethod<CompareDelegate>("compare");
                 _xor = _nativeLibraryManager.GetMethod<XorDelegate>("xor");
@@ -65,26 +68,29 @@ namespace Library
             Array.Clear(source, index, length);
         }
 
-        public static void Copy(byte[] source1, int source1Index, byte[] source2, int source2Index, int length)
+        public static void Copy(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int length)
         {
-            //if (source1 == null) throw new ArgumentNullException("source1");
-            //if (source2 == null) throw new ArgumentNullException("source2");
+            if (source == null) throw new ArgumentNullException("source");
+            if (destination == null) throw new ArgumentNullException("destination");
 
-            //if (0 > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("source1Index");
-            //if (0 > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("source2Index");
-            //if (length > (source1.Length - source1Index)) throw new ArgumentOutOfRangeException("length");
-            //if (length > (source2.Length - source2Index)) throw new ArgumentOutOfRangeException("length");
+            if (0 > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("sourceIndex");
+            if (0 > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("destinationIndex");
+            if (length > (source.Length - sourceIndex)) throw new ArgumentOutOfRangeException("length");
+            if (length > (destination.Length - destinationIndex)) throw new ArgumentOutOfRangeException("length");
 
-            //if (length == 0) return;
+            if (length == 0) return;
 
-            //fixed (byte* p_x = source1)
-            //{
-            //    byte* t_x = p_x + source1Index;
+            fixed (byte* p_x = source)
+            fixed (byte* p_y = destination)
+            {
+                byte* t_x = p_x + sourceIndex;
+                byte* t_y = p_y + destinationIndex;
 
-            //    Marshal.Copy(new IntPtr((void*)t_x), source2, source2Index, length);
-            //}
+                _copy(t_x, t_y, length);
+                //Marshal.Copy(new IntPtr((void*)t_x), destination, destinationIndex, length);
+            }
 
-            Array.Copy(source1, source1Index, source2, source2Index, length);
+            //Array.Copy(source, sourceIndex, destination, destinationIndex, length);
         }
 
         // Copyright (c) 2008-2013 Hafthor Stefansson

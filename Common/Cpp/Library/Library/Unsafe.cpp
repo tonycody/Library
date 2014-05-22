@@ -19,6 +19,68 @@
 //#include <pmmintrin.h> // SSE3
 //#include <emmintrin.h> // SSE4
 
+void copy(byte* src, byte* dst, int32_t len)
+{
+    if (len <= 32)
+    {
+        for(int32_t i = 0; i < len; i++)
+        {
+            *dst++ = *src++;
+        }
+    }
+    else
+    {
+        __m128i xmm0;
+        __m128i xmm1;
+        __m128i xmm2;
+        __m128i xmm3;
+        __m128i xmm4; 
+        __m128i xmm5;
+        __m128i xmm6;
+        __m128i xmm7;
+
+        int32_t i = 0;
+        
+        // アライメントを揃える。
+        for( ; i < len; i++)
+        {
+            if(((uintptr_t)src % 16) == 0) break;
+
+            *dst++ = *src++;
+        }
+
+        for (int32_t count = ((len - i) / 128) - 1; count >= 0 ; count--)
+        {
+            xmm0 = _mm_load_si128((__m128i*)src);
+            xmm1 = _mm_load_si128((__m128i*)(src + 16));
+            xmm2 = _mm_load_si128((__m128i*)(src + (16 * 2)));
+            xmm3 = _mm_load_si128((__m128i*)(src + (16 * 3)));
+            xmm4 = _mm_load_si128((__m128i*)(src + (16 * 4)));
+            xmm5 = _mm_load_si128((__m128i*)(src + (16 * 5)));
+            xmm6 = _mm_load_si128((__m128i*)(src + (16 * 6)));
+            xmm7 = _mm_load_si128((__m128i*)(src + (16 * 7)));
+
+            _mm_storeu_si128((__m128i*)dst, xmm0);
+            _mm_storeu_si128((__m128i*)(dst + 16), xmm1);
+            _mm_storeu_si128((__m128i*)(dst + (16 * 2)), xmm2);
+            _mm_storeu_si128((__m128i*)(dst + (16 * 3)), xmm3);
+            _mm_storeu_si128((__m128i*)(dst + (16 * 4)), xmm4);
+            _mm_storeu_si128((__m128i*)(dst + (16 * 5)), xmm5);
+            _mm_storeu_si128((__m128i*)(dst + (16 * 6)), xmm6);
+            _mm_storeu_si128((__m128i*)(dst + (16 * 7)), xmm7);
+
+            src += 128;
+            dst += 128;
+            i += 128;
+        }
+
+        for( ; i < len; i++)
+        {
+            *dst++ = *src++;
+        }
+    }
+}
+
 // https://gist.github.com/karthick18/1361842
 bool equals(byte* x, byte* y, int32_t len)
 {

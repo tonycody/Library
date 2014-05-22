@@ -70,8 +70,6 @@ namespace Library.UnitTest
 
                 Console.WriteLine(string.Format("ReedSolomon8 Parallel {0}: ", c) + sw.Elapsed.ToString());
             }
-
-            Console.WriteLine();
         }
     }
 }

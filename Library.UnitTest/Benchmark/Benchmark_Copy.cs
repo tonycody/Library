@@ -22,8 +22,13 @@ namespace Library.UnitTest
             var flags = new int[] { 0, 1 };
 
             var length = 1024 * 1024;
-            byte[] x = new byte[length];
-            byte[] y = new byte[length];
+            byte[] x1 = new byte[length];
+            byte[] y1 = new byte[length];
+            byte[] x2 = new byte[length];
+            byte[] y2 = new byte[length];
+
+            random.NextBytes(x1);
+            random.NextBytes(x2);
 
             for (int i = 0; i < 1024 * 32; i++)
             {
@@ -33,22 +38,25 @@ namespace Library.UnitTest
                     if (index == 0)
                     {
                         sw1.Start();
-                        Unsafe.Copy(x, 0, y, 0, length);
+                        Unsafe.Copy(x1, 0, y1, 0, length);
                         sw1.Stop();
                     }
                     else if (index == 1)
                     {
                         sw2.Start();
-                        Array.Copy(x, 0, y, 0, length);
+                        Array.Copy(x2, 0, y2, 0, length);
                         sw2.Stop();
                     }
                 }
+
+                Assert.IsTrue(Unsafe.Equals(x1, y1));
+                Assert.IsTrue(Unsafe.Equals(x2, y2));
             }
 
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine("Unsafe.Copy: " + sw1.Elapsed.ToString());
-            sb.AppendLine("Array.Copy: " + sw2.Elapsed.ToString());
+            sb.AppendLine("Native Copy: " + sw1.Elapsed.ToString());
+            sb.AppendLine("Array Copy: " + sw2.Elapsed.ToString());
 
             Console.WriteLine(sb.ToString());
         }

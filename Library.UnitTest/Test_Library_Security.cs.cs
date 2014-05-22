@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 using Library.Security;
 using NUnit.Framework;
 
@@ -172,6 +175,42 @@ namespace Library.UnitTest
                         Assert.IsTrue(Unsafe.Equals(hmacSha512.ComputeHash(stream1), HmacSha512.ComputeHash(stream2, key)));
                     }
                 }
+            }
+        }
+
+        [Test]
+        public void Test_Hashcash1()
+        {
+            Hashcash1 hashcash1 = new Hashcash1();
+
+            {
+                var result = hashcash1.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
+                var count = hashcash1.Verify(result, NetworkConverter.FromHexString("0101010101010101"));
+                Assert.IsTrue(count > 4);
+            }
+
+            {
+                var count = hashcash1.Verify(NetworkConverter.FromHexString("9fcc47a072aec40958c2adc4f8d557b979d5ea27c858710bfce464a13d1d9ba68a55abd7afe09d5684ad58d0473054ae0227de234e23ff9a1889de8fac460780"), NetworkConverter.FromHexString("0101010101010101"));
+                Assert.IsTrue(count == 9);
+            }
+
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                var task = Task.Factory.StartNew(() =>
+                {
+                    hashcash1.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
+                });
+
+                Thread.Sleep(1000);
+
+                hashcash1.Cancel();
+
+                task.Wait();
+
+                sw.Stop();
+                Assert.IsTrue(sw.ElapsedMilliseconds < 1000 * 3);
             }
         }
     }

@@ -315,6 +315,8 @@ namespace Library.Net.Connections
                         {
                             _bufferManager.ReturnBuffer(sendBuffer);
                         }
+
+                        _aliveTimer.Change(1000 * 30);
                     }
                     catch (ConnectionException e)
                     {

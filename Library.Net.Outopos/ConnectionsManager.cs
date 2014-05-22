@@ -47,10 +47,8 @@ namespace Library.Net.Outopos
         private VolatileHashSet<Node> _waitingNodes;
         private VolatileHashSet<Node> _cuttingNodes;
         private VolatileHashSet<Node> _removeNodes;
-        private VolatileHashDictionary<Node, int> _nodesStatus;
 
         private VolatileHashSet<string> _succeededUris;
-        private VolatileHashSet<string> _failedUris;
 
         private VolatileHashSet<Tag> _pushHeadersRequestList;
         private VolatileHashSet<Key> _downloadBlocks;
@@ -145,13 +143,11 @@ namespace Library.Net.Outopos
 
             _creatingNodes = new LockedList<Node>();
 
-            _waitingNodes = new VolatileHashSet<Node>(new TimeSpan(0, 0, 10));
+            _waitingNodes = new VolatileHashSet<Node>(new TimeSpan(0, 0, 30));
             _cuttingNodes = new VolatileHashSet<Node>(new TimeSpan(0, 10, 0));
             _removeNodes = new VolatileHashSet<Node>(new TimeSpan(0, 30, 0));
-            _nodesStatus = new VolatileHashDictionary<Node, int>(new TimeSpan(0, 30, 0));
 
             _succeededUris = new VolatileHashSet<string>(new TimeSpan(1, 0, 0));
-            _failedUris = new VolatileHashSet<string>(new TimeSpan(0, 10, 0));
 
             _downloadBlocks = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
             _pushHeadersRequestList = new VolatileHashSet<Tag>(new TimeSpan(0, 3, 0));
@@ -166,10 +162,8 @@ namespace Library.Net.Outopos
             _waitingNodes.TrimExcess();
             _cuttingNodes.TrimExcess();
             _removeNodes.TrimExcess();
-            _nodesStatus.TrimExcess();
 
             _succeededUris.TrimExcess();
-            _failedUris.TrimExcess();
 
             _downloadBlocks.TrimExcess();
             _pushHeadersRequestList.TrimExcess();
@@ -453,24 +447,12 @@ namespace Library.Net.Outopos
         {
             lock (this.ThisLock)
             {
-                if (!_removeNodes.Contains(node))
+                _removeNodes.Add(node);
+                _cuttingNodes.Remove(node);
+
+                if (_routeTable.Count > _routeTableMinCount)
                 {
-                    int closeCount;
-
-                    _nodesStatus.TryGetValue(node, out closeCount);
-                    _nodesStatus[node] = ++closeCount;
-
-                    if (closeCount >= 3)
-                    {
-                        _removeNodes.Add(node);
-
-                        if (_routeTable.Count > _routeTableMinCount)
-                        {
-                            _routeTable.Remove(node);
-                        }
-
-                        _nodesStatus.Remove(node);
-                    }
+                    _routeTable.Remove(node);
                 }
             }
         }
@@ -498,91 +480,10 @@ namespace Library.Net.Outopos
                     return;
                 }
 
-                //if (CollectionUtilities.Equals(connectionManager.Node.Id, this.BaseNode.Id))
-                //{
-                //    connectionManager.Dispose();
-                //    return;
-                //}
-
-                //var oldConnectionManager = _connectionManagers.FirstOrDefault(n => CollectionUtilities.Equals(n.Node.Id, connectionManager.Node.Id));
-
-                //if (oldConnectionManager != null)
-                //{
-                //    this.RemoveConnectionManager(oldConnectionManager);
-                //}
-
+                if (_connectionManagers.Count >= this.ConnectionCountLimit)
                 {
-                    bool flag = false;
-
-                    if (connectionManager.Direction == ConnectDirection.In)
-                    {
-                        var connectionCount = 0;
-
-                        lock (this.ThisLock)
-                        {
-                            connectionCount = _connectionManagers.Count(n => n.Direction == ConnectDirection.In);
-                        }
-
-                        if (connectionCount > ((this.ConnectionCountLimit / 3) * 2))
-                        {
-                            flag = true;
-                        }
-                    }
-
-                    if (_connectionManagers.Count >= this.ConnectionCountLimit)
-                    {
-                        flag = true;
-                    }
-
-                    if (flag)
-                    {
-                        ThreadPool.QueueUserWorkItem((object state) =>
-                        {
-                            // PushNodes
-                            try
-                            {
-                                List<Node> nodes = new List<Node>();
-
-                                lock (this.ThisLock)
-                                {
-                                    foreach (var node in _routeTable)
-                                    {
-                                        if (connectionManager.Node == node) continue;
-                                        nodes.Add(node);
-
-                                        if (nodes.Count >= 50) break;
-                                    }
-                                }
-
-                                if (nodes.Count > 0)
-                                {
-                                    connectionManager.PushNodes(nodes);
-
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push Nodes ({0})", nodes.Count));
-                                    _pushNodeCount.Add(nodes.Count);
-                                }
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            try
-                            {
-                                connectionManager.PushCancel();
-
-                                Debug.WriteLine("ConnectionManager: Push Cancel");
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-
-                            connectionManager.Dispose();
-                        });
-
-                        return;
-                    }
+                    connectionManager.Dispose();
+                    return;
                 }
 
                 Debug.WriteLine("ConnectionManager: Connect");
@@ -657,6 +558,21 @@ namespace Library.Net.Outopos
                 if (this.State == ManagerState.Stop) return;
                 Thread.Sleep(1000);
 
+                // 接続数を制限する。
+                {
+                    var connectionCount = 0;
+
+                    lock (this.ThisLock)
+                    {
+                        connectionCount = _connectionManagers.Count(n => n.Direction == ConnectDirection.Out);
+                    }
+
+                    if (connectionCount >= (this.ConnectionCountLimit / 2))
+                    {
+                        continue;
+                    }
+                }
+
                 Node node = null;
 
                 lock (this.ThisLock)
@@ -703,23 +619,9 @@ namespace Library.Net.Outopos
                         continue;
                     }
 
-                    var connectionCount = 0;
-
-                    lock (this.ThisLock)
-                    {
-                        connectionCount = _connectionManagers.Count(n => n.Direction == ConnectDirection.Out);
-                    }
-
-                    if (connectionCount > ((this.ConnectionCountLimit / 3) * 1))
-                    {
-                        continue;
-                    }
-
                     foreach (var uri in uris.Randomize())
                     {
                         if (this.State == ManagerState.Stop) return;
-
-                        if (_failedUris.Contains(uri)) continue;
 
                         var connection = _clientManager.CreateConnection(uri, _bandwidthLimit);
 
@@ -730,7 +632,7 @@ namespace Library.Net.Outopos
                             try
                             {
                                 connectionManager.Connect();
-                                if (!ConnectionsManager.Check(connectionManager.Node)) continue;
+                                if (!ConnectionsManager.Check(connectionManager.Node)) throw new ArgumentException();
 
                                 _succeededUris.Add(uri);
 
@@ -740,8 +642,7 @@ namespace Library.Net.Outopos
 
                                     if (node != connectionManager.Node)
                                     {
-                                        _removeNodes.Add(node);
-                                        _routeTable.Remove(node);
+                                        this.RemoveNode(connectionManager.Node);
                                     }
 
                                     if (connectionManager.Node.Uris.Count() != 0)
@@ -763,10 +664,6 @@ namespace Library.Net.Outopos
                                 connectionManager.Dispose();
                             }
                         }
-                        else
-                        {
-                            _failedUris.Add(uri);
-                        }
                     }
 
                     this.RemoveNode(node);
@@ -785,6 +682,21 @@ namespace Library.Net.Outopos
             {
                 Thread.Sleep(1000);
                 if (this.State == ManagerState.Stop) return;
+
+                // 接続数を制限する。
+                {
+                    var connectionCount = 0;
+
+                    lock (this.ThisLock)
+                    {
+                        connectionCount = _connectionManagers.Count(n => n.Direction == ConnectDirection.In);
+                    }
+
+                    if (connectionCount >= ((this.ConnectionCountLimit + 1) / 2))
+                    {
+                        continue;
+                    }
+                }
 
                 string uri;
                 var connection = _serverManager.AcceptConnection(out uri, _bandwidthLimit);
@@ -926,8 +838,7 @@ namespace Library.Net.Outopos
                             {
                                 lock (this.ThisLock)
                                 {
-                                    _removeNodes.Add(connectionManager.Node);
-                                    _routeTable.Remove(connectionManager.Node);
+                                    this.RemoveNode(connectionManager.Node);
                                 }
 
                                 connectionManager.PushCancel();
@@ -1771,8 +1682,7 @@ namespace Library.Net.Outopos
                         {
                             lock (this.ThisLock)
                             {
-                                _removeNodes.Add(connectionManager.Node);
-                                _routeTable.Remove(connectionManager.Node);
+                                this.RemoveNode(connectionManager.Node);
                             }
 
                             connectionManager.PushCancel();
@@ -2286,12 +2196,7 @@ namespace Library.Net.Outopos
             {
                 lock (this.ThisLock)
                 {
-                    _removeNodes.Add(connectionManager.Node);
-
-                    if (_routeTable.Count > _routeTableMinCount)
-                    {
-                        _routeTable.Remove(connectionManager.Node);
-                    }
+                    this.RemoveNode(connectionManager.Node);
                 }
 
                 this.RemoveConnectionManager(connectionManager);
@@ -2311,8 +2216,6 @@ namespace Library.Net.Outopos
             {
                 lock (this.ThisLock)
                 {
-                    this.RemoveNode(connectionManager.Node);
-
                     if (!_removeNodes.Contains(connectionManager.Node))
                     {
                         _cuttingNodes.Add(connectionManager.Node);
@@ -2535,7 +2438,6 @@ namespace Library.Net.Outopos
 
                     _cuttingNodes.Clear();
                     _removeNodes.Clear();
-                    _nodesStatus.Clear();
 
                     _messagesManager.Clear();
                 }

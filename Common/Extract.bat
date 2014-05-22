@@ -12,3 +12,6 @@ copy /Y /B Cpp\Library_Correction\x64\Release\Library_Correction.dll ..\Library.
 
 copy /Y /B Cpp\Library_Security\Release\Library_Security.dll ..\Library.Security\Assembly\Library_Security_x86.dll
 copy /Y /B Cpp\Library_Security\x64\Release\Library_Security.dll ..\Library.Security\Assembly\Library_Security_x64.dll
+
+copy /Y /B Cpp\Hashcash\Release\Hashcash.exe ..\Library.Security\Assembly\Hashcash_x86.exe
+copy /Y /B Cpp\Hashcash\x64\Release\Hashcash.exe ..\Library.Security\Assembly\Hashcash_x64.exe

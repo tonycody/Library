@@ -1,6 +1,7 @@
 LIBRARY Library
 
 EXPORTS
+	copy
 	equals
 	compare
 	xor

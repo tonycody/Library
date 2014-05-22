@@ -457,6 +457,7 @@ namespace Library.Net.Outopos
             using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
             {
                 int version;
+
                 {
                     byte[] versionBuffer = new byte[4];
                     if (inStream.Read(versionBuffer, 0, versionBuffer.Length) != versionBuffer.Length) return;
@@ -466,6 +467,7 @@ namespace Library.Net.Outopos
                 if (version == 0)
                 {
                     CompressionAlgorithm compressionAlgorithm;
+
                     {
                         compressionAlgorithm = (CompressionAlgorithm)((byte)inStream.ReadByte());
                     }
