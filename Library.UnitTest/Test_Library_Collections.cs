@@ -93,7 +93,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_BinaryArray()
         {
-            using (BinaryArray binaryArray = new BinaryArray(1024 * 256))
+            using (BinaryArray binaryArray = new BinaryArray(1024 * 256, _bufferManager))
             {
                 Random random_a, random_b;
 

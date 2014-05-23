@@ -77,20 +77,23 @@ namespace Library.Security
 
             info.Arguments = string.Format("hashcash1 verify {0} {1}", NetworkConverter.ToHexString(key), NetworkConverter.ToHexString(value));
 
-            var process = Process.Start(info);
-
-            try
+            using (var process = Process.Start(info))
             {
-                var result = process.StandardOutput.ReadLine();
+                process.PriorityClass = ProcessPriorityClass.Idle;
 
-                process.WaitForExit();
-                if (process.ExitCode != 0) return -1;
+                try
+                {
+                    var result = process.StandardOutput.ReadLine();
 
-                return int.Parse(result);
-            }
-            catch (Exception)
-            {
-                return -1;
+                    process.WaitForExit();
+                    if (process.ExitCode != 0) return -1;
+
+                    return int.Parse(result);
+                }
+                catch (Exception)
+                {
+                    return -1;
+                }
             }
         }
 

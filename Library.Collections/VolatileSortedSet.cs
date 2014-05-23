@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class VolatileSortedSet<T> : ISetOperators<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
+    public class VolatileSortedSet<T> : ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private SortedDictionary<T, DateTime> _dic;
         private readonly TimeSpan _survivalTime;
@@ -90,73 +90,6 @@ namespace Library.Collections
                 lock (this.ThisLock)
                 {
                     return _dic.Count;
-                }
-            }
-        }
-
-        public IEnumerable<T> IntersectFrom(IEnumerable<T> collection)
-        {
-            lock (this.ThisLock)
-            {
-                if (_dic.Count == 0)
-                {
-                    yield break;
-                }
-                else
-                {
-                    using (var bitmap = new BinaryArray(_dic.Count * 8))
-                    {
-                        foreach (var item in _dic.Keys)
-                        {
-                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                        }
-
-                        foreach (var item in collection)
-                        {
-                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)) continue;
-
-                            if (_dic.ContainsKey(item))
-                            {
-                                yield return item;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        public IEnumerable<T> ExceptFrom(IEnumerable<T> collection)
-        {
-            lock (this.ThisLock)
-            {
-                if (_dic.Count == 0)
-                {
-                    foreach (var item in collection)
-                    {
-                        yield return item;
-                    }
-                }
-                else
-                {
-                    using (var bitmap = new BinaryArray(_dic.Count * 8))
-                    {
-                        foreach (var item in _dic.Keys)
-                        {
-                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                        }
-
-                        foreach (var item in collection)
-                        {
-                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length))
-                            {
-                                yield return item;
-                            }
-                            else if (!_dic.ContainsKey(item))
-                            {
-                                yield return item;
-                            }
-                        }
-                    }
                 }
             }
         }

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Library.Collections
 {
-    public class LockedSortedSet<T> : ISet<T>, ISetOperators<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
+    public class LockedSortedSet<T> : ISet<T>, ICollection<T>, IEnumerable<T>, ICollection, IEnumerable, IThisLock
     {
         private SortedSet<T> _sortedSet;
         private int? _capacity;
@@ -80,101 +80,6 @@ namespace Library.Collections
                 lock (this.ThisLock)
                 {
                     _capacity = value;
-                }
-            }
-        }
-
-        public IEnumerable<T> IntersectFrom(IEnumerable<T> collection)
-        {
-            lock (this.ThisLock)
-            {
-                if (_sortedSet.Count == 0)
-                {
-                    yield break;
-                }
-                else
-                {
-                    using (var bitmap = new BinaryArray(_sortedSet.Count * 8))
-                    {
-                        foreach (var item in _sortedSet)
-                        {
-                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                        }
-
-                        foreach (var item in collection)
-                        {
-                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length)) continue;
-
-                            if (_sortedSet.Contains(item))
-                            {
-                                yield return item;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        internal IEnumerable<T> IntersectFrom_2(IEnumerable<T> collection)
-        {
-            lock (this.ThisLock)
-            {
-                foreach (var item in collection)
-                {
-                    if (_sortedSet.Contains(item))
-                    {
-                        yield return item;
-                    }
-                }
-            }
-        }
-
-        public IEnumerable<T> ExceptFrom(IEnumerable<T> collection)
-        {
-            lock (this.ThisLock)
-            {
-                if (_sortedSet.Count == 0)
-                {
-                    foreach (var item in collection)
-                    {
-                        yield return item;
-                    }
-                }
-                else
-                {
-                    using (var bitmap = new BinaryArray(_sortedSet.Count * 8))
-                    {
-                        foreach (var item in _sortedSet)
-                        {
-                            bitmap.Set((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length, true);
-                        }
-
-                        foreach (var item in collection)
-                        {
-                            if (!bitmap.Get((item.GetHashCode() & 0x7FFFFFFF) % bitmap.Length))
-                            {
-                                yield return item;
-                            }
-                            else if (!_sortedSet.Contains(item))
-                            {
-                                yield return item;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        internal IEnumerable<T> ExceptFrom_2(IEnumerable<T> collection)
-        {
-            lock (this.ThisLock)
-            {
-                foreach (var item in collection)
-                {
-                    if (!_sortedSet.Contains(item))
-                    {
-                        yield return item;
-                    }
                 }
             }
         }

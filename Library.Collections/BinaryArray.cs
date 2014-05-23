@@ -9,22 +9,19 @@ namespace Library.Collections
     public unsafe class BinaryArray : ManagerBase
     {
         private int _length;
+        private BufferManager _bufferManager;
 
         private byte[] _buffer;
 
-        private GCHandle _h_buffer;
-        private byte* _p_buffer;
-
         private volatile bool _disposed;
 
-        public BinaryArray(int length)
+        public BinaryArray(int length, BufferManager bufferManager)
         {
             _length = length;
+            _bufferManager = bufferManager;
 
-            _buffer = new byte[(_length + (8 - 1)) / 8];
-
-            _h_buffer = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
-            _p_buffer = (byte*)_h_buffer.AddrOfPinnedObject();
+            _buffer = _bufferManager.TakeBuffer((_length + (8 - 1)) / 8);
+            Unsafe.Zero(_buffer);
         }
 
         public int Length
@@ -41,11 +38,11 @@ namespace Library.Collections
 
             if (value)
             {
-                _p_buffer[index / 8] |= (byte)(0x80 >> (index % 8));
+                _buffer[index / 8] |= (byte)(0x80 >> (index % 8));
             }
             else
             {
-                _p_buffer[index / 8] &= (byte)(~(0x80 >> (index % 8)));
+                _buffer[index / 8] &= (byte)(~(0x80 >> (index % 8)));
             }
         }
 
@@ -53,7 +50,7 @@ namespace Library.Collections
         {
             if (index < 0 || index >= _length) throw new ArgumentOutOfRangeException("index");
 
-            return ((_p_buffer[index / 8] << (index % 8)) & 0x80) == 0x80;
+            return ((_buffer[index / 8] << (index % 8)) & 0x80) == 0x80;
         }
 
         public void Clear()
@@ -68,10 +65,20 @@ namespace Library.Collections
 
             if (disposing)
             {
+                if (_buffer != null)
+                {
+                    try
+                    {
+                        _bufferManager.ReturnBuffer(_buffer);
+                    }
+                    catch (Exception)
+                    {
 
+                    }
+
+                    _buffer = null;
+                }
             }
-
-            _h_buffer.Free();
         }
     }
 }

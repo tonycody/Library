@@ -93,6 +93,7 @@
     <Compile Include="DownloadItem.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
+    <Compile Include="Utilities\ISetOperators.cs" />
     <Compile Include="Utilities\ItemUtilities.cs" />
     <Compile Include="MessagesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

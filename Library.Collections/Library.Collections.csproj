@@ -64,7 +64,6 @@
     <Compile Include="SmallList.cs" />
     <Compile Include="VolatileSortedSet.cs" />
     <Compile Include="VolatileSortedDictionary.cs" />
-    <Compile Include="Utilities\ISetOperators.cs" />
     <Compile Include="LockedSortedSet.cs" />
     <Compile Include="LockedSortedDictionary.cs" />
     <Compile Include="VolatileHashSet.cs" />
