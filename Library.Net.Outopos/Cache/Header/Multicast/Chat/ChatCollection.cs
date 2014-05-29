@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    sealed class KeyCollection : LockedList<Key>, IEnumerable<Key>
+    public sealed class ChatCollection : LockedList<Chat>, IEnumerable<Chat>
     {
-        public KeyCollection() : base() { }
-        public KeyCollection(int capacity) : base(capacity) { }
-        public KeyCollection(IEnumerable<Key> collections) : base(collections) { }
+        public ChatCollection() : base() { }
+        public ChatCollection(int capacity) : base(capacity) { }
+        public ChatCollection(IEnumerable<Chat> collections) : base(collections) { }
 
-        protected override bool Filter(Key item)
+        protected override bool Filter(Chat item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Key>
+        #region IEnumerable<Chat>
 
-        IEnumerator<Key> IEnumerable<Key>.GetEnumerator()
+        IEnumerator<Chat> IEnumerable<Chat>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

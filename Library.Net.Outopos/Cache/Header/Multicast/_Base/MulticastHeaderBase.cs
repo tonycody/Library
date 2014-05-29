@@ -9,32 +9,38 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Header", Namespace = "http://Library/Net/Outopos")]
-    public sealed class Header : ImmutableCertificateItemBase<Header>, IHeader<Tag, Key>
+    [DataContract(Name = "MulticastHeaderBase", Namespace = "http://Library/Net/Outopos")]
+    public abstract class MulticastHeaderBase<THeader, TTag> : ImmutableCertificateItemBase<THeader>, IMulticastHeader<TTag>
+        where THeader : MulticastHeaderBase<THeader, TTag>
+        where TTag : ItemBase<TTag>
     {
         private enum SerializeId : byte
         {
             Tag = 0,
             CreationTime = 1,
             Key = 2,
+            Option = 3,
 
-            Certificate = 3,
+            Certificate = 4,
         }
 
-        private static Intern<Tag> _tagCache = new Intern<Tag>();
-        private volatile Tag _tag;
+        private volatile TTag _tag;
         private DateTime _creationTime;
         private volatile Key _key;
+        private byte[] _option;
 
         private volatile Certificate _certificate;
 
         private volatile object _thisLock;
 
-        public Header(Tag tag, DateTime creationTime, Key key, DigitalSignature digitalSignature)
+        public static readonly int MaxOptionLength = 256;
+
+        public MulticastHeaderBase(TTag tag, DateTime creationTime, Key key, byte[] option, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
             this.CreationTime = creationTime;
             this.Key = key;
+            this.Option = option;
 
             this.CreateCertificate(digitalSignature);
         }
@@ -58,7 +64,7 @@ namespace Library.Net.Outopos
                 {
                     if (id == (byte)SerializeId.Tag)
                     {
-                        this.Tag = Tag.Import(rangeStream, bufferManager);
+                        this.Tag = ItemBase<TTag>.Import(rangeStream, bufferManager);
                     }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
@@ -67,6 +73,11 @@ namespace Library.Net.Outopos
                     else if (id == (byte)SerializeId.Key)
                     {
                         this.Key = Key.Import(rangeStream, bufferManager);
+                    }
+
+                    else if (id == (byte)SerializeId.Option)
+                    {
+                        this.Option = ItemUtilities.GetByteArray(rangeStream);
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -103,6 +114,12 @@ namespace Library.Net.Outopos
                 }
             }
 
+            // Option
+            if (this.Option != null)
+            {
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Option, this.Option);
+            }
+
             // Certificate
             if (this.Certificate != null)
             {
@@ -123,12 +140,12 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Header)) return false;
+            if ((object)obj == null || !(obj is THeader)) return false;
 
-            return this.Equals((Header)obj);
+            return this.Equals((THeader)obj);
         }
 
-        public override bool Equals(Header other)
+        public override bool Equals(THeader other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -137,9 +154,16 @@ namespace Library.Net.Outopos
                 || this.CreationTime != other.CreationTime
                 || this.Key != other.Key
 
+                || (this.Option == null) != (other.Option == null)
+
                 || this.Certificate != other.Certificate)
             {
                 return false;
+            }
+
+            if (this.Option != null && other.Option != null)
+            {
+                if (!Unsafe.Equals(this.Option, other.Option)) return false;
             }
 
             return true;
@@ -182,10 +206,10 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IHeader<Tag, Key>
+        #region IMulicastHeader<TTag>
 
         [DataMember(Name = "Tag")]
-        public Tag Tag
+        public TTag Tag
         {
             get
             {
@@ -193,21 +217,7 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    if (value != null)
-                    {
-                        _tag = _tagCache.GetValue(value, this);
-                    }
-                    else
-                    {
-                        _tag = null;
-                    }
-                }
+                _tag = value;
             }
         }
 
@@ -241,6 +251,26 @@ namespace Library.Net.Outopos
             private set
             {
                 _key = value;
+            }
+        }
+
+        [DataMember(Name = "Option")]
+        public byte[] Option
+        {
+            get
+            {
+                return _option;
+            }
+            private set
+            {
+                if (value != null && value.Length > MulticastHeaderBase<THeader, TTag>.MaxOptionLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _option = value;
+                }
             }
         }
 

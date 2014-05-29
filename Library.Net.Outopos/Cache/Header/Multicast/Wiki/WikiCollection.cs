@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    sealed class KeyCollection : LockedList<Key>, IEnumerable<Key>
+    public sealed class WikiCollection : LockedList<Wiki>, IEnumerable<Wiki>
     {
-        public KeyCollection() : base() { }
-        public KeyCollection(int capacity) : base(capacity) { }
-        public KeyCollection(IEnumerable<Key> collections) : base(collections) { }
+        public WikiCollection() : base() { }
+        public WikiCollection(int capacity) : base(capacity) { }
+        public WikiCollection(IEnumerable<Wiki> collections) : base(collections) { }
 
-        protected override bool Filter(Key item)
+        protected override bool Filter(Wiki item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Key>
+        #region IEnumerable<Wiki>
 
-        IEnumerator<Key> IEnumerable<Key>.GetEnumerator()
+        IEnumerator<Wiki> IEnumerable<Wiki>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

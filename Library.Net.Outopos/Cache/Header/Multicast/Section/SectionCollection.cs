@@ -3,22 +3,22 @@ using Library.Collections;
 
 namespace Library.Net.Outopos
 {
-    sealed class KeyCollection : LockedList<Key>, IEnumerable<Key>
+    public sealed class SectionCollection : LockedList<Section>, IEnumerable<Section>
     {
-        public KeyCollection() : base() { }
-        public KeyCollection(int capacity) : base(capacity) { }
-        public KeyCollection(IEnumerable<Key> collections) : base(collections) { }
+        public SectionCollection() : base() { }
+        public SectionCollection(int capacity) : base(capacity) { }
+        public SectionCollection(IEnumerable<Section> collections) : base(collections) { }
 
-        protected override bool Filter(Key item)
+        protected override bool Filter(Section item)
         {
             if (item == null) return true;
 
             return false;
         }
 
-        #region IEnumerable<Key>
+        #region IEnumerable<Section>
 
-        IEnumerator<Key> IEnumerable<Key>.GetEnumerator()
+        IEnumerator<Section> IEnumerable<Section>.GetEnumerator()
         {
             lock (base.ThisLock)
             {

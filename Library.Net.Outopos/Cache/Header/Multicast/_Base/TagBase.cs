@@ -1,37 +1,32 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Tag", Namespace = "http://Library/Net/Outopos")]
-    public sealed class Tag : ItemBase<Tag>, ITag
+    [DataContract(Name = "TagBase", Namespace = "http://Library/Net/Outopos")]
+    public abstract class TagBase<TTag> : ItemBase<TTag>, ITag
+        where TTag : TagBase<TTag>
     {
         private enum SerializeId : byte
         {
-            Type = 0,
-            Name = 1,
-            Id = 2,
+            Name = 0,
+            Id = 1,
         }
 
-        private volatile string _type;
         private volatile string _name;
         private volatile byte[] _id;
 
         private volatile int _hashCode;
 
-        public static readonly int MaxTypeLength = 256;
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxIdLength = 64;
 
-        public Tag(string type, string name, byte[] id)
+        public TagBase(string name, byte[] id)
         {
-            this.Type = type;
             this.Name = name;
             this.Id = id;
         }
@@ -53,11 +48,7 @@ namespace Library.Net.Outopos
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Type)
-                    {
-                        this.Type = ItemUtilities.GetString(rangeStream);
-                    }
-                    else if (id == (byte)SerializeId.Name)
+                    if (id == (byte)SerializeId.Name)
                     {
                         this.Name = ItemUtilities.GetString(rangeStream);
                     }
@@ -73,11 +64,6 @@ namespace Library.Net.Outopos
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 
-            // Type
-            if (this.Type != null)
-            {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.Type, this.Type);
-            }
             // Name
             if (this.Name != null)
             {
@@ -100,18 +86,17 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Tag)) return false;
+            if ((object)obj == null || !(obj is TTag)) return false;
 
-            return this.Equals((Tag)obj);
+            return this.Equals((TTag)obj);
         }
 
-        public override bool Equals(Tag other)
+        public override bool Equals(TTag other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.Type != other.Type
-                || this.Name != other.Name
+            if (this.Name != other.Name
                 || (this.Id == null) != (other.Id == null))
             {
                 return false;
@@ -127,26 +112,6 @@ namespace Library.Net.Outopos
 
         #region ITag
 
-        [DataMember(Name = "Type")]
-        public string Type
-        {
-            get
-            {
-                return _type;
-            }
-            private set
-            {
-                if (value != null && value.Length > Tag.MaxTypeLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _type = value;
-                }
-            }
-        }
-
         [DataMember(Name = "Name")]
         public string Name
         {
@@ -156,7 +121,7 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && value.Length > Tag.MaxNameLength)
+                if (value != null && value.Length > TagBase<TTag>.MaxNameLength)
                 {
                     throw new ArgumentException();
                 }
@@ -176,7 +141,7 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && (value.Length > Tag.MaxIdLength))
+                if (value != null && (value.Length > TagBase<TTag>.MaxIdLength))
                 {
                     throw new ArgumentException();
                 }

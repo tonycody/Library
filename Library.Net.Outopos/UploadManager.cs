@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using Library.Collections;
-using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Outopos
@@ -16,12 +13,13 @@ namespace Library.Net.Outopos
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private LockedHashSet<Task> _taskHashSet = new LockedHashSet<Task>();
+        private Settings _settings;
 
-        private volatile ManagerState _state = ManagerState.Stop;
+        private volatile Thread _uploadThread;
+
+        private ManagerState _state = ManagerState.Stop;
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
-        private const int _blockLength = 1024 * 256;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -31,123 +29,293 @@ namespace Library.Net.Outopos
             _connectionsManager = connectionsManager;
             _cacheManager = cacheManager;
             _bufferManager = bufferManager;
+
+            _settings = new Settings(this.ThisLock);
         }
 
-        public void Upload(Tag tag, DigitalSignature digitalSignature, Stream stream)
+        private void UploadThread()
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                if (this.State == ManagerState.Stop) return;
-
-                BufferStream bufferStream = null;
-
-                try
-                {
-                    bufferStream = new BufferStream(_bufferManager);
-
-                    using (var inStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position, true))
-                    {
-                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
-
-                        try
-                        {
-                            int length = 0;
-
-                            while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
-                            {
-                                bufferStream.Write(buffer, 0, length);
-                            }
-                        }
-                        finally
-                        {
-                            _bufferManager.ReturnBuffer(buffer);
-                        }
-                    }
-
-                    bufferStream.Seek(0, SeekOrigin.Begin);
-                }
-                catch (Exception)
-                {
-                    if (bufferStream != null)
-                    {
-                        bufferStream.Dispose();
-                    }
-
-                    throw;
-                }
-
-                var item = new UploadItem();
-                item.Tag = tag;
-                item.CreationTime = DateTime.UtcNow;
-                item.DigitalSignature = digitalSignature;
-                item.Stream = bufferStream;
-
-                var task = new Task(new Action<object>(this.UploadThread), item);
-                task.ContinueWith(_ => _taskHashSet.Remove(task));
-
-                _taskHashSet.Add(task);
-
-                task.Start();
-            }
-        }
-
-        private void UploadThread(object state)
-        {
-            var item = state as UploadItem;
-            if (item == null) return;
-
-            KeyCollection keys;
-
-            {
-                var headerStream = new BufferStream(_bufferManager);
-
-                // Version
-                headerStream.Write(NetworkConverter.GetBytes(0), 0, 4);
-
-                // Type
-                headerStream.WriteByte((byte)1);
-
-                using (var dataStream = new UniteStream(headerStream, item.Stream))
-                {
-                    keys = _cacheManager.Encoding(dataStream, _blockLength, _hashAlgorithm);
-
-                    foreach (var key in keys)
-                    {
-                        _connectionsManager.Upload(key);
-                    }
-                }
-            }
+            Stopwatch refreshStopwatch = new Stopwatch();
 
             for (; ; )
             {
-                if (keys.Count == 1)
+                Thread.Sleep(1000 * 1);
+                if (this.State == ManagerState.Stop) return;
+
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 30)
                 {
-                    var header = new Header(item.Tag, item.CreationTime, keys[0], item.DigitalSignature);
-                    _connectionsManager.Upload(header);
-                }
-                else
-                {
-                    var headerStream = new BufferStream(_bufferManager);
+                    refreshStopwatch.Restart();
 
-                    // Version
-                    headerStream.Write(NetworkConverter.GetBytes(0), 0, 4);
-
-                    // Type
-                    headerStream.WriteByte((byte)0);
-
-                    using (var stream = ContentConverter.CollectionToStream(keys))
-                    using (var dataStream = new UniteStream(headerStream, stream))
+                    lock (this.ThisLock)
                     {
-                        keys = _cacheManager.Encoding(stream, _blockLength, _hashAlgorithm);
+                        var now = DateTime.UtcNow;
 
-                        foreach (var key in keys)
+                        foreach (var item in _settings.LifeSpans.ToArray())
                         {
-                            _connectionsManager.Upload(key);
+                            if ((now - item.Value) > new TimeSpan(64, 0, 0, 0))
+                            {
+                                _cacheManager.Unlock(item.Key);
+                                _settings.LifeSpans.Remove(item.Key);
+                            }
                         }
                     }
                 }
+
+                {
+                    UploadItem item = null;
+
+                    try
+                    {
+                        lock (this.ThisLock)
+                        {
+                            if (_settings.UploadItems.Count > 0)
+                            {
+                                item = _settings.UploadItems[0];
+                                _settings.UploadItems.RemoveAt(0);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        if (item != null)
+                        {
+                            ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                            try
+                            {
+                                if (item.Type == "SectionProfile")
+                                {
+                                    buffer = ContentConverter.ToSectionProfileContentBlock(item.SectionProfileContent);
+                                }
+                                else if (item.Type == "SectionMessage")
+                                {
+                                    buffer = ContentConverter.ToSectionMessageContentBlock(item.SectionMessageContent, item.ExchangePublicKey);
+                                }
+                                else if (item.Type == "WikiDocument")
+                                {
+                                    buffer = ContentConverter.ToWikiPageContentBlock(item.WikiPageContent);
+                                }
+                                else if (item.Type == "WikiVote")
+                                {
+                                    buffer = ContentConverter.ToWikiVoteContentBlock(item.WikiVoteContent);
+                                }
+                                else if (item.Type == "ChatTopic")
+                                {
+                                    buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
+                                }
+                                else if (item.Type == "ChatMessage")
+                                {
+                                    buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
+                                }
+
+                                Key key = null;
+
+                                {
+                                    if (_hashAlgorithm == HashAlgorithm.Sha512)
+                                    {
+                                        key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                                    }
+
+                                    _cacheManager.Lock(key);
+                                    _settings.LifeSpans[key] = DateTime.UtcNow;
+                                }
+
+                                _cacheManager[key] = buffer;
+                                _connectionsManager.Upload(key);
+
+                                if (item.Type == "SectionProfile")
+                                {
+                                    var header = new SectionProfileHeader(item.Section, item.CreationTime, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "SectionMessage")
+                                {
+                                    var header = new SectionMessageHeader(item.Section, item.CreationTime, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "WikiDocument")
+                                {
+                                    var header = new WikiPageHeader(item.Wiki, item.CreationTime, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "WikiVote")
+                                {
+                                    var header = new WikiVoteHeader(item.Wiki, item.CreationTime, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "ChatTopic")
+                                {
+                                    var header = new ChatTopicHeader(item.Chat, item.CreationTime, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                                else if (item.Type == "ChatMessage")
+                                {
+                                    var header = new ChatMessageHeader(item.Chat, item.CreationTime, key, item.DigitalSignature);
+                                    _connectionsManager.Upload(header);
+                                }
+                            }
+                            finally
+                            {
+                                if (buffer.Array != null)
+                                {
+                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Warning(e);
+                    }
+                }
+            }
+        }
+
+        public SectionProfile Upload(Section tag,
+            SectionProfileContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "SectionProfile";
+                uploadItem.Section = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.SectionProfileContent = content;
+                uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
+
+                return new SectionProfile(uploadItem.Section,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Comment,
+                    content.ExchangePublicKey,
+                    content.TrustSignatures,
+                    content.Wikis,
+                    content.Chats);
+            }
+        }
+
+        public SectionMessage Upload(Section tag,
+            SectionMessageContent content,
+            ExchangePublicKey exchangePublicKey,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "SectionMessage";
+                uploadItem.Section = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.SectionMessageContent = content;
+                uploadItem.ExchangePublicKey = exchangePublicKey;
+                uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
+
+                return new SectionMessage(uploadItem.Section,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Comment,
+                    content.Anchor);
+            }
+        }
+
+        public WikiPage Upload(Wiki tag,
+            WikiPageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "WikiDocument";
+                uploadItem.Wiki = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.WikiPageContent = content;
+                uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
+
+                return new WikiPage(uploadItem.Wiki,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.FormatType,
+                    content.Hypertext);
+            }
+        }
+
+        public WikiVote Upload(Wiki tag,
+            WikiVoteContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "WikiVote";
+                uploadItem.Wiki = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.WikiVoteContent = content;
+                uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
+
+                return new WikiVote(uploadItem.Wiki,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Goods,
+                    content.Bads);
+            }
+        }
+
+        public ChatTopic Upload(Chat tag,
+            ChatTopicContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "ChatTopic";
+                uploadItem.Chat = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.ChatTopicContent = content;
+                uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
+
+                return new ChatTopic(uploadItem.Chat,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.FormatType,
+                    content.Hypertext);
+            }
+        }
+
+        public ChatMessage Upload(Chat tag,
+            ChatMessageContent content,
+            DigitalSignature digitalSignature)
+        {
+            lock (this.ThisLock)
+            {
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "ChatMessage";
+                uploadItem.Chat = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.ChatMessageContent = content;
+                uploadItem.DigitalSignature = digitalSignature;
+
+                _settings.UploadItems.Add(uploadItem);
+
+                return new ChatMessage(uploadItem.Chat,
+                    uploadItem.DigitalSignature.ToString(),
+                    uploadItem.CreationTime,
+                    content.Comment,
+                    content.AnchorSignatures);
             }
         }
 
@@ -155,7 +323,10 @@ namespace Library.Net.Outopos
         {
             get
             {
-                return _state;
+                lock (this.ThisLock)
+                {
+                    return _state;
+                }
             }
         }
 
@@ -163,22 +334,23 @@ namespace Library.Net.Outopos
 
         public override void Start()
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             lock (_stateLock)
             {
                 lock (this.ThisLock)
                 {
                     if (this.State == ManagerState.Start) return;
                     _state = ManagerState.Start;
+
+                    _uploadThread = new Thread(this.UploadThread);
+                    _uploadThread.Priority = ThreadPriority.Lowest;
+                    _uploadThread.Name = "UploadManager_UploadManagerThread";
+                    _uploadThread.Start();
                 }
             }
         }
 
         public override void Stop()
         {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
             lock (_stateLock)
             {
                 lock (this.ThisLock)
@@ -187,7 +359,85 @@ namespace Library.Net.Outopos
                     _state = ManagerState.Stop;
                 }
 
-                Task.WaitAll(_taskHashSet.ToArray());
+                _uploadThread.Join();
+                _uploadThread = null;
+            }
+        }
+
+        #region ISettings
+
+        public void Load(string directoryPath)
+        {
+            lock (this.ThisLock)
+            {
+                _settings.Load(directoryPath);
+
+                foreach (var key in _settings.LifeSpans.Keys)
+                {
+                    _cacheManager.Lock(key);
+                }
+            }
+        }
+
+        public void Save(string directoryPath)
+        {
+            lock (this.ThisLock)
+            {
+                _settings.Save(directoryPath);
+            }
+        }
+
+        #endregion
+
+        private class Settings : Library.Configuration.SettingsBase
+        {
+            private volatile object _thisLock;
+
+            public Settings(object lockObject)
+                : base(new List<Library.Configuration.ISettingContent>() { 
+                    new Library.Configuration.SettingContent<LockedList<UploadItem>>() { Name = "UploadItems", Value = new LockedList<UploadItem>() },
+                    new Library.Configuration.SettingContent<LockedDictionary<Key, DateTime>>() { Name = "LifeSpans", Value = new LockedDictionary<Key, DateTime>() },
+                })
+            {
+                _thisLock = lockObject;
+            }
+
+            public override void Load(string directoryPath)
+            {
+                lock (_thisLock)
+                {
+                    base.Load(directoryPath);
+                }
+            }
+
+            public override void Save(string directoryPath)
+            {
+                lock (_thisLock)
+                {
+                    base.Save(directoryPath);
+                }
+            }
+
+            public LockedList<UploadItem> UploadItems
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (LockedList<UploadItem>)this["UploadItems"];
+                    }
+                }
+            }
+
+            public LockedDictionary<Key, DateTime> LifeSpans
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (LockedDictionary<Key, DateTime>)this["LifeSpans"];
+                    }
+                }
             }
         }
 

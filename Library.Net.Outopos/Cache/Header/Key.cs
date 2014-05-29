@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
@@ -137,7 +136,7 @@ namespace Library.Net.Outopos
 
                 if (value != null)
                 {
-                    _hashCode = ItemUtilities.GetHashCode(_hash);
+                    _hashCode = ItemUtilities.GetHashCode(value);
                 }
                 else
                 {

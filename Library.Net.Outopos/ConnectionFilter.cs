@@ -45,11 +45,11 @@ namespace Library.Net.Outopos
             {
                 if ((object)y == null) return true;
 
-                return ((ConnectionFilter)y).Equals((ConnectionFilter)x);
+                return y.Equals(x);
             }
             else
             {
-                return ((ConnectionFilter)x).Equals((ConnectionFilter)y);
+                return x.Equals(y);
             }
         }
 
@@ -176,16 +176,16 @@ namespace Library.Net.Outopos
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
                     using (WrapperStream wrapperStream = new WrapperStream(stream, true))
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
+                    using (XmlDictionaryWriter xmlDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
                     {
-                        ds.WriteObject(textDictionaryWriter, this);
+                        ds.WriteObject(xmlDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
-                        return (ConnectionFilter)ds.ReadObject(textDictionaryReader);
+                        return (ConnectionFilter)ds.ReadObject(xmlDictionaryReader);
                     }
                 }
             }
@@ -232,11 +232,11 @@ namespace Library.Net.Outopos
             {
                 if ((object)y == null) return true;
 
-                return ((UriCondition)y).Equals((UriCondition)x);
+                return y.Equals(x);
             }
             else
             {
-                return ((UriCondition)x).Equals((UriCondition)y);
+                return x.Equals(y);
             }
         }
 
@@ -314,16 +314,16 @@ namespace Library.Net.Outopos
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
                     using (WrapperStream wrapperStream = new WrapperStream(stream, true))
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
+                    using (XmlDictionaryWriter xmlDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
                     {
-                        ds.WriteObject(textDictionaryWriter, this);
+                        ds.WriteObject(xmlDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
-                        return (UriCondition)ds.ReadObject(textDictionaryReader);
+                        return (UriCondition)ds.ReadObject(xmlDictionaryReader);
                     }
                 }
             }
