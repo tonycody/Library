@@ -812,7 +812,7 @@ namespace Library.Net.Amoeba
 
                             foreach (var signature in this.SearchSignatures.ToArray())
                             {
-                                _connectionsManager.SendSeedRequest(signature);
+                                _connectionsManager.SendSeedsRequest(signature);
 
                                 // Link
                                 {

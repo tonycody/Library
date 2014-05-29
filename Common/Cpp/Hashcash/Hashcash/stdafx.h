@@ -9,15 +9,11 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <tchar.h>
-#include <windows.h>
+#include <string>
 #include <iostream>
 #include <time.h>
-
-//#include <xmmintrin.h> // SSE
-#include <smmintrin.h> // SSE2
-//#include <pmmintrin.h> // SSE3
-//#include <emmintrin.h> // SSE4
+#include <tchar.h>
+#include <windows.h>
 
 #ifndef PORTABLE_32_BIT_TEST
     #if  _WIN64 || __amd64__

@@ -14,10 +14,14 @@
     #define PORTABLE_32_BIT
 #endif
 
-//#include <xmmintrin.h> // SSE
-#include <smmintrin.h> // SSE2
-//#include <pmmintrin.h> // SSE3
-//#include <emmintrin.h> // SSE4
+#include "xmmintrin.h" //SSE
+#include "emmintrin.h" //SSE2
+//#include "pmmintrin.h" //SSE3
+//#include "tmmintrin.h" //SSSE3
+//#include "smmintrin.h" //SSE4.1
+//#include "nmmintrin.h" //SSE4.2
+//#include "wmmintrin.h" //AES
+//#include "immintrin.h" //AVX
 
 void mul(byte* src, byte* dst, byte* mulc, int32_t len)
 {
@@ -40,121 +44,155 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
         *dst++ ^= mulc[*src++];
     }
 
-    for (int32_t count = ((len - i) / 64) - 1; count >= 0 ; count--)
+    for (int32_t count = ((len - i) / 128) - 1; count >= 0 ; count--)
     {
-        xmm0 = _mm_set_epi8
-        (
-            mulc[*(src + 15)],
-            mulc[*(src + 14)],
-            mulc[*(src + 13)],
-            mulc[*(src + 12)],
+        xmm0.m128i_u8[0] = mulc[*src++];
+        xmm0.m128i_u8[1] = mulc[*src++];
+        xmm0.m128i_u8[2] = mulc[*src++];
+        xmm0.m128i_u8[3] = mulc[*src++];
+        xmm0.m128i_u8[4] = mulc[*src++];
+        xmm0.m128i_u8[5] = mulc[*src++];
+        xmm0.m128i_u8[6] = mulc[*src++];
+        xmm0.m128i_u8[7] = mulc[*src++];
+        xmm0.m128i_u8[8] = mulc[*src++];
+        xmm0.m128i_u8[9] = mulc[*src++];
+        xmm0.m128i_u8[10] = mulc[*src++];
+        xmm0.m128i_u8[11] = mulc[*src++];
+        xmm0.m128i_u8[12] = mulc[*src++];
+        xmm0.m128i_u8[13] = mulc[*src++];
+        xmm0.m128i_u8[14] = mulc[*src++];
+        xmm0.m128i_u8[15] = mulc[*src++];
 
-            mulc[*(src + 11)],
-            mulc[*(src + 10)],
-            mulc[*(src + 9)],
-            mulc[*(src + 8)],
+        xmm1.m128i_u8[0] = mulc[*src++];
+        xmm1.m128i_u8[1] = mulc[*src++];
+        xmm1.m128i_u8[2] = mulc[*src++];
+        xmm1.m128i_u8[3] = mulc[*src++];
+        xmm1.m128i_u8[4] = mulc[*src++];
+        xmm1.m128i_u8[5] = mulc[*src++];
+        xmm1.m128i_u8[6] = mulc[*src++];
+        xmm1.m128i_u8[7] = mulc[*src++];
+        xmm1.m128i_u8[8] = mulc[*src++];
+        xmm1.m128i_u8[9] = mulc[*src++];
+        xmm1.m128i_u8[10] = mulc[*src++];
+        xmm1.m128i_u8[11] = mulc[*src++];
+        xmm1.m128i_u8[12] = mulc[*src++];
+        xmm1.m128i_u8[13] = mulc[*src++];
+        xmm1.m128i_u8[14] = mulc[*src++];
+        xmm1.m128i_u8[15] = mulc[*src++];
 
-            mulc[*(src + 7)],
-            mulc[*(src + 6)],
-            mulc[*(src + 5)],
-            mulc[*(src + 4)],
+        xmm2.m128i_u8[0] = mulc[*src++];
+        xmm2.m128i_u8[1] = mulc[*src++];
+        xmm2.m128i_u8[2] = mulc[*src++];
+        xmm2.m128i_u8[3] = mulc[*src++];
+        xmm2.m128i_u8[4] = mulc[*src++];
+        xmm2.m128i_u8[5] = mulc[*src++];
+        xmm2.m128i_u8[6] = mulc[*src++];
+        xmm2.m128i_u8[7] = mulc[*src++];
+        xmm2.m128i_u8[8] = mulc[*src++];
+        xmm2.m128i_u8[9] = mulc[*src++];
+        xmm2.m128i_u8[10] = mulc[*src++];
+        xmm2.m128i_u8[11] = mulc[*src++];
+        xmm2.m128i_u8[12] = mulc[*src++];
+        xmm2.m128i_u8[13] = mulc[*src++];
+        xmm2.m128i_u8[14] = mulc[*src++];
+        xmm2.m128i_u8[15] = mulc[*src++];
 
-            mulc[*(src + 3)],
-            mulc[*(src + 2)],
-            mulc[*(src + 1)],
-            mulc[*src]
-        );
-        src += 16;
-
-        xmm1 = _mm_set_epi8
-        (
-            mulc[*(src + 15)],
-            mulc[*(src + 14)],
-            mulc[*(src + 13)],
-            mulc[*(src + 12)],
-
-            mulc[*(src + 11)],
-            mulc[*(src + 10)],
-            mulc[*(src + 9)],
-            mulc[*(src + 8)],
-
-            mulc[*(src + 7)],
-            mulc[*(src + 6)],
-            mulc[*(src + 5)],
-            mulc[*(src + 4)],
-
-            mulc[*(src + 3)],
-            mulc[*(src + 2)],
-            mulc[*(src + 1)],
-            mulc[*src]
-        );
-        src += 16;
+        xmm3.m128i_u8[0] = mulc[*src++];
+        xmm3.m128i_u8[1] = mulc[*src++];
+        xmm3.m128i_u8[2] = mulc[*src++];
+        xmm3.m128i_u8[3] = mulc[*src++];
+        xmm3.m128i_u8[4] = mulc[*src++];
+        xmm3.m128i_u8[5] = mulc[*src++];
+        xmm3.m128i_u8[6] = mulc[*src++];
+        xmm3.m128i_u8[7] = mulc[*src++];
+        xmm3.m128i_u8[8] = mulc[*src++];
+        xmm3.m128i_u8[9] = mulc[*src++];
+        xmm3.m128i_u8[10] = mulc[*src++];
+        xmm3.m128i_u8[11] = mulc[*src++];
+        xmm3.m128i_u8[12] = mulc[*src++];
+        xmm3.m128i_u8[13] = mulc[*src++];
+        xmm3.m128i_u8[14] = mulc[*src++];
+        xmm3.m128i_u8[15] = mulc[*src++];
        
-        xmm2 = _mm_set_epi8
-        (
-            mulc[*(src + 15)],
-            mulc[*(src + 14)],
-            mulc[*(src + 13)],
-            mulc[*(src + 12)],
-
-            mulc[*(src + 11)],
-            mulc[*(src + 10)],
-            mulc[*(src + 9)],
-            mulc[*(src + 8)],
-
-            mulc[*(src + 7)],
-            mulc[*(src + 6)],
-            mulc[*(src + 5)],
-            mulc[*(src + 4)],
-
-            mulc[*(src + 3)],
-            mulc[*(src + 2)],
-            mulc[*(src + 1)],
-            mulc[*src]
-        );
-        src += 16;
+        xmm4.m128i_u8[0] = mulc[*src++];
+        xmm4.m128i_u8[1] = mulc[*src++];
+        xmm4.m128i_u8[2] = mulc[*src++];
+        xmm4.m128i_u8[3] = mulc[*src++];
+        xmm4.m128i_u8[4] = mulc[*src++];
+        xmm4.m128i_u8[5] = mulc[*src++];
+        xmm4.m128i_u8[6] = mulc[*src++];
+        xmm4.m128i_u8[7] = mulc[*src++];
+        xmm4.m128i_u8[8] = mulc[*src++];
+        xmm4.m128i_u8[9] = mulc[*src++];
+        xmm4.m128i_u8[10] = mulc[*src++];
+        xmm4.m128i_u8[11] = mulc[*src++];
+        xmm4.m128i_u8[12] = mulc[*src++];
+        xmm4.m128i_u8[13] = mulc[*src++];
+        xmm4.m128i_u8[14] = mulc[*src++];
+        xmm4.m128i_u8[15] = mulc[*src++];
        
-        xmm3 = _mm_set_epi8
-        (
-            mulc[*(src + 15)],
-            mulc[*(src + 14)],
-            mulc[*(src + 13)],
-            mulc[*(src + 12)],
-
-            mulc[*(src + 11)],
-            mulc[*(src + 10)],
-            mulc[*(src + 9)],
-            mulc[*(src + 8)],
-
-            mulc[*(src + 7)],
-            mulc[*(src + 6)],
-            mulc[*(src + 5)],
-            mulc[*(src + 4)],
-
-            mulc[*(src + 3)],
-            mulc[*(src + 2)],
-            mulc[*(src + 1)],
-            mulc[*src]
-        );
-        src += 16;
+        xmm5.m128i_u8[0] = mulc[*src++];
+        xmm5.m128i_u8[1] = mulc[*src++];
+        xmm5.m128i_u8[2] = mulc[*src++];
+        xmm5.m128i_u8[3] = mulc[*src++];
+        xmm5.m128i_u8[4] = mulc[*src++];
+        xmm5.m128i_u8[5] = mulc[*src++];
+        xmm5.m128i_u8[6] = mulc[*src++];
+        xmm5.m128i_u8[7] = mulc[*src++];
+        xmm5.m128i_u8[8] = mulc[*src++];
+        xmm5.m128i_u8[9] = mulc[*src++];
+        xmm5.m128i_u8[10] = mulc[*src++];
+        xmm5.m128i_u8[11] = mulc[*src++];
+        xmm5.m128i_u8[12] = mulc[*src++];
+        xmm5.m128i_u8[13] = mulc[*src++];
+        xmm5.m128i_u8[14] = mulc[*src++];
+        xmm5.m128i_u8[15] = mulc[*src++];
        
-        xmm4 = _mm_load_si128((__m128i*)dst);
-        xmm5 = _mm_load_si128((__m128i*)(dst + 16));
-        xmm6 = _mm_load_si128((__m128i*)(dst + (16 * 2)));
-        xmm7 = _mm_load_si128((__m128i*)(dst + (16 * 3)));
+        xmm6.m128i_u8[0] = mulc[*src++];
+        xmm6.m128i_u8[1] = mulc[*src++];
+        xmm6.m128i_u8[2] = mulc[*src++];
+        xmm6.m128i_u8[3] = mulc[*src++];
+        xmm6.m128i_u8[4] = mulc[*src++];
+        xmm6.m128i_u8[5] = mulc[*src++];
+        xmm6.m128i_u8[6] = mulc[*src++];
+        xmm6.m128i_u8[7] = mulc[*src++];
+        xmm6.m128i_u8[8] = mulc[*src++];
+        xmm6.m128i_u8[9] = mulc[*src++];
+        xmm6.m128i_u8[10] = mulc[*src++];
+        xmm6.m128i_u8[11] = mulc[*src++];
+        xmm6.m128i_u8[12] = mulc[*src++];
+        xmm6.m128i_u8[13] = mulc[*src++];
+        xmm6.m128i_u8[14] = mulc[*src++];
+        xmm6.m128i_u8[15] = mulc[*src++];
+       
+        xmm7.m128i_u8[0] = mulc[*src++];
+        xmm7.m128i_u8[1] = mulc[*src++];
+        xmm7.m128i_u8[2] = mulc[*src++];
+        xmm7.m128i_u8[3] = mulc[*src++];
+        xmm7.m128i_u8[4] = mulc[*src++];
+        xmm7.m128i_u8[5] = mulc[*src++];
+        xmm7.m128i_u8[6] = mulc[*src++];
+        xmm7.m128i_u8[7] = mulc[*src++];
+        xmm7.m128i_u8[8] = mulc[*src++];
+        xmm7.m128i_u8[9] = mulc[*src++];
+        xmm7.m128i_u8[10] = mulc[*src++];
+        xmm7.m128i_u8[11] = mulc[*src++];
+        xmm7.m128i_u8[12] = mulc[*src++];
+        xmm7.m128i_u8[13] = mulc[*src++];
+        xmm7.m128i_u8[14] = mulc[*src++];
+        xmm7.m128i_u8[15] = mulc[*src++];
+       
+        _mm_store_si128((__m128i*)dst, _mm_xor_si128(xmm0, _mm_load_si128((__m128i*)dst)));
+        _mm_store_si128((__m128i*)(dst + 16), _mm_xor_si128(xmm1, _mm_load_si128((__m128i*)(dst + 16))));
+        _mm_store_si128((__m128i*)(dst + (16 * 2)), _mm_xor_si128(xmm2, _mm_load_si128((__m128i*)(dst + (16 * 2)))));
+        _mm_store_si128((__m128i*)(dst + (16 * 3)), _mm_xor_si128(xmm3, _mm_load_si128((__m128i*)(dst + (16 * 3)))));
+        _mm_store_si128((__m128i*)(dst + (16 * 4)), _mm_xor_si128(xmm4, _mm_load_si128((__m128i*)(dst + (16 * 4)))));
+        _mm_store_si128((__m128i*)(dst + (16 * 5)), _mm_xor_si128(xmm5, _mm_load_si128((__m128i*)(dst + (16 * 5)))));
+        _mm_store_si128((__m128i*)(dst + (16 * 6)), _mm_xor_si128(xmm6, _mm_load_si128((__m128i*)(dst + (16 * 6)))));
+        _mm_store_si128((__m128i*)(dst + (16 * 7)), _mm_xor_si128(xmm7, _mm_load_si128((__m128i*)(dst + (16 * 7)))));
 
-        xmm0 = _mm_xor_si128(xmm0, xmm4);
-        xmm1 = _mm_xor_si128(xmm1, xmm5);
-        xmm2 = _mm_xor_si128(xmm2, xmm6);
-        xmm3 = _mm_xor_si128(xmm3, xmm7);
-    
-        _mm_store_si128((__m128i*)dst, xmm0);
-        _mm_store_si128((__m128i*)(dst + 16), xmm1);
-        _mm_store_si128((__m128i*)(dst + (16 * 2)), xmm2);
-        _mm_store_si128((__m128i*)(dst + (16 * 3)), xmm3);
-
-        dst += 64;
-        i += 64;
+        dst += 128;
+        i += 128;
     }
 
     for( ; i < len; i++)

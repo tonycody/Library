@@ -196,6 +196,7 @@ namespace Library.Net
 
             var baseItem = infoManager.GetInfo(InfoIndex++);
             Unsafe.Xor(targetId, baseId, baseItem.Xor);
+            baseItem.Node = default(T);
 
             // 初期化。
             {
@@ -368,14 +369,16 @@ namespace Library.Net
         // Infoのプールを用意し、高速化を図る。
         private class InfoManager
         {
-            private List<Info> _Infos = new List<Info>();
+            private List<Info> _infos = new List<Info>();
             private int _bufferSize;
 
             public void SetBufferSize(int bufferSize)
             {
+                if (bufferSize <= 0) throw new ArgumentOutOfRangeException("bufferSize");
+
                 if (_bufferSize != bufferSize)
                 {
-                    _Infos.Clear();
+                    _infos.Clear();
                 }
 
                 _bufferSize = bufferSize;
@@ -385,13 +388,12 @@ namespace Library.Net
             {
                 if (index > 1024) return new Info() { Xor = new byte[_bufferSize] };
 
-                for (int i = ((index + 1) - _Infos.Count) - 1; i >= 0; i--)
+                for (int i = ((index + 1) - _infos.Count) - 1; i >= 0; i--)
                 {
-                    _Infos.Add(new Info() { Xor = new byte[_bufferSize] });
+                    _infos.Add(new Info() { Xor = new byte[_bufferSize] });
                 }
 
-                var info = _Infos[index];
-                info.Node = default(T);
+                var info = _infos[index];
                 info.Previous = null;
                 info.Next = null;
 

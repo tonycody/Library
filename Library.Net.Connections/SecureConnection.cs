@@ -534,21 +534,20 @@ namespace Library.Net.Connections
                                 byte[] iv = new byte[16];
                                 stream.Read(iv, 0, iv.Length);
 
-                                byte[] receiveBuffer = null;
-
-                                try
+                                using (var aes = Aes.Create())
                                 {
-                                    receiveBuffer = _bufferManager.TakeBuffer(1024 * 4);
+                                    aes.KeySize = 256;
+                                    aes.Mode = CipherMode.CBC;
+                                    aes.Padding = PaddingMode.PKCS7;
 
-                                    //using (var aes = new AesCryptoServiceProvider())
-                                    using (var aes = Aes.Create())
+                                    using (CryptoStream cs = new CryptoStream(new WrapperStream(bufferStream, true), aes.CreateDecryptor(_informationVersion3.OtherCryptoKey, iv), CryptoStreamMode.Write))
                                     {
-                                        aes.KeySize = 256;
-                                        aes.Mode = CipherMode.CBC;
-                                        aes.Padding = PaddingMode.PKCS7;
+                                        byte[] receiveBuffer = null;
 
-                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(bufferStream, true), aes.CreateDecryptor(_informationVersion3.OtherCryptoKey, iv), CryptoStreamMode.Write))
+                                        try
                                         {
+                                            receiveBuffer = _bufferManager.TakeBuffer(1024 * 4);
+
                                             int i = -1;
 
                                             while ((i = stream.Read(receiveBuffer, 0, receiveBuffer.Length)) > 0)
@@ -556,11 +555,14 @@ namespace Library.Net.Connections
                                                 cs.Write(receiveBuffer, 0, i);
                                             }
                                         }
+                                        finally
+                                        {
+                                            if (receiveBuffer != null)
+                                            {
+                                                _bufferManager.ReturnBuffer(receiveBuffer);
+                                            }
+                                        }
                                     }
-                                }
-                                finally
-                                {
-                                    _bufferManager.ReturnBuffer(receiveBuffer);
                                 }
                             }
                             else
@@ -614,21 +616,20 @@ namespace Library.Net.Connections
                                     _random.GetBytes(iv);
                                     bufferStream.Write(iv, 0, iv.Length);
 
-                                    byte[] sendBuffer = null;
-
-                                    try
+                                    using (var aes = Aes.Create())
                                     {
-                                        sendBuffer = _bufferManager.TakeBuffer(1024 * 4);
+                                        aes.KeySize = 256;
+                                        aes.Mode = CipherMode.CBC;
+                                        aes.Padding = PaddingMode.PKCS7;
 
-                                        //using (var aes = new AesCryptoServiceProvider())
-                                        using (var aes = Aes.Create())
+                                        using (CryptoStream cs = new CryptoStream(new WrapperStream(bufferStream, true), aes.CreateEncryptor(_informationVersion3.MyCryptoKey, iv), CryptoStreamMode.Write))
                                         {
-                                            aes.KeySize = 256;
-                                            aes.Mode = CipherMode.CBC;
-                                            aes.Padding = PaddingMode.PKCS7;
+                                            byte[] sendBuffer = null;
 
-                                            using (CryptoStream cs = new CryptoStream(new WrapperStream(bufferStream, true), aes.CreateEncryptor(_informationVersion3.MyCryptoKey, iv), CryptoStreamMode.Write))
+                                            try
                                             {
+                                                sendBuffer = _bufferManager.TakeBuffer(1024 * 4);
+
                                                 int i = -1;
 
                                                 while ((i = targetStream.Read(sendBuffer, 0, sendBuffer.Length)) > 0)
@@ -636,11 +637,14 @@ namespace Library.Net.Connections
                                                     cs.Write(sendBuffer, 0, i);
                                                 }
                                             }
+                                            finally
+                                            {
+                                                if (sendBuffer != null)
+                                                {
+                                                    _bufferManager.ReturnBuffer(sendBuffer);
+                                                }
+                                            }
                                         }
-                                    }
-                                    finally
-                                    {
-                                        _bufferManager.ReturnBuffer(sendBuffer);
                                     }
                                 }
                                 else

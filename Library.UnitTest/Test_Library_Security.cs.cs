@@ -23,9 +23,9 @@ namespace Library.UnitTest
             {
                 var signature = Signature.GetSignature(new DigitalSignature("123", a));
 
-                Assert.IsTrue(Signature.IsSignature(signature));
-                Assert.AreEqual(Signature.GetSignatureNickname(signature), "123");
-                Assert.IsTrue(Signature.GetSignatureHash(signature).Length == 64);
+                Assert.IsTrue(Signature.Check(signature));
+                Assert.AreEqual(Signature.GetNickname(signature), "123");
+                Assert.IsTrue(Signature.GetHash(signature).Length == 64);
             }
 
             foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
@@ -38,9 +38,9 @@ namespace Library.UnitTest
                     signature = Signature.GetSignature(DigitalSignature.CreateCertificate(new DigitalSignature("123", a), stream));
                 }
 
-                Assert.IsTrue(Signature.IsSignature(signature));
-                Assert.AreEqual(Signature.GetSignatureNickname(signature), "123");
-                Assert.IsTrue(Signature.GetSignatureHash(signature).Length == 64);
+                Assert.IsTrue(Signature.Check(signature));
+                Assert.AreEqual(Signature.GetNickname(signature), "123");
+                Assert.IsTrue(Signature.GetHash(signature).Length == 64);
             }
         }
 
@@ -179,18 +179,18 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_Hashcash1()
+        public void Test_Cash()
         {
-            Hashcash1 hashcash1 = new Hashcash1();
+            Cash cash = new Cash();
 
             {
-                var result = hashcash1.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
-                var count = hashcash1.Verify(result, NetworkConverter.FromHexString("0101010101010101"));
+                var result = cash.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
+                var count = cash.Verify(result, NetworkConverter.FromHexString("0101010101010101"));
                 Assert.IsTrue(count > 4);
             }
 
             {
-                var count = hashcash1.Verify(NetworkConverter.FromHexString("9fcc47a072aec40958c2adc4f8d557b979d5ea27c858710bfce464a13d1d9ba68a55abd7afe09d5684ad58d0473054ae0227de234e23ff9a1889de8fac460780"), NetworkConverter.FromHexString("0101010101010101"));
+                var count = cash.Verify(NetworkConverter.FromHexString("9fcc47a072aec40958c2adc4f8d557b979d5ea27c858710bfce464a13d1d9ba68a55abd7afe09d5684ad58d0473054ae0227de234e23ff9a1889de8fac460780"), NetworkConverter.FromHexString("0101010101010101"));
                 Assert.IsTrue(count == 9);
             }
 
@@ -200,12 +200,12 @@ namespace Library.UnitTest
 
                 var task = Task.Factory.StartNew(() =>
                 {
-                    hashcash1.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
+                    cash.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
                 });
 
                 Thread.Sleep(1000);
 
-                hashcash1.Cancel();
+                cash.Cancel();
 
                 task.Wait();
 

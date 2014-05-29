@@ -4,19 +4,7 @@
 using std::cout;
 using std::endl;
 using std::string;
-using std::stringstream;
 using std::exception;
-
-#include "base64.h"
-using CryptoPP::Base64Decoder;
- 
-#include "filters.h"
-using CryptoPP::StringSink;
-using CryptoPP::StringSource;
-using CryptoPP::HashFilter;
-using CryptoPP::ArraySink;
-
-//#define TEST
 
 inline char getHexValue(int32_t c)
 {
@@ -105,6 +93,8 @@ byte* fromHexString(string value, size_t& size)
     return buffer;
 }
 
+//#define TEST
+
 #ifdef TEST
 int main2(int argc, char* argv[])
 #else
@@ -134,8 +124,9 @@ int main(int argc, char* argv[])
 
                 cout << toHexString(key, 64) << endl;
 
-                free(value);
                 free(key);
+
+                free(value);
             }
             else if((string)argv[2] == "verify")
             {
@@ -148,14 +139,15 @@ int main(int argc, char* argv[])
 
                 int32_t count = hashcash1_Verify(key, value, valueSize);
 
+                free(value);
+
                 cout << count << endl;
 
                 free(key);
-                free(value);
             }
         }
     }
-    catch (exception& e)
+    catch (exception&)
     {
         return 1;
     }
@@ -194,7 +186,7 @@ int main(int argc, char* argv[])
         // 1800seconds, 17bit
         //arguments[3] = "e4e66c96f10ca5b904273d6ebf4695052fdb3ff4dd836c65738deee22f8fe14d1fc30d4748d27e46e14a6dd0343fb491260388b8ed6ad408541354b2b5d72982";
         // 3600seconds, 20bit
-        //arguments[3] = "fdb5f592cc2a0617943035c4b7c634a7f1d551987ddc27bebdeafbd30b8ffbd2f83613c433de5744067af548c4277846057d811b009edde177ed1b02f7acda85";
+        arguments[3] = "fdb5f592cc2a0617943035c4b7c634a7f1d551987ddc27bebdeafbd30b8ffbd2f83613c433de5744067af548c4277846057d811b009edde177ed1b02f7acda85";
 
         arguments[4] = "0101010101010101";
 

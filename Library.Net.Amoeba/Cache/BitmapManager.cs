@@ -176,43 +176,6 @@ namespace Library.Net.Amoeba
 
         #endregion
 
-        protected override void Dispose(bool disposing)
-        {
-            if (_disposed) return;
-            _disposed = true;
-
-            if (disposing)
-            {
-                if (_bitmapStream != null)
-                {
-                    try
-                    {
-                        _bitmapStream.Dispose();
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    _bitmapStream = null;
-                }
-
-                if (_cacheBuffer != null)
-                {
-                    try
-                    {
-                        _bufferManager.ReturnBuffer(_cacheBuffer);
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-
-                    _cacheBuffer = null;
-                }
-            }
-        }
-
         private class Settings : Library.Configuration.SettingsBase
         {
             private volatile object _thisLock;
@@ -256,6 +219,43 @@ namespace Library.Net.Amoeba
                     {
                         this["Length"] = value;
                     }
+                }
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            if (disposing)
+            {
+                if (_bitmapStream != null)
+                {
+                    try
+                    {
+                        _bitmapStream.Dispose();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _bitmapStream = null;
+                }
+
+                if (_cacheBuffer != null)
+                {
+                    try
+                    {
+                        _bufferManager.ReturnBuffer(_cacheBuffer);
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+
+                    _cacheBuffer = null;
                 }
             }
         }

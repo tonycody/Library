@@ -86,11 +86,11 @@ namespace Library.Net.Connections
             {
                 if ((object)y == null) return true;
 
-                return ((BandwidthLimit)y).Equals((BandwidthLimit)x);
+                return y.Equals(x);
             }
             else
             {
-                return ((BandwidthLimit)x).Equals((BandwidthLimit)y);
+                return x.Equals(y);
             }
         }
 
@@ -267,16 +267,16 @@ namespace Library.Net.Connections
                 using (BufferStream stream = new BufferStream(BufferManager.Instance))
                 {
                     using (WrapperStream wrapperStream = new WrapperStream(stream, true))
-                    using (XmlDictionaryWriter textDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
+                    using (XmlDictionaryWriter xmlDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
                     {
-                        ds.WriteObject(textDictionaryWriter, this);
+                        ds.WriteObject(xmlDictionaryWriter, this);
                     }
 
                     stream.Position = 0;
 
-                    using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
+                    using (XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                     {
-                        return (BandwidthLimit)ds.ReadObject(textDictionaryReader);
+                        return (BandwidthLimit)ds.ReadObject(xmlDictionaryReader);
                     }
                 }
             }

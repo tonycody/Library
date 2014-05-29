@@ -144,8 +144,8 @@ namespace Library.Net.Amoeba
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
                     contexts.AddRange(_serverManager.Information);
-                    contexts.AddRange(_connectionsManager.Information);
                     contexts.AddRange(_cacheManager.Information);
+                    contexts.AddRange(_connectionsManager.Information);
                     contexts.AddRange(_uploadManager.Information);
                     contexts.AddRange(_downloadManager.Information);
 

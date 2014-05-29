@@ -38,7 +38,8 @@ namespace Library.Tools
 
                         using (var certificateStream = CertificateConverter.ToCertificateStream(certificate))
                         {
-                            var buffer = new byte[1024];
+                            var buffer = new byte[1024 * 4];
+
                             int i = -1;
 
                             while ((i = certificateStream.Read(buffer, 0, buffer.Length)) > 0)

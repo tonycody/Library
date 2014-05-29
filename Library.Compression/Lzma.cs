@@ -63,7 +63,7 @@ namespace Library.Compression
                                 {
                                     int length = 0;
 
-                                    while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                    while ((length = standardOutputStream.Read(buffer, 0, buffer.Length)) > 0)
                                     {
                                         outCacheStream.Write(buffer, 0, length);
                                     }
@@ -92,7 +92,7 @@ namespace Library.Compression
                             {
                                 int length = 0;
 
-                                while (0 != (length = inCacheStream.Read(buffer, 0, buffer.Length)))
+                                while ((length = inCacheStream.Read(buffer, 0, buffer.Length)) > 0)
                                 {
                                     standardInputStream.Write(buffer, 0, length);
                                 }
@@ -170,7 +170,7 @@ namespace Library.Compression
                                 {
                                     int length = 0;
 
-                                    while (0 != (length = standardOutputStream.Read(buffer, 0, buffer.Length)))
+                                    while ((length = standardOutputStream.Read(buffer, 0, buffer.Length)) > 0)
                                     {
                                         outCacheStream.Write(buffer, 0, length);
                                     }
@@ -199,7 +199,7 @@ namespace Library.Compression
                             {
                                 int length = 0;
 
-                                while (0 != (length = inCacheStream.Read(buffer, 0, buffer.Length)))
+                                while ((length = inCacheStream.Read(buffer, 0, buffer.Length)) > 0)
                                 {
                                     standardInputStream.Write(buffer, 0, length);
                                 }

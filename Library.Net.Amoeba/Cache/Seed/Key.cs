@@ -19,7 +19,6 @@ namespace Library.Net.Amoeba
             HashAlgorithm = 1,
         }
 
-        private static Intern<byte[]> _hashCache = new Intern<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _hash;
 
         private volatile HashAlgorithm _hashAlgorithm = 0;
@@ -102,10 +101,16 @@ namespace Library.Net.Amoeba
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (!object.ReferenceEquals(this.Hash, other.Hash)
+            if ((this.Hash == null) != (other.Hash == null)
+
                 || this.HashAlgorithm != other.HashAlgorithm)
             {
                 return false;
+            }
+
+            if (this.Hash != null && other.Hash != null)
+            {
+                if (!Unsafe.Equals(this.Hash, other.Hash)) return false;
             }
 
             return true;
@@ -128,12 +133,12 @@ namespace Library.Net.Amoeba
                 }
                 else
                 {
-                    _hash = _hashCache.GetValue(value, this);
+                    _hash = value;
                 }
 
                 if (value != null)
                 {
-                    _hashCode = RuntimeHelpers.GetHashCode(_hash);
+                    _hashCode = ItemUtilities.GetHashCode(value);
                 }
                 else
                 {

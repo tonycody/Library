@@ -40,28 +40,27 @@ namespace <# 1 #>
 
         public static void Write(Stream stream, byte type, Stream exportStream)
         {
+            stream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
+            stream.WriteByte(type);
+
+            byte[] buffer = null;
+
+            try
             {
-                stream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
-                stream.WriteByte(type);
 
-                byte[] buffer = null;
+                buffer = _bufferManager.TakeBuffer(1024 * 4);
+                int length = 0;
 
-                try
+                while ((length = exportStream.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    buffer = _bufferManager.TakeBuffer(1024 * 4);
-                    int length = 0;
-
-                    while ((length = exportStream.Read(buffer, 0, buffer.Length)) > 0)
-                    {
-                        stream.Write(buffer, 0, length);
-                    }
+                    stream.Write(buffer, 0, length);
                 }
-                finally
+            }
+            finally
+            {
+                if (buffer != null)
                 {
-                    if (buffer != null)
-                    {
-                        _bufferManager.ReturnBuffer(buffer);
-                    }
+                    _bufferManager.ReturnBuffer(buffer);
                 }
             }
         }

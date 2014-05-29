@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Library.Security
 {
-    public class Hashcash1
+    public class Cash
     {
         private static string _path;
 
@@ -14,7 +14,7 @@ namespace Library.Security
 
         private readonly object _lockObject = new object();
 
-        static Hashcash1()
+        static Cash()
         {
             OperatingSystem osInfo = Environment.OSVersion;
 
@@ -33,6 +33,9 @@ namespace Library.Security
 
         public byte[] Create(byte[] value, TimeSpan timeout)
         {
+            if (value == null) throw new ArgumentNullException("value");
+            if (timeout < TimeSpan.Zero) throw new ArgumentOutOfRangeException("timeout");
+
             lock (_lockObject)
             {
                 try
@@ -63,6 +66,7 @@ namespace Library.Security
                 }
                 finally
                 {
+                    _runningProcess.Dispose();
                     _runningProcess = null;
                 }
             }
@@ -70,6 +74,10 @@ namespace Library.Security
 
         public int Verify(byte[] key, byte[] value)
         {
+            if (key == null) throw new ArgumentNullException("key");
+            if (value == null) throw new ArgumentNullException("value");
+            if (key.Length != 64) throw new ArgumentOutOfRangeException("key");
+
             var info = new ProcessStartInfo(_path);
             info.CreateNoWindow = true;
             info.UseShellExecute = false;

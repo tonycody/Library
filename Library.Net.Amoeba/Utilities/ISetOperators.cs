@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Library.Net.Amoeba
 {
-    public interface ISetOperators<T>
+    interface ISetOperators<T>
     {
         IEnumerable<T> IntersectFrom(IEnumerable<T> collection);
         IEnumerable<T> ExceptFrom(IEnumerable<T> collection);

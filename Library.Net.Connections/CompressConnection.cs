@@ -156,7 +156,6 @@ namespace Library.Net.Connections
             lock (_receiveLock)
             {
                 Stream stream = null;
-                Stream dataStream = null;
 
                 try
                 {
@@ -164,78 +163,99 @@ namespace Library.Net.Connections
 
                     byte version = (byte)stream.ReadByte();
 
-                    dataStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position);
-                    dataStream.Seek(0, SeekOrigin.Begin);
+                    Stream dataStream = null;
 
-                    if (version == (byte)0)
+                    try
                     {
-                        return dataStream;
-                    }
-                    else if (version == (byte)1)
-                    {
-                        BufferStream deflateBufferStream = null;
+                        dataStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position);
 
-                        try
+                        if (version == (byte)0)
                         {
-                            deflateBufferStream = new BufferStream(_bufferManager);
-                            byte[] decompressBuffer = null;
+                            return dataStream;
+                        }
+                        else if (version == (byte)1)
+                        {
+                            BufferStream deflateBufferStream = null;
 
                             try
                             {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+                                deflateBufferStream = new BufferStream(_bufferManager);
 
                                 using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                                 {
-                                    int i = -1;
+                                    byte[] decompressBuffer = null;
 
-                                    while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
+                                    try
                                     {
-                                        deflateBufferStream.Write(decompressBuffer, 0, i);
+                                        decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
 
-                                        if (deflateBufferStream.Length > _maxReceiveCount) throw new ConnectionException();
+                                        int i = -1;
+
+                                        while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
+                                        {
+                                            deflateBufferStream.Write(decompressBuffer, 0, i);
+
+                                            if (deflateBufferStream.Length > _maxReceiveCount) throw new ConnectionException();
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (decompressBuffer != null)
+                                        {
+                                            _bufferManager.ReturnBuffer(decompressBuffer);
+                                        }
                                     }
                                 }
                             }
-                            finally
+                            catch (Exception e)
                             {
-                                _bufferManager.ReturnBuffer(decompressBuffer);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            deflateBufferStream.Dispose();
+                                if (deflateBufferStream != null)
+                                {
+                                    deflateBufferStream.Dispose();
+                                }
 
-                            throw e;
-                        }
+                                throw e;
+                            }
 
 #if DEBUG
-                        Debug.WriteLine("Receive : {0}→{1} {2}",
-                            NetworkConverter.ToSizeString(stream.Length),
-                            NetworkConverter.ToSizeString(deflateBufferStream.Length),
-                            NetworkConverter.ToSizeString(stream.Length - deflateBufferStream.Length));
+                            Debug.WriteLine("Receive : {0}→{1} {2}",
+                                NetworkConverter.ToSizeString(stream.Length),
+                                NetworkConverter.ToSizeString(deflateBufferStream.Length),
+                                NetworkConverter.ToSizeString(stream.Length - deflateBufferStream.Length));
 #endif
 
-                        deflateBufferStream.Seek(0, SeekOrigin.Begin);
-                        dataStream.Dispose();
+                            deflateBufferStream.Seek(0, SeekOrigin.Begin);
+                            dataStream.Dispose();
 
-                        return deflateBufferStream;
+                            return deflateBufferStream;
+                        }
+                        else
+                        {
+                            throw new ArgumentException("ArgumentException");
+                        }
                     }
-                    else
+                    catch (ConnectionException e)
                     {
-                        throw new ArgumentException("ArgumentException");
+                        if (dataStream != null) dataStream.Dispose();
+
+                        throw e;
+                    }
+                    catch (Exception e)
+                    {
+                        if (dataStream != null) dataStream.Dispose();
+
+                        throw new ConnectionException(e.Message, e);
                     }
                 }
                 catch (ConnectionException e)
                 {
                     if (stream != null) stream.Dispose();
-                    if (dataStream != null) dataStream.Dispose();
 
                     throw e;
                 }
                 catch (Exception e)
                 {
                     if (stream != null) stream.Dispose();
-                    if (dataStream != null) dataStream.Dispose();
 
                     throw new ConnectionException(e.Message, e);
                 }
@@ -273,14 +293,15 @@ namespace Library.Net.Connections
                                 try
                                 {
                                     deflateBufferStream = new BufferStream(_bufferManager);
-                                    byte[] compressBuffer = null;
 
-                                    try
+                                    using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                                     {
-                                        compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+                                        byte[] compressBuffer = null;
 
-                                        using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
+                                        try
                                         {
+                                            compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+
                                             int i = -1;
 
                                             while ((i = targetStream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
@@ -288,10 +309,13 @@ namespace Library.Net.Connections
                                                 deflateStream.Write(compressBuffer, 0, i);
                                             }
                                         }
-                                    }
-                                    finally
-                                    {
-                                        _bufferManager.ReturnBuffer(compressBuffer);
+                                        finally
+                                        {
+                                            if (compressBuffer != null)
+                                            {
+                                                _bufferManager.ReturnBuffer(compressBuffer);
+                                            }
+                                        }
                                     }
 
                                     deflateBufferStream.Seek(0, SeekOrigin.Begin);
@@ -300,7 +324,10 @@ namespace Library.Net.Connections
                                 }
                                 catch (Exception e)
                                 {
-                                    deflateBufferStream.Dispose();
+                                    if (deflateBufferStream != null)
+                                    {
+                                        deflateBufferStream.Dispose();
+                                    }
 
                                     throw e;
                                 }

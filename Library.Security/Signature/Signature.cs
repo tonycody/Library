@@ -18,8 +18,8 @@ namespace Library.Security
 
         private static Intern<string> _signatureCache = new Intern<string>();
 
-        private static ConditionalWeakTable<string, byte[]> _signatureHashCache = new ConditionalWeakTable<string, byte[]>();
-        private static readonly object _signatureHashCacheLockObject = new object();
+        private static ConditionalWeakTable<string, byte[]> _hashCache = new ConditionalWeakTable<string, byte[]>();
+        private static readonly object _hashCacheLockObject = new object();
 
         private unsafe static bool CheckBase64(string value)
         {
@@ -40,6 +40,7 @@ namespace Library.Security
 
             return true;
         }
+
         public static string GetSignature(DigitalSignature digitalSignature)
         {
             if (digitalSignature == null || digitalSignature.Nickname == null || digitalSignature.PublicKey == null) return null;
@@ -59,13 +60,13 @@ namespace Library.Security
                         return _signatureCache.GetValue(signature, digitalSignature);
                     }
                 }
+
+                return null;
             }
             catch (Exception)
             {
                 return null;
             }
-
-            return null;
         }
 
         public static string GetSignature(Certificate certificate)
@@ -87,16 +88,16 @@ namespace Library.Security
                         return _signatureCache.GetValue(signature, certificate);
                     }
                 }
+
+                return null;
             }
             catch (Exception)
             {
                 return null;
             }
-
-            return null;
         }
 
-        public static void WriteString(Stream stream, string value)
+        private static void WriteString(Stream stream, string value)
         {
             Encoding encoding = _threadLocalEncoding.Value;
 
@@ -118,7 +119,7 @@ namespace Library.Security
             }
         }
 
-        public static bool IsSignature(string item)
+        public static bool Check(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
@@ -141,7 +142,7 @@ namespace Library.Security
             }
         }
 
-        public static string GetSignatureNickname(string item)
+        public static string GetNickname(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
@@ -164,17 +165,17 @@ namespace Library.Security
             }
         }
 
-        public static byte[] GetSignatureHash(string item)
+        public static byte[] GetHash(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
 
             try
             {
-                lock (_signatureHashCacheLockObject)
+                lock (_hashCacheLockObject)
                 {
                     byte[] value;
 
-                    if (!_signatureHashCache.TryGetValue(item, out value))
+                    if (!_hashCache.TryGetValue(item, out value))
                     {
                         var index = item.LastIndexOf('@');
                         if (index == -1) return null;
@@ -186,7 +187,7 @@ namespace Library.Security
                         if (hash.Length > 256 || !Signature.CheckBase64(hash)) return null;
 
                         value = NetworkConverter.FromBase64UrlString(hash);
-                        _signatureHashCache.Add(item, value);
+                        _hashCache.Add(item, value);
                     }
 
                     return value;

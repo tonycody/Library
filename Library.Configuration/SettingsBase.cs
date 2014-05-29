@@ -134,7 +134,7 @@ namespace Library.Configuration
                         using (CacheStream cacheStream = new CacheStream(stream, _cacheSize, BufferManager.Instance))
                         using (GZipStream decompressStream = new GZipStream(cacheStream, CompressionMode.Decompress))
                         {
-                            //using (XmlDictionaryReader textDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
+                            //using (XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateTextReader(decompressStream, XmlDictionaryReaderQuotas.Max))
                             using (XmlDictionaryReader xml = XmlDictionaryReader.CreateBinaryReader(decompressStream, XmlDictionaryReaderQuotas.Max))
                             {
                                 var deserializer = new DataContractSerializer(content.Type);

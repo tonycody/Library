@@ -7,28 +7,13 @@
 using std::cout;
 using std::endl;
 using std::string;
-using std::stringstream;
 using std::exception;
 
 #include "cryptlib.h"
 using CryptoPP::Exception;
- 
-#include "hmac.h"
-using CryptoPP::HMAC;
- 
+
 #include "sha.h"
 using CryptoPP::SHA512;
- 
-#include "filters.h"
-using CryptoPP::StringSink;
-using CryptoPP::StringSource;
-using CryptoPP::HashFilter;
-
-#include "randpool.h"
-using CryptoPP::RandomPool;
-
-#include "pwdbased.h"
-using CryptoPP::PKCS5_PBKDF2_HMAC;
 
 byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
 {
@@ -167,10 +152,8 @@ byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
     }
     catch (exception& e)
     {
-        cout << e.what() << endl;
+        throw e;
     }
-
-    return NULL;
 }
 
 int32_t hashcash1_Verify(byte* key, byte* value, size_t valueSize)
@@ -230,8 +213,6 @@ End:
     }
     catch (exception& e)
     {
-        cout << e.what() << endl;
+        throw e;
     }
-    
-    return -1;
 }

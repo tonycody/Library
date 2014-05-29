@@ -404,7 +404,7 @@ namespace Library.Net.Amoeba
 
         private static bool Check(string signature)
         {
-            return !(signature == null || !Signature.IsSignature(signature));
+            return !(signature == null || !Signature.Check(signature));
         }
 
         private void UpdateSessionId()
@@ -1433,7 +1433,7 @@ namespace Library.Net.Amoeba
                         {
                             var requestNodes = new List<Node>();
 
-                            foreach (var node in Kademlia<Node>.Search(Signature.GetSignatureHash(signature), baseNode.Id, otherNodes, 2))
+                            foreach (var node in Kademlia<Node>.Search(Signature.GetHash(signature), baseNode.Id, otherNodes, 2))
                             {
                                 requestNodes.Add(node);
                             }
@@ -1567,7 +1567,7 @@ namespace Library.Net.Amoeba
                             {
                                 var requestNodes = new List<Node>();
 
-                                foreach (var node in Kademlia<Node>.Search(Signature.GetSignatureHash(signature), baseNode.Id, otherNodes, 2))
+                                foreach (var node in Kademlia<Node>.Search(Signature.GetHash(signature), baseNode.Id, otherNodes, 2))
                                 {
                                     requestNodes.Add(node);
                                 }
@@ -2330,7 +2330,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void SendSeedRequest(string signature)
+        public void SendSeedsRequest(string signature)
         {
             lock (this.ThisLock)
             {

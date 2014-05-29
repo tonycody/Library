@@ -14,10 +14,14 @@
     #define PORTABLE_32_BIT
 #endif
 
-//#include <xmmintrin.h> // SSE
-#include <smmintrin.h> // SSE2
-//#include <pmmintrin.h> // SSE3
-//#include <emmintrin.h> // SSE4
+#include "xmmintrin.h" //SSE
+#include "emmintrin.h" //SSE2
+//#include "pmmintrin.h" //SSE3
+//#include "tmmintrin.h" //SSSE3
+//#include "smmintrin.h" //SSE4.1
+//#include "nmmintrin.h" //SSE4.2
+//#include "wmmintrin.h" //AES
+//#include "immintrin.h" //AVX
 
 void copy(byte* src, byte* dst, int32_t len)
 {
