@@ -403,7 +403,8 @@ namespace Library.Correction
 
                 for (int i = 0; i < _gfSize + 1; i++)
                 {
-                    _gf_mul_table[0][i] = _gf_mul_table[i][0] = (byte)0;
+                    _gf_mul_table[0][i] = (byte)0;
+                    _gf_mul_table[i][0] = (byte)0;
                 }
             }
 

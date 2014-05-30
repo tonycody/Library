@@ -16,6 +16,12 @@ namespace Library.Net.Outopos
 {
     public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
 
+    interface ISetOperators<T>
+    {
+        IEnumerable<T> IntersectFrom(IEnumerable<T> collection);
+        IEnumerable<T> ExceptFrom(IEnumerable<T> collection);
+    }
+    
     class CacheManager : ManagerBase, Library.Configuration.ISettings, ISetOperators<Key>, IEnumerable<Key>, IThisLock
     {
         private FileStream _fileStream;

@@ -22,6 +22,12 @@ namespace Library.Net.Amoeba
 
     delegate bool WatchEventHandler(object sender);
 
+    interface ISetOperators<T>
+    {
+        IEnumerable<T> IntersectFrom(IEnumerable<T> collection);
+        IEnumerable<T> ExceptFrom(IEnumerable<T> collection);
+    }
+
     class CacheManager : ManagerBase, Library.Configuration.ISettings, ISetOperators<Key>, IEnumerable<Key>, IThisLock
     {
         private FileStream _fileStream;

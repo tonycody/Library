@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="Derivation\Pbkdf2.cs" />
     <Compile Include="Hash\Cash.cs" />
+    <Compile Include="Hash\CashAlgorithm.cs" />
     <Compile Include="Hash\HmacSha512.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
     <Compile Include="Exchange\ExchangePrivateKey.cs" />

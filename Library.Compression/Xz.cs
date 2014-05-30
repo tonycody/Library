@@ -9,26 +9,28 @@ namespace Library.Compression
 {
     public static class Xz
     {
-        public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
+        private static string _path;
+
+        static Xz()
         {
-            ProcessStartInfo info = null;
+            OperatingSystem osInfo = Environment.OSVersion;
 
+            if (osInfo.Platform == PlatformID.Win32NT)
             {
-                OperatingSystem osInfo = Environment.OSVersion;
-
-                if (osInfo.Platform == PlatformID.Win32NT)
+                if (System.Environment.Is64BitProcess)
                 {
-                    if (System.Environment.Is64BitProcess)
-                    {
-                        info = new ProcessStartInfo("Assembly/Xz_x64.exe");
-                    }
-                    else
-                    {
-                        info = new ProcessStartInfo("Assembly/Xz_x86.exe");
-                    }
+                    _path = "Assembly/Xz_x64.exe";
+                }
+                else
+                {
+                    _path = "Assembly/Xz_x86.exe";
                 }
             }
+        }
 
+        public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)
+        {
+            var info = new ProcessStartInfo(_path);
             info.CreateNoWindow = true;
             info.UseShellExecute = false;
             info.RedirectStandardInput = true;
@@ -118,24 +120,7 @@ namespace Library.Compression
 
         public static void Decompress(Stream inStream, Stream outStream, BufferManager bufferManager)
         {
-            ProcessStartInfo info = null;
-
-            {
-                OperatingSystem osInfo = Environment.OSVersion;
-
-                if (osInfo.Platform == PlatformID.Win32NT)
-                {
-                    if (System.Environment.Is64BitProcess)
-                    {
-                        info = new ProcessStartInfo("Assembly/Xz_x64.exe");
-                    }
-                    else
-                    {
-                        info = new ProcessStartInfo("Assembly/Xz_x86.exe");
-                    }
-                }
-            }
-
+            var info = new ProcessStartInfo(_path);
             info.CreateNoWindow = true;
             info.UseShellExecute = false;
             info.RedirectStandardInput = true;

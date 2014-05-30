@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "WikiPageHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class WikiPageHeader : MulticastHeaderBase<WikiPageHeader, Wiki>
+    public sealed class WikiPageHeader : HeaderBase<WikiPageHeader, Wiki>
     {
 
     }

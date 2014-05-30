@@ -41,16 +41,15 @@ namespace Library.Net.Outopos
         public IEnumerable<Section> Sections { get; set; }
         public IEnumerable<Wiki> Wikis { get; set; }
         public IEnumerable<Chat> Chats { get; set; }
-        public IEnumerable<string> Signatures { get; set; }
     }
 
     class PullHeadersEventArgs : EventArgs
     {
         public IEnumerable<SectionProfileHeader> SectionProfileHeaders { get; set; }
+        public IEnumerable<SectionMessageHeader> SectionMessageHeaders { get; set; }
         public IEnumerable<WikiPageHeader> WikiPageHeaders { get; set; }
         public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
         public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
-        public IEnumerable<SignatureMessageHeader> SignatureMessageHeaders { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -579,7 +578,6 @@ namespace Library.Net.Outopos
                                             Sections = message.Sections,
                                             Wikis = message.Wikis,
                                             Chats = message.Chats,
-                                            Signatures = message.Signatures
                                         });
                                     }
                                     else if (type == (byte)SerializeId.Headers)
@@ -592,7 +590,7 @@ namespace Library.Net.Outopos
                                             WikiPageHeaders = message.WikiPageHeaders,
                                             ChatTopicHeaders = message.ChatTopicHeaders,
                                             ChatMessageHeaders = message.ChatMessageHeaders,
-                                            SignatureMessageHeaders = message.SignatureMessageHeaders,
+                                            SectionMessageHeaders = message.SectionMessageHeaders,
                                         });
                                     }
                                 }
@@ -845,8 +843,7 @@ namespace Library.Net.Outopos
         public void PushHeadersRequest(
             IEnumerable<Section> sections,
             IEnumerable<Wiki> wikis,
-            IEnumerable<Chat> chats,
-            IEnumerable<string> signatures)
+            IEnumerable<Chat> chats)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -862,8 +859,7 @@ namespace Library.Net.Outopos
                     var message = new HeadersRequestMessage(
                         sections,
                         wikis,
-                        chats,
-                        signatures);
+                        chats);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -889,10 +885,10 @@ namespace Library.Net.Outopos
 
         public void PushHeaders(
             IEnumerable<SectionProfileHeader> sectionProfileHeaders,
+            IEnumerable<SectionMessageHeader> sectionMessageHeaders,
             IEnumerable<WikiPageHeader> wikiPageHeaders,
             IEnumerable<ChatTopicHeader> chatTopicHeaders,
-            IEnumerable<ChatMessageHeader> chatMessageHeaders,
-            IEnumerable<SignatureMessageHeader> signatureMessageHeaders)
+            IEnumerable<ChatMessageHeader> chatMessageHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -907,10 +903,10 @@ namespace Library.Net.Outopos
 
                     var message = new HeadersMessage(
                         sectionProfileHeaders,
+                        sectionMessageHeaders,
                         wikiPageHeaders,
                         chatTopicHeaders,
-                        chatMessageHeaders,
-                        signatureMessageHeaders);
+                        chatMessageHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1369,19 +1365,16 @@ namespace Library.Net.Outopos
                 Section = 0,
                 Wiki = 1,
                 Chat = 2,
-                Signature = 3,
             }
 
             private SectionCollection _sections;
             private WikiCollection _wikis;
             private ChatCollection _chats;
-            private SignatureCollection _signatures;
 
             public HeadersRequestMessage(
                 IEnumerable<Section> sections,
                 IEnumerable<Wiki> wikis,
-                IEnumerable<Chat> chats,
-                IEnumerable<string> signatures)
+                IEnumerable<Chat> chats)
             {
                 if (sections != null) this.ProtectedSections.AddRange(sections);
                 if (wikis != null) this.ProtectedWikis.AddRange(wikis);
@@ -1411,10 +1404,6 @@ namespace Library.Net.Outopos
                         else if (id == (byte)SerializeId.Chat)
                         {
                             this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.Signature)
-                        {
-                            this.ProtectedSignatures.Add(ItemUtilities.GetString(rangeStream));
                         }
                     }
                 }
@@ -1447,11 +1436,6 @@ namespace Library.Net.Outopos
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.Chat, stream);
                     }
-                }
-                // Signratures
-                foreach (var value in this.Signatures)
-                {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, value);
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
@@ -1540,31 +1524,6 @@ namespace Library.Net.Outopos
                     return _chats;
                 }
             }
-
-            private volatile ReadOnlyCollection<string> _readOnlySignatures;
-
-            public IEnumerable<string> Signatures
-            {
-                get
-                {
-                    if (_readOnlySignatures == null)
-                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
-
-                    return _readOnlySignatures;
-                }
-            }
-
-            [DataMember(Name = "Signatures")]
-            private SignatureCollection ProtectedSignatures
-            {
-                get
-                {
-                    if (_signatures == null)
-                        _signatures = new SignatureCollection(_maxHeaderRequestCount);
-
-                    return _signatures;
-                }
-            }
         }
 
         private sealed class HeadersMessage : ItemBase<HeadersMessage>
@@ -1572,30 +1531,30 @@ namespace Library.Net.Outopos
             private enum SerializeId : byte
             {
                 SectionProfileHeader = 0,
-                WikiPageHeader = 1,
-                ChatTopicHeader = 2,
-                ChatMessageHeader = 3,
-                SignatureMessageHeader = 4,
+                SectionMessageHeader = 1,
+                WikiPageHeader = 2,
+                ChatTopicHeader = 3,
+                ChatMessageHeader = 4,
             }
 
             private LockedList<SectionProfileHeader> _sectionProfileHeaders;
+            private LockedList<SectionMessageHeader> _sectionMessageHeaders;
             private LockedList<WikiPageHeader> _wikiPageHeaders;
             private LockedList<ChatTopicHeader> _chatTopicHeaders;
             private LockedList<ChatMessageHeader> _chatMessageHeaders;
-            private LockedList<SignatureMessageHeader> _signatureMessageHeaders;
 
             public HeadersMessage(
                 IEnumerable<SectionProfileHeader> sectionProfileHeaders,
+                IEnumerable<SectionMessageHeader> sectionMessageHeaders,
                 IEnumerable<WikiPageHeader> wikiPageHeaders,
                 IEnumerable<ChatTopicHeader> chatTopicHeaders,
-                IEnumerable<ChatMessageHeader> chatMessageHeaders,
-                IEnumerable<SignatureMessageHeader> signatureMessageHeaders)
+                IEnumerable<ChatMessageHeader> chatMessageHeaders)
             {
                 if (sectionProfileHeaders != null) this.ProtectedSectionProfileHeaders.AddRange(sectionProfileHeaders);
+                if (sectionMessageHeaders != null) this.ProtectedSectionMessageHeaders.AddRange(sectionMessageHeaders);
                 if (wikiPageHeaders != null) this.ProtectedWikiPageHeaders.AddRange(wikiPageHeaders);
                 if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
                 if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
-                if (signatureMessageHeaders != null) this.ProtectedSignatureMessageHeaders.AddRange(signatureMessageHeaders);
             }
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -1614,6 +1573,10 @@ namespace Library.Net.Outopos
                         {
                             this.ProtectedSectionProfileHeaders.Add(SectionProfileHeader.Import(rangeStream, bufferManager));
                         }
+                        else if (id == (byte)SerializeId.SectionMessageHeader)
+                        {
+                            this.ProtectedSectionMessageHeaders.Add(SectionMessageHeader.Import(rangeStream, bufferManager));
+                        }
                         else if (id == (byte)SerializeId.WikiPageHeader)
                         {
                             this.ProtectedWikiPageHeaders.Add(WikiPageHeader.Import(rangeStream, bufferManager));
@@ -1625,10 +1588,6 @@ namespace Library.Net.Outopos
                         else if (id == (byte)SerializeId.ChatMessageHeader)
                         {
                             this.ProtectedChatMessageHeaders.Add(ChatMessageHeader.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.SignatureMessageHeader)
-                        {
-                            this.ProtectedSignatureMessageHeaders.Add(SignatureMessageHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1644,6 +1603,14 @@ namespace Library.Net.Outopos
                     using (var stream = value.Export(bufferManager))
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.SectionProfileHeader, stream);
+                    }
+                }
+                // SectionMessageHeaders
+                foreach (var value in this.SectionMessageHeaders)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SectionMessageHeader, stream);
                     }
                 }
                 // WikiPageHeaders
@@ -1668,14 +1635,6 @@ namespace Library.Net.Outopos
                     using (var stream = value.Export(bufferManager))
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatMessageHeader, stream);
-                    }
-                }
-                // SignatureMessageHeaders
-                foreach (var value in this.SignatureMessageHeaders)
-                {
-                    using (var stream = value.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SignatureMessageHeader, stream);
                     }
                 }
 
@@ -1713,6 +1672,31 @@ namespace Library.Net.Outopos
                         _sectionProfileHeaders = new LockedList<SectionProfileHeader>(_maxHeaderCount);
 
                     return _sectionProfileHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<SectionMessageHeader> _readOnlySectionMessageHeaders;
+
+            public IEnumerable<SectionMessageHeader> SectionMessageHeaders
+            {
+                get
+                {
+                    if (_readOnlySectionMessageHeaders == null)
+                        _readOnlySectionMessageHeaders = new ReadOnlyCollection<SectionMessageHeader>(this.ProtectedSectionMessageHeaders);
+
+                    return _readOnlySectionMessageHeaders;
+                }
+            }
+
+            [DataMember(Name = "SectionMessageHeaders")]
+            private LockedList<SectionMessageHeader> ProtectedSectionMessageHeaders
+            {
+                get
+                {
+                    if (_sectionMessageHeaders == null)
+                        _sectionMessageHeaders = new LockedList<SectionMessageHeader>(_maxHeaderCount);
+
+                    return _sectionMessageHeaders;
                 }
             }
 
@@ -1788,31 +1772,6 @@ namespace Library.Net.Outopos
                         _chatMessageHeaders = new LockedList<ChatMessageHeader>(_maxHeaderCount);
 
                     return _chatMessageHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<SignatureMessageHeader> _readOnlySignatureMessageHeaders;
-
-            public IEnumerable<SignatureMessageHeader> SignatureMessageHeaders
-            {
-                get
-                {
-                    if (_readOnlySignatureMessageHeaders == null)
-                        _readOnlySignatureMessageHeaders = new ReadOnlyCollection<SignatureMessageHeader>(this.ProtectedSignatureMessageHeaders);
-
-                    return _readOnlySignatureMessageHeaders;
-                }
-            }
-
-            [DataMember(Name = "SignatureMessageHeaders")]
-            private LockedList<SignatureMessageHeader> ProtectedSignatureMessageHeaders
-            {
-                get
-                {
-                    if (_signatureMessageHeaders == null)
-                        _signatureMessageHeaders = new LockedList<SignatureMessageHeader>(_maxHeaderCount);
-
-                    return _signatureMessageHeaders;
                 }
             }
         }

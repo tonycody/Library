@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "ChatTopicHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatTopicHeader : MulticastHeaderBase<ChatTopicHeader, Chat>
+    public sealed class ChatTopicHeader : HeaderBase<ChatTopicHeader, Chat>
     {
 
     }

@@ -8,8 +8,8 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "SignatureMessageHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class SignatureMessageHeader : UnicastHeaderBase<SignatureMessageHeader>
+    [DataContract(Name = "SectionMessageHeader", Namespace = "http://Library/Net/Outopos")]
+    public sealed class SectionMessageHeader : HeaderBase<SectionMessageHeader, Section>
     {
 
     }

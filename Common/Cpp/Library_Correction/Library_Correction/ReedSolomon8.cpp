@@ -44,6 +44,17 @@ void mul(byte* src, byte* dst, byte* mulc, int32_t len)
         *dst++ ^= mulc[*src++];
     }
 
+    {
+        _mm_prefetch((char*)mulc, _MM_HINT_NTA);
+        _mm_prefetch((char*)mulc + 32, _MM_HINT_NTA);
+        _mm_prefetch((char*)mulc + 64, _MM_HINT_NTA);
+        _mm_prefetch((char*)mulc + 96, _MM_HINT_NTA);
+        _mm_prefetch((char*)mulc + 128, _MM_HINT_NTA);
+        _mm_prefetch((char*)mulc + 160, _MM_HINT_NTA);   
+        _mm_prefetch((char*)mulc + 192, _MM_HINT_NTA);   
+        _mm_prefetch((char*)mulc + 224, _MM_HINT_NTA);   
+    }
+
     for (int32_t count = ((len - i) / 128) - 1; count >= 0 ; count--)
     {
         xmm0.m128i_u8[0] = mulc[*src++];

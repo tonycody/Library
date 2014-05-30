@@ -30,6 +30,3 @@ Library.Net.Outopos\Utilities\Comparer.cs
 
 Library.Net.Amoeba\Utilities\WatchTimer.cs
 Library.Net.Outopos\Utilities\WatchTimer.cs
-
-Library.Net.Amoeba\Utilities\ISetOperators.cs
-Library.Net.Outopos\Utilities\ISetOperators.cs

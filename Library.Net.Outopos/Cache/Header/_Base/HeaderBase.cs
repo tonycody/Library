@@ -9,38 +9,36 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "MulticastHeaderBase", Namespace = "http://Library/Net/Outopos")]
-    public abstract class MulticastHeaderBase<THeader, TTag> : ImmutableCertificateItemBase<THeader>, IMulticastHeader<TTag>
-        where THeader : MulticastHeaderBase<THeader, TTag>
+    [DataContract(Name = "HeaderBase", Namespace = "http://Library/Net/Outopos")]
+    abstract class HeaderBase<THeader, TTag> : ImmutableCertificateItemBase<THeader>, IHeader<TTag>
+        where THeader : HeaderBase<THeader, TTag>
         where TTag : ItemBase<TTag>
     {
         private enum SerializeId : byte
         {
             Tag = 0,
             CreationTime = 1,
-            Key = 2,
-            Option = 3,
+            Cash = 2,
+            Key = 3,
 
             Certificate = 4,
         }
 
         private volatile TTag _tag;
         private DateTime _creationTime;
+        private Cash _cash;
         private volatile Key _key;
-        private byte[] _option;
 
         private volatile Certificate _certificate;
 
         private volatile object _thisLock;
 
-        public static readonly int MaxOptionLength = 256;
-
-        public MulticastHeaderBase(TTag tag, DateTime creationTime, Key key, byte[] option, DigitalSignature digitalSignature)
+        public HeaderBase(TTag tag, DateTime creationTime, Cash cash, Key key, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
             this.CreationTime = creationTime;
+            this.Cash = cash;
             this.Key = key;
-            this.Option = option;
 
             this.CreateCertificate(digitalSignature);
         }
@@ -70,14 +68,13 @@ namespace Library.Net.Outopos
                     {
                         this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                     }
+                    else if (id == (byte)SerializeId.Cash)
+                    {
+                        this.Cash = Cash.Import(rangeStream, bufferManager);
+                    }
                     else if (id == (byte)SerializeId.Key)
                     {
                         this.Key = Key.Import(rangeStream, bufferManager);
-                    }
-
-                    else if (id == (byte)SerializeId.Option)
-                    {
-                        this.Option = ItemUtilities.GetByteArray(rangeStream);
                     }
 
                     else if (id == (byte)SerializeId.Certificate)
@@ -105,6 +102,14 @@ namespace Library.Net.Outopos
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
             }
+            // Cash
+            if (this.Cash != null)
+            {
+                using (var stream = this.Cash.Export(bufferManager))
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Cash, stream);
+                }
+            }
             // Key
             if (this.Key != null)
             {
@@ -112,12 +117,6 @@ namespace Library.Net.Outopos
                 {
                     ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                 }
-            }
-
-            // Option
-            if (this.Option != null)
-            {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.Option, this.Option);
             }
 
             // Certificate
@@ -152,18 +151,12 @@ namespace Library.Net.Outopos
 
             if (this.Tag != other.Tag
                 || this.CreationTime != other.CreationTime
+                || this.Cash != other.Cash
                 || this.Key != other.Key
-
-                || (this.Option == null) != (other.Option == null)
 
                 || this.Certificate != other.Certificate)
             {
                 return false;
-            }
-
-            if (this.Option != null && other.Option != null)
-            {
-                if (!Unsafe.Equals(this.Option, other.Option)) return false;
             }
 
             return true;
@@ -241,6 +234,19 @@ namespace Library.Net.Outopos
             }
         }
 
+        [DataMember(Name = "Cash")]
+        public Cash Cash
+        {
+            get
+            {
+                return _cash;
+            }
+            private set
+            {
+                _cash = value;
+            }
+        }
+
         [DataMember(Name = "Key")]
         public Key Key
         {
@@ -251,26 +257,6 @@ namespace Library.Net.Outopos
             private set
             {
                 _key = value;
-            }
-        }
-
-        [DataMember(Name = "Option")]
-        public byte[] Option
-        {
-            get
-            {
-                return _option;
-            }
-            private set
-            {
-                if (value != null && value.Length > MulticastHeaderBase<THeader, TTag>.MaxOptionLength)
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _option = value;
-                }
             }
         }
 

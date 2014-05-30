@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "SectionProfileHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class SectionProfileHeader : MulticastHeaderBase<SectionProfileHeader, Section>
+    public sealed class SectionProfileHeader : HeaderBase<SectionProfileHeader, Section>
     {
 
     }

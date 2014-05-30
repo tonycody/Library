@@ -8,7 +8,7 @@ using Library.Io;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "TagBase", Namespace = "http://Library/Net/Outopos")]
-    public abstract class TagBase<TTag> : ItemBase<TTag>, ITag
+    abstract class TagBase<TTag> : ItemBase<TTag>, ITag
         where TTag : TagBase<TTag>
     {
         private enum SerializeId : byte

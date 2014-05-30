@@ -34,8 +34,8 @@ namespace Library.Security
         private volatile string _toString;
 
         public static readonly int MaxNickNameLength = 256;
-        public static readonly int MaxPublickeyLength = 1024 * 8;
-        public static readonly int MaxPrivatekeyLength = 1024 * 8;
+        public static readonly int MaxPublicKeyLength = 1024 * 8;
+        public static readonly int MaxPrivateKeyLength = 1024 * 8;
 
         public DigitalSignature(string nickname, DigitalSignatureAlgorithm digitalSignatureAlgorithm)
         {
@@ -323,7 +323,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > DigitalSignature.MaxPublickeyLength))
+                if (value != null && (value.Length > DigitalSignature.MaxPublicKeyLength))
                 {
                     throw new ArgumentException();
                 }
@@ -352,7 +352,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > DigitalSignature.MaxPrivatekeyLength))
+                if (value != null && (value.Length > DigitalSignature.MaxPrivateKeyLength))
                 {
                     throw new ArgumentException();
                 }

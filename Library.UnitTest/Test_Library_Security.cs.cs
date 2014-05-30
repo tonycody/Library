@@ -181,17 +181,10 @@ namespace Library.UnitTest
         [Test]
         public void Test_Cash()
         {
-            Cash cash = new Cash();
-
             {
-                var result = cash.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
-                var count = cash.Verify(result, NetworkConverter.FromHexString("0101010101010101"));
+                var cash = Cash.Create(CashAlgorithm.Version1, NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
+                var count = cash.Verify(NetworkConverter.FromHexString("0101010101010101"));
                 Assert.IsTrue(count > 4);
-            }
-
-            {
-                var count = cash.Verify(NetworkConverter.FromHexString("9fcc47a072aec40958c2adc4f8d557b979d5ea27c858710bfce464a13d1d9ba68a55abd7afe09d5684ad58d0473054ae0227de234e23ff9a1889de8fac460780"), NetworkConverter.FromHexString("0101010101010101"));
-                Assert.IsTrue(count == 9);
             }
 
             {
@@ -200,12 +193,10 @@ namespace Library.UnitTest
 
                 var task = Task.Factory.StartNew(() =>
                 {
-                    cash.Create(NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
+                    var cash = Cash.Create(CashAlgorithm.Version1, NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 0));
                 });
 
                 Thread.Sleep(1000);
-
-                cash.Cancel();
 
                 task.Wait();
 

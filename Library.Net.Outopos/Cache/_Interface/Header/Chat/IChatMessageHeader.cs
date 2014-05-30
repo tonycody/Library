@@ -2,7 +2,7 @@ using System;
 
 namespace Library.Net.Outopos
 {
-    interface IChatTopicHeader<TChat> : IMulticastHeader<TChat>
+    interface IChatMessageHeader<TChat> : IHeader<TChat>
         where TChat : IChat
     {
 
