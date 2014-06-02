@@ -140,7 +140,7 @@ namespace Library.Net.Amoeba
             }
             private set
             {
-                if (value != null && (value.Length > Node.MaxIdLength))
+                if (value != null && value.Length > Node.MaxIdLength)
                 {
                     throw new ArgumentException();
                 }

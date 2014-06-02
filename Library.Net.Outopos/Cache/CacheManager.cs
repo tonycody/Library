@@ -21,7 +21,7 @@ namespace Library.Net.Outopos
         IEnumerable<T> IntersectFrom(IEnumerable<T> collection);
         IEnumerable<T> ExceptFrom(IEnumerable<T> collection);
     }
-    
+
     class CacheManager : ManagerBase, Library.Configuration.ISettings, ISetOperators<Key>, IEnumerable<Key>, IThisLock
     {
         private FileStream _fileStream;
@@ -415,6 +415,70 @@ namespace Library.Net.Outopos
                 }
 
                 getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
+            }
+        }
+
+        public KeyCollection Encoding(Stream inStream, int blockLength, HashAlgorithm hashAlgorithm)
+        {
+            if (inStream == null) throw new ArgumentNullException("inStream");
+
+            var keys = new KeyCollection();
+
+            try
+            {
+                using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                {
+                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                    try
+                    {
+                        int length = 0;
+
+                        while ((length = inStream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            outStream.Write(buffer, 0, length);
+                        }
+                    }
+                    finally
+                    {
+                        _bufferManager.ReturnBuffer(buffer);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                foreach (var key in keys)
+                {
+                    this.Unlock(key);
+                }
+
+                throw;
+            }
+
+            return keys;
+        }
+
+        public void Decoding(Stream outStream, KeyCollection keys)
+        {
+            if (outStream == null) throw new ArgumentNullException("outStream");
+
+            using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+            {
+                byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                try
+                {
+                    int length = 0;
+
+                    while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
+                    {
+                        outStream.Write(buffer, 0, length);
+                    }
+                }
+                finally
+                {
+                    _bufferManager.ReturnBuffer(buffer);
+                }
             }
         }
 

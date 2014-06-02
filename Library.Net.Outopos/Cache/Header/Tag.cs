@@ -1,32 +1,40 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "TagBase", Namespace = "http://Library/Net/Outopos")]
-    abstract class TagBase<TTag> : ItemBase<TTag>, ITag
-        where TTag : TagBase<TTag>
+    [DataContract(Name = "Tag", Namespace = "http://Library/Net/Outopos")]
+    public sealed class Tag : ItemBase<Tag>, ITag
     {
         private enum SerializeId : byte
         {
-            Name = 0,
-            Id = 1,
+            Type = 0,
+            Name = 1,
+            Id = 2,
         }
 
+        private static Intern<string> _typeCache = new Intern<string>();
+        private volatile string _type;
+        private static Intern<string> _nameCache = new Intern<string>();
         private volatile string _name;
+        private static Intern<byte[]> _idCache = new Intern<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _id;
 
         private volatile int _hashCode;
 
+        public static readonly int MaxTypeLength = 32;
         public static readonly int MaxNameLength = 256;
         public static readonly int MaxIdLength = 64;
 
-        public TagBase(string name, byte[] id)
+        public Tag(string type, string name, byte[] id)
         {
+            this.Type = type;
             this.Name = name;
             this.Id = id;
         }
@@ -48,7 +56,11 @@ namespace Library.Net.Outopos
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Name)
+                    if (id == (byte)SerializeId.Type)
+                    {
+                        this.Type = ItemUtilities.GetString(rangeStream);
+                    }
+                    else if (id == (byte)SerializeId.Name)
                     {
                         this.Name = ItemUtilities.GetString(rangeStream);
                     }
@@ -64,6 +76,11 @@ namespace Library.Net.Outopos
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 
+            // Type
+            if (this.Type != null)
+            {
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Type, this.Type);
+            }
             // Name
             if (this.Name != null)
             {
@@ -86,31 +103,47 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is TTag)) return false;
+            if ((object)obj == null || !(obj is Tag)) return false;
 
-            return this.Equals((TTag)obj);
+            return this.Equals((Tag)obj);
         }
 
-        public override bool Equals(TTag other)
+        public override bool Equals(Tag other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.Name != other.Name
-                || (this.Id == null) != (other.Id == null))
+            if (!object.ReferenceEquals(this.Type, other.Type)
+                || !object.ReferenceEquals(this.Name, other.Name)
+                || !object.ReferenceEquals(this.Id, other.Id))
             {
                 return false;
-            }
-
-            if (this.Id != null && other.Id != null)
-            {
-                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;
         }
 
         #region ITag
+
+        [DataMember(Name = "Type")]
+        public string Type
+        {
+            get
+            {
+                return _type;
+            }
+            private set
+            {
+                if (value != null && value.Length > Tag.MaxTypeLength)
+                {
+                    throw new ArgumentException();
+                }
+                else
+                {
+                    _type = _typeCache.GetValue(value, this);
+                }
+            }
+        }
 
         [DataMember(Name = "Name")]
         public string Name
@@ -121,13 +154,13 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && value.Length > TagBase<TTag>.MaxNameLength)
+                if (value != null && value.Length > Tag.MaxNameLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _name = value;
+                    _name = _nameCache.GetValue(value, this);
                 }
             }
         }
@@ -141,18 +174,18 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && (value.Length > TagBase<TTag>.MaxIdLength))
+                if (value != null && value.Length > Tag.MaxIdLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _id = value;
+                    _id = _idCache.GetValue(value, this);
                 }
 
                 if (value != null)
                 {
-                    _hashCode = ItemUtilities.GetHashCode(_id);
+                    _hashCode = RuntimeHelpers.GetHashCode(_id);
                 }
                 else
                 {

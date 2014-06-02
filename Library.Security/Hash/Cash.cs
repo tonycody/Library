@@ -20,7 +20,6 @@ namespace Library.Security
 
         private volatile CashAlgorithm _cashAlgorithm = 0;
         private volatile byte[] _key;
-        private volatile byte[] _value;
 
         private volatile int _hashCode;
 
@@ -170,7 +169,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > Cash.MaxKeyLength))
+                if (value != null && value.Length > Cash.MaxKeyLength)
                 {
                     throw new ArgumentException();
                 }

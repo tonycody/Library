@@ -24,9 +24,6 @@
     <ClInclude Include="Crc32_Castagnoli.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CheckBase64.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -36,9 +33,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Crc32_Castagnoli.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CheckBase64.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

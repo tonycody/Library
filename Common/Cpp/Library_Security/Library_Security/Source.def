@@ -2,4 +2,3 @@ LIBRARY Library_Security
 
 EXPORTS
 	compute_Crc32_Castagnoli
-	checkBase64

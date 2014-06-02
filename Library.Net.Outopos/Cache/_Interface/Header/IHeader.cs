@@ -1,14 +1,13 @@
 using System;
-using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    public interface IHeader<TTag> : IComputeHash
+    public interface IHeader<TTag, TKey> : IComputeHash
         where TTag : ITag
+        where TKey : IKey
     {
         TTag Tag { get; }
         DateTime CreationTime { get; }
-        Cash Cash { get; }
-        Key Key { get; }
+        TKey Key { get; }
     }
 }

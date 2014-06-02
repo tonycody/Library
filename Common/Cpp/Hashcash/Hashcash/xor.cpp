@@ -13,12 +13,15 @@
 void xor(byte* x, byte* y, byte* result, int32_t len)
 {
 #if defined (PORTABLE_64_BIT)
-    for (int32_t i = (len / 16) - 1; i >= 0; i--, x += 16, y += 16, result += 16)
+    if (len >= 16)
     {
-        __m128i xmm_x = _mm_loadu_si128((__m128i*)x);
-        __m128i xmm_y = _mm_loadu_si128((__m128i*)y);
-        __m128i xmm_res =  _mm_xor_si128(xmm_x, xmm_y);
-        _mm_storeu_si128((__m128i*)result, xmm_res);
+        for (int32_t i = (len / 16) - 1; i >= 0; i--, x += 16, y += 16, result += 16)
+        {
+            __m128i xmm_x = _mm_loadu_si128((__m128i*)x);
+            __m128i xmm_y = _mm_loadu_si128((__m128i*)y);
+            __m128i xmm_res =  _mm_xor_si128(xmm_x, xmm_y);
+            _mm_storeu_si128((__m128i*)result, xmm_res);
+        }
     }
 
     if ((len & 8) != 0)
@@ -44,12 +47,15 @@ void xor(byte* x, byte* y, byte* result, int32_t len)
         *((byte*)result) = (byte)(*((byte*)x) ^ *((byte*)y));
     }
 #elif defined (PORTABLE_32_BIT)
-    for (int32_t i = (len / 16) - 1; i >= 0; i--, x += 16, y += 16, result += 16)
+    if (len >= 16)
     {
-        __m128i xmm_x = _mm_loadu_si128((__m128i*)x);
-        __m128i xmm_y = _mm_loadu_si128((__m128i*)y);
-        __m128i xmm_res =  _mm_xor_si128(xmm_x, xmm_y);
-        _mm_storeu_si128((__m128i*)result, xmm_res);
+        for (int32_t i = (len / 16) - 1; i >= 0; i--, x += 16, y += 16, result += 16)
+        {
+            __m128i xmm_x = _mm_loadu_si128((__m128i*)x);
+            __m128i xmm_y = _mm_loadu_si128((__m128i*)y);
+            __m128i xmm_res =  _mm_xor_si128(xmm_x, xmm_y);
+            _mm_storeu_si128((__m128i*)result, xmm_res);
+        }
     }
 
     if ((len & 8) != 0)

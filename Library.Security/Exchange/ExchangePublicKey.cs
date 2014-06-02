@@ -138,7 +138,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > Exchange.MaxPublickeyLength))
+                if (value != null && value.Length > Exchange.MaxPublickeyLength)
                 {
                     throw new ArgumentException();
                 }

@@ -30,7 +30,7 @@ Crc32_Castagnoli::~Crc32_Castagnoli()
 
 }
 
-uint32_t Crc32_Castagnoli::compute(uint32_t x, byte* source, int32_t length)
+uint32_t Crc32_Castagnoli::compute(uint32_t x, byte* source, int32_t length) const
 {
     for (int32_t i = 0; i < length; i++)
     {

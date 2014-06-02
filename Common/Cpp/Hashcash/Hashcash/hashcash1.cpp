@@ -46,22 +46,22 @@ byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
         {
             memset(xorTemp, 0, hashSize);
 
-            ((uint32_t*)currentKey)[0] = xorshift.Next();
-            ((uint32_t*)currentKey)[1] = xorshift.Next();
-            ((uint32_t*)currentKey)[2] = xorshift.Next();
-            ((uint32_t*)currentKey)[3] = xorshift.Next();
-            ((uint32_t*)currentKey)[4] = xorshift.Next();
-            ((uint32_t*)currentKey)[5] = xorshift.Next();
-            ((uint32_t*)currentKey)[6] = xorshift.Next();
-            ((uint32_t*)currentKey)[7] = xorshift.Next();
-            ((uint32_t*)currentKey)[8] = xorshift.Next();
-            ((uint32_t*)currentKey)[9] = xorshift.Next();
-            ((uint32_t*)currentKey)[10] = xorshift.Next();
-            ((uint32_t*)currentKey)[11] = xorshift.Next();
-            ((uint32_t*)currentKey)[12] = xorshift.Next();
-            ((uint32_t*)currentKey)[13] = xorshift.Next();
-            ((uint32_t*)currentKey)[14] = xorshift.Next();
-            ((uint32_t*)currentKey)[15] = xorshift.Next();
+            ((uint32_t*)currentKey)[0] = xorshift.next();
+            ((uint32_t*)currentKey)[1] = xorshift.next();
+            ((uint32_t*)currentKey)[2] = xorshift.next();
+            ((uint32_t*)currentKey)[3] = xorshift.next();
+            ((uint32_t*)currentKey)[4] = xorshift.next();
+            ((uint32_t*)currentKey)[5] = xorshift.next();
+            ((uint32_t*)currentKey)[6] = xorshift.next();
+            ((uint32_t*)currentKey)[7] = xorshift.next();
+            ((uint32_t*)currentKey)[8] = xorshift.next();
+            ((uint32_t*)currentKey)[9] = xorshift.next();
+            ((uint32_t*)currentKey)[10] = xorshift.next();
+            ((uint32_t*)currentKey)[11] = xorshift.next();
+            ((uint32_t*)currentKey)[12] = xorshift.next();
+            ((uint32_t*)currentKey)[13] = xorshift.next();
+            ((uint32_t*)currentKey)[14] = xorshift.next();
+            ((uint32_t*)currentKey)[15] = xorshift.next();
 
             memcpy(block, currentKey, hashSize);
             memcpy(block + hashSize, value, valueSize);
@@ -85,22 +85,22 @@ byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
         {
             memset(xorTemp, 0, hashSize);
 
-            ((uint32_t*)currentKey)[0] = xorshift.Next();
-            ((uint32_t*)currentKey)[1] = xorshift.Next();
-            ((uint32_t*)currentKey)[2] = xorshift.Next();
-            ((uint32_t*)currentKey)[3] = xorshift.Next();
-            ((uint32_t*)currentKey)[4] = xorshift.Next();
-            ((uint32_t*)currentKey)[5] = xorshift.Next();
-            ((uint32_t*)currentKey)[6] = xorshift.Next();
-            ((uint32_t*)currentKey)[7] = xorshift.Next();
-            ((uint32_t*)currentKey)[8] = xorshift.Next();
-            ((uint32_t*)currentKey)[9] = xorshift.Next();
-            ((uint32_t*)currentKey)[10] = xorshift.Next();
-            ((uint32_t*)currentKey)[11] = xorshift.Next();
-            ((uint32_t*)currentKey)[12] = xorshift.Next();
-            ((uint32_t*)currentKey)[13] = xorshift.Next();
-            ((uint32_t*)currentKey)[14] = xorshift.Next();
-            ((uint32_t*)currentKey)[15] = xorshift.Next();
+            ((uint32_t*)currentKey)[0] = xorshift.next();
+            ((uint32_t*)currentKey)[1] = xorshift.next();
+            ((uint32_t*)currentKey)[2] = xorshift.next();
+            ((uint32_t*)currentKey)[3] = xorshift.next();
+            ((uint32_t*)currentKey)[4] = xorshift.next();
+            ((uint32_t*)currentKey)[5] = xorshift.next();
+            ((uint32_t*)currentKey)[6] = xorshift.next();
+            ((uint32_t*)currentKey)[7] = xorshift.next();
+            ((uint32_t*)currentKey)[8] = xorshift.next();
+            ((uint32_t*)currentKey)[9] = xorshift.next();
+            ((uint32_t*)currentKey)[10] = xorshift.next();
+            ((uint32_t*)currentKey)[11] = xorshift.next();
+            ((uint32_t*)currentKey)[12] = xorshift.next();
+            ((uint32_t*)currentKey)[13] = xorshift.next();
+            ((uint32_t*)currentKey)[14] = xorshift.next();
+            ((uint32_t*)currentKey)[15] = xorshift.next();
 
             memcpy(block, currentKey, hashSize);
             memcpy(block + hashSize, value, valueSize);

@@ -4,7 +4,7 @@ class Xorshift
 {
 
 // ----- C code -----
-//uint32_t xXorshift() { 
+//uint32_t xorshift() { 
 //    static uint32_t x = 123456789;
 //    static uint32_t y = 362436069;
 //    static uint32_t z = 521288629;
@@ -25,5 +25,5 @@ public:
     Xorshift();
     ~Xorshift();
 
-    uint32_t Next();
+    uint32_t next();
 };

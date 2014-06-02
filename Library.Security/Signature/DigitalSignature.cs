@@ -323,7 +323,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > DigitalSignature.MaxPublicKeyLength))
+                if (value != null && value.Length > DigitalSignature.MaxPublicKeyLength)
                 {
                     throw new ArgumentException();
                 }
@@ -352,7 +352,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > DigitalSignature.MaxPrivateKeyLength))
+                if (value != null && value.Length > DigitalSignature.MaxPrivateKeyLength)
                 {
                     throw new ArgumentException();
                 }

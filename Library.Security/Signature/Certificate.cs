@@ -239,7 +239,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > Certificate.MaxPublickeyLength))
+                if (value != null && value.Length > Certificate.MaxPublickeyLength)
                 {
                     throw new ArgumentException();
                 }
@@ -268,7 +268,7 @@ namespace Library.Security
             }
             private set
             {
-                if (value != null && (value.Length > Certificate.MaxSignatureLength))
+                if (value != null && value.Length > Certificate.MaxSignatureLength)
                 {
                     throw new ArgumentException();
                 }

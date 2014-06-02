@@ -9,35 +9,30 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "HeaderBase", Namespace = "http://Library/Net/Outopos")]
-    abstract class HeaderBase<THeader, TTag> : ImmutableCertificateItemBase<THeader>, IHeader<TTag>
-        where THeader : HeaderBase<THeader, TTag>
-        where TTag : ItemBase<TTag>
+    [DataContract(Name = "Header", Namespace = "http://Library/Net/Outopos")]
+    public sealed class Header : ImmutableCertificateItemBase<Header>, IHeader<Tag, Key>
     {
         private enum SerializeId : byte
         {
             Tag = 0,
             CreationTime = 1,
-            Cash = 2,
-            Key = 3,
+            Key = 2,
 
-            Certificate = 4,
+            Certificate = 3,
         }
 
-        private volatile TTag _tag;
+        private volatile Tag _tag;
         private DateTime _creationTime;
-        private Cash _cash;
         private volatile Key _key;
 
         private volatile Certificate _certificate;
 
         private volatile object _thisLock;
 
-        public HeaderBase(TTag tag, DateTime creationTime, Cash cash, Key key, DigitalSignature digitalSignature)
+        public Header(Tag tag, DateTime creationTime, Key key, DigitalSignature digitalSignature)
         {
             this.Tag = tag;
             this.CreationTime = creationTime;
-            this.Cash = cash;
             this.Key = key;
 
             this.CreateCertificate(digitalSignature);
@@ -62,15 +57,11 @@ namespace Library.Net.Outopos
                 {
                     if (id == (byte)SerializeId.Tag)
                     {
-                        this.Tag = ItemBase<TTag>.Import(rangeStream, bufferManager);
+                        this.Tag = Tag.Import(rangeStream, bufferManager);
                     }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
                         this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                    }
-                    else if (id == (byte)SerializeId.Cash)
-                    {
-                        this.Cash = Cash.Import(rangeStream, bufferManager);
                     }
                     else if (id == (byte)SerializeId.Key)
                     {
@@ -102,14 +93,6 @@ namespace Library.Net.Outopos
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
             }
-            // Cash
-            if (this.Cash != null)
-            {
-                using (var stream = this.Cash.Export(bufferManager))
-                {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Cash, stream);
-                }
-            }
             // Key
             if (this.Key != null)
             {
@@ -139,19 +122,18 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is THeader)) return false;
+            if ((object)obj == null || !(obj is Header)) return false;
 
-            return this.Equals((THeader)obj);
+            return this.Equals((Header)obj);
         }
 
-        public override bool Equals(THeader other)
+        public override bool Equals(Header other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
             if (this.Tag != other.Tag
                 || this.CreationTime != other.CreationTime
-                || this.Cash != other.Cash
                 || this.Key != other.Key
 
                 || this.Certificate != other.Certificate)
@@ -199,10 +181,10 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IMulicastHeader<TTag>
+        #region IHeader<Tag, Key>
 
         [DataMember(Name = "Tag")]
-        public TTag Tag
+        public Tag Tag
         {
             get
             {
@@ -231,19 +213,6 @@ namespace Library.Net.Outopos
                     var utc = value.ToUniversalTime();
                     _creationTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
                 }
-            }
-        }
-
-        [DataMember(Name = "Cash")]
-        public Cash Cash
-        {
-            get
-            {
-                return _cash;
-            }
-            private set
-            {
-                _cash = value;
             }
         }
 

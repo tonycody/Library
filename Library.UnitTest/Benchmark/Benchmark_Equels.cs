@@ -27,17 +27,17 @@ namespace Library.UnitTest
 
                 if (random.Next(0, 2) == 0)
                 {
-                    var length = random.Next(0, 1024 * 1024);
+                    var length = random.Next(0, 1024 * 256);
                     x = new byte[length];
                     y = new byte[length];
                 }
                 else
                 {
-                    x = new byte[random.Next(0, 1024 * 1024)];
-                    y = new byte[random.Next(0, 1024 * 1024)];
+                    x = new byte[random.Next(0, 1024 * 256)];
+                    y = new byte[random.Next(0, 1024 * 256)];
                 }
 
-                if (random.Next(0, 2) == 0)
+                if (random.Next(0, 3) == 0)
                 {
                     random.NextBytes(x);
                     random.NextBytes(y);

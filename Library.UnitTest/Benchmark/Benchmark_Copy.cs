@@ -21,7 +21,7 @@ namespace Library.UnitTest
 
             var flags = new int[] { 0, 1 };
 
-            var length = 1024 * 1024;
+            var length = 1024 * 256;
             byte[] x1 = new byte[length];
             byte[] y1 = new byte[length];
             byte[] x2 = new byte[length];
@@ -30,7 +30,7 @@ namespace Library.UnitTest
             random.NextBytes(x1);
             random.NextBytes(x2);
 
-            for (int i = 0; i < 1024 * 32; i++)
+            for (int i = 0; i < 1024 * 256; i++)
             {
                 random.Shuffle(flags);
                 foreach (var index in flags)

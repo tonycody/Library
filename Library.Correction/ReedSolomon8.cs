@@ -446,70 +446,63 @@ namespace Library.Correction
                 // be used many times.
                 byte[] gf_mulc = _gf_mul_table[c];
 
-                var h_dst = GCHandle.Alloc(dst, GCHandleType.Pinned);
-                var h_src = GCHandle.Alloc(src, GCHandleType.Pinned);
-                var h_gf_mulc = GCHandle.Alloc(gf_mulc, GCHandleType.Pinned);
-
                 try
                 {
-                    var p_dst = (byte*)h_dst.AddrOfPinnedObject();
-                    var p_src = (byte*)h_src.AddrOfPinnedObject();
-                    var p_gf_mulc = (byte*)h_gf_mulc.AddrOfPinnedObject();
-
-                    // Not sure if loop unrolling has any real benefit in Java, but 
-                    // what the hey.
-                    for (; i < lim && (lim - i) > unroll; i += unroll, j += unroll)
+                    fixed (byte* p_dst = dst)
+                    fixed (byte* p_src = src)
+                    fixed (byte* p_gf_mulc = gf_mulc)
                     {
-                        // dst ^= gf_mulc[x] is equal to mult then add (xor == add)
+                        // Not sure if loop unrolling has any real benefit in Java, but 
+                        // what the hey.
+                        for (; i < lim && (lim - i) > unroll; i += unroll, j += unroll)
+                        {
+                            // dst ^= gf_mulc[x] is equal to mult then add (xor == add)
 
-                        p_dst[i] ^= p_gf_mulc[p_src[j]];
-                        p_dst[i + 1] ^= p_gf_mulc[p_src[j + 1]];
-                        p_dst[i + 2] ^= p_gf_mulc[p_src[j + 2]];
-                        p_dst[i + 3] ^= p_gf_mulc[p_src[j + 3]];
-                        p_dst[i + 4] ^= p_gf_mulc[p_src[j + 4]];
-                        p_dst[i + 5] ^= p_gf_mulc[p_src[j + 5]];
-                        p_dst[i + 6] ^= p_gf_mulc[p_src[j + 6]];
-                        p_dst[i + 7] ^= p_gf_mulc[p_src[j + 7]];
-                        p_dst[i + 8] ^= p_gf_mulc[p_src[j + 8]];
-                        p_dst[i + 9] ^= p_gf_mulc[p_src[j + 9]];
-                        p_dst[i + 10] ^= p_gf_mulc[p_src[j + 10]];
-                        p_dst[i + 11] ^= p_gf_mulc[p_src[j + 11]];
-                        p_dst[i + 12] ^= p_gf_mulc[p_src[j + 12]];
-                        p_dst[i + 13] ^= p_gf_mulc[p_src[j + 13]];
-                        p_dst[i + 14] ^= p_gf_mulc[p_src[j + 14]];
-                        p_dst[i + 15] ^= p_gf_mulc[p_src[j + 15]];
-                        p_dst[i + 16] ^= p_gf_mulc[p_src[j + 16]];
-                        p_dst[i + 17] ^= p_gf_mulc[p_src[j + 17]];
-                        p_dst[i + 18] ^= p_gf_mulc[p_src[j + 18]];
-                        p_dst[i + 19] ^= p_gf_mulc[p_src[j + 19]];
-                        p_dst[i + 20] ^= p_gf_mulc[p_src[j + 20]];
-                        p_dst[i + 21] ^= p_gf_mulc[p_src[j + 21]];
-                        p_dst[i + 22] ^= p_gf_mulc[p_src[j + 22]];
-                        p_dst[i + 23] ^= p_gf_mulc[p_src[j + 23]];
-                        p_dst[i + 24] ^= p_gf_mulc[p_src[j + 24]];
-                        p_dst[i + 25] ^= p_gf_mulc[p_src[j + 25]];
-                        p_dst[i + 26] ^= p_gf_mulc[p_src[j + 26]];
-                        p_dst[i + 27] ^= p_gf_mulc[p_src[j + 27]];
-                        p_dst[i + 28] ^= p_gf_mulc[p_src[j + 28]];
-                        p_dst[i + 29] ^= p_gf_mulc[p_src[j + 29]];
-                        p_dst[i + 30] ^= p_gf_mulc[p_src[j + 30]];
-                        p_dst[i + 31] ^= p_gf_mulc[p_src[j + 31]];
-                    }
+                            p_dst[i] ^= p_gf_mulc[p_src[j]];
+                            p_dst[i + 1] ^= p_gf_mulc[p_src[j + 1]];
+                            p_dst[i + 2] ^= p_gf_mulc[p_src[j + 2]];
+                            p_dst[i + 3] ^= p_gf_mulc[p_src[j + 3]];
+                            p_dst[i + 4] ^= p_gf_mulc[p_src[j + 4]];
+                            p_dst[i + 5] ^= p_gf_mulc[p_src[j + 5]];
+                            p_dst[i + 6] ^= p_gf_mulc[p_src[j + 6]];
+                            p_dst[i + 7] ^= p_gf_mulc[p_src[j + 7]];
+                            p_dst[i + 8] ^= p_gf_mulc[p_src[j + 8]];
+                            p_dst[i + 9] ^= p_gf_mulc[p_src[j + 9]];
+                            p_dst[i + 10] ^= p_gf_mulc[p_src[j + 10]];
+                            p_dst[i + 11] ^= p_gf_mulc[p_src[j + 11]];
+                            p_dst[i + 12] ^= p_gf_mulc[p_src[j + 12]];
+                            p_dst[i + 13] ^= p_gf_mulc[p_src[j + 13]];
+                            p_dst[i + 14] ^= p_gf_mulc[p_src[j + 14]];
+                            p_dst[i + 15] ^= p_gf_mulc[p_src[j + 15]];
+                            p_dst[i + 16] ^= p_gf_mulc[p_src[j + 16]];
+                            p_dst[i + 17] ^= p_gf_mulc[p_src[j + 17]];
+                            p_dst[i + 18] ^= p_gf_mulc[p_src[j + 18]];
+                            p_dst[i + 19] ^= p_gf_mulc[p_src[j + 19]];
+                            p_dst[i + 20] ^= p_gf_mulc[p_src[j + 20]];
+                            p_dst[i + 21] ^= p_gf_mulc[p_src[j + 21]];
+                            p_dst[i + 22] ^= p_gf_mulc[p_src[j + 22]];
+                            p_dst[i + 23] ^= p_gf_mulc[p_src[j + 23]];
+                            p_dst[i + 24] ^= p_gf_mulc[p_src[j + 24]];
+                            p_dst[i + 25] ^= p_gf_mulc[p_src[j + 25]];
+                            p_dst[i + 26] ^= p_gf_mulc[p_src[j + 26]];
+                            p_dst[i + 27] ^= p_gf_mulc[p_src[j + 27]];
+                            p_dst[i + 28] ^= p_gf_mulc[p_src[j + 28]];
+                            p_dst[i + 29] ^= p_gf_mulc[p_src[j + 29]];
+                            p_dst[i + 30] ^= p_gf_mulc[p_src[j + 30]];
+                            p_dst[i + 31] ^= p_gf_mulc[p_src[j + 31]];
+                        }
 
-                    // final components
-                    for (; i < lim; i++, j++)
-                    {
-                        p_dst[i] ^= p_gf_mulc[p_src[j]];
+                        // final components
+                        for (; i < lim; i++, j++)
+                        {
+                            p_dst[i] ^= p_gf_mulc[p_src[j]];
+                        }
                     }
                 }
                 catch (Exception e)
                 {
                     Log.Error(e);
                 }
-
-                h_dst.Free();
-                h_src.Free();
-                h_gf_mulc.Free();
             }
 #else
             public void AddMul(byte[] dst, int dstPos, byte[] src, int srcPos, byte c, int len)
@@ -523,16 +516,8 @@ namespace Library.Correction
                 // be used many times.
                 byte[] gf_mulc = _gf_mul_table[c];
 
-                //var h_dst = GCHandle.Alloc(dst, GCHandleType.Pinned);
-                //var h_src = GCHandle.Alloc(src, GCHandleType.Pinned);
-                //var h_gf_mulc = GCHandle.Alloc(gf_mulc, GCHandleType.Pinned);
-
                 try
                 {
-                    //var p_dst = (byte*)h_dst.AddrOfPinnedObject();
-                    //var p_src = (byte*)h_src.AddrOfPinnedObject();
-                    //var p_gf_mulc = (byte*)h_gf_mulc.AddrOfPinnedObject();
-
                     fixed (byte* p_dst = dst)
                     fixed (byte* p_src = src)
                     fixed (byte* p_gf_mulc = gf_mulc)
@@ -544,10 +529,6 @@ namespace Library.Correction
                 {
                     Log.Error(e);
                 }
-
-                //h_dst.Free();
-                //h_src.Free();
-                //h_gf_mulc.Free();
             }
 #endif
 

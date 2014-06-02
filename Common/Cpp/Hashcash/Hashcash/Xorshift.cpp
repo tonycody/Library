@@ -19,7 +19,7 @@ Xorshift::~Xorshift()
 
 }
 
-uint32_t Xorshift::Next()
+uint32_t Xorshift::next()
 {
     uint32_t t = x ^ (x << 11);
     x = y; y = z; z = w;

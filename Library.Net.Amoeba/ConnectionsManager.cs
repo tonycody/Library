@@ -862,40 +862,42 @@ namespace Library.Net.Amoeba
                         try
                         {
                             var lockSignatures = this.OnLockSignaturesEvent();
-                            if (lockSignatures == null) return;
 
-                            var removeSignatures = new SortedSet<string>();
-                            removeSignatures.UnionWith(_settings.GetSignatures());
-                            removeSignatures.ExceptWith(lockSignatures);
-
-                            var signatureSortItems = new List<SignatureSortItem>();
-
-                            foreach (var signature in removeSignatures)
+                            if (lockSignatures != null)
                             {
-                                DateTime lastAccessTime;
-                                _seedLastAccessTimes.TryGetValue(signature, out lastAccessTime);
+                                var removeSignatures = new SortedSet<string>();
+                                removeSignatures.UnionWith(_settings.GetSignatures());
+                                removeSignatures.ExceptWith(lockSignatures);
 
-                                signatureSortItems.Add(new SignatureSortItem()
+                                var signatureSortItems = new List<SignatureSortItem>();
+
+                                foreach (var signature in removeSignatures)
                                 {
-                                    Signature = signature,
-                                    LastAccessTime = lastAccessTime,
+                                    DateTime lastAccessTime;
+                                    _seedLastAccessTimes.TryGetValue(signature, out lastAccessTime);
+
+                                    signatureSortItems.Add(new SignatureSortItem()
+                                    {
+                                        Signature = signature,
+                                        LastAccessTime = lastAccessTime,
+                                    });
+                                }
+
+                                signatureSortItems.Sort((x, y) =>
+                                {
+                                    return x.LastAccessTime.CompareTo(y.LastAccessTime);
                                 });
-                            }
 
-                            signatureSortItems.Sort((x, y) =>
-                            {
-                                return x.LastAccessTime.CompareTo(y.LastAccessTime);
-                            });
+                                _settings.RemoveSignatures(signatureSortItems.Select(n => n.Signature).Take(signatureSortItems.Count - 8192));
 
-                            _settings.RemoveSignatures(signatureSortItems.Select(n => n.Signature).Take(signatureSortItems.Count - 8192));
+                                var liveSignatures = new SortedSet<string>(_settings.GetSignatures());
 
-                            var liveSignatures = new SortedSet<string>(_settings.GetSignatures());
+                                foreach (var signature in _seedLastAccessTimes.Keys.ToArray())
+                                {
+                                    if (liveSignatures.Contains(signature)) continue;
 
-                            foreach (var signature in _seedLastAccessTimes.Keys.ToArray())
-                            {
-                                if (liveSignatures.Contains(signature)) continue;
-
-                                _seedLastAccessTimes.Remove(signature);
+                                    _seedLastAccessTimes.Remove(signature);
+                                }
                             }
                         }
                         catch (Exception e)

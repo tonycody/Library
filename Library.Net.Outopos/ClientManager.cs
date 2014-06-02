@@ -28,7 +28,7 @@ namespace Library.Net.Outopos
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
-        private const int _maxReceiveCount = 1024 * 1024 * 32;
+        private const int _maxReceiveCount = 1024 * 1024 * 8;
 
         public ClientManager(BufferManager bufferManager)
         {
