@@ -98,8 +98,6 @@
   <ItemGroup>
     <Compile Include="Cache\BitmapManager.cs" />
     <Compile Include="Cache\CacheManager.cs" />
-    <Compile Include="Cache\CacheManagerStreamReader.cs" />
-    <Compile Include="Cache\CacheManagerStreamWriter.cs" />
     <Compile Include="Cache\Header\HeaderCollection.cs" />
     <Compile Include="Cache\Header\TagCollection.cs" />
     <Compile Include="Cache\Header\Header.cs" />
