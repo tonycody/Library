@@ -312,9 +312,8 @@ namespace Library.Net.Amoeba
                                 int length = Math.Max(group.InformationLength, 32) - downloadCount;
                                 if (length <= 0) continue;
 
-                                foreach (var key in tempKeys
-                                    .Randomize()
-                                    .Take(length))
+                                random.Shuffle(tempKeys);
+                                foreach (var key in tempKeys.Take(length))
                                 {
                                     _connectionsManager.Download(key);
 

@@ -57,9 +57,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Derivation\Pbkdf2.cs" />
-    <Compile Include="Hash\Cash.cs" />
-    <Compile Include="Hash\CashAlgorithm.cs" />
+    <Compile Include="Mining\Cash.cs" />
+    <Compile Include="Mining\CashAlgorithm.cs" />
     <Compile Include="Hash\HmacSha512.cs" />
+    <Compile Include="Mining\ImmutableCashItemBase.cs" />
+    <Compile Include="Mining\ICash.cs" />
+    <Compile Include="Mining\Miner.cs" />
+    <Compile Include="Mining\MutableCashItemBase.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
     <Compile Include="Exchange\ExchangePrivateKey.cs" />
     <Compile Include="Exchange\ExchangePublicKey.cs" />
@@ -101,16 +105,16 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Assembly\Hashcash_x64.exe">
+    <Content Include="Assemblies\Hashcash_x64.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assembly\Hashcash_x86.exe">
+    <Content Include="Assemblies\Hashcash_x86.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assembly\Library_Security_x64.dll">
+    <Content Include="Assemblies\Library_Security_x64.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assembly\Library_Security_x86.dll">
+    <Content Include="Assemblies\Library_Security_x86.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Properties\Library.Security.License">

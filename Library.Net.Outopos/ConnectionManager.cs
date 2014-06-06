@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Xml;
+using Library.Collections;
 using Library.Io;
 using Library.Net.Connections;
 using Library.Security;
@@ -37,12 +38,18 @@ namespace Library.Net.Outopos
 
     class PullHeadersRequestEventArgs : EventArgs
     {
-        public IEnumerable<Tag> Tags { get; set; }
+        public IEnumerable<Section> Sections { get; set; }
+        public IEnumerable<Wiki> Wikis { get; set; }
+        public IEnumerable<Chat> Chats { get; set; }
     }
 
     class PullHeadersEventArgs : EventArgs
     {
-        public IEnumerable<Header> Headers { get; set; }
+        public IEnumerable<SectionProfileHeader> SectionProfileHeaders { get; set; }
+        public IEnumerable<SectionMessageHeader> SectionMessageHeaders { get; set; }
+        public IEnumerable<WikiPageHeader> WikiPageHeaders { get; set; }
+        public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
+        public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -90,7 +97,7 @@ namespace Library.Net.Outopos
 
         private byte[] _mySessionId;
         private byte[] _otherSessionId;
-        private ConnectionBase _connection;
+        private Connection _connection;
         private ProtocolVersion _protocolVersion;
         private ProtocolVersion _myProtocolVersion;
         private ProtocolVersion _otherProtocolVersion;
@@ -134,7 +141,7 @@ namespace Library.Net.Outopos
 
         public event CloseEventHandler CloseEvent;
 
-        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectDirection direction, BufferManager bufferManager)
+        public ConnectionManager(Connection connection, byte[] mySessionId, Node baseNode, ConnectDirection direction, BufferManager bufferManager)
         {
             _connection = connection;
             _mySessionId = mySessionId;
@@ -184,7 +191,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ConnectionBase Connection
+        public Connection Connection
         {
             get
             {
@@ -565,12 +572,26 @@ namespace Library.Net.Outopos
                                     else if (type == (byte)SerializeId.HeadersRequest)
                                     {
                                         var message = HeadersRequestMessage.Import(stream2, _bufferManager);
-                                        this.OnPullHeadersRequest(new PullHeadersRequestEventArgs() { Tags = message.Tags });
+
+                                        this.OnPullHeadersRequest(new PullHeadersRequestEventArgs()
+                                        {
+                                            Sections = message.Sections,
+                                            Wikis = message.Wikis,
+                                            Chats = message.Chats,
+                                        });
                                     }
                                     else if (type == (byte)SerializeId.Headers)
                                     {
                                         var message = HeadersMessage.Import(stream2, _bufferManager);
-                                        this.OnPullHeaders(new PullHeadersEventArgs() { Headers = message.Headers });
+
+                                        this.OnPullHeaders(new PullHeadersEventArgs()
+                                        {
+                                            SectionProfileHeaders = message.SectionProfileHeaders,
+                                            WikiPageHeaders = message.WikiPageHeaders,
+                                            ChatTopicHeaders = message.ChatTopicHeaders,
+                                            ChatMessageHeaders = message.ChatMessageHeaders,
+                                            SectionMessageHeaders = message.SectionMessageHeaders,
+                                        });
                                     }
                                 }
                                 catch (Exception)
@@ -819,7 +840,10 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushHeadersRequest(IEnumerable<Tag> tags)
+        public void PushHeadersRequest(
+            IEnumerable<Section> sections,
+            IEnumerable<Wiki> wikis,
+            IEnumerable<Chat> chats)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -832,7 +856,10 @@ namespace Library.Net.Outopos
                     stream.WriteByte((byte)SerializeId.HeadersRequest);
                     stream.Flush();
 
-                    var message = new HeadersRequestMessage(tags);
+                    var message = new HeadersRequestMessage(
+                        sections,
+                        wikis,
+                        chats);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -856,7 +883,12 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushHeaders(IEnumerable<Header> headers)
+        public void PushHeaders(
+            IEnumerable<SectionProfileHeader> sectionProfileHeaders,
+            IEnumerable<SectionMessageHeader> sectionMessageHeaders,
+            IEnumerable<WikiPageHeader> wikiPageHeaders,
+            IEnumerable<ChatTopicHeader> chatTopicHeaders,
+            IEnumerable<ChatMessageHeader> chatMessageHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -869,7 +901,12 @@ namespace Library.Net.Outopos
                     stream.WriteByte((byte)SerializeId.Headers);
                     stream.Flush();
 
-                    var message = new HeadersMessage(headers);
+                    var message = new HeadersMessage(
+                        sectionProfileHeaders,
+                        sectionMessageHeaders,
+                        wikiPageHeaders,
+                        chatTopicHeaders,
+                        chatMessageHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1325,14 +1362,23 @@ namespace Library.Net.Outopos
         {
             private enum SerializeId : byte
             {
-                Tag = 0,
+                Section = 0,
+                Wiki = 1,
+                Chat = 2,
             }
 
-            private TagCollection _tags;
+            private SectionCollection _sections;
+            private WikiCollection _wikis;
+            private ChatCollection _chats;
 
-            public HeadersRequestMessage(IEnumerable<Tag> tags)
+            public HeadersRequestMessage(
+                IEnumerable<Section> sections,
+                IEnumerable<Wiki> wikis,
+                IEnumerable<Chat> chats)
             {
-                if (tags != null) this.ProtectedTags.AddRange(tags);
+                if (sections != null) this.ProtectedSections.AddRange(sections);
+                if (wikis != null) this.ProtectedWikis.AddRange(wikis);
+                if (chats != null) this.ProtectedChats.AddRange(chats);
             }
 
             protected override void Initialize()
@@ -1352,9 +1398,17 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Tag)
+                        if (id == (byte)SerializeId.Section)
                         {
-                            this.ProtectedTags.Add(Tag.Import(rangeStream, bufferManager));
+                            this.ProtectedSections.Add(Section.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Wiki)
+                        {
+                            this.ProtectedWikis.Add(Wiki.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Chat)
+                        {
+                            this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1364,12 +1418,28 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // Tags
-                foreach (var value in this.Tags)
+                // Sections
+                foreach (var value in this.Sections)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Section, stream);
+                    }
+                }
+                // Wikis
+                foreach (var value in this.Wikis)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Wiki, stream);
+                    }
+                }
+                // Chats
+                foreach (var value in this.Chats)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Chat, stream);
                     }
                 }
 
@@ -1385,28 +1455,78 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private volatile ReadOnlyCollection<Tag> _readOnlyTags;
+            private volatile ReadOnlyCollection<Section> _readOnlySections;
 
-            public IEnumerable<Tag> Tags
+            public IEnumerable<Section> Sections
             {
                 get
                 {
-                    if (_readOnlyTags == null)
-                        _readOnlyTags = new ReadOnlyCollection<Tag>(this.ProtectedTags);
+                    if (_readOnlySections == null)
+                        _readOnlySections = new ReadOnlyCollection<Section>(this.ProtectedSections);
 
-                    return _readOnlyTags;
+                    return _readOnlySections;
                 }
             }
 
-            [DataMember(Name = "Tags")]
-            private TagCollection ProtectedTags
+            [DataMember(Name = "Sections")]
+            private SectionCollection ProtectedSections
             {
                 get
                 {
-                    if (_tags == null)
-                        _tags = new TagCollection(_maxHeaderRequestCount);
+                    if (_sections == null)
+                        _sections = new SectionCollection(_maxHeaderRequestCount);
 
-                    return _tags;
+                    return _sections;
+                }
+            }
+
+            private volatile ReadOnlyCollection<Wiki> _readOnlyWikis;
+
+            public IEnumerable<Wiki> Wikis
+            {
+                get
+                {
+                    if (_readOnlyWikis == null)
+                        _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis);
+
+                    return _readOnlyWikis;
+                }
+            }
+
+            [DataMember(Name = "Wikis")]
+            private WikiCollection ProtectedWikis
+            {
+                get
+                {
+                    if (_wikis == null)
+                        _wikis = new WikiCollection(_maxHeaderRequestCount);
+
+                    return _wikis;
+                }
+            }
+
+            private volatile ReadOnlyCollection<Chat> _readOnlyChats;
+
+            public IEnumerable<Chat> Chats
+            {
+                get
+                {
+                    if (_readOnlyChats == null)
+                        _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats);
+
+                    return _readOnlyChats;
+                }
+            }
+
+            [DataMember(Name = "Chats")]
+            private ChatCollection ProtectedChats
+            {
+                get
+                {
+                    if (_chats == null)
+                        _chats = new ChatCollection(_maxHeaderRequestCount);
+
+                    return _chats;
                 }
             }
         }
@@ -1415,14 +1535,31 @@ namespace Library.Net.Outopos
         {
             private enum SerializeId : byte
             {
-                Header = 0,
+                SectionProfileHeader = 0,
+                SectionMessageHeader = 1,
+                WikiPageHeader = 2,
+                ChatTopicHeader = 3,
+                ChatMessageHeader = 4,
             }
 
-            private HeaderCollection _headers;
+            private LockedList<SectionProfileHeader> _sectionProfileHeaders;
+            private LockedList<SectionMessageHeader> _sectionMessageHeaders;
+            private LockedList<WikiPageHeader> _wikiPageHeaders;
+            private LockedList<ChatTopicHeader> _chatTopicHeaders;
+            private LockedList<ChatMessageHeader> _chatMessageHeaders;
 
-            public HeadersMessage(IEnumerable<Header> headers)
+            public HeadersMessage(
+                IEnumerable<SectionProfileHeader> sectionProfileHeaders,
+                IEnumerable<SectionMessageHeader> sectionMessageHeaders,
+                IEnumerable<WikiPageHeader> wikiPageHeaders,
+                IEnumerable<ChatTopicHeader> chatTopicHeaders,
+                IEnumerable<ChatMessageHeader> chatMessageHeaders)
             {
-                if (headers != null) this.ProtectedHeaders.AddRange(headers);
+                if (sectionProfileHeaders != null) this.ProtectedSectionProfileHeaders.AddRange(sectionProfileHeaders);
+                if (sectionMessageHeaders != null) this.ProtectedSectionMessageHeaders.AddRange(sectionMessageHeaders);
+                if (wikiPageHeaders != null) this.ProtectedWikiPageHeaders.AddRange(wikiPageHeaders);
+                if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
+                if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
             }
 
             protected override void Initialize()
@@ -1442,9 +1579,25 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Header)
+                        if (id == (byte)SerializeId.SectionProfileHeader)
                         {
-                            this.ProtectedHeaders.Add(Header.Import(rangeStream, bufferManager));
+                            this.ProtectedSectionProfileHeaders.Add(SectionProfileHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.SectionMessageHeader)
+                        {
+                            this.ProtectedSectionMessageHeaders.Add(SectionMessageHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.WikiPageHeader)
+                        {
+                            this.ProtectedWikiPageHeaders.Add(WikiPageHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.ChatTopicHeader)
+                        {
+                            this.ProtectedChatTopicHeaders.Add(ChatTopicHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.ChatMessageHeader)
+                        {
+                            this.ProtectedChatMessageHeaders.Add(ChatMessageHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1454,12 +1607,44 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // Headers
-                foreach (var value in this.Headers)
+                // SectionProfileHeaders
+                foreach (var value in this.SectionProfileHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Header, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SectionProfileHeader, stream);
+                    }
+                }
+                // SectionMessageHeaders
+                foreach (var value in this.SectionMessageHeaders)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SectionMessageHeader, stream);
+                    }
+                }
+                // WikiPageHeaders
+                foreach (var value in this.WikiPageHeaders)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiPageHeader, stream);
+                    }
+                }
+                // ChatTopicHeaders
+                foreach (var value in this.ChatTopicHeaders)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatTopicHeader, stream);
+                    }
+                }
+                // ChatMessageHeaders
+                foreach (var value in this.ChatMessageHeaders)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatMessageHeader, stream);
                     }
                 }
 
@@ -1475,28 +1660,128 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private volatile ReadOnlyCollection<Header> _readOnlyHeaders;
+            private volatile ReadOnlyCollection<SectionProfileHeader> _readOnlySectionProfileHeaders;
 
-            public IEnumerable<Header> Headers
+            public IEnumerable<SectionProfileHeader> SectionProfileHeaders
             {
                 get
                 {
-                    if (_readOnlyHeaders == null)
-                        _readOnlyHeaders = new ReadOnlyCollection<Header>(this.ProtectedHeaders);
+                    if (_readOnlySectionProfileHeaders == null)
+                        _readOnlySectionProfileHeaders = new ReadOnlyCollection<SectionProfileHeader>(this.ProtectedSectionProfileHeaders);
 
-                    return _readOnlyHeaders;
+                    return _readOnlySectionProfileHeaders;
                 }
             }
 
-            [DataMember(Name = "Headers")]
-            private HeaderCollection ProtectedHeaders
+            [DataMember(Name = "SectionProfileHeaders")]
+            private LockedList<SectionProfileHeader> ProtectedSectionProfileHeaders
             {
                 get
                 {
-                    if (_headers == null)
-                        _headers = new HeaderCollection(_maxHeaderCount);
+                    if (_sectionProfileHeaders == null)
+                        _sectionProfileHeaders = new LockedList<SectionProfileHeader>(_maxHeaderCount);
 
-                    return _headers;
+                    return _sectionProfileHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<SectionMessageHeader> _readOnlySectionMessageHeaders;
+
+            public IEnumerable<SectionMessageHeader> SectionMessageHeaders
+            {
+                get
+                {
+                    if (_readOnlySectionMessageHeaders == null)
+                        _readOnlySectionMessageHeaders = new ReadOnlyCollection<SectionMessageHeader>(this.ProtectedSectionMessageHeaders);
+
+                    return _readOnlySectionMessageHeaders;
+                }
+            }
+
+            [DataMember(Name = "SectionMessageHeaders")]
+            private LockedList<SectionMessageHeader> ProtectedSectionMessageHeaders
+            {
+                get
+                {
+                    if (_sectionMessageHeaders == null)
+                        _sectionMessageHeaders = new LockedList<SectionMessageHeader>(_maxHeaderCount);
+
+                    return _sectionMessageHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<WikiPageHeader> _readOnlyWikiPageHeaders;
+
+            public IEnumerable<WikiPageHeader> WikiPageHeaders
+            {
+                get
+                {
+                    if (_readOnlyWikiPageHeaders == null)
+                        _readOnlyWikiPageHeaders = new ReadOnlyCollection<WikiPageHeader>(this.ProtectedWikiPageHeaders);
+
+                    return _readOnlyWikiPageHeaders;
+                }
+            }
+
+            [DataMember(Name = "WikiPageHeaders")]
+            private LockedList<WikiPageHeader> ProtectedWikiPageHeaders
+            {
+                get
+                {
+                    if (_wikiPageHeaders == null)
+                        _wikiPageHeaders = new LockedList<WikiPageHeader>(_maxHeaderCount);
+
+                    return _wikiPageHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<ChatTopicHeader> _readOnlyChatTopicHeaders;
+
+            public IEnumerable<ChatTopicHeader> ChatTopicHeaders
+            {
+                get
+                {
+                    if (_readOnlyChatTopicHeaders == null)
+                        _readOnlyChatTopicHeaders = new ReadOnlyCollection<ChatTopicHeader>(this.ProtectedChatTopicHeaders);
+
+                    return _readOnlyChatTopicHeaders;
+                }
+            }
+
+            [DataMember(Name = "ChatTopicHeaders")]
+            private LockedList<ChatTopicHeader> ProtectedChatTopicHeaders
+            {
+                get
+                {
+                    if (_chatTopicHeaders == null)
+                        _chatTopicHeaders = new LockedList<ChatTopicHeader>(_maxHeaderCount);
+
+                    return _chatTopicHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<ChatMessageHeader> _readOnlyChatMessageHeaders;
+
+            public IEnumerable<ChatMessageHeader> ChatMessageHeaders
+            {
+                get
+                {
+                    if (_readOnlyChatMessageHeaders == null)
+                        _readOnlyChatMessageHeaders = new ReadOnlyCollection<ChatMessageHeader>(this.ProtectedChatMessageHeaders);
+
+                    return _readOnlyChatMessageHeaders;
+                }
+            }
+
+            [DataMember(Name = "ChatMessageHeaders")]
+            private LockedList<ChatMessageHeader> ProtectedChatMessageHeaders
+            {
+                get
+                {
+                    if (_chatMessageHeaders == null)
+                        _chatMessageHeaders = new LockedList<ChatMessageHeader>(_maxHeaderCount);
+
+                    return _chatMessageHeaders;
                 }
             }
         }

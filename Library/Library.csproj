@@ -82,10 +82,10 @@
     <Compile Include="Utilities\SimpleLinkedList.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Assembly\Library_x64.dll">
+    <Content Include="Assemblies\Library_x64.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assembly\Library_x86.dll">
+    <Content Include="Assemblies\Library_x86.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Properties\Library.License">

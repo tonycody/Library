@@ -4,14 +4,17 @@ using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
+using Library;
 using Library.Collections;
 using Library.Net.Connections;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    public delegate IEnumerable<Tag> GetTagsEventHandler(object sender);
-    public delegate IEnumerable<string> GetSignaturesEventHandler(object sender, Tag tag);
+    public delegate IEnumerable<string> GetSignaturesEventHandler(object sender);
+    public delegate IEnumerable<Section> GetSectionsEventHandler(object sender);
+    public delegate IEnumerable<Wiki> GetWikisEventHandler(object sender);
+    public delegate IEnumerable<Chat> GetChatsEventHandler(object sender);
 
     class ConnectionsManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
@@ -33,7 +36,10 @@ namespace Library.Net.Outopos
 
         private LockedHashDictionary<Node, List<Key>> _pushBlocksLinkDictionary = new LockedHashDictionary<Node, List<Key>>();
         private LockedHashDictionary<Node, List<Key>> _pushBlocksRequestDictionary = new LockedHashDictionary<Node, List<Key>>();
-        private LockedHashDictionary<Node, List<Tag>> _pushHeadersRequestDictionary = new LockedHashDictionary<Node, List<Tag>>();
+        private LockedHashDictionary<Node, List<Section>> _pushSectionsRequestDictionary = new LockedHashDictionary<Node, List<Section>>();
+        private LockedHashDictionary<Node, List<Wiki>> _pushWikisRequestDictionary = new LockedHashDictionary<Node, List<Wiki>>();
+        private LockedHashDictionary<Node, List<Chat>> _pushChatsRequestDictionary = new LockedHashDictionary<Node, List<Chat>>();
+        private LockedHashDictionary<Node, List<string>> _pushSignaturesRequestDictionary = new LockedHashDictionary<Node, List<string>>();
 
         private LockedHashDictionary<Node, Queue<Key>> _diffusionBlocksDictionary = new LockedHashDictionary<Node, Queue<Key>>();
         private LockedHashDictionary<Node, Queue<Key>> _uploadBlocksDictionary = new LockedHashDictionary<Node, Queue<Key>>();
@@ -48,10 +54,15 @@ namespace Library.Net.Outopos
 
         private VolatileHashSet<string> _succeededUris;
 
-        private VolatileHashSet<Tag> _pushHeadersRequestList;
+        private VolatileHashSet<string> _pushSignaturesRequestList;
+        private VolatileHashSet<Section> _pushSectionsRequestList;
+        private VolatileHashSet<Wiki> _pushWikisRequestList;
+        private VolatileHashSet<Chat> _pushChatsRequestList;
         private VolatileHashSet<Key> _downloadBlocks;
 
-        private LockedHashDictionary<Tag, DateTime> _headerLastAccessTimes = new LockedHashDictionary<Tag, DateTime>();
+        private LockedHashDictionary<Section, DateTime> _lastUsedSectionTimes = new LockedHashDictionary<Section, DateTime>();
+        private LockedHashDictionary<Wiki, DateTime> _lastUsedWikiTimes = new LockedHashDictionary<Wiki, DateTime>();
+        private LockedHashDictionary<Chat, DateTime> _lastUsedChatTimes = new LockedHashDictionary<Chat, DateTime>();
 
         private volatile Thread _connectionsManagerThread;
         private volatile Thread _createConnection1Thread;
@@ -90,8 +101,10 @@ namespace Library.Net.Outopos
         private readonly SafeInteger _connectConnectionCount = new SafeInteger();
         private readonly SafeInteger _acceptConnectionCount = new SafeInteger();
 
-        private GetTagsEventHandler _getLockTagsEvent;
         private GetSignaturesEventHandler _getLockSignaturesEvent;
+        private GetSectionsEventHandler _getLockSectionsEvent;
+        private GetWikisEventHandler _getLockWikisEvent;
+        private GetChatsEventHandler _getLockChatsEvent;
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
@@ -147,7 +160,10 @@ namespace Library.Net.Outopos
             _succeededUris = new VolatileHashSet<string>(new TimeSpan(1, 0, 0));
 
             _downloadBlocks = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
-            _pushHeadersRequestList = new VolatileHashSet<Tag>(new TimeSpan(0, 3, 0));
+            _pushSectionsRequestList = new VolatileHashSet<Section>(new TimeSpan(0, 3, 0));
+            _pushWikisRequestList = new VolatileHashSet<Wiki>(new TimeSpan(0, 3, 0));
+            _pushChatsRequestList = new VolatileHashSet<Chat>(new TimeSpan(0, 3, 0));
+            _pushSignaturesRequestList = new VolatileHashSet<string>(new TimeSpan(0, 3, 0));
 
             _relayBlocks = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
 
@@ -163,20 +179,12 @@ namespace Library.Net.Outopos
             _succeededUris.TrimExcess();
 
             _downloadBlocks.TrimExcess();
-            _pushHeadersRequestList.TrimExcess();
+            _pushSectionsRequestList.TrimExcess();
+            _pushWikisRequestList.TrimExcess();
+            _pushChatsRequestList.TrimExcess();
+            _pushSignaturesRequestList.TrimExcess();
 
             _relayBlocks.TrimExcess();
-        }
-
-        public GetTagsEventHandler GetLockTagsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _getLockTagsEvent = value;
-                }
-            }
         }
 
         public GetSignaturesEventHandler GetLockSignaturesEvent
@@ -186,6 +194,39 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     _getLockSignaturesEvent = value;
+                }
+            }
+        }
+
+        public GetSectionsEventHandler GetLockSectionsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _getLockSectionsEvent = value;
+                }
+            }
+        }
+
+        public GetWikisEventHandler GetLockWikisEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _getLockWikisEvent = value;
+                }
+            }
+        }
+
+        public GetChatsEventHandler GetLockChatsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _getLockChatsEvent = value;
                 }
             }
         }
@@ -368,21 +409,41 @@ namespace Library.Net.Outopos
             }
         }
 
-        protected virtual IEnumerable<Tag> OnLockTagsEvent()
+        protected virtual IEnumerable<string> OnLockSignaturesEvent()
         {
-            if (_getLockTagsEvent != null)
+            if (_getLockSignaturesEvent != null)
             {
-                return _getLockTagsEvent(this);
+                return _getLockSignaturesEvent(this);
             }
 
             return null;
         }
 
-        protected virtual IEnumerable<string> OnLockSignaturesEvent(Tag tag)
+        protected virtual IEnumerable<Section> OnLockSectionsEvent()
         {
             if (_getLockSignaturesEvent != null)
             {
-                return _getLockSignaturesEvent(this, tag);
+                return _getLockSectionsEvent(this);
+            }
+
+            return null;
+        }
+
+        protected virtual IEnumerable<Wiki> OnLockWikisEvent()
+        {
+            if (_getLockSignaturesEvent != null)
+            {
+                return _getLockWikisEvent(this);
+            }
+
+            return null;
+        }
+
+        protected virtual IEnumerable<Chat> OnLockChatsEvent()
+        {
+            if (_getLockSignaturesEvent != null)
+            {
+                return _getLockChatsEvent(this);
             }
 
             return null;
@@ -401,12 +462,25 @@ namespace Library.Net.Outopos
                 || key.HashAlgorithm != HashAlgorithm.Sha512);
         }
 
-        private static bool Check(Tag tag)
+        private static bool Check(Section section)
         {
-            return !(tag == null
-                || tag.Type == null
-                || tag.Name == null
-                || tag.Id == null || tag.Id.Length == 0);
+            return !(section == null
+                || section.Name == null
+                || section.Id == null || section.Id.Length == 0);
+        }
+
+        private static bool Check(Wiki wiki)
+        {
+            return !(wiki == null
+                || wiki.Name == null
+                || wiki.Id == null || wiki.Id.Length == 0);
+        }
+
+        private static bool Check(Chat chat)
+        {
+            return !(chat == null
+                || chat.Name == null
+                || chat.Id == null || chat.Id.Length == 0);
         }
 
         private void UpdateSessionId()
@@ -720,12 +794,6 @@ namespace Library.Net.Outopos
             public DateTime LastPullTime { get; set; }
         }
 
-        private class TagSortItem
-        {
-            public Tag Tag { get; set; }
-            public DateTime LastAccessTime { get; set; }
-        }
-
         private volatile bool _refreshThreadRunning;
 
         private void ConnectionsManagerThread()
@@ -746,21 +814,6 @@ namespace Library.Net.Outopos
             pushHeaderUploadStopwatch.Start();
             Stopwatch pushHeaderDownloadStopwatch = new Stopwatch();
             pushHeaderDownloadStopwatch.Start();
-
-            // 電子署名を検証して破損しているHeaderを検索し、削除。
-            {
-                var removeTags = new SortedSet<Tag>();
-
-                foreach (var tag in _settings.GetTags())
-                {
-                    foreach (var header in _settings.GetHeaders(tag))
-                    {
-                        if (!header.VerifyCertificate()) removeTags.Add(tag);
-                    }
-                }
-
-                _settings.RemoveTags(removeTags);
-            }
 
             for (; ; )
             {
@@ -839,7 +892,6 @@ namespace Library.Net.Outopos
                     refreshStopwatch.Restart();
 
                     // トラストにより必要なHeaderを選択し、不要なHeaderを削除する。
-                    //　非トラストなHeaderでアクセスが頻繁なHeaderを優先して保護する。
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         if (_refreshThreadRunning) return;
@@ -847,61 +899,339 @@ namespace Library.Net.Outopos
 
                         try
                         {
-                            // TagのLock状況を取得し、アクセス頻度順にソートし、不要なHeaderを削除。
+                            var lockSignatures = this.OnLockSignaturesEvent();
+                            if (lockSignatures == null) return;
+
+                            var lockSections = this.OnLockSectionsEvent();
+                            if (lockSections == null) return;
+
+                            var lockWikis = this.OnLockWikisEvent();
+                            if (lockWikis == null) return;
+
+                            var lockChats = this.OnLockChatsEvent();
+                            if (lockChats == null) return;
+
                             {
-                                var lockTags = this.OnLockTagsEvent();
-
-                                if (lockTags != null)
+                                // Section
                                 {
-                                    var removeTags = new SortedSet<Tag>();
-                                    removeTags.UnionWith(_settings.GetTags());
-                                    removeTags.ExceptWith(lockTags);
+                                    var removeSections = new HashSet<Section>();
+                                    removeSections.UnionWith(_settings.HeaderManager.GetSections());
+                                    removeSections.ExceptWith(lockSections);
 
-                                    var tagSortItems = new List<TagSortItem>();
+                                    var sortList = removeSections.ToList();
 
-                                    foreach (var tag in removeTags)
+                                    sortList.Sort((x, y) =>
                                     {
-                                        DateTime lastAccessTime;
-                                        _headerLastAccessTimes.TryGetValue(tag, out lastAccessTime);
+                                        DateTime tx;
+                                        DateTime ty;
 
-                                        tagSortItems.Add(new TagSortItem()
-                                        {
-                                            Tag = tag,
-                                            LastAccessTime = lastAccessTime,
-                                        });
-                                    }
+                                        _lastUsedSectionTimes.TryGetValue(x, out tx);
+                                        _lastUsedSectionTimes.TryGetValue(y, out ty);
 
-                                    tagSortItems.Sort((x, y) =>
-                                    {
-                                        return x.LastAccessTime.CompareTo(y.LastAccessTime);
+                                        return tx.CompareTo(ty);
                                     });
 
-                                    _settings.RemoveTags(tagSortItems.Select(n => n.Tag).Take(tagSortItems.Count - 1024));
+                                    _settings.HeaderManager.RemoveTags(sortList.Take(sortList.Count - 1024));
 
-                                    var liveTags = new SortedSet<Tag>(_settings.GetTags());
+                                    var liveSections = new HashSet<Section>(_settings.HeaderManager.GetSections());
 
-                                    foreach (var tag in _headerLastAccessTimes.Keys.ToArray())
+                                    foreach (var section in _lastUsedSectionTimes.Keys.ToArray())
                                     {
-                                        if (liveTags.Contains(tag)) continue;
+                                        if (liveSections.Contains(section)) continue;
 
-                                        _headerLastAccessTimes.Remove(tag);
+                                        _lastUsedSectionTimes.Remove(section);
+                                    }
+                                }
+
+                                // Wiki
+                                {
+                                    var removeWikis = new HashSet<Wiki>();
+                                    removeWikis.UnionWith(_settings.HeaderManager.GetWikis());
+                                    removeWikis.ExceptWith(lockWikis);
+
+                                    var sortList = removeWikis.ToList();
+
+                                    sortList.Sort((x, y) =>
+                                    {
+                                        DateTime tx;
+                                        DateTime ty;
+
+                                        _lastUsedWikiTimes.TryGetValue(x, out tx);
+                                        _lastUsedWikiTimes.TryGetValue(y, out ty);
+
+                                        return tx.CompareTo(ty);
+                                    });
+
+                                    _settings.HeaderManager.RemoveTags(sortList.Take(sortList.Count - 1024));
+
+                                    var liveWikis = new HashSet<Wiki>(_settings.HeaderManager.GetWikis());
+
+                                    foreach (var section in _lastUsedWikiTimes.Keys.ToArray())
+                                    {
+                                        if (liveWikis.Contains(section)) continue;
+
+                                        _lastUsedWikiTimes.Remove(section);
+                                    }
+                                }
+
+                                // Chat
+                                {
+                                    var removeChats = new HashSet<Chat>();
+                                    removeChats.UnionWith(_settings.HeaderManager.GetChats());
+                                    removeChats.ExceptWith(lockChats);
+
+                                    var sortList = removeChats.ToList();
+
+                                    sortList.Sort((x, y) =>
+                                    {
+                                        DateTime tx;
+                                        DateTime ty;
+
+                                        _lastUsedChatTimes.TryGetValue(x, out tx);
+                                        _lastUsedChatTimes.TryGetValue(y, out ty);
+
+                                        return tx.CompareTo(ty);
+                                    });
+
+                                    _settings.HeaderManager.RemoveTags(sortList.Take(sortList.Count - 1024));
+
+                                    var liveChats = new HashSet<Chat>(_settings.HeaderManager.GetChats());
+
+                                    foreach (var section in _lastUsedChatTimes.Keys.ToArray())
+                                    {
+                                        if (liveChats.Contains(section)) continue;
+
+                                        _lastUsedChatTimes.Remove(section);
                                     }
                                 }
                             }
 
-                            // 個別のTag空間におけるSignatureのLock状況を取得し、不要なHeaderを削除する。
                             {
-                                foreach (var tag in _settings.GetTags())
+                                var trustSignature = new HashSet<string>(lockSignatures);
+
                                 {
-                                    var lockSignature = this.OnLockSignaturesEvent(tag);
+                                    var now = DateTime.UtcNow;
 
-                                    if (lockSignature != null)
+                                    var removeSectionProfileHeaders = new HashSet<SectionProfileHeader>();
+                                    var removeSectionMessageHeaders = new HashSet<SectionMessageHeader>();
+
+                                    foreach (var section in _settings.HeaderManager.GetSections())
                                     {
-                                        var removeSignatures = new SortedSet<string>();
-                                        removeSignatures.UnionWith(_settings.GetSignatures(tag));
-                                        removeSignatures.ExceptWith(lockSignature);
+                                        // SectionProfile
+                                        {
+                                            var untrustHeaders = new List<SectionProfileHeader>();
 
-                                        _settings.RemoveSignatures(tag, removeSignatures.Randomize().Take(removeSignatures.Count - 256));
+                                            foreach (var header in _settings.HeaderManager.GetSectionProfileHeaders(section))
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (!trustSignature.Contains(signature))
+                                                {
+                                                    untrustHeaders.Add(header);
+                                                }
+                                            }
+
+                                            removeSectionProfileHeaders.UnionWith(untrustHeaders.Randomize().Skip(32));
+                                        }
+
+                                        // SectionMessage
+                                        {
+                                            var trustHeaders = new Dictionary<string, List<SectionMessageHeader>>();
+                                            var untrustHeaders = new Dictionary<string, List<SectionMessageHeader>>();
+
+                                            foreach (var header in _settings.HeaderManager.GetSectionMessageHeaders(section))
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (trustSignature.Contains(signature))
+                                                {
+                                                    List<SectionMessageHeader> list;
+
+                                                    if (!trustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<SectionMessageHeader>();
+                                                        trustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                                else
+                                                {
+                                                    List<SectionMessageHeader> list;
+
+                                                    if (!untrustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<SectionMessageHeader>();
+                                                        untrustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                            }
+
+                                            removeSectionMessageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in trustHeaders.Values.Concat(untrustHeaders.Values))
+                                            {
+                                                if (list.Count <= 32) continue;
+
+                                                list.Sort((x, y) => x.Metadata.CreationTime.CompareTo(y.Metadata.CreationTime));
+                                                removeSectionMessageHeaders.UnionWith(list.Take(list.Count - 32));
+                                            }
+                                        }
+                                    }
+
+                                    foreach (var header in removeSectionProfileHeaders)
+                                    {
+                                        _settings.HeaderManager.RemoveHeader(header);
+                                    }
+
+                                    foreach (var header in removeSectionMessageHeaders)
+                                    {
+                                        _settings.HeaderManager.RemoveHeader(header);
+                                    }
+                                }
+
+                                {
+                                    var now = DateTime.UtcNow;
+
+                                    var removeWikiPageHeaders = new HashSet<WikiPageHeader>();
+
+                                    foreach (var wiki in _settings.HeaderManager.GetWikis())
+                                    {
+                                        // WikiPage
+                                        {
+                                            var trustHeaders = new Dictionary<string, List<WikiPageHeader>>();
+                                            var untrustHeaders = new Dictionary<string, List<WikiPageHeader>>();
+
+                                            foreach (var header in _settings.HeaderManager.GetWikiPageHeaders(wiki))
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (trustSignature.Contains(signature))
+                                                {
+                                                    List<WikiPageHeader> list;
+
+                                                    if (!trustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<WikiPageHeader>();
+                                                        trustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                                else
+                                                {
+                                                    List<WikiPageHeader> list;
+
+                                                    if (!untrustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<WikiPageHeader>();
+                                                        untrustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                            }
+
+                                            removeWikiPageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in trustHeaders.Values.Concat(untrustHeaders.Values))
+                                            {
+                                                if (list.Count <= 32) continue;
+
+                                                list.Sort((x, y) => x.Metadata.CreationTime.CompareTo(y.Metadata.CreationTime));
+                                                removeWikiPageHeaders.UnionWith(list.Take(list.Count - 32));
+                                            }
+                                        }
+                                    }
+
+                                    foreach (var header in removeWikiPageHeaders)
+                                    {
+                                        _settings.HeaderManager.RemoveHeader(header);
+                                    }
+                                }
+
+                                {
+                                    var now = DateTime.UtcNow;
+
+                                    var removeChatTopicHeaders = new HashSet<ChatTopicHeader>();
+                                    var removeChatMessageHeaders = new HashSet<ChatMessageHeader>();
+
+                                    foreach (var chat in _settings.HeaderManager.GetChats())
+                                    {
+                                        // ChatTopic
+                                        {
+                                            var untrustHeaders = new List<ChatTopicHeader>();
+
+                                            foreach (var header in _settings.HeaderManager.GetChatTopicHeaders(chat))
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (!trustSignature.Contains(signature))
+                                                {
+                                                    untrustHeaders.Add(header);
+                                                }
+                                            }
+
+                                            removeChatTopicHeaders.UnionWith(untrustHeaders.Randomize().Skip(32));
+                                        }
+
+                                        // ChatMessage
+                                        {
+                                            var trustHeaders = new Dictionary<string, List<ChatMessageHeader>>();
+                                            var untrustHeaders = new Dictionary<string, List<ChatMessageHeader>>();
+
+                                            foreach (var header in _settings.HeaderManager.GetChatMessageHeaders(chat))
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (trustSignature.Contains(signature))
+                                                {
+                                                    List<ChatMessageHeader> list;
+
+                                                    if (!trustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<ChatMessageHeader>();
+                                                        trustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                                else
+                                                {
+                                                    List<ChatMessageHeader> list;
+
+                                                    if (!untrustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<ChatMessageHeader>();
+                                                        untrustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                            }
+
+                                            removeChatMessageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in trustHeaders.Values.Concat(untrustHeaders.Values))
+                                            {
+                                                if (list.Count <= 32) continue;
+
+                                                list.Sort((x, y) => x.Metadata.CreationTime.CompareTo(y.Metadata.CreationTime));
+                                                removeChatMessageHeaders.UnionWith(list.Take(list.Count - 32));
+                                            }
+                                        }
+                                    }
+
+                                    foreach (var header in removeChatTopicHeaders)
+                                    {
+                                        _settings.HeaderManager.RemoveHeader(header);
+                                    }
+
+                                    foreach (var header in removeChatMessageHeaders)
+                                    {
+                                        _settings.HeaderManager.RemoveHeader(header);
                                     }
                                 }
                             }
@@ -1431,7 +1761,7 @@ namespace Library.Net.Outopos
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    foreach (var tag in _settings.GetTags())
+                    foreach (var tag in _settings.HeaderManager.GetSections())
                     {
                         try
                         {
@@ -1444,7 +1774,51 @@ namespace Library.Net.Outopos
 
                             for (int i = 0; i < requestNodes.Count; i++)
                             {
-                                messageManagers[requestNodes[i]].PullHeadersRequest.Add(tag);
+                                messageManagers[requestNodes[i]].PullSectionsRequest.Add(tag);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    }
+
+                    foreach (var tag in _settings.HeaderManager.GetWikis())
+                    {
+                        try
+                        {
+                            var requestNodes = new List<Node>();
+
+                            foreach (var node in Kademlia<Node>.Search(tag.Id, baseNode.Id, otherNodes, 2))
+                            {
+                                requestNodes.Add(node);
+                            }
+
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                messageManagers[requestNodes[i]].PullWikisRequest.Add(tag);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e);
+                        }
+                    }
+
+                    foreach (var tag in _settings.HeaderManager.GetChats())
+                    {
+                        try
+                        {
+                            var requestNodes = new List<Node>();
+
+                            foreach (var node in Kademlia<Node>.Search(tag.Id, baseNode.Id, otherNodes, 2))
+                            {
+                                requestNodes.Add(node);
+                            }
+
+                            for (int i = 0; i < requestNodes.Count; i++)
+                            {
+                                messageManagers[requestNodes[i]].PullChatsRequest.Add(tag);
                             }
                         }
                         catch (Exception e)
@@ -1476,21 +1850,23 @@ namespace Library.Net.Outopos
                         messageManagers[node] = _messagesManager[node];
                     }
 
-                    var pushHeadersRequestList = new List<Tag>();
+                    var pushSectionsRequestList = new List<Section>();
+                    var pushWikisRequestList = new List<Wiki>();
+                    var pushChatsRequestList = new List<Chat>();
 
                     {
                         {
                             {
-                                var array = _pushHeadersRequestList.ToArray();
+                                var array = _pushSectionsRequestList.ToArray();
                                 _random.Shuffle(array);
 
                                 int count = _maxHeaderRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
-                                    if (!messageManagers.Values.Any(n => n.PushHeadersRequest.Contains(array[i])))
+                                    if (!messageManagers.Values.Any(n => n.PushSectionsRequest.Contains(array[i])))
                                     {
-                                        pushHeadersRequestList.Add(array[i]);
+                                        pushSectionsRequestList.Add(array[i]);
 
                                         count--;
                                     }
@@ -1498,22 +1874,37 @@ namespace Library.Net.Outopos
                             }
 
                             {
-                                //var array = _pushHeadersRequestList.ToArray();
-                                //_random.Shuffle(array);
+                                var array = _pushWikisRequestList.ToArray();
+                                _random.Shuffle(array);
 
-                                //IEnumerable<string> items = array;
+                                int count = _maxHeaderRequestCount;
 
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushHeadersRequest.ExceptFrom(items);
-                                //}
+                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                {
+                                    if (!messageManagers.Values.Any(n => n.PushWikisRequest.Contains(array[i])))
+                                    {
+                                        pushWikisRequestList.Add(array[i]);
 
-                                //int count = _maxHeaderRequestCount;
+                                        count--;
+                                    }
+                                }
+                            }
 
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushHeadersRequestList.Add(item);
-                                //}
+                            {
+                                var array = _pushChatsRequestList.ToArray();
+                                _random.Shuffle(array);
+
+                                int count = _maxHeaderRequestCount;
+
+                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                {
+                                    if (!messageManagers.Values.Any(n => n.PushChatsRequest.Contains(array[i])))
+                                    {
+                                        pushChatsRequestList.Add(array[i]);
+
+                                        count--;
+                                    }
+                                }
                             }
                         }
 
@@ -1523,16 +1914,16 @@ namespace Library.Net.Outopos
                             var messageManager = pair.Value;
 
                             {
-                                var array = messageManager.PullHeadersRequest.ToArray();
+                                var array = messageManager.PullSectionsRequest.ToArray();
                                 _random.Shuffle(array);
 
                                 int count = _maxHeaderRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
-                                    if (!messageManagers.Values.Any(n => n.PushHeadersRequest.Contains(array[i])))
+                                    if (!messageManagers.Values.Any(n => n.PushSectionsRequest.Contains(array[i])))
                                     {
-                                        pushHeadersRequestList.Add(array[i]);
+                                        pushSectionsRequestList.Add(array[i]);
 
                                         count--;
                                     }
@@ -1540,32 +1931,51 @@ namespace Library.Net.Outopos
                             }
 
                             {
-                                //var array = messageManager.PullHeadersRequest.ToArray();
-                                //_random.Shuffle(array);
+                                var array = messageManager.PullWikisRequest.ToArray();
+                                _random.Shuffle(array);
 
-                                //IEnumerable<string> items = array;
+                                int count = _maxHeaderRequestCount;
 
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushHeadersRequest.ExceptFrom(items);
-                                //}
+                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                {
+                                    if (!messageManagers.Values.Any(n => n.PushWikisRequest.Contains(array[i])))
+                                    {
+                                        pushWikisRequestList.Add(array[i]);
 
-                                //int count = _maxHeaderRequestCount;
+                                        count--;
+                                    }
+                                }
+                            }
 
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushHeadersRequestList.Add(item);
-                                //}
+                            {
+                                var array = messageManager.PullChatsRequest.ToArray();
+                                _random.Shuffle(array);
+
+                                int count = _maxHeaderRequestCount;
+
+                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                {
+                                    if (!messageManagers.Values.Any(n => n.PushChatsRequest.Contains(array[i])))
+                                    {
+                                        pushChatsRequestList.Add(array[i]);
+
+                                        count--;
+                                    }
+                                }
                             }
                         }
                     }
 
-                    _random.Shuffle(pushHeadersRequestList);
+                    _random.Shuffle(pushSectionsRequestList);
+                    _random.Shuffle(pushWikisRequestList);
+                    _random.Shuffle(pushChatsRequestList);
 
                     {
-                        var pushHeadersRequestDictionary = new Dictionary<Node, SortedSet<Tag>>();
+                        var pushSectionsRequestDictionary = new Dictionary<Node, HashSet<Section>>();
+                        var pushWikisRequestDictionary = new Dictionary<Node, HashSet<Wiki>>();
+                        var pushChatsRequestDictionary = new Dictionary<Node, HashSet<Chat>>();
 
-                        foreach (var tag in pushHeadersRequestList)
+                        foreach (var tag in pushSectionsRequestList)
                         {
                             try
                             {
@@ -1578,12 +1988,12 @@ namespace Library.Net.Outopos
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Tag> collection;
+                                    HashSet<Section> collection;
 
-                                    if (!pushHeadersRequestDictionary.TryGetValue(requestNodes[i], out collection))
+                                    if (!pushSectionsRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Tag>();
-                                        pushHeadersRequestDictionary[requestNodes[i]] = collection;
+                                        collection = new HashSet<Section>();
+                                        pushSectionsRequestDictionary[requestNodes[i]] = collection;
                                     }
 
                                     if (collection.Count < _maxHeaderRequestCount)
@@ -1598,16 +2008,108 @@ namespace Library.Net.Outopos
                             }
                         }
 
-                        lock (_pushHeadersRequestDictionary.ThisLock)
+                        foreach (var tag in pushWikisRequestList)
                         {
-                            _pushHeadersRequestDictionary.Clear();
+                            try
+                            {
+                                var requestNodes = new List<Node>();
 
-                            foreach (var pair in pushHeadersRequestDictionary)
+                                foreach (var node in Kademlia<Node>.Search(tag.Id, baseNode.Id, otherNodes, 2))
+                                {
+                                    requestNodes.Add(node);
+                                }
+
+                                for (int i = 0; i < requestNodes.Count; i++)
+                                {
+                                    HashSet<Wiki> collection;
+
+                                    if (!pushWikisRequestDictionary.TryGetValue(requestNodes[i], out collection))
+                                    {
+                                        collection = new HashSet<Wiki>();
+                                        pushWikisRequestDictionary[requestNodes[i]] = collection;
+                                    }
+
+                                    if (collection.Count < _maxHeaderRequestCount)
+                                    {
+                                        collection.Add(tag);
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e);
+                            }
+                        }
+
+                        foreach (var tag in pushChatsRequestList)
+                        {
+                            try
+                            {
+                                var requestNodes = new List<Node>();
+
+                                foreach (var node in Kademlia<Node>.Search(tag.Id, baseNode.Id, otherNodes, 2))
+                                {
+                                    requestNodes.Add(node);
+                                }
+
+                                for (int i = 0; i < requestNodes.Count; i++)
+                                {
+                                    HashSet<Chat> collection;
+
+                                    if (!pushChatsRequestDictionary.TryGetValue(requestNodes[i], out collection))
+                                    {
+                                        collection = new HashSet<Chat>();
+                                        pushChatsRequestDictionary[requestNodes[i]] = collection;
+                                    }
+
+                                    if (collection.Count < _maxHeaderRequestCount)
+                                    {
+                                        collection.Add(tag);
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e);
+                            }
+                        }
+
+                        lock (_pushSectionsRequestDictionary.ThisLock)
+                        {
+                            _pushSectionsRequestDictionary.Clear();
+
+                            foreach (var pair in pushSectionsRequestDictionary)
                             {
                                 var node = pair.Key;
                                 var targets = pair.Value;
 
-                                _pushHeadersRequestDictionary.Add(node, new List<Tag>(targets.Randomize()));
+                                _pushSectionsRequestDictionary.Add(node, new List<Section>(targets.Randomize()));
+                            }
+                        }
+
+                        lock (_pushWikisRequestDictionary.ThisLock)
+                        {
+                            _pushWikisRequestDictionary.Clear();
+
+                            foreach (var pair in pushWikisRequestDictionary)
+                            {
+                                var node = pair.Key;
+                                var targets = pair.Value;
+
+                                _pushWikisRequestDictionary.Add(node, new List<Wiki>(targets.Randomize()));
+                            }
+                        }
+
+                        lock (_pushChatsRequestDictionary.ThisLock)
+                        {
+                            _pushChatsRequestDictionary.Clear();
+
+                            foreach (var pair in pushChatsRequestDictionary)
+                            {
+                                var node = pair.Key;
+                                var targets = pair.Value;
+
+                                _pushChatsRequestDictionary.Add(node, new List<Chat>(targets.Randomize()));
                             }
                         }
                     }
@@ -1782,39 +2284,83 @@ namespace Library.Net.Outopos
                         // PushHeadersRequest
                         if (connectionCount >= _downloadingConnectionCountLowerLimit)
                         {
-                            List<Tag> targetList = null;
-
-                            lock (_pushHeadersRequestDictionary.ThisLock)
                             {
-                                if (_pushHeadersRequestDictionary.TryGetValue(connectionManager.Node, out targetList))
-                                {
-                                    _pushHeadersRequestDictionary.Remove(connectionManager.Node);
-                                    messageManager.PushHeadersRequest.AddRange(targetList);
-                                }
-                            }
+                                List<Section> sectionList = null;
+                                List<Wiki> wikiList = null;
+                                List<Chat> chatList = null;
 
-                            if (targetList != null)
-                            {
-                                try
+                                lock (_pushSectionsRequestDictionary.ThisLock)
                                 {
-                                    connectionManager.PushHeadersRequest(targetList);
-
-                                    foreach (var item in targetList)
+                                    if (_pushSectionsRequestDictionary.TryGetValue(connectionManager.Node, out sectionList))
                                     {
-                                        _pushHeadersRequestList.Remove(item);
+                                        _pushSectionsRequestDictionary.Remove(connectionManager.Node);
+                                        messageManager.PushSectionsRequest.AddRange(sectionList);
                                     }
-
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest ({0})", targetList.Count));
-                                    _pushHeaderRequestCount.Add(targetList.Count);
                                 }
-                                catch (Exception e)
-                                {
-                                    foreach (var item in targetList)
-                                    {
-                                        messageManager.PushHeadersRequest.Remove(item);
-                                    }
 
-                                    throw e;
+                                lock (_pushWikisRequestDictionary.ThisLock)
+                                {
+                                    if (_pushWikisRequestDictionary.TryGetValue(connectionManager.Node, out wikiList))
+                                    {
+                                        _pushWikisRequestDictionary.Remove(connectionManager.Node);
+                                        messageManager.PushWikisRequest.AddRange(wikiList);
+                                    }
+                                }
+
+                                lock (_pushChatsRequestDictionary.ThisLock)
+                                {
+                                    if (_pushChatsRequestDictionary.TryGetValue(connectionManager.Node, out chatList))
+                                    {
+                                        _pushChatsRequestDictionary.Remove(connectionManager.Node);
+                                        messageManager.PushChatsRequest.AddRange(chatList);
+                                    }
+                                }
+
+                                if (sectionList != null || wikiList != null || chatList != null)
+                                {
+                                    try
+                                    {
+                                        connectionManager.PushHeadersRequest(sectionList, wikiList, chatList);
+
+                                        foreach (var item in sectionList)
+                                        {
+                                            _pushSectionsRequestList.Remove(item);
+                                        }
+
+                                        foreach (var item in wikiList)
+                                        {
+                                            _pushWikisRequestList.Remove(item);
+                                        }
+
+                                        foreach (var item in chatList)
+                                        {
+                                            _pushChatsRequestList.Remove(item);
+                                        }
+
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest ({0})",
+                                            sectionList.Count + wikiList.Count + chatList.Count));
+
+                                        _pushHeaderRequestCount.Add(sectionList.Count);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        foreach (var item in sectionList)
+                                        {
+                                            messageManager.PushSectionsRequest.Remove(item);
+                                        }
+
+                                        foreach (var item in wikiList)
+                                        {
+                                            messageManager.PushWikisRequest.Remove(item);
+                                        }
+
+                                        foreach (var item in chatList)
+                                        {
+                                            messageManager.PushChatsRequest.Remove(item);
+                                        }
+
+                                        throw e;
+                                    }
                                 }
                             }
                         }
@@ -1959,38 +2505,134 @@ namespace Library.Net.Outopos
                         // PushHeaders
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
                         {
-                            var tags = messageManager.PullHeadersRequest.ToArray();
-
-                            var headers = new List<Header>();
-
-                            _random.Shuffle(tags);
-                            foreach (var tag in tags)
                             {
-                                foreach (var header in _settings.GetHeaders(tag))
+                                var sections = messageManager.PullSectionsRequest.ToArray();
+                                var wikis = messageManager.PullWikisRequest.ToArray();
+                                var chats = messageManager.PullChatsRequest.ToArray();
+
+                                var sectionProfileHeaders = new List<SectionProfileHeader>();
+                                var sectionMessageHeaders = new List<SectionMessageHeader>();
+                                var wikiPageHeaders = new List<WikiPageHeader>();
+                                var chatTopicHeaders = new List<ChatTopicHeader>();
+                                var chatMessageHeaders = new List<ChatMessageHeader>();
+
+                                _random.Shuffle(sections);
+                                foreach (var tag in sections)
                                 {
-                                    if (!messageManager.StockHeaders.Contains(header.GetHash(_hashAlgorithm)))
+                                    foreach (var header in _settings.HeaderManager.GetSectionProfileHeaders(tag))
                                     {
-                                        headers.Add(header);
+                                        if (!messageManager.StockSectionProfileHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        {
+                                            sectionProfileHeaders.Add(header);
 
-                                        if (headers.Count >= _maxHeaderCount) break;
+                                            if (sectionProfileHeaders.Count >= _maxHeaderCount) break;
+                                        }
                                     }
+
+                                    foreach (var header in _settings.HeaderManager.GetSectionMessageHeaders(tag))
+                                    {
+                                        if (!messageManager.StockSectionMessageHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        {
+                                            sectionMessageHeaders.Add(header);
+
+                                            if (sectionMessageHeaders.Count >= _maxHeaderCount) break;
+                                        }
+                                    }
+
+                                    if (sectionProfileHeaders.Count >= _maxHeaderCount) break;
+                                    if (sectionMessageHeaders.Count >= _maxHeaderCount) break;
                                 }
-                            }
 
-                            if (headers.Count > 0)
-                            {
-                                _random.Shuffle(headers);
-
-                                connectionManager.PushHeaders(headers);
-
-                                Debug.WriteLine(string.Format("ConnectionManager: Push Headers ({0})", headers.Count));
-                                _pushHeaderCount.Add(headers.Count);
-
-                                foreach (var header in headers)
+                                _random.Shuffle(wikis);
+                                foreach (var tag in wikis)
                                 {
-                                    var tag = header.Certificate.ToString();
+                                    foreach (var header in _settings.HeaderManager.GetWikiPageHeaders(tag))
+                                    {
+                                        if (!messageManager.StockWikiPageHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        {
+                                            wikiPageHeaders.Add(header);
 
-                                    messageManager.StockHeaders.Add(header.GetHash(_hashAlgorithm));
+                                            if (wikiPageHeaders.Count >= _maxHeaderCount) break;
+                                        }
+                                    }
+
+                                    if (wikiPageHeaders.Count >= _maxHeaderCount) break;
+                                }
+
+                                _random.Shuffle(chats);
+                                foreach (var tag in chats)
+                                {
+                                    foreach (var header in _settings.HeaderManager.GetChatTopicHeaders(tag))
+                                    {
+                                        if (!messageManager.StockChatTopicHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        {
+                                            chatTopicHeaders.Add(header);
+
+                                            if (chatTopicHeaders.Count >= _maxHeaderCount) break;
+                                        }
+                                    }
+
+                                    foreach (var header in _settings.HeaderManager.GetChatMessageHeaders(tag))
+                                    {
+                                        if (!messageManager.StockChatMessageHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        {
+                                            chatMessageHeaders.Add(header);
+
+                                            if (chatMessageHeaders.Count >= _maxHeaderCount) break;
+                                        }
+                                    }
+
+                                    if (chatTopicHeaders.Count >= _maxHeaderCount) break;
+                                    if (chatMessageHeaders.Count >= _maxHeaderCount) break;
+                                }
+
+                                if (sectionProfileHeaders.Count > 0
+                                    || sectionMessageHeaders.Count > 0
+                                    || wikiPageHeaders.Count > 0
+                                    || chatTopicHeaders.Count > 0
+                                    || chatMessageHeaders.Count > 0)
+                                {
+                                    connectionManager.PushHeaders(
+                                        sectionProfileHeaders,
+                                        sectionMessageHeaders,
+                                        wikiPageHeaders,
+                                        chatTopicHeaders,
+                                        chatMessageHeaders);
+
+                                    var headerCount =
+                                        sectionProfileHeaders.Count
+                                        + sectionMessageHeaders.Count
+                                        + wikiPageHeaders.Count
+                                        + chatTopicHeaders.Count
+                                        + chatMessageHeaders.Count;
+
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push Headers ({0})", headerCount));
+                                    _pushHeaderCount.Add(headerCount);
+
+                                    foreach (var header in sectionProfileHeaders)
+                                    {
+                                        messageManager.StockSectionProfileHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                    }
+
+                                    foreach (var header in sectionMessageHeaders)
+                                    {
+                                        messageManager.StockSectionMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                    }
+
+                                    foreach (var header in wikiPageHeaders)
+                                    {
+                                        messageManager.StockWikiPageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                    }
+
+                                    foreach (var header in chatTopicHeaders)
+                                    {
+                                        messageManager.StockChatTopicHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                    }
+
+                                    foreach (var header in chatMessageHeaders)
+                                    {
+                                        messageManager.StockChatMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                    }
                                 }
                             }
                         }
@@ -2117,18 +2759,41 @@ namespace Library.Net.Outopos
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.PullHeadersRequest.Count > _maxHeaderRequestCount * messageManager.PullHeadersRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullSectionsRequest.Count > _maxHeaderRequestCount * messageManager.PullSectionsRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullWikisRequest.Count > _maxHeaderRequestCount * messageManager.PullWikisRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullChatsRequest.Count > _maxHeaderRequestCount * messageManager.PullChatsRequest.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})", e.Tags.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})",
+                e.Sections.Count() + e.Wikis.Count() + e.Chats.Count()));
 
-            foreach (var tag in e.Tags.Take(_maxHeaderRequestCount))
+            foreach (var tag in e.Sections.Take(_maxHeaderRequestCount))
             {
                 if (!ConnectionsManager.Check(tag)) continue;
 
-                messageManager.PullHeadersRequest.Add(tag);
+                messageManager.PullSectionsRequest.Add(tag);
                 _pullHeaderRequestCount.Increment();
 
-                _headerLastAccessTimes[tag] = DateTime.UtcNow;
+                _lastUsedSectionTimes[tag] = DateTime.UtcNow;
+            }
+
+            foreach (var tag in e.Wikis.Take(_maxHeaderRequestCount))
+            {
+                if (!ConnectionsManager.Check(tag)) continue;
+
+                messageManager.PullWikisRequest.Add(tag);
+                _pullHeaderRequestCount.Increment();
+
+                _lastUsedWikiTimes[tag] = DateTime.UtcNow;
+            }
+
+            foreach (var tag in e.Chats.Take(_maxHeaderRequestCount))
+            {
+                if (!ConnectionsManager.Check(tag)) continue;
+
+                messageManager.PullChatsRequest.Add(tag);
+                _pullHeaderRequestCount.Increment();
+
+                _lastUsedChatTimes[tag] = DateTime.UtcNow;
             }
         }
 
@@ -2139,19 +2804,74 @@ namespace Library.Net.Outopos
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.StockHeaders.Count > _maxHeaderCount * messageManager.StockHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockSectionProfileHeaders.Count > _maxHeaderCount * messageManager.StockSectionProfileHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockSectionMessageHeaders.Count > _maxHeaderCount * messageManager.StockSectionMessageHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockWikiPageHeaders.Count > _maxHeaderCount * messageManager.StockWikiPageHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockChatTopicHeaders.Count > _maxHeaderCount * messageManager.StockChatTopicHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockChatMessageHeaders.Count > _maxHeaderCount * messageManager.StockChatMessageHeaders.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})", e.Headers.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull Headers ({0})",
+                e.SectionProfileHeaders.Count()
+                + e.SectionMessageHeaders.Count()
+                + e.WikiPageHeaders.Count()
+                + e.ChatTopicHeaders.Count()
+                + e.ChatMessageHeaders.Count()));
 
-            foreach (var header in e.Headers.Take(_maxHeaderCount))
+            foreach (var header in e.SectionProfileHeaders.Take(_maxHeaderCount))
             {
-                if (_settings.SetHeader(header))
+                if (_settings.HeaderManager.SetHeader(header))
                 {
-                    var tag = header.Tag;
+                    messageManager.StockSectionProfileHeaders.Add(header.CreateHash(_hashAlgorithm));
 
-                    messageManager.StockHeaders.Add(header.GetHash(_hashAlgorithm));
+                    _lastUsedSectionTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                }
 
-                    _headerLastAccessTimes[tag] = DateTime.UtcNow;
+                _pullHeaderCount.Increment();
+            }
+
+            foreach (var header in e.SectionMessageHeaders.Take(_maxHeaderCount))
+            {
+                if (_settings.HeaderManager.SetHeader(header))
+                {
+                    messageManager.StockSectionMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+
+                    _lastUsedSectionTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount.Increment();
+            }
+
+            foreach (var header in e.WikiPageHeaders.Take(_maxHeaderCount))
+            {
+                if (_settings.HeaderManager.SetHeader(header))
+                {
+                    messageManager.StockWikiPageHeaders.Add(header.CreateHash(_hashAlgorithm));
+
+                    _lastUsedWikiTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount.Increment();
+            }
+
+            foreach (var header in e.ChatTopicHeaders.Take(_maxHeaderCount))
+            {
+                if (_settings.HeaderManager.SetHeader(header))
+                {
+                    messageManager.StockChatTopicHeaders.Add(header.CreateHash(_hashAlgorithm));
+
+                    _lastUsedChatTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                }
+
+                _pullHeaderCount.Increment();
+            }
+
+            foreach (var header in e.ChatMessageHeaders.Take(_maxHeaderCount))
+            {
+                if (_settings.HeaderManager.SetHeader(header))
+                {
+                    messageManager.StockChatMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+
+                    _lastUsedChatTimes[header.Metadata.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount.Increment();
@@ -2278,31 +2998,135 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void SendHeaderRequest(Tag tag)
+        public void SendHeadersRequest(Section tag)
         {
             lock (this.ThisLock)
             {
-                _pushHeadersRequestList.Add(tag);
+                _pushSectionsRequestList.Add(tag);
             }
         }
 
-        public IEnumerable<Header> GetHeaders(Tag tag)
+        public void SendHeadersRequest(Wiki tag)
+        {
+            lock (this.ThisLock)
+            {
+                _pushWikisRequestList.Add(tag);
+            }
+        }
+
+        public void SendHeadersRequest(Chat tag)
+        {
+            lock (this.ThisLock)
+            {
+                _pushChatsRequestList.Add(tag);
+            }
+        }
+
+        public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _settings.GetHeaders(tag);
+                _pushSectionsRequestList.Add(tag);
+
+                return _settings.HeaderManager.GetSectionProfileHeaders(tag);
             }
         }
 
-        public void Upload(Header header)
+        public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _settings.SetHeader(header);
+                _pushSectionsRequestList.Add(tag);
+
+                return _settings.HeaderManager.GetSectionMessageHeaders(tag);
+            }
+        }
+
+        public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _settings.HeaderManager.GetWikiPageHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _pushChatsRequestList.Add(tag);
+
+                return _settings.HeaderManager.GetChatTopicHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _pushChatsRequestList.Add(tag);
+
+                return _settings.HeaderManager.GetChatMessageHeaders(tag);
+            }
+        }
+
+        public void Upload(SectionProfileHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _settings.HeaderManager.SetHeader(header);
+            }
+        }
+
+        public void Upload(SectionMessageHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _settings.HeaderManager.SetHeader(header);
+            }
+        }
+
+        public void Upload(WikiPageHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _settings.HeaderManager.SetHeader(header);
+            }
+        }
+
+        public void Upload(ChatTopicHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _settings.HeaderManager.SetHeader(header);
+            }
+        }
+
+        public void Upload(ChatMessageHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _settings.HeaderManager.SetHeader(header);
             }
         }
 
@@ -2457,9 +3281,9 @@ namespace Library.Net.Outopos
 
         private class Settings : Library.Configuration.SettingsBase
         {
-            private Dictionary<Tag, Dictionary<string, Header>> _headers;
-
             private volatile object _thisLock;
+
+            private HeaderManager _headerManager = new HeaderManager();
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
@@ -2469,12 +3293,14 @@ namespace Library.Net.Outopos
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingContent<List<Header>>() { Name = "Headers", Value = new List<Header>() },
+                    new Library.Configuration.SettingContent<List<SectionProfileHeader>>() { Name = "SectionProfileHeaders", Value = new List<SectionProfileHeader>() },
+                    new Library.Configuration.SettingContent<List<SectionMessageHeader>>() { Name = "SectionMessageHeaders", Value = new List<SectionMessageHeader>() },
+                    new Library.Configuration.SettingContent<List<WikiPageHeader>>() { Name = "WikiPageHeaders", Value = new List<WikiPageHeader>() },
+                    new Library.Configuration.SettingContent<List<ChatTopicHeader>>() { Name = "ChatTopicHeaders", Value = new List<ChatTopicHeader>() },
+                    new Library.Configuration.SettingContent<List<ChatMessageHeader>>() { Name = "ChatMessageHeaders", Value = new List<ChatMessageHeader>() },
                 })
             {
                 _thisLock = lockObject;
-
-                _headers = new Dictionary<Tag, Dictionary<string, Header>>();
             }
 
             public override void Load(string directoryPath)
@@ -2483,14 +3309,36 @@ namespace Library.Net.Outopos
                 {
                     base.Load(directoryPath);
 
-                    _headers.Clear();
-
-                    foreach (var header in this.Headers)
+                    foreach (var header in this.SectionProfileHeaders)
                     {
-                        this.SetHeader(header);
+                        _headerManager.SetHeader(header);
                     }
 
-                    this.Headers.Clear();
+                    foreach (var header in this.SectionMessageHeaders)
+                    {
+                        _headerManager.SetHeader(header);
+                    }
+
+                    foreach (var header in this.WikiPageHeaders)
+                    {
+                        _headerManager.SetHeader(header);
+                    }
+
+                    foreach (var header in this.ChatTopicHeaders)
+                    {
+                        _headerManager.SetHeader(header);
+                    }
+
+                    foreach (var header in this.ChatMessageHeaders)
+                    {
+                        _headerManager.SetHeader(header);
+                    }
+
+                    this.SectionProfileHeaders.Clear();
+                    this.SectionMessageHeaders.Clear();
+                    this.WikiPageHeaders.Clear();
+                    this.ChatTopicHeaders.Clear();
+                    this.ChatMessageHeaders.Clear();
                 }
             }
 
@@ -2498,119 +3346,19 @@ namespace Library.Net.Outopos
             {
                 lock (_thisLock)
                 {
-                    this.Headers.AddRange(_headers.Values.SelectMany(n => n.Values));
+                    this.SectionProfileHeaders.AddRange(_headerManager.GetSectionProfileHeaders());
+                    this.SectionMessageHeaders.AddRange(_headerManager.GetSectionMessageHeaders());
+                    this.WikiPageHeaders.AddRange(_headerManager.GetWikiPageHeaders());
+                    this.ChatTopicHeaders.AddRange(_headerManager.GetChatTopicHeaders());
+                    this.ChatMessageHeaders.AddRange(_headerManager.GetChatMessageHeaders());
 
                     base.Save(directoryPath);
 
-                    this.Headers.Clear();
-                }
-            }
-
-            public IEnumerable<Tag> GetTags()
-            {
-                lock (_thisLock)
-                {
-                    return _headers.Keys.ToList();
-                }
-            }
-
-            public void RemoveTags(IEnumerable<Tag> tags)
-            {
-                lock (_thisLock)
-                {
-                    foreach (var tag in tags)
-                    {
-                        _headers.Remove(tag);
-                    }
-                }
-            }
-
-            public IEnumerable<string> GetSignatures(Tag tag)
-            {
-                lock (_thisLock)
-                {
-                    Dictionary<string, Header> dic;
-
-                    if (_headers.TryGetValue(tag, out dic))
-                    {
-                        return dic.Keys.ToList();
-                    }
-
-                    return new string[0];
-                }
-            }
-
-            public void RemoveSignatures(Tag tag, IEnumerable<string> signatures)
-            {
-                lock (_thisLock)
-                {
-                    Dictionary<string, Header> dic;
-
-                    if (_headers.TryGetValue(tag, out dic))
-                    {
-                        foreach (var signature in signatures)
-                        {
-                            dic.Remove(signature);
-                        }
-                    }
-
-                    if (dic.Count == 0) _headers.Remove(tag);
-                }
-            }
-
-            public IEnumerable<Header> GetHeaders(Tag tag)
-            {
-                lock (_thisLock)
-                {
-                    Dictionary<string, Header> dic;
-
-                    if (!_headers.TryGetValue(tag, out dic))
-                    {
-                        dic = new Dictionary<string, Header>();
-                        _headers[tag] = dic;
-                    }
-
-                    return dic.Values.ToList();
-                }
-            }
-
-            public bool SetHeader(Header header)
-            {
-                var now = DateTime.UtcNow;
-
-                if (header == null
-                    || header.Tag == null
-                        || header.Tag.Type == null
-                        || header.Tag.Name == null
-                        || header.Tag.Id == null || header.Tag.Id.Length == 0
-                    || (header.CreationTime - now).Minutes > 30) return false;
-
-                if (header.Certificate == null) throw new CertificateException();
-
-                var signature = header.Certificate.ToString();
-
-                // なるべく電子署名の検証をさけ、CPU使用率を下げるよう工夫する。
-                lock (_thisLock)
-                {
-                    Dictionary<string, Header> dic;
-
-                    if (!_headers.TryGetValue(header.Tag, out dic))
-                    {
-                        dic = new Dictionary<string, Header>();
-                        _headers[header.Tag] = dic;
-                    }
-
-                    Header tempHeader;
-
-                    if (!dic.TryGetValue(signature, out tempHeader)
-                        || header.CreationTime > tempHeader.CreationTime)
-                    {
-                        if (!header.VerifyCertificate()) throw new CertificateException();
-
-                        dic[signature] = header;
-                    }
-
-                    return (tempHeader == null || header.CreationTime >= tempHeader.CreationTime);
+                    this.SectionProfileHeaders.Clear();
+                    this.SectionMessageHeaders.Clear();
+                    this.WikiPageHeaders.Clear();
+                    this.ChatTopicHeaders.Clear();
+                    this.ChatMessageHeaders.Clear();
                 }
             }
 
@@ -2701,11 +3449,679 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private List<Header> Headers
+            public HeaderManager HeaderManager
             {
                 get
                 {
-                    return (List<Header>)this["Headers"];
+                    lock (_thisLock)
+                    {
+                        return _headerManager;
+                    }
+                }
+            }
+
+            private List<SectionProfileHeader> SectionProfileHeaders
+            {
+                get
+                {
+                    return (List<SectionProfileHeader>)this["SectionProfileHeaders"];
+                }
+            }
+
+            private List<SectionMessageHeader> SectionMessageHeaders
+            {
+                get
+                {
+                    return (List<SectionMessageHeader>)this["SectionMessageHeaders"];
+                }
+            }
+
+            private List<WikiPageHeader> WikiPageHeaders
+            {
+                get
+                {
+                    return (List<WikiPageHeader>)this["WikiPageHeaders"];
+                }
+            }
+
+            private List<ChatTopicHeader> ChatTopicHeaders
+            {
+                get
+                {
+                    return (List<ChatTopicHeader>)this["ChatTopicHeaders"];
+                }
+            }
+
+            private List<ChatMessageHeader> ChatMessageHeaders
+            {
+                get
+                {
+                    return (List<ChatMessageHeader>)this["ChatMessageHeaders"];
+                }
+            }
+        }
+
+        public class HeaderManager
+        {
+            private Dictionary<Section, Dictionary<string, SectionProfileHeader>> _sectionProfileHeaders = new Dictionary<Section, Dictionary<string, SectionProfileHeader>>();
+            private Dictionary<Section, Dictionary<string, HashSet<SectionMessageHeader>>> _sectionMessageHeaders = new Dictionary<Section, Dictionary<string, HashSet<SectionMessageHeader>>>();
+            private Dictionary<Wiki, Dictionary<string, HashSet<WikiPageHeader>>> _wikiPageHeaders = new Dictionary<Wiki, Dictionary<string, HashSet<WikiPageHeader>>>();
+            private Dictionary<Chat, Dictionary<string, ChatTopicHeader>> _chatTopicHeaders = new Dictionary<Chat, Dictionary<string, ChatTopicHeader>>();
+            private Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>> _chatMessageHeaders = new Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>>();
+
+            private readonly object _thisLock = new object();
+
+            public HeaderManager()
+            {
+
+            }
+
+            public int Count
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        int count = 0;
+
+                        count += _sectionProfileHeaders.Values.Sum(n => n.Values.Count);
+                        count += _sectionMessageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
+                        count += _wikiPageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
+                        count += _chatTopicHeaders.Values.Sum(n => n.Values.Count);
+                        count += _chatMessageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
+
+                        return count;
+                    }
+                }
+            }
+
+            public IEnumerable<Section> GetSections()
+            {
+                lock (_thisLock)
+                {
+                    var hashset = new HashSet<Section>();
+
+                    hashset.UnionWith(_sectionProfileHeaders.Keys);
+                    hashset.UnionWith(_sectionMessageHeaders.Keys);
+
+                    return hashset;
+                }
+            }
+
+            public IEnumerable<Wiki> GetWikis()
+            {
+                lock (_thisLock)
+                {
+                    var hashset = new HashSet<Wiki>();
+
+                    hashset.UnionWith(_wikiPageHeaders.Keys);
+
+                    return hashset;
+                }
+            }
+
+            public IEnumerable<Chat> GetChats()
+            {
+                lock (_thisLock)
+                {
+                    var hashset = new HashSet<Chat>();
+
+                    hashset.UnionWith(_chatTopicHeaders.Keys);
+                    hashset.UnionWith(_chatMessageHeaders.Keys);
+
+                    return hashset;
+                }
+            }
+
+            public void RemoveTags(IEnumerable<Section> tags)
+            {
+                lock (_thisLock)
+                {
+                    foreach (var section in tags)
+                    {
+                        _sectionProfileHeaders.Remove(section);
+                        _sectionMessageHeaders.Remove(section);
+                    }
+                }
+            }
+
+            public void RemoveTags(IEnumerable<Wiki> tags)
+            {
+                lock (_thisLock)
+                {
+                    foreach (var wiki in tags)
+                    {
+                        _wikiPageHeaders.Remove(wiki);
+                    }
+                }
+            }
+
+            public void RemoveTags(IEnumerable<Chat> tags)
+            {
+                lock (_thisLock)
+                {
+                    foreach (var chat in tags)
+                    {
+                        _chatTopicHeaders.Remove(chat);
+                        _chatMessageHeaders.Remove(chat);
+                    }
+                }
+            }
+
+            public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders()
+            {
+                lock (_thisLock)
+                {
+                    return _sectionProfileHeaders.Values.SelectMany(n => n.Values);
+                }
+            }
+
+            public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, SectionProfileHeader> dic = null;
+
+                    if (_sectionProfileHeaders.TryGetValue(tag, out dic))
+                    {
+                        return dic.Values.ToArray();
+                    }
+
+                    return new SectionProfileHeader[0];
+                }
+            }
+
+            public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders()
+            {
+                lock (_thisLock)
+                {
+                    return _sectionMessageHeaders.Values.SelectMany(n => n.Values.Extract());
+                }
+            }
+
+            public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, HashSet<SectionMessageHeader>> dic = null;
+
+                    if (_sectionMessageHeaders.TryGetValue(tag, out dic))
+                    {
+                        return dic.Values.SelectMany(n => n).ToArray();
+                    }
+
+                    return new SectionMessageHeader[0];
+                }
+            }
+
+            public IEnumerable<WikiPageHeader> GetWikiPageHeaders()
+            {
+                lock (_thisLock)
+                {
+                    return _wikiPageHeaders.Values.SelectMany(n => n.Values.SelectMany(m => m));
+                }
+            }
+
+            public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, HashSet<WikiPageHeader>> dic = null;
+
+                    if (_wikiPageHeaders.TryGetValue(tag, out dic))
+                    {
+                        return dic.Values.SelectMany(n => n).ToArray();
+                    }
+
+                    return new WikiPageHeader[0];
+                }
+            }
+
+            public IEnumerable<ChatTopicHeader> GetChatTopicHeaders()
+            {
+                lock (_thisLock)
+                {
+                    return _chatTopicHeaders.Values.SelectMany(n => n.Values);
+                }
+            }
+
+            public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat chat)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, ChatTopicHeader> dic = null;
+
+                    if (_chatTopicHeaders.TryGetValue(chat, out dic))
+                    {
+                        return dic.Values.ToArray();
+                    }
+
+                    return new ChatTopicHeader[0];
+                }
+            }
+
+            public IEnumerable<ChatMessageHeader> GetChatMessageHeaders()
+            {
+                lock (_thisLock)
+                {
+                    return _chatMessageHeaders.Values.SelectMany(n => n.Values.SelectMany(m => m));
+                }
+            }
+
+            public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+            {
+                lock (_thisLock)
+                {
+                    Dictionary<string, HashSet<ChatMessageHeader>> dic = null;
+
+                    if (_chatMessageHeaders.TryGetValue(tag, out dic))
+                    {
+                        return dic.Values.SelectMany(n => n).ToArray();
+                    }
+
+                    return new ChatMessageHeader[0];
+                }
+            }
+
+            public bool SetHeader(SectionProfileHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return false;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, SectionProfileHeader> dic = null;
+
+                    if (!_sectionProfileHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, SectionProfileHeader>();
+                        _sectionProfileHeaders[header.Metadata.Tag] = dic;
+                    }
+
+                    SectionProfileHeader tempHeader = null;
+
+                    if (!dic.TryGetValue(signature, out tempHeader)
+                        || header.Metadata.CreationTime > tempHeader.Metadata.CreationTime)
+                    {
+                        if (!header.VerifyCertificate()) throw new CertificateException();
+
+                        dic[signature] = header;
+                    }
+
+                    return (tempHeader == null || header.Metadata.CreationTime >= tempHeader.Metadata.CreationTime);
+                }
+            }
+
+            public bool SetHeader(SectionMessageHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return false;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, HashSet<SectionMessageHeader>> dic = null;
+
+                    if (!_sectionMessageHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, HashSet<SectionMessageHeader>>();
+                        _sectionMessageHeaders[header.Metadata.Tag] = dic;
+                    }
+
+                    HashSet<SectionMessageHeader> hashset = null;
+
+                    if (!dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset = new HashSet<SectionMessageHeader>();
+                        dic[signature] = hashset;
+                    }
+
+                    if (!hashset.Contains(header))
+                    {
+                        if (!header.VerifyCertificate()) throw new CertificateException();
+
+                        hashset.Add(header);
+                    }
+
+                    return true;
+                }
+            }
+
+            public bool SetHeader(WikiPageHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return false;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, HashSet<WikiPageHeader>> dic = null;
+
+                    if (!_wikiPageHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, HashSet<WikiPageHeader>>();
+                        _wikiPageHeaders[header.Metadata.Tag] = dic;
+                    }
+
+                    HashSet<WikiPageHeader> hashset = null;
+
+                    if (!dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset = new HashSet<WikiPageHeader>();
+                        dic[signature] = hashset;
+                    }
+
+                    if (!hashset.Contains(header))
+                    {
+                        if (!header.VerifyCertificate()) throw new CertificateException();
+
+                        hashset.Add(header);
+                    }
+
+                    return true;
+                }
+            }
+
+            public bool SetHeader(ChatTopicHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return false;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, ChatTopicHeader> dic = null;
+
+                    if (!_chatTopicHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, ChatTopicHeader>();
+                        _chatTopicHeaders[header.Metadata.Tag] = dic;
+                    }
+
+                    ChatTopicHeader tempHeader = null;
+
+                    if (!dic.TryGetValue(signature, out tempHeader)
+                        || header.Metadata.CreationTime > tempHeader.Metadata.CreationTime)
+                    {
+                        if (!header.VerifyCertificate()) throw new CertificateException();
+
+                        dic[signature] = header;
+                    }
+
+                    return (tempHeader == null || header.Metadata.CreationTime >= tempHeader.Metadata.CreationTime);
+                }
+            }
+
+            public bool SetHeader(ChatMessageHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return false;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, HashSet<ChatMessageHeader>> dic = null;
+
+                    if (!_chatMessageHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    {
+                        dic = new Dictionary<string, HashSet<ChatMessageHeader>>();
+                        _chatMessageHeaders[header.Metadata.Tag] = dic;
+                    }
+
+                    HashSet<ChatMessageHeader> hashset = null;
+
+                    if (!dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset = new HashSet<ChatMessageHeader>();
+                        dic[signature] = hashset;
+                    }
+
+                    if (!hashset.Contains(header))
+                    {
+                        if (!header.VerifyCertificate()) throw new CertificateException();
+
+                        hashset.Add(header);
+                    }
+
+                    return true;
+                }
+            }
+
+            public void RemoveHeader(SectionProfileHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, SectionProfileHeader> dic = null;
+
+                    if (!_sectionProfileHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+
+                    SectionProfileHeader tempHeader = null;
+
+                    if (dic.TryGetValue(signature, out tempHeader)
+                        && header == tempHeader)
+                    {
+                        dic.Remove(signature);
+
+                        if (dic.Count == 0)
+                        {
+                            _sectionProfileHeaders.Remove(header.Metadata.Tag);
+                        }
+                    }
+                }
+            }
+
+            public void RemoveHeader(SectionMessageHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, HashSet<SectionMessageHeader>> dic = null;
+
+                    if (!_sectionMessageHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+
+                    HashSet<SectionMessageHeader> hashset = null;
+
+                    if (dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset.Remove(header);
+
+                        if (hashset.Count == 0)
+                        {
+                            dic.Remove(signature);
+
+                            if (dic.Count == 0)
+                            {
+                                _sectionMessageHeaders.Remove(header.Metadata.Tag);
+                            }
+                        }
+                    }
+                }
+            }
+
+            public void RemoveHeader(WikiPageHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, HashSet<WikiPageHeader>> dic = null;
+
+                    if (!_wikiPageHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+
+                    HashSet<WikiPageHeader> hashset = null;
+
+                    if (dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset.Remove(header);
+
+                        if (hashset.Count == 0)
+                        {
+                            dic.Remove(signature);
+
+                            if (dic.Count == 0)
+                            {
+                                _wikiPageHeaders.Remove(header.Metadata.Tag);
+                            }
+                        }
+                    }
+                }
+            }
+
+            public void RemoveHeader(ChatTopicHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, ChatTopicHeader> dic = null;
+
+                    if (!_chatTopicHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+
+                    ChatTopicHeader tempHeader = null;
+
+                    if (dic.TryGetValue(signature, out tempHeader)
+                        && header == tempHeader)
+                    {
+                        dic.Remove(signature);
+
+                        if (dic.Count == 0)
+                        {
+                            _chatTopicHeaders.Remove(header.Metadata.Tag);
+                        }
+                    }
+                }
+            }
+
+            public void RemoveHeader(ChatMessageHeader header)
+            {
+                lock (_thisLock)
+                {
+                    var now = DateTime.UtcNow;
+
+                    if (header == null
+                        || header.Metadata == null
+                            || header.Metadata.Tag == null
+                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
+                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
+                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Certificate == null) return;
+
+                    var signature = header.Certificate.ToString();
+                    if (signature != header.Metadata.Signature) throw new CertificateException();
+
+                    Dictionary<string, HashSet<ChatMessageHeader>> dic = null;
+
+                    if (!_chatMessageHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+
+                    HashSet<ChatMessageHeader> hashset = null;
+
+                    if (dic.TryGetValue(signature, out hashset))
+                    {
+                        hashset.Remove(header);
+
+                        if (hashset.Count == 0)
+                        {
+                            dic.Remove(signature);
+
+                            if (dic.Count == 0)
+                            {
+                                _chatMessageHeaders.Remove(header.Metadata.Tag);
+                            }
+                        }
+                    }
                 }
             }
         }

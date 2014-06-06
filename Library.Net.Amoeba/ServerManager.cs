@@ -119,14 +119,14 @@ namespace Library.Net.Amoeba
             return true;
         }
 
-        public ConnectionBase AcceptConnection(out string uri, BandwidthLimit bandwidthLimit)
+        public Connection AcceptConnection(out string uri, BandwidthLimit bandwidthLimit)
         {
             uri = null;
             List<IDisposable> garbages = new List<IDisposable>();
 
             try
             {
-                ConnectionBase connection = null;
+                Connection connection = null;
 
                 foreach (var type in (new int[] { 0, 1 }).Randomize())
                 {

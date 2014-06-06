@@ -90,7 +90,7 @@ namespace Library.Net.Amoeba
 
         private byte[] _mySessionId;
         private byte[] _otherSessionId;
-        private ConnectionBase _connection;
+        private Connection _connection;
         private ProtocolVersion _protocolVersion;
         private ProtocolVersion _myProtocolVersion;
         private ProtocolVersion _otherProtocolVersion;
@@ -134,7 +134,7 @@ namespace Library.Net.Amoeba
 
         public event CloseEventHandler CloseEvent;
 
-        public ConnectionManager(ConnectionBase connection, byte[] mySessionId, Node baseNode, ConnectDirection direction, BufferManager bufferManager)
+        public ConnectionManager(Connection connection, byte[] mySessionId, Node baseNode, ConnectDirection direction, BufferManager bufferManager)
         {
             _connection = connection;
             _mySessionId = mySessionId;
@@ -184,7 +184,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public ConnectionBase Connection
+        public Connection Connection
         {
             get
             {

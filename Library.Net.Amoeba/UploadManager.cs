@@ -980,7 +980,7 @@ namespace Library.Net.Amoeba
                     _encodeState = ManagerState.Start;
 
                     _uploadManagerThread = new Thread(this.UploadManagerThread);
-                    _uploadManagerThread.Priority = ThreadPriority.Lowest;
+                    _uploadManagerThread.Priority = ThreadPriority.BelowNormal;
                     _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
                     _uploadManagerThread.Start();
                 }

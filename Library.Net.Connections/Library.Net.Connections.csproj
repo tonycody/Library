@@ -61,9 +61,6 @@
     </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ionic.Zip">
-      <HintPath>..\Assembly\Ionic.Zip.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -87,7 +84,7 @@
     <Compile Include="SecureConnectionType.cs" />
     <Compile Include="Utilities\Rsa2048.cs" />
     <Compile Include="CompressConnection.cs" />
-    <Compile Include="ConnectionBase.cs" />
+    <Compile Include="Connection.cs" />
     <Compile Include="CrcConnection.cs" />
     <Compile Include="Utilities\EcDiffieHellmanP521_Sha512.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

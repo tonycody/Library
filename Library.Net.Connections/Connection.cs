@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Library.Net.Connections
 {
-    public abstract class ConnectionBase : ManagerBase
+    public abstract class Connection : ManagerBase
     {
         protected static TimeSpan CheckTimeout(TimeSpan elapsedTime, TimeSpan timeout)
         {
@@ -21,7 +21,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public abstract IEnumerable<ConnectionBase> GetLayers();
+        public abstract IEnumerable<Connection> GetLayers();
 
         public abstract long ReceivedByteCount { get; }
 

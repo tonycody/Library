@@ -248,13 +248,13 @@ namespace Library.Net.Outopos
             throw new ClientManagerException();
         }
 
-        public ConnectionBase CreateConnection(string uri, BandwidthLimit bandwidthLimit)
+        public Connection CreateConnection(string uri, BandwidthLimit bandwidthLimit)
         {
             List<IDisposable> garbages = new List<IDisposable>();
 
             try
             {
-                ConnectionBase connection = null;
+                Connection connection = null;
 
                 if (connection == null)
                 {

@@ -58,9 +58,9 @@ namespace Library.Net.Amoeba
         {
             lock (this.ThisLock)
             {
-                _table.GetValue(group, (key) =>
+                _table.GetValue(group, (_) =>
                 {
-                    var value = new GroupManager(key);
+                    var value = new GroupManager(group);
                     _groupManagers.AddLast(new WeakReference(value));
 
                     return value;

@@ -9,33 +9,38 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Header", Namespace = "http://Library/Net/Outopos")]
-    public sealed class Header : ImmutableCertificateItemBase<Header>, IHeader<Tag, Key>
+    [DataContract(Name = "Metadata", Namespace = "http://Library/Net/Outopos")]
+    public abstract class Metadata<TMetadata, TTag> : ImmutableCashItemBase<TMetadata>, IMetadata<TTag>
+        where TMetadata : Metadata<TMetadata, TTag>
+        where TTag : ItemBase<TTag>, ITag
     {
         private enum SerializeId : byte
         {
             Tag = 0,
-            CreationTime = 1,
-            Key = 2,
+            Signature = 1,
+            CreationTime = 2,
+            Key = 3,
 
-            Certificate = 3,
+            Cash = 4,
         }
 
-        private volatile Tag _tag;
+        private volatile TTag _tag;
+        private volatile string _signature;
         private DateTime _creationTime;
         private volatile Key _key;
 
-        private volatile Certificate _certificate;
+        private volatile Cash _cash;
 
         private volatile object _thisLock;
 
-        public Header(Tag tag, DateTime creationTime, Key key, DigitalSignature digitalSignature)
+        public Metadata(TTag tag, string signature, DateTime creationTime, Key key, Miner miner)
         {
             this.Tag = tag;
+            this.Signature = signature;
             this.CreationTime = creationTime;
             this.Key = key;
 
-            this.CreateCertificate(digitalSignature);
+            this.CreateCash(miner);
         }
 
         protected override void Initialize()
@@ -57,7 +62,11 @@ namespace Library.Net.Outopos
                 {
                     if (id == (byte)SerializeId.Tag)
                     {
-                        this.Tag = Tag.Import(rangeStream, bufferManager);
+                        this.Tag = ItemBase<TTag>.Import(rangeStream, bufferManager);
+                    }
+                    else if (id == (byte)SerializeId.Signature)
+                    {
+                        this.Signature = ItemUtilities.GetString(rangeStream);
                     }
                     else if (id == (byte)SerializeId.CreationTime)
                     {
@@ -68,9 +77,9 @@ namespace Library.Net.Outopos
                         this.Key = Key.Import(rangeStream, bufferManager);
                     }
 
-                    else if (id == (byte)SerializeId.Certificate)
+                    else if (id == (byte)SerializeId.Cash)
                     {
-                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        this.Cash = Cash.Import(rangeStream, bufferManager);
                     }
                 }
             }
@@ -88,6 +97,11 @@ namespace Library.Net.Outopos
                     ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
                 }
             }
+            // Signature
+            if (this.Signature != null)
+            {
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
+            }
             // CreationTime
             if (this.CreationTime != DateTime.MinValue)
             {
@@ -102,12 +116,12 @@ namespace Library.Net.Outopos
                 }
             }
 
-            // Certificate
-            if (this.Certificate != null)
+            // Cash
+            if (this.Cash != null)
             {
-                using (var stream = this.Certificate.Export(bufferManager))
+                using (var stream = this.Cash.Export(bufferManager))
                 {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Cash, stream);
                 }
             }
 
@@ -117,17 +131,18 @@ namespace Library.Net.Outopos
 
         public override int GetHashCode()
         {
-            return _key.GetHashCode();
+            if (this.Key == null) return 0;
+            else return this.Key.GetHashCode();
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Header)) return false;
+            if ((object)obj == null || !(obj is TMetadata)) return false;
 
-            return this.Equals((Header)obj);
+            return this.Equals((TMetadata)obj);
         }
 
-        public override bool Equals(Header other)
+        public override bool Equals(TMetadata other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -136,7 +151,7 @@ namespace Library.Net.Outopos
                 || this.CreationTime != other.CreationTime
                 || this.Key != other.Key
 
-                || this.Certificate != other.Certificate)
+                || this.Cash != other.Cash)
             {
                 return false;
             }
@@ -144,20 +159,20 @@ namespace Library.Net.Outopos
             return true;
         }
 
-        protected override void CreateCertificate(DigitalSignature digitalSignature)
+        protected override void CreateCash(Miner miner)
         {
-            base.CreateCertificate(digitalSignature);
+            base.CreateCash(miner);
         }
 
-        public override bool VerifyCertificate()
+        public override int VerifyCash()
         {
-            return base.VerifyCertificate();
+            return base.VerifyCash();
         }
 
-        protected override Stream GetCertificateStream()
+        protected override Stream GetCashStream()
         {
-            var temp = this.Certificate;
-            this.Certificate = null;
+            var temp = this.Cash;
+            this.Cash = null;
 
             try
             {
@@ -165,26 +180,26 @@ namespace Library.Net.Outopos
             }
             finally
             {
-                this.Certificate = temp;
+                this.Cash = temp;
             }
         }
 
-        public override Certificate Certificate
+        public override Cash Cash
         {
             get
             {
-                return _certificate;
+                return _cash;
             }
             protected set
             {
-                _certificate = value;
+                _cash = value;
             }
         }
 
-        #region IHeader<Tag, Key>
+        #region IMetadata<TTag>
 
         [DataMember(Name = "Tag")]
-        public Tag Tag
+        public TTag Tag
         {
             get
             {
@@ -193,6 +208,19 @@ namespace Library.Net.Outopos
             private set
             {
                 _tag = value;
+            }
+        }
+
+        [DataMember(Name = "Signature")]
+        public string Signature
+        {
+            get
+            {
+                return _signature;
+            }
+            private set
+            {
+                _signature = value;
             }
         }
 
@@ -227,35 +255,6 @@ namespace Library.Net.Outopos
             {
                 _key = value;
             }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private volatile byte[] _sha512_hash;
-
-        public byte[] GetHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    _sha512_hash = Sha512.ComputeHash(stream);
-                }
-            }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            return Unsafe.Equals(this.GetHash(hashAlgorithm), hash);
         }
 
         #endregion

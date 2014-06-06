@@ -131,7 +131,7 @@ namespace Library.Net.Amoeba
         {
             try
             {
-                using (var targetStream = new RangeStream(stream))
+                using (var targetStream = new RangeStream(stream, true))
                 {
                     using (Stream verifyStream = new RangeStream(targetStream, 0, targetStream.Length - 4, true))
                     {
@@ -213,21 +213,24 @@ namespace Library.Net.Amoeba
 
         private static string ToBase64String(Stream stream)
         {
-            byte[] buffer = null;
-
-            try
+            using (var targetStream = new RangeStream(stream, true))
             {
-                buffer = _bufferManager.TakeBuffer((int)stream.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-                stream.Read(buffer, 0, (int)stream.Length);
+                byte[] buffer = null;
 
-                return NetworkConverter.ToBase64UrlString(buffer, 0, (int)stream.Length);
-            }
-            finally
-            {
-                if (buffer != null)
+                try
                 {
-                    _bufferManager.ReturnBuffer(buffer);
+                    buffer = _bufferManager.TakeBuffer((int)targetStream.Length);
+                    targetStream.Seek(0, SeekOrigin.Begin);
+                    targetStream.Read(buffer, 0, (int)targetStream.Length);
+
+                    return NetworkConverter.ToBase64UrlString(buffer, 0, (int)targetStream.Length);
+                }
+                finally
+                {
+                    if (buffer != null)
+                    {
+                        _bufferManager.ReturnBuffer(buffer);
+                    }
                 }
             }
         }

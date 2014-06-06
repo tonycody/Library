@@ -23,17 +23,17 @@ namespace Library.Security
 
         private volatile int _hashCode;
 
-        public static readonly int MaxKeyLength = 256;
+        public static readonly int MaxKeyLength = 64;
         public static readonly int MaxValueLength = 64;
 
-        private Cash(CashAlgorithm cashAlgorithm, byte[] value, TimeSpan timeout)
+        internal Cash(Miner miner, Stream stream)
         {
-            this.CashAlgorithm = cashAlgorithm;
-
-            if (cashAlgorithm == CashAlgorithm.Version1)
+            if (miner.CashAlgorithm == CashAlgorithm.Version1)
             {
-                this.Key = Cash_Utilities_1.Create(value, timeout);
+                this.Key = Cash_Utilities_1.Create(Sha512.ComputeHash(stream), miner.ComputeTime);
             }
+
+            this.CashAlgorithm = miner.CashAlgorithm;
         }
 
         protected override void Initialize()
@@ -123,20 +123,15 @@ namespace Library.Security
             }
         }
 
-        public static Cash Create(CashAlgorithm cashAlgorithm, byte[] value, TimeSpan timeout)
-        {
-            return new Cash(cashAlgorithm, value, timeout);
-        }
-
-        public int Verify(byte[] value)
+        internal int Verify(Stream stream)
         {
             if (this.CashAlgorithm == Security.CashAlgorithm.Version1)
             {
-                return Cash_Utilities_1.Verify(this.Key, value);
+                return Cash_Utilities_1.Verify(this.Key, Sha512.ComputeHash(stream));
             }
             else
             {
-                return -1;
+                return 0;
             }
         }
 
@@ -201,26 +196,27 @@ namespace Library.Security
                 {
                     if (System.Environment.Is64BitProcess)
                     {
-                        _path = "Assembly/Hashcash_x64.exe";
+                        _path = "Assemblies/Hashcash_x64.exe";
                     }
                     else
                     {
-                        _path = "Assembly/Hashcash_x86.exe";
+                        _path = "Assemblies/Hashcash_x86.exe";
                     }
                 }
             }
 
-            public static byte[] Create(byte[] value, TimeSpan timeout)
+            public static byte[] Create(byte[] value, TimeSpan computeTime)
             {
                 if (value == null) throw new ArgumentNullException("value");
-                if (timeout < TimeSpan.Zero) throw new ArgumentOutOfRangeException("timeout");
+                if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
+                if (computeTime < TimeSpan.Zero) throw new ArgumentOutOfRangeException("computeTime");
 
                 var info = new ProcessStartInfo(_path);
                 info.CreateNoWindow = true;
                 info.UseShellExecute = false;
                 info.RedirectStandardOutput = true;
 
-                info.Arguments = string.Format("hashcash1 create {0} {1}", NetworkConverter.ToHexString(value), (int)timeout.TotalSeconds);
+                info.Arguments = string.Format("hashcash1 create {0} {1}", NetworkConverter.ToHexString(value), (int)computeTime.TotalSeconds);
 
                 using (var process = Process.Start(info))
                 {
@@ -245,8 +241,9 @@ namespace Library.Security
             public static int Verify(byte[] key, byte[] value)
             {
                 if (key == null) throw new ArgumentNullException("key");
-                if (value == null) throw new ArgumentNullException("value");
                 if (key.Length != 64) throw new ArgumentOutOfRangeException("key");
+                if (value == null) throw new ArgumentNullException("value");
+                if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
 
                 var info = new ProcessStartInfo(_path);
                 info.CreateNoWindow = true;
@@ -264,13 +261,13 @@ namespace Library.Security
                         var result = process.StandardOutput.ReadLine();
 
                         process.WaitForExit();
-                        if (process.ExitCode != 0) return -1;
+                        if (process.ExitCode != 0) return 0;
 
                         return int.Parse(result);
                     }
                     catch (Exception)
                     {
-                        return -1;
+                        return 0;
                     }
                 }
             }

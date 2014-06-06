@@ -222,9 +222,9 @@ namespace Library.Security
                 streams.Add(new UniteStream(bufferStream, exportStream));
             }
 
-            using (var joinStream = new UniteStream(streams))
+            using (var uniteStream = new UniteStream(streams))
             {
-                return new Certificate(digitalSignature, joinStream);
+                return new Certificate(digitalSignature, uniteStream);
             }
         }
 
@@ -268,9 +268,9 @@ namespace Library.Security
                 streams.Add(new UniteStream(bufferStream, exportStream));
             }
 
-            using (var joinStream = new UniteStream(streams))
+            using (var uniteStream = new UniteStream(streams))
             {
-                return certificate.Verify(joinStream);
+                return certificate.Verify(uniteStream);
             }
         }
 

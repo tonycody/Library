@@ -34,11 +34,11 @@ namespace Library
             {
                 if (System.Environment.Is64BitProcess)
                 {
-                    _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_x64.dll");
+                    _nativeLibraryManager = new NativeLibraryManager("Assemblies/Library_x64.dll");
                 }
                 else
                 {
-                    _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_x86.dll");
+                    _nativeLibraryManager = new NativeLibraryManager("Assemblies/Library_x86.dll");
                 }
 
                 _copy = _nativeLibraryManager.GetMethod<CopyDelegate>("copy");

@@ -27,36 +27,55 @@ namespace Library.Net.Outopos
 
             try
             {
-                stream = item.Export(_bufferManager);
+                stream = new RangeStream(item.Export(_bufferManager));
+
                 List<KeyValuePair<byte, Stream>> list = new List<KeyValuePair<byte, Stream>>();
 
                 try
                 {
-                    BufferStream deflateBufferStream = new BufferStream(_bufferManager);
-                    byte[] compressBuffer = null;
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    BufferStream deflateBufferStream = null;
 
                     try
                     {
-                        compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+                        deflateBufferStream = new BufferStream(_bufferManager);
 
                         using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                         {
-                            int i = -1;
+                            byte[] compressBuffer = null;
 
-                            while ((i = stream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
+                            try
                             {
-                                deflateStream.Write(compressBuffer, 0, i);
+                                compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                                int i = -1;
+
+                                while ((i = stream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
+                                {
+                                    deflateStream.Write(compressBuffer, 0, i);
+                                }
+                            }
+                            finally
+                            {
+                                if (compressBuffer != null)
+                                {
+                                    _bufferManager.ReturnBuffer(compressBuffer);
+                                }
                             }
                         }
+
+                        deflateBufferStream.Seek(0, SeekOrigin.Begin);
+
+                        list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                     }
-                    finally
+                    catch (Exception)
                     {
-                        _bufferManager.ReturnBuffer(compressBuffer);
+                        if (deflateBufferStream != null)
+                        {
+                            deflateBufferStream.Dispose();
+                        }
                     }
-
-                    deflateBufferStream.Seek(0, SeekOrigin.Begin);
-
-                    list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
@@ -99,7 +118,9 @@ namespace Library.Net.Outopos
             catch (Exception ex)
             {
                 if (stream != null)
+                {
                     stream.Dispose();
+                }
 
                 throw new ArgumentException(ex.Message, ex);
             }
@@ -110,69 +131,77 @@ namespace Library.Net.Outopos
         {
             try
             {
-                using (Stream verifyStream = new RangeStream(stream, 0, stream.Length - 4, true))
+                using (var targetStream = new RangeStream(stream, true))
                 {
-                    byte[] verifyCrc = Crc32_Castagnoli.ComputeHash(verifyStream);
-                    byte[] orignalCrc = new byte[4];
-
-                    using (RangeStream crcStream = new RangeStream(stream, stream.Length - 4, 4, true))
+                    using (Stream verifyStream = new RangeStream(targetStream, 0, targetStream.Length - 4, true))
                     {
-                        crcStream.Read(orignalCrc, 0, orignalCrc.Length);
-                    }
+                        byte[] verifyCrc = Crc32_Castagnoli.ComputeHash(verifyStream);
+                        byte[] orignalCrc = new byte[4];
 
-                    if (!CollectionUtilities.Equals(verifyCrc, orignalCrc))
-                        throw new ArgumentException("Crc Error");
-                }
-
-                stream.Seek(0, SeekOrigin.Begin);
-                byte type = (byte)stream.ReadByte();
-
-                using (Stream dataStream = new RangeStream(stream, stream.Position, stream.Length - stream.Position - 4, true))
-                {
-                    if (type == (byte)ConvertCompressionAlgorithm.None)
-                    {
-                        return ItemBase<T>.Import(dataStream, _bufferManager);
-                    }
-                    else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
-                    {
-                        using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
+                        using (RangeStream crcStream = new RangeStream(targetStream, targetStream.Length - 4, 4, true))
                         {
-                            byte[] decompressBuffer = null;
+                            crcStream.Read(orignalCrc, 0, orignalCrc.Length);
+                        }
 
-                            try
-                            {
-                                decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
-
-                                using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
-                                {
-                                    int i = -1;
-
-                                    while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
-                                    {
-                                        deflateBufferStream.Write(decompressBuffer, 0, i);
-                                    }
-                                }
-                            }
-                            finally
-                            {
-                                _bufferManager.ReturnBuffer(decompressBuffer);
-                            }
-
-#if DEBUG
-                            Debug.WriteLine("OutoposConverter FromStream : {0}→{1} {2}",
-                                NetworkConverter.ToSizeString(dataStream.Length),
-                                NetworkConverter.ToSizeString(deflateBufferStream.Length),
-                                NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));
-#endif
-
-                            deflateBufferStream.Seek(0, SeekOrigin.Begin);
-
-                            return ItemBase<T>.Import(deflateBufferStream, _bufferManager);
+                        if (!Unsafe.Equals(verifyCrc, orignalCrc))
+                        {
+                            throw new ArgumentException("Crc Error");
                         }
                     }
-                    else
+
+                    targetStream.Seek(0, SeekOrigin.Begin);
+                    byte type = (byte)targetStream.ReadByte();
+
+                    using (Stream dataStream = new RangeStream(targetStream, targetStream.Position, targetStream.Length - targetStream.Position - 4, true))
                     {
-                        throw new ArgumentException("ArgumentException");
+                        if (type == (byte)ConvertCompressionAlgorithm.None)
+                        {
+                            return ItemBase<T>.Import(dataStream, _bufferManager);
+                        }
+                        else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
+                        {
+                            using (BufferStream deflateBufferStream = new BufferStream(_bufferManager))
+                            {
+                                byte[] decompressBuffer = null;
+
+                                try
+                                {
+                                    decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                                    using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
+                                    {
+                                        int i = -1;
+
+                                        while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
+                                        {
+                                            deflateBufferStream.Write(decompressBuffer, 0, i);
+                                        }
+                                    }
+                                }
+                                finally
+                                {
+                                    if (decompressBuffer != null)
+                                    {
+                                        _bufferManager.ReturnBuffer(decompressBuffer);
+                                    }
+                                }
+
+#if DEBUG
+                                Debug.WriteLine("OutoposConverter FromStream : {0}→{1} {2}",
+                                    NetworkConverter.ToSizeString(dataStream.Length),
+                                    NetworkConverter.ToSizeString(deflateBufferStream.Length),
+                                    NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length));
+#endif
+
+                                deflateBufferStream.Seek(0, SeekOrigin.Begin);
+
+                                return ItemBase<T>.Import(deflateBufferStream, _bufferManager);
+                            }
+                        }
+                        else
+                        {
+                            throw new ArgumentException("ArgumentException");
+                        }
                     }
                 }
             }
@@ -184,21 +213,24 @@ namespace Library.Net.Outopos
 
         private static string ToBase64String(Stream stream)
         {
-            byte[] buffer = null;
-
-            try
+            using (var targetStream = new RangeStream(stream, true))
             {
-                buffer = _bufferManager.TakeBuffer((int)stream.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-                stream.Read(buffer, 0, (int)stream.Length);
+                byte[] buffer = null;
 
-                return NetworkConverter.ToBase64UrlString(buffer, 0, (int)stream.Length);
-            }
-            finally
-            {
-                if (buffer != null)
+                try
                 {
-                    _bufferManager.ReturnBuffer(buffer);
+                    buffer = _bufferManager.TakeBuffer((int)targetStream.Length);
+                    targetStream.Seek(0, SeekOrigin.Begin);
+                    targetStream.Read(buffer, 0, (int)targetStream.Length);
+
+                    return NetworkConverter.ToBase64UrlString(buffer, 0, (int)targetStream.Length);
+                }
+                finally
+                {
+                    if (buffer != null)
+                    {
+                        _bufferManager.ReturnBuffer(buffer);
+                    }
                 }
             }
         }
@@ -233,7 +265,7 @@ namespace Library.Net.Outopos
         public static Node FromNodeString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node:")) throw new ArgumentException("item");
+            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) throw new ArgumentException("item");
 
             try
             {
@@ -248,24 +280,24 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static string ToTagString(Tag item, string option)
+        public static string ToSectionString(Section item, string option)
         {
-            if (item == null) throw new ArgumentNullException("Tag");
+            if (item == null) throw new ArgumentNullException("Section");
 
             try
             {
                 if (option != null)
                 {
-                    using (Stream stream = OutoposConverter.ToStream<Tag>(item))
+                    using (Stream stream = OutoposConverter.ToStream<Section>(item))
                     {
-                        return "Tag:" + OutoposConverter.ToBase64String(stream) + "," + option;
+                        return "Section:" + OutoposConverter.ToBase64String(stream) + "," + option;
                     }
                 }
                 else
                 {
-                    using (Stream stream = OutoposConverter.ToStream<Tag>(item))
+                    using (Stream stream = OutoposConverter.ToStream<Section>(item))
                     {
-                        return "Tag:" + OutoposConverter.ToBase64String(stream);
+                        return "Section:" + OutoposConverter.ToBase64String(stream);
                     }
                 }
             }
@@ -275,10 +307,10 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static Tag FromTagString(string item, out string option)
+        public static Section FromSectionString(string item, out string option)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Tag:")) throw new ArgumentException("item");
+            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
 
             option = null;
 
@@ -290,16 +322,138 @@ namespace Library.Net.Outopos
 
                     option = list[1];
 
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Tag:".Length)))
+                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Section:".Length)))
                     {
-                        return OutoposConverter.FromStream<Tag>(stream);
+                        return OutoposConverter.FromStream<Section>(stream);
                     }
                 }
                 else
                 {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Tag:".Length)))
+                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Section:".Length)))
                     {
-                        return OutoposConverter.FromStream<Tag>(stream);
+                        return OutoposConverter.FromStream<Section>(stream);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw new FormatException();
+            }
+        }
+
+        public static string ToWikiString(Wiki item, string option)
+        {
+            if (item == null) throw new ArgumentNullException("Wiki");
+
+            try
+            {
+                if (option != null)
+                {
+                    using (Stream stream = OutoposConverter.ToStream<Wiki>(item))
+                    {
+                        return "Wiki:" + OutoposConverter.ToBase64String(stream) + "," + option;
+                    }
+                }
+                else
+                {
+                    using (Stream stream = OutoposConverter.ToStream<Wiki>(item))
+                    {
+                        return "Wiki:" + OutoposConverter.ToBase64String(stream);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw new FormatException();
+            }
+        }
+
+        public static Wiki FromWikiString(string item, out string option)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (!item.StartsWith("Wiki:") && !item.StartsWith("Wiki@")) throw new ArgumentException("item");
+
+            option = null;
+
+            try
+            {
+                if (item.Contains(","))
+                {
+                    var list = item.Split(new char[] { ',' }, 2);
+
+                    option = list[1];
+
+                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Wiki:".Length)))
+                    {
+                        return OutoposConverter.FromStream<Wiki>(stream);
+                    }
+                }
+                else
+                {
+                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Wiki:".Length)))
+                    {
+                        return OutoposConverter.FromStream<Wiki>(stream);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw new FormatException();
+            }
+        }
+
+        public static string ToChatString(Chat item, string option)
+        {
+            if (item == null) throw new ArgumentNullException("Chat");
+
+            try
+            {
+                if (option != null)
+                {
+                    using (Stream stream = OutoposConverter.ToStream<Chat>(item))
+                    {
+                        return "Chat:" + OutoposConverter.ToBase64String(stream) + "," + option;
+                    }
+                }
+                else
+                {
+                    using (Stream stream = OutoposConverter.ToStream<Chat>(item))
+                    {
+                        return "Chat:" + OutoposConverter.ToBase64String(stream);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw new FormatException();
+            }
+        }
+
+        public static Chat FromChatString(string item, out string option)
+        {
+            if (item == null) throw new ArgumentNullException("item");
+            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
+
+            option = null;
+
+            try
+            {
+                if (item.Contains(","))
+                {
+                    var list = item.Split(new char[] { ',' }, 2);
+
+                    option = list[1];
+
+                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Chat:".Length)))
+                    {
+                        return OutoposConverter.FromStream<Chat>(stream);
+                    }
+                }
+                else
+                {
+                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
+                    {
+                        return OutoposConverter.FromStream<Chat>(stream);
                     }
                 }
             }

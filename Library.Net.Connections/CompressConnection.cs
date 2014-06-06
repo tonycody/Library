@@ -7,7 +7,7 @@ using Library.Io;
 
 namespace Library.Net.Connections
 {
-    public class CompressConnection : ConnectionBase, IThisLock
+    public class CompressConnection : Connection, IThisLock
     {
         [Flags]
         private enum CompressAlgorithm : uint
@@ -16,7 +16,7 @@ namespace Library.Net.Connections
             Deflate = 0x01,
         }
 
-        private ConnectionBase _connection;
+        private Connection _connection;
         private int _maxReceiveCount;
         private BufferManager _bufferManager;
 
@@ -31,7 +31,7 @@ namespace Library.Net.Connections
 
         private volatile bool _disposed;
 
-        public CompressConnection(ConnectionBase connection, int maxReceiveCount, BufferManager bufferManager)
+        public CompressConnection(Connection connection, int maxReceiveCount, BufferManager bufferManager)
         {
             _connection = connection;
             _maxReceiveCount = maxReceiveCount;
@@ -40,9 +40,9 @@ namespace Library.Net.Connections
             _myCompressAlgorithm = CompressAlgorithm.Deflate;
         }
 
-        public override IEnumerable<ConnectionBase> GetLayers()
+        public override IEnumerable<Connection> GetLayers()
         {
-            var list = new List<ConnectionBase>(_connection.GetLayers());
+            var list = new List<Connection>(_connection.GetLayers());
             list.Add(this);
 
             return list;
@@ -68,7 +68,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public ConnectionBase Connection
+        public Connection Connection
         {
             get
             {

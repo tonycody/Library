@@ -28,11 +28,11 @@ namespace Library.Security
             {
                 if (System.Environment.Is64BitProcess)
                 {
-                    _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Security_x64.dll");
+                    _nativeLibraryManager = new NativeLibraryManager("Assemblies/Library_Security_x64.dll");
                 }
                 else
                 {
-                    _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Security_x86.dll");
+                    _nativeLibraryManager = new NativeLibraryManager("Assemblies/Library_Security_x86.dll");
                 }
 
                 _compute = _nativeLibraryManager.GetMethod<ComputeDelegate>("compute_Crc32_Castagnoli");

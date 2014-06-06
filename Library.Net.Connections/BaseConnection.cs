@@ -7,7 +7,7 @@ using Library.Io;
 
 namespace Library.Net.Connections
 {
-    public class BaseConnection : ConnectionBase, IThisLock
+    public class BaseConnection : Connection, IThisLock
     {
         private CapBase _cap;
         private BandwidthLimit _bandwidthLimit;
@@ -61,9 +61,9 @@ namespace Library.Net.Connections
             }
         }
 
-        public override IEnumerable<ConnectionBase> GetLayers()
+        public override IEnumerable<Connection> GetLayers()
         {
-            return new ConnectionBase[] { this };
+            return new Connection[] { this };
         }
 
         public override long ReceivedByteCount

@@ -19,11 +19,11 @@ namespace Library.Compression
             {
                 if (System.Environment.Is64BitProcess)
                 {
-                    _path = "Assembly/Xz_x64.exe";
+                    _path = "Assemblies/Xz_x64.exe";
                 }
                 else
                 {
-                    _path = "Assembly/Xz_x86.exe";
+                    _path = "Assemblies/Xz_x86.exe";
                 }
             }
         }

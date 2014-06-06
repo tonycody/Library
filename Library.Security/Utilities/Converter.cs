@@ -128,7 +128,7 @@ namespace Library.Security
         {
             try
             {
-                using (var targetStream = new RangeStream(stream))
+                using (var targetStream = new RangeStream(stream, true))
                 {
                     using (Stream verifyStream = new RangeStream(targetStream, 0, targetStream.Length - 4, true))
                     {

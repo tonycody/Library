@@ -6,9 +6,9 @@ using Library.Security;
 
 namespace Library.Net.Connections
 {
-    public class CrcConnection : ConnectionBase, IThisLock
+    public class CrcConnection : Connection, IThisLock
     {
-        private ConnectionBase _connection;
+        private Connection _connection;
         private BufferManager _bufferManager;
 
         private readonly object _sendLock = new object();
@@ -19,7 +19,7 @@ namespace Library.Net.Connections
 
         private volatile bool _disposed;
 
-        public CrcConnection(ConnectionBase connection, BufferManager bufferManager)
+        public CrcConnection(Connection connection, BufferManager bufferManager)
         {
             _connection = connection;
             _bufferManager = bufferManager;
@@ -27,9 +27,9 @@ namespace Library.Net.Connections
             _connect = true;
         }
 
-        public override IEnumerable<ConnectionBase> GetLayers()
+        public override IEnumerable<Connection> GetLayers()
         {
-            var list = new List<ConnectionBase>(_connection.GetLayers());
+            var list = new List<Connection>(_connection.GetLayers());
             list.Add(this);
 
             return list;
@@ -55,7 +55,7 @@ namespace Library.Net.Connections
             }
         }
 
-        public ConnectionBase Connection
+        public Connection Connection
         {
             get
             {

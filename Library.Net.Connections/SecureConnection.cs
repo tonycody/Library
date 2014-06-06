@@ -11,10 +11,10 @@ using Library.Security;
 
 namespace Library.Net.Connections
 {
-    public class SecureConnection : ConnectionBase, IThisLock
+    public class SecureConnection : Connection, IThisLock
     {
         private SecureConnectionType _type;
-        private ConnectionBase _connection;
+        private Connection _connection;
         private DigitalSignature _digitalSignature;
         private BufferManager _bufferManager;
 
@@ -39,7 +39,7 @@ namespace Library.Net.Connections
 
         private volatile bool _disposed;
 
-        public SecureConnection(SecureConnectionVersion version, SecureConnectionType type, ConnectionBase connection, DigitalSignature digitalSignature, BufferManager bufferManager)
+        public SecureConnection(SecureConnectionVersion version, SecureConnectionType type, Connection connection, DigitalSignature digitalSignature, BufferManager bufferManager)
         {
             _type = type;
             _connection = connection;
@@ -49,9 +49,9 @@ namespace Library.Net.Connections
             _myVersion = version;
         }
 
-        public override IEnumerable<ConnectionBase> GetLayers()
+        public override IEnumerable<Connection> GetLayers()
         {
-            var list = new List<ConnectionBase>(_connection.GetLayers());
+            var list = new List<Connection>(_connection.GetLayers());
             list.Add(this);
 
             return list;

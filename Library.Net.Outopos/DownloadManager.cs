@@ -2,20 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.Serialization;
 using System.Threading;
-using System.Linq;
+using System.Threading.Tasks;
 using Library.Collections;
 using Library.Security;
-using Library.Io;
 
 namespace Library.Net.Outopos
 {
-    class DownloadManager : ManagerBase, IThisLock
+    class DownloadManager : StateManagerBase, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
+
+        private ManagerState _state = ManagerState.Stop;
+
+        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -27,46 +29,252 @@ namespace Library.Net.Outopos
             _bufferManager = bufferManager;
         }
 
-        public Stream GetContent(Header header)
+        public Task<SectionProfileContent> Download(SectionProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
+            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
 
-            lock (this.ThisLock)
+            return Task<SectionProfileContent>.Factory.StartNew(() =>
             {
-                if (!_cacheManager.Contains(header.Key))
+                lock (this.ThisLock)
                 {
-                    _connectionsManager.Download(header.Key);
-                }
-                else
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
+                    if (!_cacheManager.Contains(header.Metadata.Key))
                     {
-                        buffer = _cacheManager[header.Key];
-                        if (buffer.Count > 1024 * 1024 * 8) throw new DownloadManagerException();
+                        _connectionsManager.Download(header.Metadata.Key);
 
-                        var bufferStream = new BufferStream(_bufferManager);
-                        bufferStream.Write(buffer.Array, buffer.Offset, buffer.Count);
-                        bufferStream.Seek(0, SeekOrigin.Begin);
-
-                        return bufferStream;
+                        return null;
                     }
-                    catch (Exception)
+                    else
                     {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
+                        try
                         {
-                            _bufferManager.ReturnBuffer(buffer.Array);
+                            buffer = _cacheManager[header.Metadata.Key];
+                            return ContentConverter.FromSectionProfileContentBlock(buffer);
                         }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+
+                        return null;
                     }
+                }
+            });
+        }
+
+        public Task<SectionMessageContent> Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
+            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
+
+            return Task<SectionMessageContent>.Factory.StartNew(() =>
+            {
+                lock (this.ThisLock)
+                {
+                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    {
+                        _connectionsManager.Download(header.Metadata.Key);
+
+                        return null;
+                    }
+                    else
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            buffer = _cacheManager[header.Metadata.Key];
+                            return ContentConverter.FromSectionMessageContentBlock(buffer, exchangePrivateKey);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+
+                        return null;
+                    }
+                }
+            });
+        }
+
+        public Task<WikiPageContent> Download(WikiPageHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
+
+            return Task<WikiPageContent>.Factory.StartNew(() =>
+            {
+                lock (this.ThisLock)
+                {
+                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    {
+                        _connectionsManager.Download(header.Metadata.Key);
+
+                        return null;
+                    }
+                    else
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            buffer = _cacheManager[header.Metadata.Key];
+                            return ContentConverter.FromWikiPageContentBlock(buffer);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+
+                        return null;
+                    }
+                }
+            });
+        }
+
+        public Task<ChatTopicContent> Download(ChatTopicHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
+
+            return Task<ChatTopicContent>.Factory.StartNew(() =>
+            {
+                lock (this.ThisLock)
+                {
+                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    {
+                        _connectionsManager.Download(header.Metadata.Key);
+
+                        return null;
+                    }
+                    else
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            buffer = _cacheManager[header.Metadata.Key];
+                            return ContentConverter.FromChatTopicContentBlock(buffer);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+
+                        return null;
+                    }
+                }
+            });
+        }
+
+        public Task<ChatMessageContent> Download(ChatMessageHeader header)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
+
+            return Task<ChatMessageContent>.Factory.StartNew(() =>
+            {
+                lock (this.ThisLock)
+                {
+                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    {
+                        _connectionsManager.Download(header.Metadata.Key);
+
+                        return null;
+                    }
+                    else
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            buffer = _cacheManager[header.Metadata.Key];
+                            return ContentConverter.FromChatMessageContentBlock(buffer);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+
+                        return null;
+                    }
+                }
+            });
+        }
+
+        public override ManagerState State
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _state;
                 }
             }
+        }
 
-            return null;
+        private readonly object _stateLock = new object();
+
+        public override void Start()
+        {
+            lock (_stateLock)
+            {
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
+                }
+            }
+        }
+
+        public override void Stop()
+        {
+            lock (_stateLock)
+            {
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
+                }
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -99,5 +307,13 @@ namespace Library.Net.Outopos
         public DownloadManagerException() : base() { }
         public DownloadManagerException(string message) : base(message) { }
         public DownloadManagerException(string message, Exception innerException) : base(message, innerException) { }
+    }
+
+    [Serializable]
+    class DecodeException : DownloadManagerException
+    {
+        public DecodeException() : base() { }
+        public DecodeException(string message) : base(message) { }
+        public DecodeException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

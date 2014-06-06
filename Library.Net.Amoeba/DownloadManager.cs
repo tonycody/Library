@@ -440,9 +440,8 @@ namespace Library.Net.Amoeba
                                 int length = Math.Max(group.InformationLength, 32) - downloadCount;
                                 if (length <= 0) continue;
 
-                                foreach (var key in tempKeys
-                                    .Randomize()
-                                    .Take(length))
+                                random.Shuffle(tempKeys);
+                                foreach (var key in tempKeys.Take(length))
                                 {
                                     _connectionsManager.Download(key);
 
@@ -1105,7 +1104,7 @@ namespace Library.Net.Amoeba
                     _state = ManagerState.Start;
 
                     _downloadManagerThread = new Thread(this.DownloadManagerThread);
-                    _downloadManagerThread.Priority = ThreadPriority.Lowest;
+                    _downloadManagerThread.Priority = ThreadPriority.BelowNormal;
                     _downloadManagerThread.Name = "DownloadManager_DownloadManagerThread";
                     _downloadManagerThread.Start();
                 }
@@ -1139,7 +1138,7 @@ namespace Library.Net.Amoeba
                     _decodeState = ManagerState.Start;
 
                     _decodeManagerThread = new Thread(this.DecodeManagerThread);
-                    _decodeManagerThread.Priority = ThreadPriority.Lowest;
+                    _decodeManagerThread.Priority = ThreadPriority.BelowNormal;
                     _decodeManagerThread.Name = "DownloadManager_DecodeManagerThread";
                     _decodeManagerThread.Start();
                 }

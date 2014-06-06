@@ -280,11 +280,11 @@ namespace Library.Correction
                 {
                     if (System.Environment.Is64BitProcess)
                     {
-                        _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Correction_x64.dll");
+                        _nativeLibraryManager = new NativeLibraryManager("Assemblies/Library_Correction_x64.dll");
                     }
                     else
                     {
-                        _nativeLibraryManager = new NativeLibraryManager("Assembly/Library_Correction_x86.dll");
+                        _nativeLibraryManager = new NativeLibraryManager("Assemblies/Library_Correction_x86.dll");
                     }
 
                     _mul = _nativeLibraryManager.GetMethod<MulDelegate>("mul");

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Library.Security;
@@ -23,18 +22,20 @@ namespace Library.Net.Outopos
         private DownloadManager _downloadManager;
         private UploadManager _uploadManager;
 
-        private volatile ManagerState _state = ManagerState.Stop;
+        private ManagerState _state = ManagerState.Stop;
 
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
         private CheckUriEventHandler _checkUriEvent;
-        private GetTagsEventHandler _getLockTagsEvent;
         private GetSignaturesEventHandler _getLockSignaturesEvent;
+        private GetSectionsEventHandler _getLockSectionsEvent;
+        private GetWikisEventHandler _getLockWikisEvent;
+        private GetChatsEventHandler _getLockChatsEvent;
 
-        private bool _isLoaded = false;
+        private volatile bool _isLoaded;
 
-        private readonly object _thisLock = new object();
         private volatile bool _disposed;
+        private readonly object _thisLock = new object();
 
         public OutoposManager(string bitmapPath, string cachePath, BufferManager bufferManager)
         {
@@ -92,21 +93,41 @@ namespace Library.Net.Outopos
                 return true;
             };
 
-            _connectionsManager.GetLockTagsEvent = (object sender) =>
+            _connectionsManager.GetLockSignaturesEvent = (object sender) =>
             {
-                if (_getLockTagsEvent != null)
+                if (_getLockSignaturesEvent != null)
                 {
-                    return _getLockTagsEvent(sender);
+                    return _getLockSignaturesEvent(this);
                 }
 
                 return null;
             };
 
-            _connectionsManager.GetLockSignaturesEvent = (object sender, Tag tag) =>
+            _connectionsManager.GetLockSectionsEvent = (object sender) =>
             {
-                if (_getLockSignaturesEvent != null)
+                if (_getLockSectionsEvent != null)
                 {
-                    return _getLockSignaturesEvent(sender, tag);
+                    return _getLockSectionsEvent(this);
+                }
+
+                return null;
+            };
+
+            _connectionsManager.GetLockWikisEvent = (object sender) =>
+            {
+                if (_getLockWikisEvent != null)
+                {
+                    return _getLockWikisEvent(this);
+                }
+
+                return null;
+            };
+
+            _connectionsManager.GetLockChatsEvent = (object sender) =>
+            {
+                if (_getLockChatsEvent != null)
+                {
+                    return _getLockChatsEvent(this);
                 }
 
                 return null;
@@ -146,17 +167,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        public GetTagsEventHandler GetLockTagsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _getLockTagsEvent = value;
-                }
-            }
-        }
-
         public GetSignaturesEventHandler GetLockSignaturesEvent
         {
             set
@@ -164,6 +174,39 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     _getLockSignaturesEvent = value;
+                }
+            }
+        }
+
+        public GetSectionsEventHandler GetLockSectionsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _getLockSectionsEvent = value;
+                }
+            }
+        }
+
+        public GetWikisEventHandler GetLockWikisEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _getLockWikisEvent = value;
+                }
+            }
+        }
+
+        public GetChatsEventHandler GetLockChatsEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _getLockChatsEvent = value;
                 }
             }
         }
@@ -178,7 +221,6 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
-                    contexts.AddRange(_serverManager.Information);
                     contexts.AddRange(_connectionsManager.Information);
                     contexts.AddRange(_cacheManager.Information);
 
@@ -380,7 +422,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
+        public void ChecBlocks(CheckBlocksProgressEventHandler getProgressEvent)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
             if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
@@ -388,28 +430,154 @@ namespace Library.Net.Outopos
             _cacheManager.CheckBlocks(getProgressEvent);
         }
 
-        public IEnumerable<Header> GetHeaders(Tag tag)
+        public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
-            return _connectionsManager.GetHeaders(tag);
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetSectionProfileHeaders(tag);
+            }
         }
 
-        public Stream GetContent(Header header)
+        public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
-            return _downloadManager.GetContent(header);
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetSectionMessageHeaders(tag);
+            }
         }
 
-        public Header Upload(Tag tag, Stream stream, DigitalSignature digitalSignature)
+        public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
-            return _uploadManager.Upload(tag, stream, digitalSignature);
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetWikiPageHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetChatTopicHeaders(tag);
+            }
+        }
+
+        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetChatMessageHeaders(tag);
+            }
+        }
+
+        public Task<SectionProfileContent> Download(SectionProfileHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public Task<SectionMessageContent> Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header, exchangePrivateKey);
+            }
+        }
+
+        public Task<WikiPageContent> Download(WikiPageHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public Task<ChatTopicContent> Download(ChatTopicHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public Task<ChatMessageContent> Download(ChatMessageHeader header)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _downloadManager.Download(header);
+            }
+        }
+
+        public Task<SectionProfileHeader> Upload(Section tag, SectionProfileContent content, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _uploadManager.Upload(tag, content, miner, digitalSignature);
+            }
+        }
+
+        public Task<SectionMessageHeader> Upload(Section tag, SectionMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _uploadManager.Upload(tag, content, exchangePublicKey, miner, digitalSignature);
+            }
+        }
+
+        public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _uploadManager.Upload(tag, content, miner, digitalSignature);
+            }
+        }
+
+        public Task<ChatTopicHeader> Upload(Chat tag, ChatTopicContent content, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _uploadManager.Upload(tag, content, miner, digitalSignature);
+            }
+        }
+
+        public Task<ChatMessageHeader> Upload(Chat tag, ChatMessageContent content, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _uploadManager.Upload(tag, content, miner, digitalSignature);
+            }
         }
 
         public override ManagerState State
@@ -419,7 +587,10 @@ namespace Library.Net.Outopos
                 if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
                 if (!_isLoaded) throw new OutoposManagerException("OutoposManager is not loaded.");
 
-                return _state;
+                lock (this.ThisLock)
+                {
+                    return _state;
+                }
             }
         }
 
@@ -434,6 +605,8 @@ namespace Library.Net.Outopos
                 _state = ManagerState.Start;
 
                 _connectionsManager.Start();
+                _downloadManager.Start();
+                _uploadManager.Start();
             }
         }
 
@@ -447,11 +620,13 @@ namespace Library.Net.Outopos
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
 
+                _uploadManager.Stop();
+                _downloadManager.Stop();
                 _connectionsManager.Stop();
             }
         }
 
-        #region ISettings
+        #region ISettings メンバ
 
         public void Load(string directoryPath)
         {
@@ -464,11 +639,9 @@ namespace Library.Net.Outopos
 
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
-                _bitmapManager.Load(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
-                _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionsManager"));
-
-                _cacheManager.CheckInformation();
+                _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
+                _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
             }
         }
 
@@ -479,9 +652,9 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionsManager"));
+                _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
+                _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
-                _bitmapManager.Save(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
             }
@@ -496,11 +669,9 @@ namespace Library.Net.Outopos
 
             if (disposing)
             {
-                _uploadManager.Dispose();
                 _downloadManager.Dispose();
+                _uploadManager.Dispose();
                 _connectionsManager.Dispose();
-                _cacheManager.Dispose();
-                _bitmapManager.Dispose();
                 _serverManager.Dispose();
                 _clientManager.Dispose();
             }

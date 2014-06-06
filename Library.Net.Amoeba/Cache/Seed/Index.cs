@@ -155,7 +155,7 @@ namespace Library.Net.Amoeba
             return true;
         }
 
-        #region IIndex<Group, Header>
+        #region IIndex<Group, Key>
 
         ICollection<Group> IIndex<Group, Key>.Groups
         {

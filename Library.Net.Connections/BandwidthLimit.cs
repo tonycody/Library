@@ -28,7 +28,7 @@ namespace Library.Net.Connections
         private object _outLockObject = new object();
         private object _inLockObject = new object();
 
-        private HashSet<ConnectionBase> _connections = new HashSet<ConnectionBase>();
+        private HashSet<Connection> _connections = new HashSet<Connection>();
         private object _connectionsLockObject = new object();
 
         private volatile int _out;
@@ -128,7 +128,7 @@ namespace Library.Net.Connections
             return true;
         }
 
-        internal int GetOutBandwidth(ConnectionBase connection, int size)
+        internal int GetOutBandwidth(Connection connection, int size)
         {
             for (; ; )
             {
@@ -165,7 +165,7 @@ namespace Library.Net.Connections
             }
         }
 
-        internal int GetInBandwidth(ConnectionBase connection, int size)
+        internal int GetInBandwidth(Connection connection, int size)
         {
             for (; ; )
             {
@@ -202,7 +202,7 @@ namespace Library.Net.Connections
             }
         }
 
-        internal void Join(ConnectionBase connection)
+        internal void Join(Connection connection)
         {
             lock (_connectionsLockObject)
             {
@@ -210,7 +210,7 @@ namespace Library.Net.Connections
             }
         }
 
-        internal void Leave(ConnectionBase connection)
+        internal void Leave(Connection connection)
         {
             lock (_connectionsLockObject)
             {
