@@ -8,21 +8,11 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "SectionMessageMetadata", Namespace = "http://Library/Net/Outopos")]
-    public sealed class SectionMessageMetadata : Metadata<SectionMessageMetadata, Section>
-    {
-        public SectionMessageMetadata(Section tag, string signature, DateTime creationTime, Key key, Miner miner)
-            : base(tag, signature, creationTime, key, miner)
-        {
-
-        }
-    }
-
     [DataContract(Name = "SectionMessageHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class SectionMessageHeader : Header<SectionMessageHeader, SectionMessageMetadata, Section>
+    public sealed class SectionMessageHeader : Header<SectionMessageHeader, Section>
     {
-        public SectionMessageHeader(SectionMessageMetadata metadata, DigitalSignature digitalSignature)
-            : base(metadata, digitalSignature)
+        public SectionMessageHeader(Section tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+            : base(tag, creationTime, key, miner, digitalSignature)
         {
 
         }

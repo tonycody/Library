@@ -2,8 +2,7 @@ using System;
 
 namespace Library.Net.Outopos
 {
-    interface IChatMessageHeader<TMetadata, TChat> : IHeader<TMetadata, TChat>
-        where TMetadata : IMetadata<TChat>
+    interface IChatMessageHeader<TChat> : IHeader<TChat>
         where TChat : IChat
     {
 

@@ -98,10 +98,8 @@
   <ItemGroup>
     <Compile Include="Cache\BitmapManager.cs" />
     <Compile Include="Cache\CacheManager.cs" />
-    <Compile Include="Cache\Header\_Base\Metadata.cs" />
     <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
     <Compile Include="Cache\Header\_Base\Tag.cs" />
-    <Compile Include="Cache\_Interface\Header\IMetadata.cs" />
     <Compile Include="Cache\_Interface\Header\Section\ISectionProfileHeader.cs" />
     <Compile Include="Content\ChatMessageContent.cs" />
     <Compile Include="Content\ChatTopicContent.cs" />

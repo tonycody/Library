@@ -76,6 +76,7 @@
     <Compile Include="Benchmark\Benchmark_ToHexString.cs" />
     <Compile Include="Benchmark\Benchmark_FromHexString.cs" />
     <Compile Include="Benchmark\Benchmark_Xor.cs" />
+    <Compile Include="Test_Library_Net_Outopos.cs" />
     <Compile Include="Test_Library_Compression.cs" />
     <Compile Include="Utilities\T_Crc32_Castagnoli.cs" />
     <Compile Include="Utilities\T_Box.cs" />
@@ -112,6 +113,10 @@
     <ProjectReference Include="..\Library.Net.Connections\Library.Net.Connections.csproj">
       <Project>{38994E3C-0699-4D6C-AD02-F9F657340347}</Project>
       <Name>Library.Net.Connections</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library.Net.Outopos\Library.Net.Outopos.csproj">
+      <Project>{ae8fe1eb-0280-48ce-a26a-f58e3ffe6b5d}</Project>
+      <Name>Library.Net.Outopos</Name>
     </ProjectReference>
     <ProjectReference Include="..\Library.Net\Library.Net.csproj">
       <Project>{7CFDE01D-4A0E-4E10-ACC2-34DB897DBE0F}</Project>

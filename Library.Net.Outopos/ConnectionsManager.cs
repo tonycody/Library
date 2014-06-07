@@ -1075,7 +1075,7 @@ namespace Library.Net.Outopos
                                             {
                                                 if (list.Count <= 32) continue;
 
-                                                list.Sort((x, y) => x.Metadata.CreationTime.CompareTo(y.Metadata.CreationTime));
+                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
                                                 removeSectionMessageHeaders.UnionWith(list.Take(list.Count - 32));
                                             }
                                         }
@@ -1140,7 +1140,7 @@ namespace Library.Net.Outopos
                                             {
                                                 if (list.Count <= 32) continue;
 
-                                                list.Sort((x, y) => x.Metadata.CreationTime.CompareTo(y.Metadata.CreationTime));
+                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
                                                 removeWikiPageHeaders.UnionWith(list.Take(list.Count - 32));
                                             }
                                         }
@@ -1218,7 +1218,7 @@ namespace Library.Net.Outopos
                                             {
                                                 if (list.Count <= 32) continue;
 
-                                                list.Sort((x, y) => x.Metadata.CreationTime.CompareTo(y.Metadata.CreationTime));
+                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
                                                 removeChatMessageHeaders.UnionWith(list.Take(list.Count - 32));
                                             }
                                         }
@@ -2823,7 +2823,7 @@ namespace Library.Net.Outopos
                 {
                     messageManager.StockSectionProfileHeaders.Add(header.CreateHash(_hashAlgorithm));
 
-                    _lastUsedSectionTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                    _lastUsedSectionTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount.Increment();
@@ -2835,7 +2835,7 @@ namespace Library.Net.Outopos
                 {
                     messageManager.StockSectionMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
 
-                    _lastUsedSectionTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                    _lastUsedSectionTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount.Increment();
@@ -2847,7 +2847,7 @@ namespace Library.Net.Outopos
                 {
                     messageManager.StockWikiPageHeaders.Add(header.CreateHash(_hashAlgorithm));
 
-                    _lastUsedWikiTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                    _lastUsedWikiTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount.Increment();
@@ -2859,7 +2859,7 @@ namespace Library.Net.Outopos
                 {
                     messageManager.StockChatTopicHeaders.Add(header.CreateHash(_hashAlgorithm));
 
-                    _lastUsedChatTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                    _lastUsedChatTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount.Increment();
@@ -2871,7 +2871,7 @@ namespace Library.Net.Outopos
                 {
                     messageManager.StockChatMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
 
-                    _lastUsedChatTimes[header.Metadata.Tag] = DateTime.UtcNow;
+                    _lastUsedChatTimes[header.Tag] = DateTime.UtcNow;
                 }
 
                 _pullHeaderCount.Increment();
@@ -3730,35 +3730,33 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, SectionProfileHeader> dic = null;
 
-                    if (!_sectionProfileHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    if (!_sectionProfileHeaders.TryGetValue(header.Tag, out dic))
                     {
                         dic = new Dictionary<string, SectionProfileHeader>();
-                        _sectionProfileHeaders[header.Metadata.Tag] = dic;
+                        _sectionProfileHeaders[header.Tag] = dic;
                     }
 
                     SectionProfileHeader tempHeader = null;
 
                     if (!dic.TryGetValue(signature, out tempHeader)
-                        || header.Metadata.CreationTime > tempHeader.Metadata.CreationTime)
+                        || header.CreationTime > tempHeader.CreationTime)
                     {
                         if (!header.VerifyCertificate()) throw new CertificateException();
 
                         dic[signature] = header;
                     }
 
-                    return (tempHeader == null || header.Metadata.CreationTime >= tempHeader.Metadata.CreationTime);
+                    return (tempHeader == null || header.CreationTime >= tempHeader.CreationTime);
                 }
             }
 
@@ -3769,22 +3767,20 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, HashSet<SectionMessageHeader>> dic = null;
 
-                    if (!_sectionMessageHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    if (!_sectionMessageHeaders.TryGetValue(header.Tag, out dic))
                     {
                         dic = new Dictionary<string, HashSet<SectionMessageHeader>>();
-                        _sectionMessageHeaders[header.Metadata.Tag] = dic;
+                        _sectionMessageHeaders[header.Tag] = dic;
                     }
 
                     HashSet<SectionMessageHeader> hashset = null;
@@ -3813,22 +3809,20 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, HashSet<WikiPageHeader>> dic = null;
 
-                    if (!_wikiPageHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    if (!_wikiPageHeaders.TryGetValue(header.Tag, out dic))
                     {
                         dic = new Dictionary<string, HashSet<WikiPageHeader>>();
-                        _wikiPageHeaders[header.Metadata.Tag] = dic;
+                        _wikiPageHeaders[header.Tag] = dic;
                     }
 
                     HashSet<WikiPageHeader> hashset = null;
@@ -3857,35 +3851,33 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, ChatTopicHeader> dic = null;
 
-                    if (!_chatTopicHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    if (!_chatTopicHeaders.TryGetValue(header.Tag, out dic))
                     {
                         dic = new Dictionary<string, ChatTopicHeader>();
-                        _chatTopicHeaders[header.Metadata.Tag] = dic;
+                        _chatTopicHeaders[header.Tag] = dic;
                     }
 
                     ChatTopicHeader tempHeader = null;
 
                     if (!dic.TryGetValue(signature, out tempHeader)
-                        || header.Metadata.CreationTime > tempHeader.Metadata.CreationTime)
+                        || header.CreationTime > tempHeader.CreationTime)
                     {
                         if (!header.VerifyCertificate()) throw new CertificateException();
 
                         dic[signature] = header;
                     }
 
-                    return (tempHeader == null || header.Metadata.CreationTime >= tempHeader.Metadata.CreationTime);
+                    return (tempHeader == null || header.CreationTime >= tempHeader.CreationTime);
                 }
             }
 
@@ -3896,22 +3888,20 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, HashSet<ChatMessageHeader>> dic = null;
 
-                    if (!_chatMessageHeaders.TryGetValue(header.Metadata.Tag, out dic))
+                    if (!_chatMessageHeaders.TryGetValue(header.Tag, out dic))
                     {
                         dic = new Dictionary<string, HashSet<ChatMessageHeader>>();
-                        _chatMessageHeaders[header.Metadata.Tag] = dic;
+                        _chatMessageHeaders[header.Tag] = dic;
                     }
 
                     HashSet<ChatMessageHeader> hashset = null;
@@ -3940,19 +3930,17 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, SectionProfileHeader> dic = null;
 
-                    if (!_sectionProfileHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+                    if (!_sectionProfileHeaders.TryGetValue(header.Tag, out dic)) return;
 
                     SectionProfileHeader tempHeader = null;
 
@@ -3963,7 +3951,7 @@ namespace Library.Net.Outopos
 
                         if (dic.Count == 0)
                         {
-                            _sectionProfileHeaders.Remove(header.Metadata.Tag);
+                            _sectionProfileHeaders.Remove(header.Tag);
                         }
                     }
                 }
@@ -3976,19 +3964,17 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, HashSet<SectionMessageHeader>> dic = null;
 
-                    if (!_sectionMessageHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+                    if (!_sectionMessageHeaders.TryGetValue(header.Tag, out dic)) return;
 
                     HashSet<SectionMessageHeader> hashset = null;
 
@@ -4002,7 +3988,7 @@ namespace Library.Net.Outopos
 
                             if (dic.Count == 0)
                             {
-                                _sectionMessageHeaders.Remove(header.Metadata.Tag);
+                                _sectionMessageHeaders.Remove(header.Tag);
                             }
                         }
                     }
@@ -4016,19 +4002,17 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, HashSet<WikiPageHeader>> dic = null;
 
-                    if (!_wikiPageHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+                    if (!_wikiPageHeaders.TryGetValue(header.Tag, out dic)) return;
 
                     HashSet<WikiPageHeader> hashset = null;
 
@@ -4042,7 +4026,7 @@ namespace Library.Net.Outopos
 
                             if (dic.Count == 0)
                             {
-                                _wikiPageHeaders.Remove(header.Metadata.Tag);
+                                _wikiPageHeaders.Remove(header.Tag);
                             }
                         }
                     }
@@ -4056,19 +4040,17 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, ChatTopicHeader> dic = null;
 
-                    if (!_chatTopicHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+                    if (!_chatTopicHeaders.TryGetValue(header.Tag, out dic)) return;
 
                     ChatTopicHeader tempHeader = null;
 
@@ -4079,7 +4061,7 @@ namespace Library.Net.Outopos
 
                         if (dic.Count == 0)
                         {
-                            _chatTopicHeaders.Remove(header.Metadata.Tag);
+                            _chatTopicHeaders.Remove(header.Tag);
                         }
                     }
                 }
@@ -4092,19 +4074,17 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || header.Metadata == null
-                            || header.Metadata.Tag == null
-                                || header.Metadata.Tag.Id == null || header.Metadata.Tag.Id.Length == 0
-                                || string.IsNullOrWhiteSpace(header.Metadata.Tag.Name)
-                            || (header.Metadata.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
+                        || header.Tag == null
+                            || header.Tag.Id == null || header.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(header.Tag.Name)
+                        || (header.CreationTime - now) > new TimeSpan(0, 0, 30, 0)
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
-                    if (signature != header.Metadata.Signature) throw new CertificateException();
 
                     Dictionary<string, HashSet<ChatMessageHeader>> dic = null;
 
-                    if (!_chatMessageHeaders.TryGetValue(header.Metadata.Tag, out dic)) return;
+                    if (!_chatMessageHeaders.TryGetValue(header.Tag, out dic)) return;
 
                     HashSet<ChatMessageHeader> hashset = null;
 
@@ -4118,7 +4098,7 @@ namespace Library.Net.Outopos
 
                             if (dic.Count == 0)
                             {
-                                _chatMessageHeaders.Remove(header.Metadata.Tag);
+                                _chatMessageHeaders.Remove(header.Tag);
                             }
                         }
                     }

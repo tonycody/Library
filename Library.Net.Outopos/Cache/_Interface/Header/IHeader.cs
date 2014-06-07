@@ -3,10 +3,12 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    public interface IHeader<TMetadata, TTag> : IComputeHash
-        where TMetadata : IMetadata<TTag>
+    public interface IHeader<TTag> : IComputeHash
         where TTag : ITag
     {
-        TMetadata Metadata { get; }
+        TTag Tag { get; }
+        DateTime CreationTime { get; }
+        int Cash { get; }
+        Key Key { get; }
     }
 }

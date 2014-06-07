@@ -32,6 +32,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.I2p", "Library.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Tools", "Library.Tools\Library.Tools.csproj", "{B4424312-441E-4B12-9278-D640CDABD99B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Library.Net.Outopos", "Library.Net.Outopos\Library.Net.Outopos.csproj", "{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -102,6 +104,10 @@ Global
 		{B4424312-441E-4B12-9278-D640CDABD99B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4424312-441E-4B12-9278-D640CDABD99B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B4424312-441E-4B12-9278-D640CDABD99B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE8FE1EB-0280-48CE-A26A-F58E3FFE6B5D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

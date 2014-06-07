@@ -2,8 +2,7 @@ using System;
 
 namespace Library.Net.Outopos
 {
-    interface IWikiPageHeader<TMetadata, TWiki> : IHeader<TMetadata, TWiki>
-        where TMetadata : IMetadata<TWiki>
+    interface IWikiPageHeader<TWiki> : IHeader<TWiki>
         where TWiki : IWiki
     {
 

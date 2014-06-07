@@ -8,21 +8,11 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "ChatMessageMetadata", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatMessageMetadata : Metadata<ChatMessageMetadata, Chat>
-    {
-        public ChatMessageMetadata(Chat tag, string signature, DateTime creationTime, Key key, Miner miner)
-            : base(tag, signature, creationTime, key, miner)
-        {
-
-        }
-    }
-
     [DataContract(Name = "ChatMessageHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatMessageHeader : Header<ChatMessageHeader, ChatMessageMetadata, Chat>
+    public sealed class ChatMessageHeader : Header<ChatMessageHeader, Chat>
     {
-        public ChatMessageHeader(ChatMessageMetadata metadata, DigitalSignature digitalSignature)
-            : base(metadata, digitalSignature)
+        public ChatMessageHeader(Chat tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+            : base(tag, creationTime, key, miner, digitalSignature)
         {
 
         }

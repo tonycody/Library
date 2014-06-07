@@ -8,7 +8,7 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    class UploadManager : StateManagerBase, IThisLock
+    class UploadManager : ManagerBase, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
@@ -17,8 +17,6 @@ namespace Library.Net.Outopos
         private Settings _settings;
 
         private WatchTimer _watchTimer;
-
-        private ManagerState _state = ManagerState.Stop;
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
@@ -94,7 +92,7 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                var header = new SectionProfileHeader(new SectionProfileMetadata(tag, digitalSignature.ToString(), DateTime.UtcNow, key, miner), digitalSignature);
+                var header = new SectionProfileHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {
@@ -146,7 +144,7 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                var header = new SectionMessageHeader(new SectionMessageMetadata(tag, digitalSignature.ToString(), DateTime.UtcNow, key, miner), digitalSignature);
+                var header = new SectionMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {
@@ -198,7 +196,7 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                var header = new WikiPageHeader(new WikiPageMetadata(tag, digitalSignature.ToString(), DateTime.UtcNow, key, miner), digitalSignature);
+                var header = new WikiPageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {
@@ -250,7 +248,7 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                var header = new ChatTopicHeader(new ChatTopicMetadata(tag, digitalSignature.ToString(), DateTime.UtcNow, key, miner), digitalSignature);
+                var header = new ChatTopicHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {
@@ -302,7 +300,7 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                var header = new ChatMessageHeader(new ChatMessageMetadata(tag, digitalSignature.ToString(), DateTime.UtcNow, key, miner), digitalSignature);
+                var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {
@@ -311,43 +309,6 @@ namespace Library.Net.Outopos
 
                 return header;
             });
-        }
-
-        public override ManagerState State
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
-            }
-        }
-
-        private readonly object _stateLock = new object();
-
-        public override void Start()
-        {
-            lock (_stateLock)
-            {
-                lock (this.ThisLock)
-                {
-                    if (this.State == ManagerState.Start) return;
-                    _state = ManagerState.Start;
-                }
-            }
-        }
-
-        public override void Stop()
-        {
-            lock (_stateLock)
-            {
-                lock (this.ThisLock)
-                {
-                    if (this.State == ManagerState.Stop) return;
-                    _state = ManagerState.Stop;
-                }
-            }
         }
 
         #region ISettings

@@ -221,8 +221,9 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     List<InformationContext> contexts = new List<InformationContext>();
-                    contexts.AddRange(_connectionsManager.Information);
+                    contexts.AddRange(_serverManager.Information);
                     contexts.AddRange(_cacheManager.Information);
+                    contexts.AddRange(_connectionsManager.Information);
 
                     return new Information(contexts);
                 }
@@ -605,8 +606,6 @@ namespace Library.Net.Outopos
                 _state = ManagerState.Start;
 
                 _connectionsManager.Start();
-                _downloadManager.Start();
-                _uploadManager.Start();
             }
         }
 
@@ -620,8 +619,6 @@ namespace Library.Net.Outopos
                 if (this.State == ManagerState.Stop) return;
                 _state = ManagerState.Stop;
 
-                _uploadManager.Stop();
-                _downloadManager.Stop();
                 _connectionsManager.Stop();
             }
         }

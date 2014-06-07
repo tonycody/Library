@@ -182,9 +182,28 @@ namespace Library.UnitTest
         public void Test_Cash()
         {
             {
-                var cash = Cash.Create(CashAlgorithm.Version1, NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 30));
-                var count = cash.Verify(NetworkConverter.FromHexString("0101010101010101"));
-                Assert.IsTrue(count > 4);
+                Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 30));
+
+                Cash cash = null;
+
+                using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                {
+                    cash = Miner.Create(miner, stream);
+                }
+
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                {
+                    var count = Miner.Verify(cash, stream);
+                    Assert.IsTrue(count > 4);
+                }
+
+                sw.Stop();
+
+                Console.WriteLine("Miner.Verify :" + sw.Elapsed.ToString());
+                Console.Write(Environment.NewLine);
             }
 
             {
@@ -193,10 +212,15 @@ namespace Library.UnitTest
 
                 var task = Task.Factory.StartNew(() =>
                 {
-                    var cash = Cash.Create(CashAlgorithm.Version1, NetworkConverter.FromHexString("0101010101010101"), new TimeSpan(0, 0, 0));
-                });
+                    Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 1));
 
-                Thread.Sleep(1000);
+                    Cash cash = null;
+
+                    using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                    {
+                        cash = Miner.Create(miner, stream);
+                    }
+                });
 
                 task.Wait();
 

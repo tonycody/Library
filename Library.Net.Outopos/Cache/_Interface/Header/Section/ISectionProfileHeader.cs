@@ -2,8 +2,7 @@ using System;
 
 namespace Library.Net.Outopos
 {
-    interface ISectionProfileHeader<TMetadata, TSection> : IHeader<TMetadata, TSection>
-        where TMetadata : IMetadata<TSection>
+    interface ISectionProfileHeader<TSection> : IHeader<TSection>
         where TSection : ISection
     {
 

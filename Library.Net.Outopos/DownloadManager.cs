@@ -9,13 +9,11 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    class DownloadManager : StateManagerBase, IThisLock
+    class DownloadManager : ManagerBase, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
-
-        private ManagerState _state = ManagerState.Stop;
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
@@ -32,15 +30,14 @@ namespace Library.Net.Outopos
         public Task<SectionProfileContent> Download(SectionProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
-            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
 
             return Task<SectionProfileContent>.Factory.StartNew(() =>
             {
                 lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    if (!_cacheManager.Contains(header.Key))
                     {
-                        _connectionsManager.Download(header.Metadata.Key);
+                        _connectionsManager.Download(header.Key);
 
                         return null;
                     }
@@ -50,7 +47,7 @@ namespace Library.Net.Outopos
 
                         try
                         {
-                            buffer = _cacheManager[header.Metadata.Key];
+                            buffer = _cacheManager[header.Key];
                             return ContentConverter.FromSectionProfileContentBlock(buffer);
                         }
                         catch (Exception)
@@ -74,16 +71,15 @@ namespace Library.Net.Outopos
         public Task<SectionMessageContent> Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
             if (header == null) throw new ArgumentNullException("header");
-            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
             if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
 
             return Task<SectionMessageContent>.Factory.StartNew(() =>
             {
                 lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    if (!_cacheManager.Contains(header.Key))
                     {
-                        _connectionsManager.Download(header.Metadata.Key);
+                        _connectionsManager.Download(header.Key);
 
                         return null;
                     }
@@ -93,7 +89,7 @@ namespace Library.Net.Outopos
 
                         try
                         {
-                            buffer = _cacheManager[header.Metadata.Key];
+                            buffer = _cacheManager[header.Key];
                             return ContentConverter.FromSectionMessageContentBlock(buffer, exchangePrivateKey);
                         }
                         catch (Exception)
@@ -117,15 +113,14 @@ namespace Library.Net.Outopos
         public Task<WikiPageContent> Download(WikiPageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
-            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
 
             return Task<WikiPageContent>.Factory.StartNew(() =>
             {
                 lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    if (!_cacheManager.Contains(header.Key))
                     {
-                        _connectionsManager.Download(header.Metadata.Key);
+                        _connectionsManager.Download(header.Key);
 
                         return null;
                     }
@@ -135,7 +130,7 @@ namespace Library.Net.Outopos
 
                         try
                         {
-                            buffer = _cacheManager[header.Metadata.Key];
+                            buffer = _cacheManager[header.Key];
                             return ContentConverter.FromWikiPageContentBlock(buffer);
                         }
                         catch (Exception)
@@ -159,15 +154,14 @@ namespace Library.Net.Outopos
         public Task<ChatTopicContent> Download(ChatTopicHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
-            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
 
             return Task<ChatTopicContent>.Factory.StartNew(() =>
             {
                 lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    if (!_cacheManager.Contains(header.Key))
                     {
-                        _connectionsManager.Download(header.Metadata.Key);
+                        _connectionsManager.Download(header.Key);
 
                         return null;
                     }
@@ -177,7 +171,7 @@ namespace Library.Net.Outopos
 
                         try
                         {
-                            buffer = _cacheManager[header.Metadata.Key];
+                            buffer = _cacheManager[header.Key];
                             return ContentConverter.FromChatTopicContentBlock(buffer);
                         }
                         catch (Exception)
@@ -201,15 +195,14 @@ namespace Library.Net.Outopos
         public Task<ChatMessageContent> Download(ChatMessageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
-            if (header.Metadata == null) throw new ArgumentNullException("header.Metadata");
 
             return Task<ChatMessageContent>.Factory.StartNew(() =>
             {
                 lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Metadata.Key))
+                    if (!_cacheManager.Contains(header.Key))
                     {
-                        _connectionsManager.Download(header.Metadata.Key);
+                        _connectionsManager.Download(header.Key);
 
                         return null;
                     }
@@ -219,7 +212,7 @@ namespace Library.Net.Outopos
 
                         try
                         {
-                            buffer = _cacheManager[header.Metadata.Key];
+                            buffer = _cacheManager[header.Key];
                             return ContentConverter.FromChatMessageContentBlock(buffer);
                         }
                         catch (Exception)
@@ -238,43 +231,6 @@ namespace Library.Net.Outopos
                     }
                 }
             });
-        }
-
-        public override ManagerState State
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _state;
-                }
-            }
-        }
-
-        private readonly object _stateLock = new object();
-
-        public override void Start()
-        {
-            lock (_stateLock)
-            {
-                lock (this.ThisLock)
-                {
-                    if (this.State == ManagerState.Start) return;
-                    _state = ManagerState.Start;
-                }
-            }
-        }
-
-        public override void Stop()
-        {
-            lock (_stateLock)
-            {
-                lock (this.ThisLock)
-                {
-                    if (this.State == ManagerState.Stop) return;
-                    _state = ManagerState.Stop;
-                }
-            }
         }
 
         protected override void Dispose(bool disposing)
