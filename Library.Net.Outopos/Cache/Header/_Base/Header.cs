@@ -16,28 +16,29 @@ namespace Library.Net.Outopos
     {
         private enum SerializeId : byte
         {
-            Metadata = 0,
+            Tag = 0,
+            CreationTime = 1,
+            Key = 2,
+            Cash = 3,
 
-            Certificate = 1,
+            Certificate = 4,
         }
 
-        private volatile Metadata _protectedMetadata;
+        private TTag _tag;
+        private DateTime _creationTime;
+        private Key _key;
+        private Cash _cash;
 
-        private volatile Certificate _certificate;
+        private Certificate _certificate;
 
         private volatile object _thisLock;
 
         internal Header(TTag tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
         {
-            this.ProtectedMetadata = new Metadata()
-            {
-                Tag = tag,
-                CreationTime = creationTime,
-                Key = key,
-            };
-            this.ProtectedMetadata.Signature = digitalSignature.ToString();
-            this.ProtectedMetadata.CreateCash(miner);
-            this.ProtectedMetadata.Signature = null;
+            this.Tag = tag;
+            this.CreationTime = creationTime;
+            this.Key = key;
+            this.CreateCash(miner, digitalSignature.ToString());
 
             this.CreateCertificate(digitalSignature);
         }
@@ -49,243 +50,7 @@ namespace Library.Net.Outopos
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
-            {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
-
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
-                {
-                    if (id == (byte)SerializeId.Metadata)
-                    {
-                        this.ProtectedMetadata = ItemBase<Metadata>.Import(rangeStream, bufferManager);
-                    }
-
-                    else if (id == (byte)SerializeId.Certificate)
-                    {
-                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
-                    }
-                }
-            }
-        }
-
-        protected override Stream Export(BufferManager bufferManager, int count)
-        {
-            BufferStream bufferStream = new BufferStream(bufferManager);
-
-            // Metadata
-            if (this.ProtectedMetadata != null)
-            {
-                using (var stream = this.ProtectedMetadata.Export(bufferManager))
-                {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Metadata, stream);
-                }
-            }
-
-            // Certificate
-            if (this.Certificate != null)
-            {
-                using (var stream = this.Certificate.Export(bufferManager))
-                {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
-                }
-            }
-
-            bufferStream.Seek(0, SeekOrigin.Begin);
-            return bufferStream;
-        }
-
-        public override int GetHashCode()
-        {
-            if (this.ProtectedMetadata == null) return 0;
-            else return this.ProtectedMetadata.GetHashCode();
-        }
-
-        public override bool Equals(object obj)
-        {
-            if ((object)obj == null || !(obj is THeader)) return false;
-
-            return this.Equals((THeader)obj);
-        }
-
-        public override bool Equals(THeader other)
-        {
-            if ((object)other == null) return false;
-            if (object.ReferenceEquals(this, other)) return true;
-
-            if (this.ProtectedMetadata != other.ProtectedMetadata
-
-                || this.Certificate != other.Certificate)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        protected override void CreateCertificate(DigitalSignature digitalSignature)
-        {
-            base.CreateCertificate(digitalSignature);
-        }
-
-        public override bool VerifyCertificate()
-        {
-            return base.VerifyCertificate();
-        }
-
-        protected override Stream GetCertificateStream()
-        {
-            var temp = this.Certificate;
-            this.Certificate = null;
-
-            try
-            {
-                return this.Export(BufferManager.Instance);
-            }
-            finally
-            {
-                this.Certificate = temp;
-            }
-        }
-
-        public override Certificate Certificate
-        {
-            get
-            {
-                return _certificate;
-            }
-            protected set
-            {
-                _certificate = value;
-            }
-        }
-
-        [DataMember(Name = "Metadata")]
-        private Metadata ProtectedMetadata
-        {
-            get
-            {
-                return _protectedMetadata;
-            }
-            set
-            {
-                _protectedMetadata = value;
-            }
-        }
-
-        #region IHeader<TTag>
-
-        public TTag Tag
-        {
-            get
-            {
-                return this.ProtectedMetadata.Tag;
-            }
-        }
-
-        public DateTime CreationTime
-        {
-            get
-            {
-                lock (_thisLock)
-                {
-                    return this.ProtectedMetadata.CreationTime;
-                }
-            }
-        }
-
-        public Key Key
-        {
-            get
-            {
-                return this.ProtectedMetadata.Key;
-            }
-        }
-
-        private int? _cash;
-
-        public int Cash
-        {
-            get
-            {
-                lock (_thisLock)
-                {
-                    if (_cash == null)
-                    {
-                        this.ProtectedMetadata.Signature = this.Certificate.ToString();
-                        _cash = this.ProtectedMetadata.VerifyCash();
-                        this.ProtectedMetadata.Signature = null;
-                    }
-
-                    return _cash.Value;
-                }
-            }
-        }
-
-        #endregion
-
-        #region IComputeHash
-
-        private volatile byte[] _sha512_hash;
-
-        public byte[] CreateHash(HashAlgorithm hashAlgorithm)
-        {
-            if (_sha512_hash == null)
-            {
-                using (var stream = this.Export(BufferManager.Instance))
-                {
-                    _sha512_hash = Sha512.ComputeHash(stream);
-                }
-            }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
-        }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            return Unsafe.Equals(this.CreateHash(hashAlgorithm), hash);
-        }
-
-        #endregion
-
-        [DataContract(Name = "Metadata", Namespace = "http://Library/Net/Outopos/Header")]
-        private class Metadata : MutableCashItemBase<Metadata>
-        {
-            private enum SerializeId : byte
-            {
-                Tag = 0,
-                CreationTime = 1,
-                Key = 2,
-
-                Cash = 3,
-
-                Signature = byte.MaxValue,
-            }
-
-            private volatile TTag _tag;
-            private DateTime _creationTime;
-            private volatile Key _key;
-
-            private volatile Cash _cash;
-
-            private volatile string _signature;
-
-            private volatile object _thisLock;
-
-            protected override void Initialize()
-            {
-                _thisLock = new object();
-            }
-
-            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+            lock (_thisLock)
             {
                 byte[] lengthBuffer = new byte[4];
 
@@ -309,21 +74,23 @@ namespace Library.Net.Outopos
                         {
                             this.Key = Key.Import(rangeStream, bufferManager);
                         }
-
                         else if (id == (byte)SerializeId.Cash)
                         {
                             this.Cash = Cash.Import(rangeStream, bufferManager);
                         }
 
-                        else if (id == (byte)SerializeId.Signature)
+                        else if (id == (byte)SerializeId.Certificate)
                         {
-                            this.Signature = ItemUtilities.GetString(rangeStream);
+                            this.Certificate = Certificate.Import(rangeStream, bufferManager);
                         }
                     }
                 }
             }
+        }
 
-            protected override Stream Export(BufferManager bufferManager, int count)
+        protected override Stream Export(BufferManager bufferManager, int count)
+        {
+            lock (_thisLock)
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
@@ -348,7 +115,6 @@ namespace Library.Net.Outopos
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
                     }
                 }
-
                 // Cash
                 if (this.Cash != null)
                 {
@@ -358,60 +124,151 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                // Signature
-                if (this.Signature != null)
+                // Certificate
+                if (this.Certificate != null)
                 {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
+                    using (var stream = this.Certificate.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    }
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 return bufferStream;
             }
+        }
 
-            public override int GetHashCode()
+        public override int GetHashCode()
+        {
+            lock (_thisLock)
             {
                 if (this.Key == null) return 0;
                 else return this.Key.GetHashCode();
             }
+        }
 
-            public override bool Equals(object obj)
+        public override bool Equals(object obj)
+        {
+            if ((object)obj == null || !(obj is THeader)) return false;
+
+            return this.Equals((THeader)obj);
+        }
+
+        public override bool Equals(THeader other)
+        {
+            if ((object)other == null) return false;
+            if (object.ReferenceEquals(this, other)) return true;
+
+            if (this.Tag != other.Tag
+                || this.CreationTime != other.CreationTime
+                || this.Key != other.Key
+                || this.Cash != other.Cash
+
+                || this.Certificate != other.Certificate)
             {
-                if ((object)obj == null || !(obj is Metadata)) return false;
-
-                return this.Equals((Metadata)obj);
+                return false;
             }
 
-            public override bool Equals(Metadata other)
+            return true;
+        }
+
+        protected virtual void CreateCash(Miner miner, string signature)
+        {
+            lock (_thisLock)
             {
-                if ((object)other == null) return false;
-                if (object.ReferenceEquals(this, other)) return true;
+                var tempCertificate = this.Certificate;
+                this.Certificate = null;
 
-                if (this.Tag != other.Tag
-                    || this.CreationTime != other.CreationTime
-                    || this.Key != other.Key
-
-                    || this.Cash != other.Cash)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-
-            public override void CreateCash(Miner miner)
-            {
-                base.CreateCash(miner);
-            }
-
-            public override int VerifyCash()
-            {
-                return base.VerifyCash();
-            }
-
-            protected override Stream GetCashStream()
-            {
-                var temp = this.Cash;
+                var tempCash = this.Cash;
                 this.Cash = null;
+
+                try
+                {
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        ItemUtilities.Write(stream, byte.MaxValue, signature);
+                        stream.Seek(0, SeekOrigin.Begin);
+
+                        tempCash = Miner.Create(miner, stream);
+                    }
+                }
+                finally
+                {
+                    this.Certificate = tempCertificate;
+                    this.Cash = tempCash;
+                }
+            }
+        }
+
+        protected virtual int VerifyCash(string signature)
+        {
+            lock (_thisLock)
+            {
+                var tempCertificate = this.Certificate;
+                this.Certificate = null;
+
+                var tempCash = this.Cash;
+                this.Cash = null;
+
+                try
+                {
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        ItemUtilities.Write(stream, byte.MaxValue, signature);
+                        stream.Seek(0, SeekOrigin.Begin);
+
+                        return Miner.Verify(tempCash, stream);
+                    }
+                }
+                finally
+                {
+                    this.Certificate = tempCertificate;
+                    this.Cash = tempCash;
+                }
+            }
+        }
+
+        [DataMember(Name = "Cash")]
+        protected virtual Cash Cash
+        {
+            get
+            {
+                lock (_thisLock)
+                {
+                    return _cash;
+                }
+            }
+            set
+            {
+                lock (_thisLock)
+                {
+                    _cash = value;
+                }
+            }
+        }
+
+        protected override void CreateCertificate(DigitalSignature digitalSignature)
+        {
+            lock (_thisLock)
+            {
+                base.CreateCertificate(digitalSignature);
+            }
+        }
+
+        public override bool VerifyCertificate()
+        {
+            lock (_thisLock)
+            {
+                return base.VerifyCertificate();
+            }
+        }
+
+        protected override Stream GetCertificateStream()
+        {
+            lock (_thisLock)
+            {
+                var temp = this.Certificate;
+                this.Certificate = null;
 
                 try
                 {
@@ -419,84 +276,140 @@ namespace Library.Net.Outopos
                 }
                 finally
                 {
-                    this.Cash = temp;
+                    this.Certificate = temp;
                 }
             }
+        }
 
-            public override Cash Cash
+        public override Certificate Certificate
+        {
+            get
             {
-                get
+                lock (_thisLock)
                 {
-                    return _cash;
-                }
-                protected set
-                {
-                    _cash = value;
+                    return _certificate;
                 }
             }
-
-            #region IMetadata<TTag>
-
-            [DataMember(Name = "Tag")]
-            public TTag Tag
+            protected set
             {
-                get
+                lock (_thisLock)
+                {
+                    _certificate = value;
+                }
+            }
+        }
+
+        #region IHeader<TTag>
+
+        [DataMember(Name = "Tag")]
+        public TTag Tag
+        {
+            get
+            {
+                lock (_thisLock)
                 {
                     return _tag;
                 }
-                set
+            }
+            private set
+            {
+                lock (_thisLock)
                 {
                     _tag = value;
                 }
             }
+        }
 
-            [DataMember(Name = "CreationTime")]
-            public DateTime CreationTime
+        [DataMember(Name = "CreationTime")]
+        public DateTime CreationTime
+        {
+            get
             {
-                get
+                lock (_thisLock)
                 {
-                    lock (_thisLock)
-                    {
-                        return _creationTime;
-                    }
-                }
-                set
-                {
-                    lock (_thisLock)
-                    {
-                        var utc = value.ToUniversalTime();
-                        _creationTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
-                    }
+                    return _creationTime;
                 }
             }
-
-            [DataMember(Name = "Key")]
-            public Key Key
+            private set
             {
-                get
+                lock (_thisLock)
+                {
+                    var utc = value.ToUniversalTime();
+                    _creationTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
+                }
+            }
+        }
+
+        private int? _coin;
+
+        public int Coin
+        {
+            get
+            {
+                lock (_thisLock)
+                {
+                    if (_coin == null)
+                        _coin = this.VerifyCash(this.Certificate.ToString());
+
+                    return (int)_coin;
+                }
+            }
+        }
+
+        [DataMember(Name = "Key")]
+        public Key Key
+        {
+            get
+            {
+                lock (_thisLock)
                 {
                     return _key;
                 }
-                set
+            }
+            private set
+            {
+                lock (_thisLock)
                 {
                     _key = value;
                 }
             }
-
-            [DataMember(Name = "Signature")]
-            public string Signature
-            {
-                get
-                {
-                    return _signature;
-                }
-                set
-                {
-                    _signature = value;
-                }
-            }
-
-            #endregion
         }
+
+        #endregion
+
+        #region IComputeHash
+
+        private byte[] _sha512_hash;
+
+        public byte[] CreateHash(HashAlgorithm hashAlgorithm)
+        {
+            lock (_thisLock)
+            {
+                if (_sha512_hash == null)
+                {
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        _sha512_hash = Sha512.ComputeHash(stream);
+                    }
+                }
+
+                if (hashAlgorithm == HashAlgorithm.Sha512)
+                {
+                    return _sha512_hash;
+                }
+
+                return null;
+            }
+        }
+
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        {
+            lock (_thisLock)
+            {
+                return Unsafe.Equals(this.CreateHash(hashAlgorithm), hash);
+            }
+        }
+
+        #endregion
     }
 }

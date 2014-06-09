@@ -136,12 +136,12 @@ namespace Library.Security
             return true;
         }
 
-        public ExchangePublicKey GetPublicKey()
+        public ExchangePublicKey GetExchangePublicKey()
         {
             return new ExchangePublicKey(this);
         }
 
-        public ExchangePrivateKey GetPrivateKey()
+        public ExchangePrivateKey GetExchangePrivateKey()
         {
             return new ExchangePrivateKey(this);
         }

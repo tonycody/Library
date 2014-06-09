@@ -22,7 +22,7 @@ byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
         clock_t clockStart, clockEnd;
         clockStart = clock();
 
-        const size_t bufferSize = 1024 * 256;
+        const size_t bufferSize = 1024 * 1024;
         byte* buffer = (byte*)calloc(bufferSize, sizeof(byte));
 
         SHA512 hash;
@@ -160,7 +160,7 @@ int32_t hashcash1_Verify(byte* key, byte* value, size_t valueSize)
 {
     try
     {
-        const size_t bufferSize = 1024 * 256;
+        const size_t bufferSize = 1024 * 1024;
         byte* buffer = (byte*)calloc(bufferSize, sizeof(byte));
 
         SHA512 hash;

@@ -26,6 +26,29 @@ namespace Library.Compression
                     _path = "Assemblies/Xz_x86.exe";
                 }
             }
+
+            foreach (var p in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(_path)))
+            {
+                try
+                {
+                    if (p.MainModule.FileName == Path.GetFullPath(_path))
+                    {
+                        try
+                        {
+                            p.Kill();
+                            p.WaitForExit();
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+
+                }
+            }
         }
 
         public static void Compress(Stream inStream, Stream outStream, BufferManager bufferManager)

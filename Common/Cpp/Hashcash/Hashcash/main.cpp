@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
     //    arguments[1] = "hashcash1";
     //    arguments[2] = "create";
     //    arguments[3] = "0101010101010101";
-    //    arguments[4] = "3600";
+    //    arguments[4] = "600";
 
     //    main2(count, arguments);
     //}
@@ -179,14 +179,13 @@ int main(int argc, char* argv[])
         char* arguments[count];
         arguments[1] = "hashcash1";
         arguments[2] = "verify";
-        // 60seconds, 9bit
-        //arguments[3] = "9fcc47a072aec40958c2adc4f8d557b979d5ea27c858710bfce464a13d1d9ba68a55abd7afe09d5684ad58d0473054ae0227de234e23ff9a1889de8fac460780";
-        // 600seconds, 12bit
-        //arguments[3] = "23788335b0ec58deae9b689e713d9bb6e109f798234bd3815c05bc5befcba3349b743b146cafaa0f20dd87b4ec84519e11a4015192b08a0b1e026e813b800a93";
-        // 1800seconds, 17bit
-        //arguments[3] = "e4e66c96f10ca5b904273d6ebf4695052fdb3ff4dd836c65738deee22f8fe14d1fc30d4748d27e46e14a6dd0343fb491260388b8ed6ad408541354b2b5d72982";
-        // 3600seconds, 20bit
-        arguments[3] = "fdb5f592cc2a0617943035c4b7c634a7f1d551987ddc27bebdeafbd30b8ffbd2f83613c433de5744067af548c4277846057d811b009edde177ed1b02f7acda85";
+        
+        // 5seconds, 4bit
+        //arguments[3] = "9b243b8ab151fe55e04467904c3a2424afdd68772a79bcd09967567ac5c4a57f3beb114efabe577d6674f4b4d10d26e57d6aaf247ca0cfe4c7af8ff3e27c1226";
+        // 60seconds, 11bit
+        //arguments[3] = "8f0500bfcb091b83722ab7e2cd0b1d9fdc498e205749807bef183f20463c0b57d25f9905c7642a7ccdf30aa40602edaa46bf456575e3664a6fe501b97b3d3e7b";
+        // 600seconds, 13bit
+        arguments[3] = "eaf65296957c3b820b0d6c83d336a932ca734d33e27ecb6ae5222c89bd8248f21d6cc3aac92bce9b5f091d73eb30f6c5cc0fe474faf29e9e87475205ae5e5771";
 
         arguments[4] = "0101010101010101";
 

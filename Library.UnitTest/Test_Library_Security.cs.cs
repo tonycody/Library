@@ -70,8 +70,8 @@ namespace Library.UnitTest
                 byte[] buffer = new byte[128];
                 _random.NextBytes(buffer);
 
-                var eBuffer = Exchange.Encrypt(exchange.GetPublicKey(), buffer);
-                var dBuffer = Exchange.Decrypt(exchange.GetPrivateKey(), eBuffer);
+                var eBuffer = Exchange.Encrypt(exchange.GetExchangePublicKey(), buffer);
+                var dBuffer = Exchange.Decrypt(exchange.GetExchangePrivateKey(), eBuffer);
 
                 Assert.IsTrue(CollectionUtilities.Equals(buffer, dBuffer), "Exchange #1");
             }

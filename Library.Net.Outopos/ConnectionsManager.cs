@@ -2928,7 +2928,7 @@ namespace Library.Net.Outopos
         public void SetBaseNode(Node baseNode)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-            if (ConnectionsManager.Check(baseNode)) throw new ArgumentException("baseNode");
+            if (!ConnectionsManager.Check(baseNode)) throw new ArgumentException("baseNode");
 
             lock (this.ThisLock)
             {
