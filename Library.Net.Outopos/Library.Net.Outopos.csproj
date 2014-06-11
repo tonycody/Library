@@ -98,8 +98,12 @@
   <ItemGroup>
     <Compile Include="Cache\BitmapManager.cs" />
     <Compile Include="Cache\CacheManager.cs" />
-    <Compile Include="Cache\Header\Section\SectionMessageHeader.cs" />
+    <Compile Include="Cache\Header\Mail\Mail.cs" />
+    <Compile Include="Cache\Header\Mail\MailMessageHeader.cs" />
+    <Compile Include="Cache\Header\Mail\MailCollection.cs" />
     <Compile Include="Cache\Header\_Base\Tag.cs" />
+    <Compile Include="Cache\_Interface\Header\Mail\IMail.cs" />
+    <Compile Include="Cache\_Interface\Header\Mail\IMailMessageHeader.cs" />
     <Compile Include="Cache\_Interface\Header\Section\ISectionProfileHeader.cs" />
     <Compile Include="Content\ChatMessageContent.cs" />
     <Compile Include="Content\ChatTopicContent.cs" />
@@ -124,9 +128,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Header\Chat\IChatTopicHeader.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Cache\_Interface\Header\Section\ISectionMessageHeader.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Header\Wiki\IWiki.cs" />

@@ -11,7 +11,7 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    public static class ContentConverter
+    static class ContentConverter
     {
         private enum ConvertCompressionAlgorithm : byte
         {
@@ -541,50 +541,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static ArraySegment<byte> ToSectionMessageContentBlock(SectionMessageContent content, IExchangeEncrypt publicKey)
-        {
-            if (content == null) throw new ArgumentNullException("content");
-            if (publicKey == null) throw new ArgumentNullException("publicKey");
-
-            ArraySegment<byte> value;
-
-            using (Stream contentStream = content.Export(_bufferManager))
-            using (Stream compressStream = ContentConverter.Compress(contentStream))
-            using (Stream paddingStream = ContentConverter.AddPadding(compressStream, 1024 * 256))
-            using (Stream hashStream = ContentConverter.AddHash(paddingStream))
-            using (Stream cryptostream = ContentConverter.Encrypt(hashStream, publicKey))
-            using (Stream typeStream = ContentConverter.AddType(cryptostream, "SectionMessage"))
-            {
-                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
-                typeStream.Read(value.Array, value.Offset, value.Count);
-            }
-
-            return value;
-        }
-
-        public static SectionMessageContent FromSectionMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt privateKey)
-        {
-            if (content.Array == null) throw new ArgumentNullException("content.Array");
-            if (privateKey == null) throw new ArgumentNullException("privateKey");
-
-            try
-            {
-                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream cryptoStream = ContentConverter.RemoveType(typeStream, "SectionMessage"))
-                using (Stream hashStream = ContentConverter.Decrypt(cryptoStream, privateKey))
-                using (Stream paddingStream = ContentConverter.RemoveHash(hashStream))
-                using (Stream compressStream = ContentConverter.RemovePadding(paddingStream))
-                using (Stream contentStream = ContentConverter.Decompress(compressStream))
-                {
-                    return SectionMessageContent.Import(contentStream, _bufferManager);
-                }
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
         public static ArraySegment<byte> ToWikiPageContentBlock(WikiPageContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
@@ -685,6 +641,50 @@ namespace Library.Net.Outopos
                 using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
                     return ChatMessageContent.Import(contentStream, _bufferManager);
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static ArraySegment<byte> ToMailMessageContentBlock(MailMessageContent content, IExchangeEncrypt publicKey)
+        {
+            if (content == null) throw new ArgumentNullException("content");
+            if (publicKey == null) throw new ArgumentNullException("publicKey");
+
+            ArraySegment<byte> value;
+
+            using (Stream contentStream = content.Export(_bufferManager))
+            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream paddingStream = ContentConverter.AddPadding(compressStream, 1024 * 256))
+            using (Stream hashStream = ContentConverter.AddHash(paddingStream))
+            using (Stream cryptostream = ContentConverter.Encrypt(hashStream, publicKey))
+            using (Stream typeStream = ContentConverter.AddType(cryptostream, "MailMessage"))
+            {
+                value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
+                typeStream.Read(value.Array, value.Offset, value.Count);
+            }
+
+            return value;
+        }
+
+        public static MailMessageContent FromMailMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt privateKey)
+        {
+            if (content.Array == null) throw new ArgumentNullException("content.Array");
+            if (privateKey == null) throw new ArgumentNullException("privateKey");
+
+            try
+            {
+                using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
+                using (Stream cryptoStream = ContentConverter.RemoveType(typeStream, "MailMessage"))
+                using (Stream hashStream = ContentConverter.Decrypt(cryptoStream, privateKey))
+                using (Stream paddingStream = ContentConverter.RemoveHash(hashStream))
+                using (Stream compressStream = ContentConverter.RemovePadding(paddingStream))
+                using (Stream contentStream = ContentConverter.Decompress(compressStream))
+                {
+                    return MailMessageContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)

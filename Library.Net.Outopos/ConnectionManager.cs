@@ -41,15 +41,16 @@ namespace Library.Net.Outopos
         public IEnumerable<Section> Sections { get; set; }
         public IEnumerable<Wiki> Wikis { get; set; }
         public IEnumerable<Chat> Chats { get; set; }
+        public IEnumerable<Mail> Mails { get; set; }
     }
 
     class PullHeadersEventArgs : EventArgs
     {
         public IEnumerable<SectionProfileHeader> SectionProfileHeaders { get; set; }
-        public IEnumerable<SectionMessageHeader> SectionMessageHeaders { get; set; }
         public IEnumerable<WikiPageHeader> WikiPageHeaders { get; set; }
         public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
         public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
+        public IEnumerable<MailMessageHeader> MailMessageHeaders { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -578,6 +579,7 @@ namespace Library.Net.Outopos
                                             Sections = message.Sections,
                                             Wikis = message.Wikis,
                                             Chats = message.Chats,
+                                            Mails = message.Mails,
                                         });
                                     }
                                     else if (type == (byte)SerializeId.Headers)
@@ -590,7 +592,7 @@ namespace Library.Net.Outopos
                                             WikiPageHeaders = message.WikiPageHeaders,
                                             ChatTopicHeaders = message.ChatTopicHeaders,
                                             ChatMessageHeaders = message.ChatMessageHeaders,
-                                            SectionMessageHeaders = message.SectionMessageHeaders,
+                                            MailMessageHeaders = message.MailMessageHeaders,
                                         });
                                     }
                                 }
@@ -843,7 +845,8 @@ namespace Library.Net.Outopos
         public void PushHeadersRequest(
             IEnumerable<Section> sections,
             IEnumerable<Wiki> wikis,
-            IEnumerable<Chat> chats)
+            IEnumerable<Chat> chats,
+            IEnumerable<Mail> mails)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -859,7 +862,8 @@ namespace Library.Net.Outopos
                     var message = new HeadersRequestMessage(
                         sections,
                         wikis,
-                        chats);
+                        chats,
+                        mails);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -885,10 +889,10 @@ namespace Library.Net.Outopos
 
         public void PushHeaders(
             IEnumerable<SectionProfileHeader> sectionProfileHeaders,
-            IEnumerable<SectionMessageHeader> sectionMessageHeaders,
             IEnumerable<WikiPageHeader> wikiPageHeaders,
             IEnumerable<ChatTopicHeader> chatTopicHeaders,
-            IEnumerable<ChatMessageHeader> chatMessageHeaders)
+            IEnumerable<ChatMessageHeader> chatMessageHeaders,
+            IEnumerable<MailMessageHeader> mailMessageHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -903,10 +907,10 @@ namespace Library.Net.Outopos
 
                     var message = new HeadersMessage(
                         sectionProfileHeaders,
-                        sectionMessageHeaders,
                         wikiPageHeaders,
                         chatTopicHeaders,
-                        chatMessageHeaders);
+                        chatMessageHeaders,
+                        mailMessageHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1365,20 +1369,24 @@ namespace Library.Net.Outopos
                 Section = 0,
                 Wiki = 1,
                 Chat = 2,
+                Mail = 3,
             }
 
             private SectionCollection _sections;
             private WikiCollection _wikis;
             private ChatCollection _chats;
+            private MailCollection _mails;
 
             public HeadersRequestMessage(
                 IEnumerable<Section> sections,
                 IEnumerable<Wiki> wikis,
-                IEnumerable<Chat> chats)
+                IEnumerable<Chat> chats,
+                IEnumerable<Mail> mails)
             {
                 if (sections != null) this.ProtectedSections.AddRange(sections);
                 if (wikis != null) this.ProtectedWikis.AddRange(wikis);
                 if (chats != null) this.ProtectedChats.AddRange(chats);
+                if (mails != null) this.ProtectedMails.AddRange(mails);
             }
 
             protected override void Initialize()
@@ -1410,6 +1418,10 @@ namespace Library.Net.Outopos
                         {
                             this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
                         }
+                        else if (id == (byte)SerializeId.Mail)
+                        {
+                            this.ProtectedMails.Add(Mail.Import(rangeStream, bufferManager));
+                        }
                     }
                 }
             }
@@ -1440,6 +1452,14 @@ namespace Library.Net.Outopos
                     using (var stream = value.Export(bufferManager))
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.Chat, stream);
+                    }
+                }
+                // Mails
+                foreach (var value in this.Mails)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Mail, stream);
                     }
                 }
 
@@ -1529,6 +1549,31 @@ namespace Library.Net.Outopos
                     return _chats;
                 }
             }
+
+            private volatile ReadOnlyCollection<Mail> _readOnlyMails;
+
+            public IEnumerable<Mail> Mails
+            {
+                get
+                {
+                    if (_readOnlyMails == null)
+                        _readOnlyMails = new ReadOnlyCollection<Mail>(this.ProtectedMails);
+
+                    return _readOnlyMails;
+                }
+            }
+
+            [DataMember(Name = "Mails")]
+            private MailCollection ProtectedMails
+            {
+                get
+                {
+                    if (_mails == null)
+                        _mails = new MailCollection(_maxHeaderRequestCount);
+
+                    return _mails;
+                }
+            }
         }
 
         private sealed class HeadersMessage : ItemBase<HeadersMessage>
@@ -1536,30 +1581,30 @@ namespace Library.Net.Outopos
             private enum SerializeId : byte
             {
                 SectionProfileHeader = 0,
-                SectionMessageHeader = 1,
+                MailMessageHeader = 1,
                 WikiPageHeader = 2,
                 ChatTopicHeader = 3,
                 ChatMessageHeader = 4,
             }
 
             private LockedList<SectionProfileHeader> _sectionProfileHeaders;
-            private LockedList<SectionMessageHeader> _sectionMessageHeaders;
             private LockedList<WikiPageHeader> _wikiPageHeaders;
             private LockedList<ChatTopicHeader> _chatTopicHeaders;
             private LockedList<ChatMessageHeader> _chatMessageHeaders;
+            private LockedList<MailMessageHeader> _mailMessageHeaders;
 
             public HeadersMessage(
                 IEnumerable<SectionProfileHeader> sectionProfileHeaders,
-                IEnumerable<SectionMessageHeader> sectionMessageHeaders,
                 IEnumerable<WikiPageHeader> wikiPageHeaders,
                 IEnumerable<ChatTopicHeader> chatTopicHeaders,
-                IEnumerable<ChatMessageHeader> chatMessageHeaders)
+                IEnumerable<ChatMessageHeader> chatMessageHeaders,
+                IEnumerable<MailMessageHeader> mailMessageHeaders)
             {
                 if (sectionProfileHeaders != null) this.ProtectedSectionProfileHeaders.AddRange(sectionProfileHeaders);
-                if (sectionMessageHeaders != null) this.ProtectedSectionMessageHeaders.AddRange(sectionMessageHeaders);
                 if (wikiPageHeaders != null) this.ProtectedWikiPageHeaders.AddRange(wikiPageHeaders);
                 if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
                 if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
+                if (mailMessageHeaders != null) this.ProtectedMailMessageHeaders.AddRange(mailMessageHeaders);
             }
 
             protected override void Initialize()
@@ -1583,10 +1628,6 @@ namespace Library.Net.Outopos
                         {
                             this.ProtectedSectionProfileHeaders.Add(SectionProfileHeader.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.SectionMessageHeader)
-                        {
-                            this.ProtectedSectionMessageHeaders.Add(SectionMessageHeader.Import(rangeStream, bufferManager));
-                        }
                         else if (id == (byte)SerializeId.WikiPageHeader)
                         {
                             this.ProtectedWikiPageHeaders.Add(WikiPageHeader.Import(rangeStream, bufferManager));
@@ -1598,6 +1639,10 @@ namespace Library.Net.Outopos
                         else if (id == (byte)SerializeId.ChatMessageHeader)
                         {
                             this.ProtectedChatMessageHeaders.Add(ChatMessageHeader.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.MailMessageHeader)
+                        {
+                            this.ProtectedMailMessageHeaders.Add(MailMessageHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1613,14 +1658,6 @@ namespace Library.Net.Outopos
                     using (var stream = value.Export(bufferManager))
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.SectionProfileHeader, stream);
-                    }
-                }
-                // SectionMessageHeaders
-                foreach (var value in this.SectionMessageHeaders)
-                {
-                    using (var stream = value.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SectionMessageHeader, stream);
                     }
                 }
                 // WikiPageHeaders
@@ -1645,6 +1682,14 @@ namespace Library.Net.Outopos
                     using (var stream = value.Export(bufferManager))
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatMessageHeader, stream);
+                    }
+                }
+                // MailMessageHeaders
+                foreach (var value in this.MailMessageHeaders)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.MailMessageHeader, stream);
                     }
                 }
 
@@ -1682,31 +1727,6 @@ namespace Library.Net.Outopos
                         _sectionProfileHeaders = new LockedList<SectionProfileHeader>(_maxHeaderCount);
 
                     return _sectionProfileHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<SectionMessageHeader> _readOnlySectionMessageHeaders;
-
-            public IEnumerable<SectionMessageHeader> SectionMessageHeaders
-            {
-                get
-                {
-                    if (_readOnlySectionMessageHeaders == null)
-                        _readOnlySectionMessageHeaders = new ReadOnlyCollection<SectionMessageHeader>(this.ProtectedSectionMessageHeaders);
-
-                    return _readOnlySectionMessageHeaders;
-                }
-            }
-
-            [DataMember(Name = "SectionMessageHeaders")]
-            private LockedList<SectionMessageHeader> ProtectedSectionMessageHeaders
-            {
-                get
-                {
-                    if (_sectionMessageHeaders == null)
-                        _sectionMessageHeaders = new LockedList<SectionMessageHeader>(_maxHeaderCount);
-
-                    return _sectionMessageHeaders;
                 }
             }
 
@@ -1782,6 +1802,31 @@ namespace Library.Net.Outopos
                         _chatMessageHeaders = new LockedList<ChatMessageHeader>(_maxHeaderCount);
 
                     return _chatMessageHeaders;
+                }
+            }
+
+            private volatile ReadOnlyCollection<MailMessageHeader> _readOnlyMailMessageHeaders;
+
+            public IEnumerable<MailMessageHeader> MailMessageHeaders
+            {
+                get
+                {
+                    if (_readOnlyMailMessageHeaders == null)
+                        _readOnlyMailMessageHeaders = new ReadOnlyCollection<MailMessageHeader>(this.ProtectedMailMessageHeaders);
+
+                    return _readOnlyMailMessageHeaders;
+                }
+            }
+
+            [DataMember(Name = "MailMessageHeaders")]
+            private LockedList<MailMessageHeader> ProtectedMailMessageHeaders
+            {
+                get
+                {
+                    if (_mailMessageHeaders == null)
+                        _mailMessageHeaders = new LockedList<MailMessageHeader>(_maxHeaderCount);
+
+                    return _mailMessageHeaders;
                 }
             }
         }

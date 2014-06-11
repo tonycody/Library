@@ -68,48 +68,6 @@ namespace Library.Net.Outopos
             });
         }
 
-        public Task<SectionMessageContent> Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
-        {
-            if (header == null) throw new ArgumentNullException("header");
-            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
-
-            return Task<SectionMessageContent>.Factory.StartNew(() =>
-            {
-                lock (this.ThisLock)
-                {
-                    if (!_cacheManager.Contains(header.Key))
-                    {
-                        _connectionsManager.Download(header.Key);
-
-                        return null;
-                    }
-                    else
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromSectionMessageContentBlock(buffer, exchangePrivateKey);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-                        }
-
-                        return null;
-                    }
-                }
-            });
-        }
-
         public Task<WikiPageContent> Download(WikiPageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
@@ -214,6 +172,48 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[header.Key];
                             return ContentConverter.FromChatMessageContentBlock(buffer);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+
+                        return null;
+                    }
+                }
+            });
+        }
+
+        public Task<MailMessageContent> Download(MailMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
+
+            return Task<MailMessageContent>.Factory.StartNew(() =>
+            {
+                lock (this.ThisLock)
+                {
+                    if (!_cacheManager.Contains(header.Key))
+                    {
+                        _connectionsManager.Download(header.Key);
+
+                        return null;
+                    }
+                    else
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            buffer = _cacheManager[header.Key];
+                            return ContentConverter.FromMailMessageContentBlock(buffer, exchangePrivateKey);
                         }
                         catch (Exception)
                         {

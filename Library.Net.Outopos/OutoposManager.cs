@@ -441,16 +441,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        public IEnumerable<SectionMessageHeader> GetSectionMessageHeaders(Section tag)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetSectionMessageHeaders(tag);
-            }
-        }
-
         public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -481,6 +471,16 @@ namespace Library.Net.Outopos
             }
         }
 
+        public IEnumerable<MailMessageHeader> GetMailMessageHeaders(Mail tag)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetMailMessageHeaders(tag);
+            }
+        }
+
         public Task<SectionProfileContent> Download(SectionProfileHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -491,7 +491,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Task<SectionMessageContent> Download(SectionMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        public Task<MailMessageContent> Download(MailMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -541,16 +541,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Task<SectionMessageHeader> Upload(Section tag, SectionMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _uploadManager.Upload(tag, content, exchangePublicKey, miner, digitalSignature);
-            }
-        }
-
         public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, Miner miner, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
@@ -578,6 +568,16 @@ namespace Library.Net.Outopos
             lock (this.ThisLock)
             {
                 return _uploadManager.Upload(tag, content, miner, digitalSignature);
+            }
+        }
+
+        public Task<MailMessageHeader> Upload(Mail tag, MailMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _uploadManager.Upload(tag, content, exchangePublicKey, miner, digitalSignature);
             }
         }
 

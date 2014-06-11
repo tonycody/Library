@@ -88,6 +88,21 @@ namespace Library.UnitTest
         }
 
         [Test]
+        public void Test_OutoposConverter_Mail()
+        {
+            Mail tag1 = new Mail("oooo", new byte[64]);
+            Mail tag2;
+            string option1 = "ABCD";
+            string option2;
+
+            var stringTagAndOption = OutoposConverter.ToMailString(tag1, option1);
+            tag2 = OutoposConverter.FromMailString(stringTagAndOption, out option2);
+
+            Assert.AreEqual(tag1, tag2, "OutoposConverter #8");
+            Assert.AreEqual(option1, option2, "OutoposConverter #9");
+        }
+
+        [Test]
         public void Test_Node()
         {
             Node node = null;
@@ -524,6 +539,7 @@ namespace Library.UnitTest
                     var sections = new SectionCollection();
                     var wikis = new WikiCollection();
                     var chats = new ChatCollection();
+                    var mails = new MailCollection();
 
                     for (int j = 0; j < 32; j++)
                     {
@@ -552,7 +568,16 @@ namespace Library.UnitTest
                         chats.Add(new Chat(RandomString.GetValue(256), id));
                     }
 
-                    senderConnection.PushHeadersRequest(sections, wikis, chats);
+                    for (int j = 0; j < 32; j++)
+                    {
+                        var id = new byte[64];
+                        _random.NextBytes(id);
+                        var key = new Key(id, HashAlgorithm.Sha512);
+
+                        mails.Add(new Mail(RandomString.GetValue(256), id));
+                    }
+
+                    senderConnection.PushHeadersRequest(sections, wikis, chats, mails);
 
                     var item = queue.Dequeue();
                     Assert.IsTrue(CollectionUtilities.Equals(sections, item.Sections), "ConnectionManager #6.1");
@@ -576,10 +601,10 @@ namespace Library.UnitTest
                     var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
 
                     var headers1 = new List<SectionProfileHeader>();
-                    var headers2 = new List<SectionMessageHeader>();
-                    var headers3 = new List<WikiPageHeader>();
-                    var headers4 = new List<ChatTopicHeader>();
-                    var headers5 = new List<ChatMessageHeader>();
+                    var headers2 = new List<WikiPageHeader>();
+                    var headers3 = new List<ChatTopicHeader>();
+                    var headers4 = new List<ChatMessageHeader>();
+                    var headers5 = new List<MailMessageHeader>();
 
                     for (int j = 0; j < 4; j++)
                     {
@@ -598,23 +623,11 @@ namespace Library.UnitTest
                         var id = new byte[64];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
-                        var tag = new Section("oooo", new byte[64]);
-                        var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
-                        var header = new SectionMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
-
-                        headers2.Add(header);
-                    }
-
-                    for (int j = 0; j < 4; j++)
-                    {
-                        var id = new byte[64];
-                        _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
                         var tag = new Wiki("oooo", new byte[64]);
                         var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
                         var header = new WikiPageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
-                        headers3.Add(header);
+                        headers2.Add(header);
                     }
 
                     for (int j = 0; j < 4; j++)
@@ -626,7 +639,7 @@ namespace Library.UnitTest
                         var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
                         var header = new ChatTopicHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
-                        headers4.Add(header);
+                        headers3.Add(header);
                     }
 
                     for (int j = 0; j < 4; j++)
@@ -638,6 +651,18 @@ namespace Library.UnitTest
                         var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
                         var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
+                        headers4.Add(header);
+                    }
+
+                    for (int j = 0; j < 4; j++)
+                    {
+                        var id = new byte[64];
+                        _random.NextBytes(id);
+                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var tag = new Mail("oooo", new byte[64]);
+                        var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
+                        var header = new MailMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+
                         headers5.Add(header);
                     }
 
@@ -645,10 +670,10 @@ namespace Library.UnitTest
 
                     var item = queue.Dequeue();
                     Assert.IsTrue(CollectionUtilities.Equals(headers1, item.SectionProfileHeaders), "ConnectionManager #7.1");
-                    Assert.IsTrue(CollectionUtilities.Equals(headers2, item.SectionMessageHeaders), "ConnectionManager #7.2");
-                    Assert.IsTrue(CollectionUtilities.Equals(headers3, item.WikiPageHeaders), "ConnectionManager #7.3");
-                    Assert.IsTrue(CollectionUtilities.Equals(headers4, item.ChatTopicHeaders), "ConnectionManager #7.4");
-                    Assert.IsTrue(CollectionUtilities.Equals(headers5, item.ChatMessageHeaders), "ConnectionManager #7.5");
+                    Assert.IsTrue(CollectionUtilities.Equals(headers2, item.WikiPageHeaders), "ConnectionManager #7.2");
+                    Assert.IsTrue(CollectionUtilities.Equals(headers3, item.ChatTopicHeaders), "ConnectionManager #7.3");
+                    Assert.IsTrue(CollectionUtilities.Equals(headers4, item.ChatMessageHeaders), "ConnectionManager #7.4");
+                    Assert.IsTrue(CollectionUtilities.Equals(headers5, item.MailMessageHeaders), "ConnectionManager #7.5");
                 }
 
                 foreach (var connectionManager in connectionManagers)

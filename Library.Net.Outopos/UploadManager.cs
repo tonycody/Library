@@ -103,58 +103,6 @@ namespace Library.Net.Outopos
             });
         }
 
-        public Task<SectionMessageHeader> Upload(Section tag, SectionMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
-        {
-            if (tag == null) throw new ArgumentNullException("tag");
-            if (content == null) throw new ArgumentNullException("content");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
-            return Task<SectionMessageHeader>.Factory.StartNew(() =>
-            {
-                Key key;
-
-                lock (this.ThisLock)
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = ContentConverter.ToSectionMessageContentBlock(content, exchangePublicKey);
-
-
-                        {
-                            if (_hashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                            }
-
-                            _cacheManager.Lock(key);
-                            _settings.LifeSpans[key] = DateTime.UtcNow;
-                        }
-
-                        _cacheManager[key] = buffer;
-                        _connectionsManager.Upload(key);
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-                }
-
-                var header = new SectionMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.Upload(header);
-                }
-
-                return header;
-            });
-        }
-
         public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, Miner miner, DigitalSignature digitalSignature)
         {
             if (tag == null) throw new ArgumentNullException("tag");
@@ -301,6 +249,58 @@ namespace Library.Net.Outopos
                 }
 
                 var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+
+                lock (this.ThisLock)
+                {
+                    _connectionsManager.Upload(header);
+                }
+
+                return header;
+            });
+        }
+
+        public Task<MailMessageHeader> Upload(Mail tag, MailMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (tag == null) throw new ArgumentNullException("tag");
+            if (content == null) throw new ArgumentNullException("content");
+            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
+
+            return Task<MailMessageHeader>.Factory.StartNew(() =>
+            {
+                Key key;
+
+                lock (this.ThisLock)
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = ContentConverter.ToMailMessageContentBlock(content, exchangePublicKey);
+
+
+                        {
+                            if (_hashAlgorithm == HashAlgorithm.Sha512)
+                            {
+                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                            }
+
+                            _cacheManager.Lock(key);
+                            _settings.LifeSpans[key] = DateTime.UtcNow;
+                        }
+
+                        _cacheManager[key] = buffer;
+                        _connectionsManager.Upload(key);
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+                }
+
+                var header = new MailMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {

@@ -8,8 +8,8 @@ using Library.Io;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "SectionMessageContent", Namespace = "http://Library/Net/Outopos")]
-    public sealed class SectionMessageContent : ItemBase<SectionMessageContent>
+    [DataContract(Name = "MailMessageContent", Namespace = "http://Library/Net/Outopos")]
+    public sealed class MailMessageContent : ItemBase<MailMessageContent>
     {
         private enum SerializeId : byte
         {
@@ -21,7 +21,7 @@ namespace Library.Net.Outopos
         public static readonly int MaxCommentLength = 1024 * 32;
         public static readonly int MaxAnchorCount = 32;
 
-        public SectionMessageContent(string comment)
+        public MailMessageContent(string comment)
         {
             this.Comment = comment;
         }
@@ -73,12 +73,12 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is SectionMessageContent)) return false;
+            if ((object)obj == null || !(obj is MailMessageContent)) return false;
 
-            return this.Equals((SectionMessageContent)obj);
+            return this.Equals((MailMessageContent)obj);
         }
 
-        public override bool Equals(SectionMessageContent other)
+        public override bool Equals(MailMessageContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -100,7 +100,7 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && value.Length > SectionMessageContent.MaxCommentLength)
+                if (value != null && value.Length > MailMessageContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }

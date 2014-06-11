@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
@@ -17,7 +18,9 @@ namespace Library.Net.Outopos
             Id = 1,
         }
 
+        private static Intern<string> _nameCache = new Intern<string>();
         private volatile string _name;
+        private static Intern<byte[]> _idCache = new Intern<byte[]>(new ByteArrayEqualityComparer());
         private volatile byte[] _id;
 
         private volatile int _hashCode;
@@ -127,7 +130,7 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _name = value;
+                    _name = _nameCache.GetValue(value, this);
                 }
             }
         }
@@ -147,12 +150,12 @@ namespace Library.Net.Outopos
                 }
                 else
                 {
-                    _id = value;
+                    _id = _idCache.GetValue(value, this);
                 }
 
                 if (value != null)
                 {
-                    _hashCode = ItemUtilities.GetHashCode(_id);
+                    _hashCode = RuntimeHelpers.GetHashCode(_id);
                 }
                 else
                 {
