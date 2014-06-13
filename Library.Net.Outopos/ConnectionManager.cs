@@ -1581,10 +1581,10 @@ namespace Library.Net.Outopos
             private enum SerializeId : byte
             {
                 SectionProfileHeader = 0,
-                MailMessageHeader = 1,
-                WikiPageHeader = 2,
-                ChatTopicHeader = 3,
-                ChatMessageHeader = 4,
+                WikiPageHeader = 1,
+                ChatTopicHeader = 2,
+                ChatMessageHeader = 3,
+                MailMessageHeader = 4,
             }
 
             private LockedList<SectionProfileHeader> _sectionProfileHeaders;

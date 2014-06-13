@@ -1553,25 +1553,6 @@ namespace Library.Net.Outopos
                                     }
                                 }
                             }
-
-                            {
-                                //var array = _cacheManager.ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksLink.ExceptFrom(items);
-                                //}
-
-                                //int count = _maxBlockLinkCount;
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksLinkList.Add(item);
-                                //}
-                            }
                         }
 
                         foreach (var pair in messageManagers)
@@ -1595,25 +1576,6 @@ namespace Library.Net.Outopos
                                     }
                                 }
                             }
-
-                            {
-                                //var array = messageManager.PullBlocksLink.ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksLink.ExceptFrom(items);
-                                //}
-
-                                //int count = (int)(_maxBlockLinkCount * ((double)12 / otherNodes.Count));
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksLinkList.Add(item);
-                                //}
-                            }
                         }
 
                         {
@@ -1632,25 +1594,6 @@ namespace Library.Net.Outopos
                                         count--;
                                     }
                                 }
-                            }
-
-                            {
-                                //var array = _cacheManager.ExceptFrom(_downloadBlocks.ToArray()).ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksRequest.ExceptFrom(items);
-                                //}
-
-                                //int count = _maxBlockRequestCount;
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksRequestList.Add(item);
-                                //}
                             }
                         }
 
@@ -1674,25 +1617,6 @@ namespace Library.Net.Outopos
                                         count--;
                                     }
                                 }
-                            }
-
-                            {
-                                //var array = _cacheManager.ExceptFrom(messageManager.PullBlocksRequest.ToArray()).ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksRequest.ExceptFrom(items);
-                                //}
-
-                                //int count = (int)(_maxBlockRequestCount * ((double)12 / otherNodes.Count));
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksRequestList.Add(item);
-                                //}
                             }
                         }
                     }
@@ -2504,7 +2428,10 @@ namespace Library.Net.Outopos
                                     }
                                 }
 
-                                if (sectionList != null || wikiList != null || chatList != null || mailList != null)
+                                if (sectionList != null
+                                    || wikiList != null
+                                    || chatList != null
+                                    || mailList != null)
                                 {
                                     try
                                     {
@@ -2530,10 +2457,15 @@ namespace Library.Net.Outopos
                                             _pushMailsRequestList.Remove(item);
                                         }
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest ({0})",
-                                            sectionList.Count + wikiList.Count + chatList.Count));
+                                        var tagCount =
+                                            sectionList.Count
+                                            + wikiList.Count
+                                            + chatList.Count
+                                            + mailList.Count;
 
-                                        _pushHeaderRequestCount.Add(sectionList.Count);
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push HeadersRequest ({0})", tagCount));
+
+                                        _pushHeaderRequestCount.Add(tagCount);
                                     }
                                     catch (Exception e)
                                     {
@@ -2966,9 +2898,13 @@ namespace Library.Net.Outopos
             if (messageManager.PullSectionsRequest.Count > _maxHeaderRequestCount * messageManager.PullSectionsRequest.SurvivalTime.TotalMinutes) return;
             if (messageManager.PullWikisRequest.Count > _maxHeaderRequestCount * messageManager.PullWikisRequest.SurvivalTime.TotalMinutes) return;
             if (messageManager.PullChatsRequest.Count > _maxHeaderRequestCount * messageManager.PullChatsRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullMailsRequest.Count > _maxHeaderRequestCount * messageManager.PullMailsRequest.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull HeadersRequest ({0})",
-                e.Sections.Count() + e.Wikis.Count() + e.Chats.Count()));
+                e.Sections.Count()
+                + e.Wikis.Count()
+                + e.Chats.Count()
+                + e.Mails.Count()));
 
             foreach (var tag in e.Sections.Take(_maxHeaderRequestCount))
             {

@@ -120,7 +120,7 @@
     <Compile Include="OutoposConverter.cs" />
     <Compile Include="Cache\Header\Section\SectionCollection.cs" />
     <Compile Include="Cache\Header\Section\Section.cs" />
-    <Compile Include="Content\SectionMessageContent.cs" />
+    <Compile Include="Content\MailMessageContent.cs" />
     <Compile Include="Content\SectionProfileContent.cs" />
     <Compile Include="Cache\Header\Key.cs" />
     <Compile Include="Cache\Header\KeyCollection.cs" />

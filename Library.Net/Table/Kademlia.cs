@@ -419,9 +419,11 @@ namespace Library.Net
                 // 生存率の高いNodeはFirstに、そうでないNodeはLastに
                 if (targetList != null)
                 {
-                    if (targetList.Contains(item))
+                    var orignal = targetList.FirstOrDefault(n => Unsafe.Equals(n.Id, item.Id));
+
+                    if (orignal != null)
                     {
-                        targetList.Remove(item);
+                        targetList.Remove(orignal);
                         targetList.AddFirst(item);
                     }
                     else
@@ -457,10 +459,12 @@ namespace Library.Net
 
                 var targetList = _nodesList[i];
 
+                // 生存率の高いNodeはFirstに、そうでないNodeはLastに
                 if (targetList != null)
                 {
-                    // 生存率の高いNodeはFirstに、そうでないNodeはLastに
-                    if (!targetList.Contains(item))
+                    var orignal = targetList.FirstOrDefault(n => Unsafe.Equals(n.Id, item.Id));
+
+                    if (orignal == null)
                     {
                         if (targetList.Count < _column)
                         {
