@@ -718,12 +718,6 @@ namespace Library.Net.Amoeba
             public DateTime LastPullTime { get; set; }
         }
 
-        private class SignatureSortItem
-        {
-            public string Signature { get; set; }
-            public DateTime LastAccessTime { get; set; }
-        }
-
         private volatile bool _refreshThreadRunning;
 
         private void ConnectionsManagerThread()
@@ -869,26 +863,16 @@ namespace Library.Net.Amoeba
                                 removeSignatures.UnionWith(_settings.GetSignatures());
                                 removeSignatures.ExceptWith(lockSignatures);
 
-                                var signatureSortItems = new List<SignatureSortItem>();
-
-                                foreach (var signature in removeSignatures)
-                                {
-                                    DateTime lastAccessTime;
-                                    _seedLastAccessTimes.TryGetValue(signature, out lastAccessTime);
-
-                                    signatureSortItems.Add(new SignatureSortItem()
+                                var sortList = removeSignatures
+                                    .OrderBy(n =>
                                     {
-                                        Signature = signature,
-                                        LastAccessTime = lastAccessTime,
-                                    });
-                                }
+                                        DateTime t;
+                                        _seedLastAccessTimes.TryGetValue(n, out t);
 
-                                signatureSortItems.Sort((x, y) =>
-                                {
-                                    return x.LastAccessTime.CompareTo(y.LastAccessTime);
-                                });
+                                        return t;
+                                    }).ToList();
 
-                                _settings.RemoveSignatures(signatureSortItems.Select(n => n.Signature).Take(signatureSortItems.Count - 8192));
+                                _settings.RemoveSignatures(sortList.Take(sortList.Count - 1024));
 
                                 var liveSignatures = new SortedSet<string>(_settings.GetSignatures());
 

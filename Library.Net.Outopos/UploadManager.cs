@@ -68,7 +68,6 @@ namespace Library.Net.Outopos
                     {
                         buffer = ContentConverter.ToBroadcastProfileContentBlock(content);
 
-
                         {
                             if (_hashAlgorithm == HashAlgorithm.Sha512)
                             {
@@ -121,7 +120,6 @@ namespace Library.Net.Outopos
                     {
                         buffer = ContentConverter.ToUnicastMessageContentBlock(content, exchangePublicKey);
 
-
                         {
                             if (_hashAlgorithm == HashAlgorithm.Sha512)
                             {
@@ -172,7 +170,6 @@ namespace Library.Net.Outopos
                     try
                     {
                         buffer = ContentConverter.ToWikiPageContentBlock(content);
-
 
                         {
                             if (_hashAlgorithm == HashAlgorithm.Sha512)
@@ -225,7 +222,6 @@ namespace Library.Net.Outopos
                     {
                         buffer = ContentConverter.ToChatTopicContentBlock(content);
 
-
                         {
                             if (_hashAlgorithm == HashAlgorithm.Sha512)
                             {
@@ -276,7 +272,6 @@ namespace Library.Net.Outopos
                     try
                     {
                         buffer = ContentConverter.ToChatMessageContentBlock(content);
-
 
                         {
                             if (_hashAlgorithm == HashAlgorithm.Sha512)
