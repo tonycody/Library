@@ -280,67 +280,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static string ToSectionString(Section item, string option)
-        {
-            if (item == null) throw new ArgumentNullException("Section");
-
-            try
-            {
-                if (option != null)
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Section>(item))
-                    {
-                        return "Section:" + OutoposConverter.ToBase64String(stream) + "," + option;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Section>(item))
-                    {
-                        return "Section:" + OutoposConverter.ToBase64String(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
-        public static Section FromSectionString(string item, out string option)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Section:") && !item.StartsWith("Section@")) throw new ArgumentException("item");
-
-            option = null;
-
-            try
-            {
-                if (item.Contains(","))
-                {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    option = list[1];
-
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Section:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Section>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Section:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Section>(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
         public static string ToWikiString(Wiki item, string option)
         {
             if (item == null) throw new ArgumentNullException("Wiki");
@@ -454,67 +393,6 @@ namespace Library.Net.Outopos
                     using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
                     {
                         return OutoposConverter.FromStream<Chat>(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
-        public static string ToMailString(Mail item, string option)
-        {
-            if (item == null) throw new ArgumentNullException("Mail");
-
-            try
-            {
-                if (option != null)
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Mail>(item))
-                    {
-                        return "Mail:" + OutoposConverter.ToBase64String(stream) + "," + option;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Mail>(item))
-                    {
-                        return "Mail:" + OutoposConverter.ToBase64String(stream);
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                throw new FormatException();
-            }
-        }
-
-        public static Mail FromMailString(string item, out string option)
-        {
-            if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Mail:") && !item.StartsWith("Mail@")) throw new ArgumentException("item");
-
-            option = null;
-
-            try
-            {
-                if (item.Contains(","))
-                {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    option = list[1];
-
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Mail:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Mail>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Mail:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Mail>(stream);
                     }
                 }
             }

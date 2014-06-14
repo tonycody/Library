@@ -51,13 +51,12 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Task<SectionProfileHeader> Upload(Section tag, SectionProfileContent content, Miner miner, DigitalSignature digitalSignature)
+        public Task<BroadcastProfileHeader> Upload(BroadcastProfileContent content, Miner miner, DigitalSignature digitalSignature)
         {
-            if (tag == null) throw new ArgumentNullException("tag");
             if (content == null) throw new ArgumentNullException("content");
             if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
 
-            return Task<SectionProfileHeader>.Factory.StartNew(() =>
+            return Task<BroadcastProfileHeader>.Factory.StartNew(() =>
             {
                 Key key;
 
@@ -67,7 +66,7 @@ namespace Library.Net.Outopos
 
                     try
                     {
-                        buffer = ContentConverter.ToSectionProfileContentBlock(content);
+                        buffer = ContentConverter.ToBroadcastProfileContentBlock(content);
 
 
                         {
@@ -92,7 +91,60 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                var header = new SectionProfileHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+                var header = new BroadcastProfileHeader(DateTime.UtcNow, key, miner, digitalSignature);
+
+                lock (this.ThisLock)
+                {
+                    _connectionsManager.Upload(header);
+                }
+
+                return header;
+            });
+        }
+
+        public Task<UnicastMessageHeader> Upload(string signature, UnicastMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
+        {
+            if (signature == null) throw new ArgumentNullException("signature");
+            if (!Signature.Check(signature)) throw new ArgumentException("signature");
+            if (content == null) throw new ArgumentNullException("content");
+            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
+
+            return Task<UnicastMessageHeader>.Factory.StartNew(() =>
+            {
+                Key key;
+
+                lock (this.ThisLock)
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = ContentConverter.ToUnicastMessageContentBlock(content, exchangePublicKey);
+
+
+                        {
+                            if (_hashAlgorithm == HashAlgorithm.Sha512)
+                            {
+                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                            }
+
+                            _cacheManager.Lock(key);
+                            _settings.LifeSpans[key] = DateTime.UtcNow;
+                        }
+
+                        _cacheManager[key] = buffer;
+                        _connectionsManager.Upload(key);
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+                }
+
+                var header = new UnicastMessageHeader(signature, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {
@@ -249,58 +301,6 @@ namespace Library.Net.Outopos
                 }
 
                 var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.Upload(header);
-                }
-
-                return header;
-            });
-        }
-
-        public Task<MailMessageHeader> Upload(Mail tag, MailMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
-        {
-            if (tag == null) throw new ArgumentNullException("tag");
-            if (content == null) throw new ArgumentNullException("content");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
-            return Task<MailMessageHeader>.Factory.StartNew(() =>
-            {
-                Key key;
-
-                lock (this.ThisLock)
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = ContentConverter.ToMailMessageContentBlock(content, exchangePublicKey);
-
-
-                        {
-                            if (_hashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                            }
-
-                            _cacheManager.Lock(key);
-                            _settings.LifeSpans[key] = DateTime.UtcNow;
-                        }
-
-                        _cacheManager[key] = buffer;
-                        _connectionsManager.Upload(key);
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-                }
-
-                var header = new MailMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                 lock (this.ThisLock)
                 {

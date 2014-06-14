@@ -606,8 +606,8 @@ namespace Library.UnitTest
                     senderConnection.PushBlock(key, new ArraySegment<byte>(buffer, 0, 1024 * 1024 * 4));
 
                     var item = queue.Dequeue();
-                    Assert.AreEqual(key, item.Key, "ConnectionManager #4");
-                    Assert.IsTrue(CollectionUtilities.Equals(buffer, 0, item.Value.Array, item.Value.Offset, 1024 * 1024 * 4), "ConnectionManager #5");
+                    Assert.AreEqual(key, item.Key, "ConnectionManager #4.1");
+                    Assert.IsTrue(CollectionUtilities.Equals(buffer, 0, item.Value.Array, item.Value.Offset, 1024 * 1024 * 4), "ConnectionManager #4.2");
 
                     _bufferManager.ReturnBuffer(buffer);
                     _bufferManager.ReturnBuffer(item.Value.Array);
@@ -626,17 +626,19 @@ namespace Library.UnitTest
                         queue.Enqueue(e);
                     };
 
+                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+
                     var signatures = new SignatureCollection();
 
                     for (int j = 0; j < 32; j++)
                     {
-                        signatures.Add(RandomString.GetValue(256));
+                        signatures.Add(digitalSignature.ToString());
                     }
 
                     senderConnection.PushSeedsRequest(signatures);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(CollectionUtilities.Equals(signatures, item.Signatures), "ConnectionManager #6");
+                    Assert.IsTrue(CollectionUtilities.Equals(signatures, item.Signatures), "ConnectionManager #5");
                 }
 
                 connectionManagers.Randomize();
@@ -679,7 +681,7 @@ namespace Library.UnitTest
                     senderConnection.PushSeeds(seeds);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(CollectionUtilities.Equals(seeds, item.Seeds), "ConnectionManager #7");
+                    Assert.IsTrue(CollectionUtilities.Equals(seeds, item.Seeds), "ConnectionManager #6");
                 }
 
                 foreach (var connectionManager in connectionManagers)

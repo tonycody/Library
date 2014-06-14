@@ -1130,40 +1130,19 @@ namespace Library.Net.Amoeba
 
                     {
                         {
+                            var array = _cacheManager.ToArray();
+                            _random.Shuffle(array);
+
+                            int count = _maxBlockLinkCount;
+
+                            for (int i = 0; count > 0 && i < array.Length; i++)
                             {
-                                var array = _cacheManager.ToArray();
-                                _random.Shuffle(array);
-
-                                int count = _maxBlockLinkCount;
-
-                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
                                 {
-                                    if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
-                                    {
-                                        pushBlocksLinkList.Add(array[i]);
+                                    pushBlocksLinkList.Add(array[i]);
 
-                                        count--;
-                                    }
+                                    count--;
                                 }
-                            }
-
-                            {
-                                //var array = _cacheManager.ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksLink.ExceptFrom(items);
-                                //}
-
-                                //int count = _maxBlockLinkCount;
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksLinkList.Add(item);
-                                //}
                             }
                         }
 
@@ -1172,78 +1151,36 @@ namespace Library.Net.Amoeba
                             var node = pair.Key;
                             var messageManager = pair.Value;
 
+                            var array = messageManager.PullBlocksLink.ToArray();
+                            _random.Shuffle(array);
+
+                            int count = (int)(_maxBlockLinkCount * ((double)12 / otherNodes.Count));
+
+                            for (int i = 0; count > 0 && i < array.Length; i++)
                             {
-                                var array = messageManager.PullBlocksLink.ToArray();
-                                _random.Shuffle(array);
-
-                                int count = (int)(_maxBlockLinkCount * ((double)12 / otherNodes.Count));
-
-                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
                                 {
-                                    if (!messageManagers.Values.Any(n => n.PushBlocksLink.Contains(array[i])))
-                                    {
-                                        pushBlocksLinkList.Add(array[i]);
+                                    pushBlocksLinkList.Add(array[i]);
 
-                                        count--;
-                                    }
+                                    count--;
                                 }
-                            }
-
-                            {
-                                //var array = messageManager.PullBlocksLink.ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksLink.ExceptFrom(items);
-                                //}
-
-                                //int count = (int)(_maxBlockLinkCount * ((double)12 / otherNodes.Count));
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksLinkList.Add(item);
-                                //}
                             }
                         }
 
                         {
+                            var array = _cacheManager.ExceptFrom(_downloadBlocks.ToArray()).ToArray();
+                            _random.Shuffle(array);
+
+                            int count = _maxBlockRequestCount;
+
+                            for (int i = 0; count > 0 && i < array.Length; i++)
                             {
-                                var array = _cacheManager.ExceptFrom(_downloadBlocks.ToArray()).ToArray();
-                                _random.Shuffle(array);
-
-                                int count = _maxBlockRequestCount;
-
-                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
                                 {
-                                    if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
-                                    {
-                                        pushBlocksRequestList.Add(array[i]);
+                                    pushBlocksRequestList.Add(array[i]);
 
-                                        count--;
-                                    }
+                                    count--;
                                 }
-                            }
-
-                            {
-                                //var array = _cacheManager.ExceptFrom(_downloadBlocks.ToArray()).ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksRequest.ExceptFrom(items);
-                                //}
-
-                                //int count = _maxBlockRequestCount;
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksRequestList.Add(item);
-                                //}
                             }
                         }
 
@@ -1252,40 +1189,19 @@ namespace Library.Net.Amoeba
                             var node = pair.Key;
                             var messageManager = pair.Value;
 
+                            var array = _cacheManager.ExceptFrom(messageManager.PullBlocksRequest.ToArray()).ToArray();
+                            _random.Shuffle(array);
+
+                            int count = (int)(_maxBlockRequestCount * ((double)12 / otherNodes.Count));
+
+                            for (int i = 0; count > 0 && i < array.Length; i++)
                             {
-                                var array = _cacheManager.ExceptFrom(messageManager.PullBlocksRequest.ToArray()).ToArray();
-                                _random.Shuffle(array);
-
-                                int count = (int)(_maxBlockRequestCount * ((double)12 / otherNodes.Count));
-
-                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
                                 {
-                                    if (!messageManagers.Values.Any(n => n.PushBlocksRequest.Contains(array[i])))
-                                    {
-                                        pushBlocksRequestList.Add(array[i]);
+                                    pushBlocksRequestList.Add(array[i]);
 
-                                        count--;
-                                    }
+                                    count--;
                                 }
-                            }
-
-                            {
-                                //var array = _cacheManager.ExceptFrom(messageManager.PullBlocksRequest.ToArray()).ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<Key> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushBlocksRequest.ExceptFrom(items);
-                                //}
-
-                                //int count = (int)(_maxBlockRequestCount * ((double)12 / otherNodes.Count));
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushBlocksRequestList.Add(item);
-                                //}
                             }
                         }
                     }
@@ -1476,40 +1392,19 @@ namespace Library.Net.Amoeba
 
                     {
                         {
+                            var array = _pushSeedsRequestList.ToArray();
+                            _random.Shuffle(array);
+
+                            int count = _maxSeedRequestCount;
+
+                            for (int i = 0; count > 0 && i < array.Length; i++)
                             {
-                                var array = _pushSeedsRequestList.ToArray();
-                                _random.Shuffle(array);
-
-                                int count = _maxSeedRequestCount;
-
-                                for (int i = 0; count > 0 && i < array.Length; i++)
+                                if (!messageManagers.Values.Any(n => n.PushSeedsRequest.Contains(array[i])))
                                 {
-                                    if (!messageManagers.Values.Any(n => n.PushSeedsRequest.Contains(array[i])))
-                                    {
-                                        pushSeedsRequestList.Add(array[i]);
+                                    pushSeedsRequestList.Add(array[i]);
 
-                                        count--;
-                                    }
+                                    count--;
                                 }
-                            }
-
-                            {
-                                //var array = _pushSeedsRequestList.ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<string> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushSeedsRequest.ExceptFrom(items);
-                                //}
-
-                                //int count = _maxSeedRequestCount;
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushSeedsRequestList.Add(item);
-                                //}
                             }
                         }
 
@@ -1533,25 +1428,6 @@ namespace Library.Net.Amoeba
                                         count--;
                                     }
                                 }
-                            }
-
-                            {
-                                //var array = messageManager.PullSeedsRequest.ToArray();
-                                //_random.Shuffle(array);
-
-                                //IEnumerable<string> items = array;
-
-                                //foreach (var tempMessageManager in messageManagers.Values.OrderBy(n => n.Id))
-                                //{
-                                //    items = tempMessageManager.PushSeedsRequest.ExceptFrom(items);
-                                //}
-
-                                //int count = _maxSeedRequestCount;
-
-                                //foreach (var item in items.Take(count))
-                                //{
-                                //    pushSeedsRequestList.Add(item);
-                                //}
                             }
                         }
                     }

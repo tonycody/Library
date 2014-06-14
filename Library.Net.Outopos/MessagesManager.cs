@@ -34,11 +34,11 @@ namespace Library.Net.Outopos
                 foreach (var messageManager in _messageManagerDictionary.Values.ToArray())
                 {
                     messageManager.StockBlocks.TrimExcess();
-                    messageManager.StockSectionProfileHeaders.TrimExcess();
+                    messageManager.StockBroadcastProfileHeaders.TrimExcess();
+                    messageManager.StockUnicastMessageHeaders.TrimExcess();
                     messageManager.StockWikiPageHeaders.TrimExcess();
                     messageManager.StockChatTopicHeaders.TrimExcess();
                     messageManager.StockChatMessageHeaders.TrimExcess();
-                    messageManager.StockMailMessageHeaders.TrimExcess();
 
                     messageManager.PushBlocksLink.TrimExcess();
                     messageManager.PullBlocksLink.TrimExcess();
@@ -46,17 +46,17 @@ namespace Library.Net.Outopos
                     messageManager.PushBlocksRequest.TrimExcess();
                     messageManager.PullBlocksRequest.TrimExcess();
 
-                    messageManager.PushSectionsRequest.TrimExcess();
-                    messageManager.PullSectionsRequest.TrimExcess();
+                    messageManager.PushBroadcastsRequest.TrimExcess();
+                    messageManager.PullBroadcastsRequest.TrimExcess();
+
+                    messageManager.PushUnicastsRequest.TrimExcess();
+                    messageManager.PullUnicastsRequest.TrimExcess();
 
                     messageManager.PushWikisRequest.TrimExcess();
                     messageManager.PullWikisRequest.TrimExcess();
 
                     messageManager.PushChatsRequest.TrimExcess();
                     messageManager.PullChatsRequest.TrimExcess();
-
-                    messageManager.PushMailsRequest.TrimExcess();
-                    messageManager.PullMailsRequest.TrimExcess();
                 }
 
                 if (_messageManagerDictionary.Count > 128)
@@ -187,11 +187,11 @@ namespace Library.Net.Outopos
         private DateTime _lastPullTime = DateTime.UtcNow;
 
         private VolatileHashSet<Key> _stockBlocks;
-        private VolatileHashSet<byte[]> _stockSectionProfileHeaders;
+        private VolatileHashSet<byte[]> _stockBroadcastProfileHeaders;
+        private VolatileHashSet<byte[]> _stockUnicastMessageHeaders;
         private VolatileHashSet<byte[]> _stockWikiPageHeaders;
         private VolatileHashSet<byte[]> _stockChatTopicHeaders;
         private VolatileHashSet<byte[]> _stockChatMessageHeaders;
-        private VolatileHashSet<byte[]> _stockMailMessageHeaders;
 
         private VolatileHashSet<Key> _pushBlocksLink;
         private VolatileHashSet<Key> _pullBlocksLink;
@@ -199,17 +199,17 @@ namespace Library.Net.Outopos
         private VolatileHashSet<Key> _pushBlocksRequest;
         private VolatileHashSet<Key> _pullBlocksRequest;
 
-        private VolatileHashSet<Section> _pushSectionsRequest;
-        private VolatileHashSet<Section> _pullSectionsRequest;
+        private VolatileHashSet<string> _pushBroadcastsRequest;
+        private VolatileHashSet<string> _pullBroadcastsRequest;
+
+        private VolatileHashSet<string> _pushUnicastsRequest;
+        private VolatileHashSet<string> _pullUnicastsRequest;
 
         private VolatileHashSet<Wiki> _pushWikisRequest;
         private VolatileHashSet<Wiki> _pullWikisRequest;
 
         private VolatileHashSet<Chat> _pushChatsRequest;
         private VolatileHashSet<Chat> _pullChatsRequest;
-
-        private VolatileHashSet<Mail> _pushMailsRequest;
-        private VolatileHashSet<Mail> _pullMailsRequest;
 
         private readonly object _thisLock = new object();
 
@@ -223,11 +223,11 @@ namespace Library.Net.Outopos
             _sentByteCount = new SafeInteger();
 
             _stockBlocks = new VolatileHashSet<Key>(new TimeSpan(1, 0, 0, 0));
-            _stockSectionProfileHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockBroadcastProfileHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockUnicastMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _stockWikiPageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _stockChatTopicHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _stockChatMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockMailMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
 
             _pushBlocksLink = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksLink = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
@@ -235,17 +235,17 @@ namespace Library.Net.Outopos
             _pushBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
 
-            _pushSectionsRequest = new VolatileHashSet<Section>(new TimeSpan(0, 30, 0));
-            _pullSectionsRequest = new VolatileHashSet<Section>(new TimeSpan(0, 30, 0));
+            _pushBroadcastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pullBroadcastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+
+            _pushUnicastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pullUnicastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
 
             _pushWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
             _pullWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
 
             _pushChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
             _pullChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
-
-            _pushMailsRequest = new VolatileHashSet<Mail>(new TimeSpan(0, 30, 0));
-            _pullMailsRequest = new VolatileHashSet<Mail>(new TimeSpan(0, 30, 0));
         }
 
         public int Id
@@ -330,13 +330,24 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockSectionProfileHeaders
+        public VolatileHashSet<byte[]> StockBroadcastProfileHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _stockSectionProfileHeaders;
+                    return _stockBroadcastProfileHeaders;
+                }
+            }
+        }
+
+        public VolatileHashSet<byte[]> StockUnicastMessageHeaders
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _stockUnicastMessageHeaders;
                 }
             }
         }
@@ -370,17 +381,6 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     return _stockChatMessageHeaders;
-                }
-            }
-        }
-
-        public VolatileHashSet<byte[]> StockMailMessageHeaders
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _stockMailMessageHeaders;
                 }
             }
         }
@@ -429,24 +429,46 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Section> PushSectionsRequest
+        public VolatileHashSet<string> PushBroadcastsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushSectionsRequest;
+                    return _pushBroadcastsRequest;
                 }
             }
         }
 
-        public VolatileHashSet<Section> PullSectionsRequest
+        public VolatileHashSet<string> PullBroadcastsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullSectionsRequest;
+                    return _pullBroadcastsRequest;
+                }
+            }
+        }
+
+        public VolatileHashSet<string> PushUnicastsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pushUnicastsRequest;
+                }
+            }
+        }
+
+        public VolatileHashSet<string> PullUnicastsRequest
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _pullUnicastsRequest;
                 }
             }
         }
@@ -491,28 +513,6 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     return _pullChatsRequest;
-                }
-            }
-        }
-
-        public VolatileHashSet<Mail> PushMailsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pushMailsRequest;
-                }
-            }
-        }
-
-        public VolatileHashSet<Mail> PullMailsRequest
-        {
-            get
-            {
-                lock (this.ThisLock)
-                {
-                    return _pullMailsRequest;
                 }
             }
         }

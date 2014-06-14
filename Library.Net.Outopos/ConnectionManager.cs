@@ -36,21 +36,37 @@ namespace Library.Net.Outopos
         public ArraySegment<byte> Value { get; set; }
     }
 
-    class PullHeadersRequestEventArgs : EventArgs
+    class PullBroadcastHeadersRequestEventArgs : EventArgs
     {
-        public IEnumerable<Section> Sections { get; set; }
-        public IEnumerable<Wiki> Wikis { get; set; }
-        public IEnumerable<Chat> Chats { get; set; }
-        public IEnumerable<Mail> Mails { get; set; }
+        public IEnumerable<string> Signatures { get; set; }
     }
 
-    class PullHeadersEventArgs : EventArgs
+    class PullBroadcastHeadersEventArgs : EventArgs
     {
-        public IEnumerable<SectionProfileHeader> SectionProfileHeaders { get; set; }
+        public IEnumerable<BroadcastProfileHeader> BroadcastProfileHeaders { get; set; }
+    }
+
+    class PullUnicastHeadersRequestEventArgs : EventArgs
+    {
+        public IEnumerable<string> Signatures { get; set; }
+    }
+
+    class PullUnicastHeadersEventArgs : EventArgs
+    {
+        public IEnumerable<UnicastMessageHeader> UnicastMessageHeaders { get; set; }
+    }
+
+    class PullMulticastHeadersRequestEventArgs : EventArgs
+    {
+        public IEnumerable<Wiki> Wikis { get; set; }
+        public IEnumerable<Chat> Chats { get; set; }
+    }
+
+    class PullMulticastHeadersEventArgs : EventArgs
+    {
         public IEnumerable<WikiPageHeader> WikiPageHeaders { get; set; }
         public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
         public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
-        public IEnumerable<MailMessageHeader> MailMessageHeaders { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -59,8 +75,14 @@ namespace Library.Net.Outopos
     delegate void PullBlocksRequestEventHandler(object sender, PullBlocksRequestEventArgs e);
     delegate void PullBlockEventHandler(object sender, PullBlockEventArgs e);
 
-    delegate void PullHeadersRequestEventHandler(object sender, PullHeadersRequestEventArgs e);
-    delegate void PullHeadersEventHandler(object sender, PullHeadersEventArgs e);
+    delegate void PullBroadcastHeadersRequestEventHandler(object sender, PullBroadcastHeadersRequestEventArgs e);
+    delegate void PullBroadcastHeadersEventHandler(object sender, PullBroadcastHeadersEventArgs e);
+
+    delegate void PullUnicastHeadersRequestEventHandler(object sender, PullUnicastHeadersRequestEventArgs e);
+    delegate void PullUnicastHeadersEventHandler(object sender, PullUnicastHeadersEventArgs e);
+
+    delegate void PullMulticastHeadersRequestEventHandler(object sender, PullMulticastHeadersRequestEventArgs e);
+    delegate void PullMulticastHeadersEventHandler(object sender, PullMulticastHeadersEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
 
@@ -92,8 +114,14 @@ namespace Library.Net.Outopos
             BlocksRequest = 6,
             Block = 7,
 
-            HeadersRequest = 8,
-            Headers = 9,
+            BroadcastHeadersRequest = 8,
+            BroadcastHeaders = 9,
+
+            UnicastHeadersRequest = 10,
+            UnicastHeaders = 11,
+
+            MulticastHeadersRequest = 12,
+            MulticastHeaders = 13,
         }
 
         private byte[] _mySessionId;
@@ -135,8 +163,14 @@ namespace Library.Net.Outopos
         public event PullBlocksRequestEventHandler PullBlocksRequestEvent;
         public event PullBlockEventHandler PullBlockEvent;
 
-        public event PullHeadersRequestEventHandler PullHeadersRequestEvent;
-        public event PullHeadersEventHandler PullHeadersEvent;
+        public event PullBroadcastHeadersRequestEventHandler PullBroadcastHeadersRequestEvent;
+        public event PullBroadcastHeadersEventHandler PullBroadcastHeadersEvent;
+
+        public event PullUnicastHeadersRequestEventHandler PullUnicastHeadersRequestEvent;
+        public event PullUnicastHeadersEventHandler PullUnicastHeadersEvent;
+
+        public event PullMulticastHeadersRequestEventHandler PullMulticastHeadersRequestEvent;
+        public event PullMulticastHeadersEventHandler PullMulticastHeadersEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
 
@@ -570,29 +604,61 @@ namespace Library.Net.Outopos
                                         var message = BlockMessage.Import(stream2, _bufferManager);
                                         this.OnPullBlock(new PullBlockEventArgs() { Key = message.Key, Value = message.Value });
                                     }
-                                    else if (type == (byte)SerializeId.HeadersRequest)
+                                    else if (type == (byte)SerializeId.BroadcastHeadersRequest)
                                     {
-                                        var message = HeadersRequestMessage.Import(stream2, _bufferManager);
+                                        var message = BroadcastHeadersRequestMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullHeadersRequest(new PullHeadersRequestEventArgs()
+                                        this.OnPullBroadcastHeadersRequest(new PullBroadcastHeadersRequestEventArgs()
                                         {
-                                            Sections = message.Sections,
-                                            Wikis = message.Wikis,
-                                            Chats = message.Chats,
-                                            Mails = message.Mails,
+                                            Signatures = message.Signatures,
                                         });
                                     }
-                                    else if (type == (byte)SerializeId.Headers)
+                                    else if (type == (byte)SerializeId.BroadcastHeaders)
                                     {
-                                        var message = HeadersMessage.Import(stream2, _bufferManager);
+                                        var message = BroadcastHeadersMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullHeaders(new PullHeadersEventArgs()
+                                        this.OnPullBroadcastHeaders(new PullBroadcastHeadersEventArgs()
                                         {
-                                            SectionProfileHeaders = message.SectionProfileHeaders,
+                                            BroadcastProfileHeaders = message.BroadcastProfileHeaders,
+                                        });
+                                    }
+                                    else if (type == (byte)SerializeId.UnicastHeadersRequest)
+                                    {
+                                        var message = UnicastHeadersRequestMessage.Import(stream2, _bufferManager);
+
+                                        this.OnPullUnicastHeadersRequest(new PullUnicastHeadersRequestEventArgs()
+                                        {
+                                            Signatures = message.Signatures,
+                                        });
+                                    }
+                                    else if (type == (byte)SerializeId.UnicastHeaders)
+                                    {
+                                        var message = UnicastHeadersMessage.Import(stream2, _bufferManager);
+
+                                        this.OnPullUnicastHeaders(new PullUnicastHeadersEventArgs()
+                                        {
+                                            UnicastMessageHeaders = message.UnicastMessageHeaders,
+                                        });
+                                    }
+                                    else if (type == (byte)SerializeId.MulticastHeadersRequest)
+                                    {
+                                        var message = MulticastHeadersRequestMessage.Import(stream2, _bufferManager);
+
+                                        this.OnPullMulticastHeadersRequest(new PullMulticastHeadersRequestEventArgs()
+                                        {
+                                            Wikis = message.Wikis,
+                                            Chats = message.Chats,
+                                        });
+                                    }
+                                    else if (type == (byte)SerializeId.MulticastHeaders)
+                                    {
+                                        var message = MulticastHeadersMessage.Import(stream2, _bufferManager);
+
+                                        this.OnPullMulticastHeaders(new PullMulticastHeadersEventArgs()
+                                        {
                                             WikiPageHeaders = message.WikiPageHeaders,
                                             ChatTopicHeaders = message.ChatTopicHeaders,
                                             ChatMessageHeaders = message.ChatMessageHeaders,
-                                            MailMessageHeaders = message.MailMessageHeaders,
                                         });
                                     }
                                 }
@@ -656,19 +722,51 @@ namespace Library.Net.Outopos
             }
         }
 
-        protected virtual void OnPullHeadersRequest(PullHeadersRequestEventArgs e)
+        protected virtual void OnPullBroadcastHeadersRequest(PullBroadcastHeadersRequestEventArgs e)
         {
-            if (this.PullHeadersRequestEvent != null)
+            if (this.PullBroadcastHeadersRequestEvent != null)
             {
-                this.PullHeadersRequestEvent(this, e);
+                this.PullBroadcastHeadersRequestEvent(this, e);
             }
         }
 
-        protected virtual void OnPullHeaders(PullHeadersEventArgs e)
+        protected virtual void OnPullBroadcastHeaders(PullBroadcastHeadersEventArgs e)
         {
-            if (this.PullHeadersEvent != null)
+            if (this.PullBroadcastHeadersEvent != null)
             {
-                this.PullHeadersEvent(this, e);
+                this.PullBroadcastHeadersEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullUnicastHeadersRequest(PullUnicastHeadersRequestEventArgs e)
+        {
+            if (this.PullUnicastHeadersRequestEvent != null)
+            {
+                this.PullUnicastHeadersRequestEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullUnicastHeaders(PullUnicastHeadersEventArgs e)
+        {
+            if (this.PullUnicastHeadersEvent != null)
+            {
+                this.PullUnicastHeadersEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullMulticastHeadersRequest(PullMulticastHeadersRequestEventArgs e)
+        {
+            if (this.PullMulticastHeadersRequestEvent != null)
+            {
+                this.PullMulticastHeadersRequestEvent(this, e);
+            }
+        }
+
+        protected virtual void OnPullMulticastHeaders(PullMulticastHeadersEventArgs e)
+        {
+            if (this.PullMulticastHeadersEvent != null)
+            {
+                this.PullMulticastHeadersEvent(this, e);
             }
         }
 
@@ -842,11 +940,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushHeadersRequest(
-            IEnumerable<Section> sections,
-            IEnumerable<Wiki> wikis,
-            IEnumerable<Chat> chats,
-            IEnumerable<Mail> mails)
+        public void PushBroadcastHeadersRequest(IEnumerable<string> signatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -856,14 +950,10 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.HeadersRequest);
+                    stream.WriteByte((byte)SerializeId.BroadcastHeadersRequest);
                     stream.Flush();
 
-                    var message = new HeadersRequestMessage(
-                        sections,
-                        wikis,
-                        chats,
-                        mails);
+                    var message = new BroadcastHeadersRequestMessage(signatures);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -887,12 +977,8 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushHeaders(
-            IEnumerable<SectionProfileHeader> sectionProfileHeaders,
-            IEnumerable<WikiPageHeader> wikiPageHeaders,
-            IEnumerable<ChatTopicHeader> chatTopicHeaders,
-            IEnumerable<ChatMessageHeader> chatMessageHeaders,
-            IEnumerable<MailMessageHeader> mailMessageHeaders)
+        public void PushBroadcastHeaders(
+            IEnumerable<BroadcastProfileHeader> broadcastProfileHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -902,15 +988,171 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.Headers);
+                    stream.WriteByte((byte)SerializeId.BroadcastHeaders);
                     stream.Flush();
 
-                    var message = new HeadersMessage(
-                        sectionProfileHeaders,
+                    var message = new BroadcastHeadersMessage(
+                        broadcastProfileHeaders);
+
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _aliveStopwatch.Restart();
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushUnicastHeadersRequest(IEnumerable<string> signatures)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.UnicastHeadersRequest);
+                    stream.Flush();
+
+                    var message = new UnicastHeadersRequestMessage(signatures);
+
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _aliveStopwatch.Restart();
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushUnicastHeaders(
+            IEnumerable<UnicastMessageHeader> UnicastMessageHeaders)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.UnicastHeaders);
+                    stream.Flush();
+
+                    var message = new UnicastHeadersMessage(
+                        UnicastMessageHeaders);
+
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _aliveStopwatch.Restart();
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushMulticastHeadersRequest(
+            IEnumerable<Wiki> wikis,
+            IEnumerable<Chat> chats)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.MulticastHeadersRequest);
+                    stream.Flush();
+
+                    var message = new MulticastHeadersRequestMessage(
+                        wikis,
+                        chats);
+
+                    stream = new UniteStream(stream, message.Export(_bufferManager));
+
+                    _connection.Send(stream, _sendTimeSpan);
+                    _aliveStopwatch.Restart();
+                }
+                catch (ConnectionException)
+                {
+                    this.OnClose(new EventArgs());
+
+                    throw;
+                }
+                finally
+                {
+                    stream.Close();
+                }
+            }
+            else
+            {
+                throw new ConnectionManagerException();
+            }
+        }
+
+        public void PushMulticastHeaders(
+            IEnumerable<WikiPageHeader> wikiPageHeaders,
+            IEnumerable<ChatTopicHeader> chatTopicHeaders,
+            IEnumerable<ChatMessageHeader> chatMessageHeaders)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            {
+                Stream stream = new BufferStream(_bufferManager);
+
+                try
+                {
+                    stream.WriteByte((byte)SerializeId.MulticastHeaders);
+                    stream.Flush();
+
+                    var message = new MulticastHeadersMessage(
                         wikiPageHeaders,
                         chatTopicHeaders,
-                        chatMessageHeaders,
-                        mailMessageHeaders);
+                        chatMessageHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1362,31 +1604,18 @@ namespace Library.Net.Outopos
             }
         }
 
-        private sealed class HeadersRequestMessage : ItemBase<HeadersRequestMessage>
+        private sealed class BroadcastHeadersRequestMessage : ItemBase<BroadcastHeadersRequestMessage>
         {
             private enum SerializeId : byte
             {
-                Section = 0,
-                Wiki = 1,
-                Chat = 2,
-                Mail = 3,
+                Signature = 0,
             }
 
-            private SectionCollection _sections;
-            private WikiCollection _wikis;
-            private ChatCollection _chats;
-            private MailCollection _mails;
+            private SignatureCollection _signatures;
 
-            public HeadersRequestMessage(
-                IEnumerable<Section> sections,
-                IEnumerable<Wiki> wikis,
-                IEnumerable<Chat> chats,
-                IEnumerable<Mail> mails)
+            public BroadcastHeadersRequestMessage(IEnumerable<string> signatures)
             {
-                if (sections != null) this.ProtectedSections.AddRange(sections);
-                if (wikis != null) this.ProtectedWikis.AddRange(wikis);
-                if (chats != null) this.ProtectedChats.AddRange(chats);
-                if (mails != null) this.ProtectedMails.AddRange(mails);
+                if (signatures != null) this.ProtectedSignatures.AddRange(signatures);
             }
 
             protected override void Initialize()
@@ -1406,21 +1635,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Section)
+                        if (id == (byte)SerializeId.Signature)
                         {
-                            this.ProtectedSections.Add(Section.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.Wiki)
-                        {
-                            this.ProtectedWikis.Add(Wiki.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.Chat)
-                        {
-                            this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.Mail)
-                        {
-                            this.ProtectedMails.Add(Mail.Import(rangeStream, bufferManager));
+                            this.ProtectedSignatures.Add(ItemUtilities.GetString(rangeStream));
                         }
                     }
                 }
@@ -1430,14 +1647,371 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // Sections
-                foreach (var value in this.Sections)
+                // Signatures
+                foreach (var value in this.Signatures)
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, value);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
+            }
+
+            public BroadcastHeadersRequestMessage Clone()
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return BroadcastHeadersRequestMessage.Import(stream, BufferManager.Instance);
+                }
+            }
+
+            private volatile ReadOnlyCollection<string> _readOnlySignatures;
+
+            public IEnumerable<string> Signatures
+            {
+                get
+                {
+                    if (_readOnlySignatures == null)
+                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
+
+                    return _readOnlySignatures;
+                }
+            }
+
+            [DataMember(Name = "Signatures")]
+            private SignatureCollection ProtectedSignatures
+            {
+                get
+                {
+                    if (_signatures == null)
+                        _signatures = new SignatureCollection(_maxHeaderRequestCount);
+
+                    return _signatures;
+                }
+            }
+        }
+
+        private sealed class BroadcastHeadersMessage : ItemBase<BroadcastHeadersMessage>
+        {
+            private enum SerializeId : byte
+            {
+                BroadcastProfileHeader = 0,
+            }
+
+            private LockedList<BroadcastProfileHeader> _broadcastProfileHeaders;
+
+            public BroadcastHeadersMessage(
+                IEnumerable<BroadcastProfileHeader> broadcastProfileHeaders)
+            {
+                if (broadcastProfileHeaders != null) this.ProtectedBroadcastProfileHeaders.AddRange(broadcastProfileHeaders);
+            }
+
+            protected override void Initialize()
+            {
+
+            }
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+            {
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
+                {
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    {
+                        if (id == (byte)SerializeId.BroadcastProfileHeader)
+                        {
+                            this.ProtectedBroadcastProfileHeaders.Add(BroadcastProfileHeader.Import(rangeStream, bufferManager));
+                        }
+                    }
+                }
+            }
+
+            protected override Stream Export(BufferManager bufferManager, int count)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+
+                // BroadcastProfileHeaders
+                foreach (var value in this.BroadcastProfileHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Section, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.BroadcastProfileHeader, stream);
                     }
                 }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
+            }
+
+            public BroadcastHeadersMessage Clone()
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return BroadcastHeadersMessage.Import(stream, BufferManager.Instance);
+                }
+            }
+
+            private volatile ReadOnlyCollection<BroadcastProfileHeader> _readOnlyBroadcastProfileHeaders;
+
+            public IEnumerable<BroadcastProfileHeader> BroadcastProfileHeaders
+            {
+                get
+                {
+                    if (_readOnlyBroadcastProfileHeaders == null)
+                        _readOnlyBroadcastProfileHeaders = new ReadOnlyCollection<BroadcastProfileHeader>(this.ProtectedBroadcastProfileHeaders);
+
+                    return _readOnlyBroadcastProfileHeaders;
+                }
+            }
+
+            [DataMember(Name = "BroadcastProfileHeaders")]
+            private LockedList<BroadcastProfileHeader> ProtectedBroadcastProfileHeaders
+            {
+                get
+                {
+                    if (_broadcastProfileHeaders == null)
+                        _broadcastProfileHeaders = new LockedList<BroadcastProfileHeader>(_maxHeaderCount);
+
+                    return _broadcastProfileHeaders;
+                }
+            }
+        }
+
+        private sealed class UnicastHeadersRequestMessage : ItemBase<UnicastHeadersRequestMessage>
+        {
+            private enum SerializeId : byte
+            {
+                Signature = 0,
+            }
+
+            private SignatureCollection _signatures;
+
+            public UnicastHeadersRequestMessage(IEnumerable<string> signatures)
+            {
+                if (signatures != null) this.ProtectedSignatures.AddRange(signatures);
+            }
+
+            protected override void Initialize()
+            {
+
+            }
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+            {
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
+                {
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    {
+                        if (id == (byte)SerializeId.Signature)
+                        {
+                            this.ProtectedSignatures.Add(ItemUtilities.GetString(rangeStream));
+                        }
+                    }
+                }
+            }
+
+            protected override Stream Export(BufferManager bufferManager, int count)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+
+                // Signatures
+                foreach (var value in this.Signatures)
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, value);
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
+            }
+
+            public BroadcastHeadersRequestMessage Clone()
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return BroadcastHeadersRequestMessage.Import(stream, BufferManager.Instance);
+                }
+            }
+
+            private volatile ReadOnlyCollection<string> _readOnlySignatures;
+
+            public IEnumerable<string> Signatures
+            {
+                get
+                {
+                    if (_readOnlySignatures == null)
+                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
+
+                    return _readOnlySignatures;
+                }
+            }
+
+            [DataMember(Name = "Signatures")]
+            private SignatureCollection ProtectedSignatures
+            {
+                get
+                {
+                    if (_signatures == null)
+                        _signatures = new SignatureCollection(_maxHeaderRequestCount);
+
+                    return _signatures;
+                }
+            }
+        }
+
+        private sealed class UnicastHeadersMessage : ItemBase<UnicastHeadersMessage>
+        {
+            private enum SerializeId : byte
+            {
+                UnicastMessageHeader = 0,
+            }
+
+            private LockedList<UnicastMessageHeader> _unicastMessageHeaders;
+
+            public UnicastHeadersMessage(
+                IEnumerable<UnicastMessageHeader> unicastMessageHeaders)
+            {
+                if (unicastMessageHeaders != null) this.ProtectedUnicastMessageHeaders.AddRange(unicastMessageHeaders);
+            }
+
+            protected override void Initialize()
+            {
+
+            }
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+            {
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
+                {
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    {
+                        if (id == (byte)SerializeId.UnicastMessageHeader)
+                        {
+                            this.ProtectedUnicastMessageHeaders.Add(UnicastMessageHeader.Import(rangeStream, bufferManager));
+                        }
+                    }
+                }
+            }
+
+            protected override Stream Export(BufferManager bufferManager, int count)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+
+                // UnicastMessageHeaders
+                foreach (var value in this.UnicastMessageHeaders)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.UnicastMessageHeader, stream);
+                    }
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
+            }
+
+            public UnicastHeadersMessage Clone()
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    return UnicastHeadersMessage.Import(stream, BufferManager.Instance);
+                }
+            }
+
+            private volatile ReadOnlyCollection<UnicastMessageHeader> _readOnlyUnicastMessageHeaders;
+
+            public IEnumerable<UnicastMessageHeader> UnicastMessageHeaders
+            {
+                get
+                {
+                    if (_readOnlyUnicastMessageHeaders == null)
+                        _readOnlyUnicastMessageHeaders = new ReadOnlyCollection<UnicastMessageHeader>(this.ProtectedUnicastMessageHeaders);
+
+                    return _readOnlyUnicastMessageHeaders;
+                }
+            }
+
+            [DataMember(Name = "UnicastMessageHeaders")]
+            private LockedList<UnicastMessageHeader> ProtectedUnicastMessageHeaders
+            {
+                get
+                {
+                    if (_unicastMessageHeaders == null)
+                        _unicastMessageHeaders = new LockedList<UnicastMessageHeader>(_maxHeaderCount);
+
+                    return _unicastMessageHeaders;
+                }
+            }
+        }
+
+        private sealed class MulticastHeadersRequestMessage : ItemBase<MulticastHeadersRequestMessage>
+        {
+            private enum SerializeId : byte
+            {
+                Wiki = 0,
+                Chat = 1,
+            }
+
+            private WikiCollection _wikis;
+            private ChatCollection _chats;
+
+            public MulticastHeadersRequestMessage(
+                IEnumerable<Wiki> wikis,
+                IEnumerable<Chat> chats)
+            {
+                if (wikis != null) this.ProtectedWikis.AddRange(wikis);
+                if (chats != null) this.ProtectedChats.AddRange(chats);
+            }
+
+            protected override void Initialize()
+            {
+
+            }
+
+            protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
+            {
+                byte[] lengthBuffer = new byte[4];
+
+                for (; ; )
+                {
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
+
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                    {
+                        if (id == (byte)SerializeId.Wiki)
+                        {
+                            this.ProtectedWikis.Add(Wiki.Import(rangeStream, bufferManager));
+                        }
+                        else if (id == (byte)SerializeId.Chat)
+                        {
+                            this.ProtectedChats.Add(Chat.Import(rangeStream, bufferManager));
+                        }
+                    }
+                }
+            }
+
+            protected override Stream Export(BufferManager bufferManager, int count)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
+
                 // Wikis
                 foreach (var value in this.Wikis)
                 {
@@ -1454,49 +2028,16 @@ namespace Library.Net.Outopos
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.Chat, stream);
                     }
                 }
-                // Mails
-                foreach (var value in this.Mails)
-                {
-                    using (var stream = value.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Mail, stream);
-                    }
-                }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 return bufferStream;
             }
 
-            public HeadersRequestMessage Clone()
+            public MulticastHeadersRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return HeadersRequestMessage.Import(stream, BufferManager.Instance);
-                }
-            }
-
-            private volatile ReadOnlyCollection<Section> _readOnlySections;
-
-            public IEnumerable<Section> Sections
-            {
-                get
-                {
-                    if (_readOnlySections == null)
-                        _readOnlySections = new ReadOnlyCollection<Section>(this.ProtectedSections);
-
-                    return _readOnlySections;
-                }
-            }
-
-            [DataMember(Name = "Sections")]
-            private SectionCollection ProtectedSections
-            {
-                get
-                {
-                    if (_sections == null)
-                        _sections = new SectionCollection(_maxHeaderRequestCount);
-
-                    return _sections;
+                    return MulticastHeadersRequestMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
@@ -1549,62 +2090,29 @@ namespace Library.Net.Outopos
                     return _chats;
                 }
             }
-
-            private volatile ReadOnlyCollection<Mail> _readOnlyMails;
-
-            public IEnumerable<Mail> Mails
-            {
-                get
-                {
-                    if (_readOnlyMails == null)
-                        _readOnlyMails = new ReadOnlyCollection<Mail>(this.ProtectedMails);
-
-                    return _readOnlyMails;
-                }
-            }
-
-            [DataMember(Name = "Mails")]
-            private MailCollection ProtectedMails
-            {
-                get
-                {
-                    if (_mails == null)
-                        _mails = new MailCollection(_maxHeaderRequestCount);
-
-                    return _mails;
-                }
-            }
         }
 
-        private sealed class HeadersMessage : ItemBase<HeadersMessage>
+        private sealed class MulticastHeadersMessage : ItemBase<MulticastHeadersMessage>
         {
             private enum SerializeId : byte
             {
-                SectionProfileHeader = 0,
-                WikiPageHeader = 1,
-                ChatTopicHeader = 2,
-                ChatMessageHeader = 3,
-                MailMessageHeader = 4,
+                WikiPageHeader = 0,
+                ChatTopicHeader = 1,
+                ChatMessageHeader = 2,
             }
 
-            private LockedList<SectionProfileHeader> _sectionProfileHeaders;
             private LockedList<WikiPageHeader> _wikiPageHeaders;
             private LockedList<ChatTopicHeader> _chatTopicHeaders;
             private LockedList<ChatMessageHeader> _chatMessageHeaders;
-            private LockedList<MailMessageHeader> _mailMessageHeaders;
 
-            public HeadersMessage(
-                IEnumerable<SectionProfileHeader> sectionProfileHeaders,
+            public MulticastHeadersMessage(
                 IEnumerable<WikiPageHeader> wikiPageHeaders,
                 IEnumerable<ChatTopicHeader> chatTopicHeaders,
-                IEnumerable<ChatMessageHeader> chatMessageHeaders,
-                IEnumerable<MailMessageHeader> mailMessageHeaders)
+                IEnumerable<ChatMessageHeader> chatMessageHeaders)
             {
-                if (sectionProfileHeaders != null) this.ProtectedSectionProfileHeaders.AddRange(sectionProfileHeaders);
                 if (wikiPageHeaders != null) this.ProtectedWikiPageHeaders.AddRange(wikiPageHeaders);
                 if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
                 if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
-                if (mailMessageHeaders != null) this.ProtectedMailMessageHeaders.AddRange(mailMessageHeaders);
             }
 
             protected override void Initialize()
@@ -1624,11 +2132,7 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.SectionProfileHeader)
-                        {
-                            this.ProtectedSectionProfileHeaders.Add(SectionProfileHeader.Import(rangeStream, bufferManager));
-                        }
-                        else if (id == (byte)SerializeId.WikiPageHeader)
+                        if (id == (byte)SerializeId.WikiPageHeader)
                         {
                             this.ProtectedWikiPageHeaders.Add(WikiPageHeader.Import(rangeStream, bufferManager));
                         }
@@ -1640,10 +2144,6 @@ namespace Library.Net.Outopos
                         {
                             this.ProtectedChatMessageHeaders.Add(ChatMessageHeader.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.MailMessageHeader)
-                        {
-                            this.ProtectedMailMessageHeaders.Add(MailMessageHeader.Import(rangeStream, bufferManager));
-                        }
                     }
                 }
             }
@@ -1652,14 +2152,6 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // SectionProfileHeaders
-                foreach (var value in this.SectionProfileHeaders)
-                {
-                    using (var stream = value.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SectionProfileHeader, stream);
-                    }
-                }
                 // WikiPageHeaders
                 foreach (var value in this.WikiPageHeaders)
                 {
@@ -1684,49 +2176,16 @@ namespace Library.Net.Outopos
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatMessageHeader, stream);
                     }
                 }
-                // MailMessageHeaders
-                foreach (var value in this.MailMessageHeaders)
-                {
-                    using (var stream = value.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.MailMessageHeader, stream);
-                    }
-                }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
                 return bufferStream;
             }
 
-            public HeadersMessage Clone()
+            public MulticastHeadersMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return HeadersMessage.Import(stream, BufferManager.Instance);
-                }
-            }
-
-            private volatile ReadOnlyCollection<SectionProfileHeader> _readOnlySectionProfileHeaders;
-
-            public IEnumerable<SectionProfileHeader> SectionProfileHeaders
-            {
-                get
-                {
-                    if (_readOnlySectionProfileHeaders == null)
-                        _readOnlySectionProfileHeaders = new ReadOnlyCollection<SectionProfileHeader>(this.ProtectedSectionProfileHeaders);
-
-                    return _readOnlySectionProfileHeaders;
-                }
-            }
-
-            [DataMember(Name = "SectionProfileHeaders")]
-            private LockedList<SectionProfileHeader> ProtectedSectionProfileHeaders
-            {
-                get
-                {
-                    if (_sectionProfileHeaders == null)
-                        _sectionProfileHeaders = new LockedList<SectionProfileHeader>(_maxHeaderCount);
-
-                    return _sectionProfileHeaders;
+                    return MulticastHeadersMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
@@ -1802,31 +2261,6 @@ namespace Library.Net.Outopos
                         _chatMessageHeaders = new LockedList<ChatMessageHeader>(_maxHeaderCount);
 
                     return _chatMessageHeaders;
-                }
-            }
-
-            private volatile ReadOnlyCollection<MailMessageHeader> _readOnlyMailMessageHeaders;
-
-            public IEnumerable<MailMessageHeader> MailMessageHeaders
-            {
-                get
-                {
-                    if (_readOnlyMailMessageHeaders == null)
-                        _readOnlyMailMessageHeaders = new ReadOnlyCollection<MailMessageHeader>(this.ProtectedMailMessageHeaders);
-
-                    return _readOnlyMailMessageHeaders;
-                }
-            }
-
-            [DataMember(Name = "MailMessageHeaders")]
-            private LockedList<MailMessageHeader> ProtectedMailMessageHeaders
-            {
-                get
-                {
-                    if (_mailMessageHeaders == null)
-                        _mailMessageHeaders = new LockedList<MailMessageHeader>(_maxHeaderCount);
-
-                    return _mailMessageHeaders;
                 }
             }
         }

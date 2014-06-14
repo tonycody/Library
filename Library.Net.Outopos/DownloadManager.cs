@@ -27,11 +27,11 @@ namespace Library.Net.Outopos
             _bufferManager = bufferManager;
         }
 
-        public Task<SectionProfileContent> Download(SectionProfileHeader header)
+        public Task<BroadcastProfileContent> Download(BroadcastProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
-            return Task<SectionProfileContent>.Factory.StartNew(() =>
+            return Task<BroadcastProfileContent>.Factory.StartNew(() =>
             {
                 lock (this.ThisLock)
                 {
@@ -48,7 +48,49 @@ namespace Library.Net.Outopos
                         try
                         {
                             buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromSectionProfileContentBlock(buffer);
+                            return ContentConverter.FromBroadcastProfileContentBlock(buffer);
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
+                        }
+
+                        return null;
+                    }
+                }
+            });
+        }
+
+        public Task<UnicastMessageContent> Download(UnicastMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        {
+            if (header == null) throw new ArgumentNullException("header");
+            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
+
+            return Task<UnicastMessageContent>.Factory.StartNew(() =>
+            {
+                lock (this.ThisLock)
+                {
+                    if (!_cacheManager.Contains(header.Key))
+                    {
+                        _connectionsManager.Download(header.Key);
+
+                        return null;
+                    }
+                    else
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                        try
+                        {
+                            buffer = _cacheManager[header.Key];
+                            return ContentConverter.FromUnicastMessageContentBlock(buffer, exchangePrivateKey);
                         }
                         catch (Exception)
                         {
@@ -172,48 +214,6 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[header.Key];
                             return ContentConverter.FromChatMessageContentBlock(buffer);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-                        }
-
-                        return null;
-                    }
-                }
-            });
-        }
-
-        public Task<MailMessageContent> Download(MailMessageHeader header, ExchangePrivateKey exchangePrivateKey)
-        {
-            if (header == null) throw new ArgumentNullException("header");
-            if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
-
-            return Task<MailMessageContent>.Factory.StartNew(() =>
-            {
-                lock (this.ThisLock)
-                {
-                    if (!_cacheManager.Contains(header.Key))
-                    {
-                        _connectionsManager.Download(header.Key);
-
-                        return null;
-                    }
-                    else
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromMailMessageContentBlock(buffer, exchangePrivateKey);
                         }
                         catch (Exception)
                         {

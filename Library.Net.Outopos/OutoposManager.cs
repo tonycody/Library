@@ -28,7 +28,6 @@ namespace Library.Net.Outopos
         private AcceptCapEventHandler _acceptCapEvent;
         private CheckUriEventHandler _checkUriEvent;
         private GetSignaturesEventHandler _getLockSignaturesEvent;
-        private GetSectionsEventHandler _getLockSectionsEvent;
         private GetWikisEventHandler _getLockWikisEvent;
         private GetChatsEventHandler _getLockChatsEvent;
 
@@ -103,16 +102,6 @@ namespace Library.Net.Outopos
                 return null;
             };
 
-            _connectionsManager.GetLockSectionsEvent = (object sender) =>
-            {
-                if (_getLockSectionsEvent != null)
-                {
-                    return _getLockSectionsEvent(this);
-                }
-
-                return null;
-            };
-
             _connectionsManager.GetLockWikisEvent = (object sender) =>
             {
                 if (_getLockWikisEvent != null)
@@ -174,17 +163,6 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     _getLockSignaturesEvent = value;
-                }
-            }
-        }
-
-        public GetSectionsEventHandler GetLockSectionsEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _getLockSectionsEvent = value;
                 }
             }
         }
@@ -431,13 +409,23 @@ namespace Library.Net.Outopos
             _cacheManager.CheckBlocks(getProgressEvent);
         }
 
-        public IEnumerable<SectionProfileHeader> GetSectionProfileHeaders(Section tag)
+        public BroadcastProfileHeader GetBroadcastProfileHeaders(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetSectionProfileHeaders(tag);
+                return _connectionsManager.GetBroadcastProfileHeader(signature);
+            }
+        }
+
+        public IEnumerable<UnicastMessageHeader> GetUnicastMessageHeaders(string signature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _connectionsManager.GetUnicastMessageHeaders(signature);
             }
         }
 
@@ -471,17 +459,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public IEnumerable<MailMessageHeader> GetMailMessageHeaders(Mail tag)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _connectionsManager.GetMailMessageHeaders(tag);
-            }
-        }
-
-        public Task<SectionProfileContent> Download(SectionProfileHeader header)
+        public Task<BroadcastProfileContent> Download(BroadcastProfileHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -491,7 +469,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Task<MailMessageContent> Download(MailMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        public Task<UnicastMessageContent> Download(UnicastMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -531,33 +509,43 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Task<SectionProfileHeader> Upload(Section tag, SectionProfileContent content, Miner miner, DigitalSignature digitalSignature)
+        public Task<BroadcastProfileHeader> Upload(BroadcastProfileContent content, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, content, miner, digitalSignature);
+                return _uploadManager.Upload(content, null, digitalSignature);
             }
         }
 
-        public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, Miner miner, DigitalSignature digitalSignature)
+        public Task<UnicastMessageHeader> Upload(string signature, UnicastMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, content, miner, digitalSignature);
+                return _uploadManager.Upload(signature, content, exchangePublicKey, miner, digitalSignature);
             }
         }
 
-        public Task<ChatTopicHeader> Upload(Chat tag, ChatTopicContent content, Miner miner, DigitalSignature digitalSignature)
+        public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, content, miner, digitalSignature);
+                return _uploadManager.Upload(tag, content, null, digitalSignature);
+            }
+        }
+
+        public Task<ChatTopicHeader> Upload(Chat tag, ChatTopicContent content, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                return _uploadManager.Upload(tag, content, null, digitalSignature);
             }
         }
 
@@ -568,16 +556,6 @@ namespace Library.Net.Outopos
             lock (this.ThisLock)
             {
                 return _uploadManager.Upload(tag, content, miner, digitalSignature);
-            }
-        }
-
-        public Task<MailMessageHeader> Upload(Mail tag, MailMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _uploadManager.Upload(tag, content, exchangePublicKey, miner, digitalSignature);
             }
         }
 
