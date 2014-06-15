@@ -101,7 +101,7 @@
     <Compile Include="Cache\Header\Unicast\UnicastMessageHeader.cs" />
     <Compile Include="Cache\Header\_Base\Unicast\UnicastHeader.cs" />
     <Compile Include="Cache\Header\_Base\Broadcast\BroadcastHeader.cs" />
-    <Compile Include="Cache\Header\_Base\Multicast\Tag.cs" />
+    <Compile Include="Cache\Header\_Base\Multicast\Tag\Tag.cs" />
     <Compile Include="Cache\_Interface\Header\Unicast\IUnicastHeader.cs" />
     <Compile Include="Cache\_Interface\Header\Broadcast\IBroadcastHeader.cs" />
     <Compile Include="Content\Multicast\ChatMessageContent.cs" />
@@ -110,11 +110,11 @@
     <Compile Include="Cache\Header\Multicast\ChatMessageHeader.cs" />
     <Compile Include="Cache\Header\Broadcast\BroadcastProfileHeader.cs" />
     <Compile Include="Cache\Header\Multicast\WikiPageHeader.cs" />
-    <Compile Include="Cache\Header\Multicast\_Tag\Chat.cs" />
-    <Compile Include="Cache\Header\Multicast\_Tag\ChatCollection.cs" />
+    <Compile Include="Cache\Header\Multicast\Tag\Chat.cs" />
+    <Compile Include="Cache\Header\Multicast\Tag\ChatCollection.cs" />
     <Compile Include="Cache\Header\Multicast\ChatTopicHeader.cs" />
-    <Compile Include="Cache\Header\Multicast\_Tag\Wiki.cs" />
-    <Compile Include="Cache\Header\Multicast\_Tag\WikiCollection.cs" />
+    <Compile Include="Cache\Header\Multicast\Tag\Wiki.cs" />
+    <Compile Include="Cache\Header\Multicast\Tag\WikiCollection.cs" />
     <Compile Include="Cache\Header\_Base\Multicast\MulticastHeader.cs" />
     <Compile Include="OutoposConverter.cs" />
     <Compile Include="Content\Unicast\UnicastMessageContent.cs" />
@@ -136,7 +136,7 @@
     <Compile Include="Cache\_Interface\Header\IKey.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Header\Multicast\ITag.cs">
+    <Compile Include="Cache\_Interface\Header\Multicast\Tag\ITag.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Content\_Interface\IHypertext.cs" />

@@ -509,13 +509,13 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Task<BroadcastProfileHeader> Upload(BroadcastProfileContent content, DigitalSignature digitalSignature)
+        public Task<BroadcastProfileHeader> Upload(BroadcastProfileContent content, Miner miner, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(content, null, digitalSignature);
+                return _uploadManager.Upload(content, miner, digitalSignature);
             }
         }
 
@@ -529,23 +529,23 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, DigitalSignature digitalSignature)
+        public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, Miner miner, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, content, null, digitalSignature);
+                return _uploadManager.Upload(tag, content, miner, digitalSignature);
             }
         }
 
-        public Task<ChatTopicHeader> Upload(Chat tag, ChatTopicContent content, DigitalSignature digitalSignature)
+        public Task<ChatTopicHeader> Upload(Chat tag, ChatTopicContent content, Miner miner, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, content, null, digitalSignature);
+                return _uploadManager.Upload(tag, content, miner, digitalSignature);
             }
         }
 

@@ -13,22 +13,27 @@ namespace Library.Security
     {
         private enum SerializeId : byte
         {
-            ExchangeAlgorithm = 0,
-            PublicKey = 1,
-            PrivateKey = 2,
+            CreationTime = 0,
+            ExchangeAlgorithm = 1,
+            PublicKey = 2,
+            PrivateKey = 3,
         }
 
+        private DateTime _creationTime;
         private volatile ExchangeAlgorithm _exchangeAlgorithm = 0;
         private volatile byte[] _publicKey;
         private volatile byte[] _privateKey;
 
         private volatile int _hashCode;
 
+        private volatile object _thisLock;
+
         public static readonly int MaxPublickeyLength = 1024 * 8;
         public static readonly int MaxPrivatekeyLength = 1024 * 8;
 
         public Exchange(ExchangeAlgorithm exchangeAlgorithm)
         {
+            this.CreationTime = DateTime.UtcNow;
             this.ExchangeAlgorithm = exchangeAlgorithm;
 
             if (exchangeAlgorithm == ExchangeAlgorithm.Rsa2048)
@@ -44,7 +49,7 @@ namespace Library.Security
 
         protected override void Initialize()
         {
-
+            _thisLock = new object();
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -59,7 +64,11 @@ namespace Library.Security
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.ExchangeAlgorithm)
+                    if (id == (byte)SerializeId.CreationTime)
+                    {
+                        this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                    }
+                    else if (id == (byte)SerializeId.ExchangeAlgorithm)
                     {
                         this.ExchangeAlgorithm = (ExchangeAlgorithm)Enum.Parse(typeof(ExchangeAlgorithm), ItemUtilities.GetString(rangeStream));
                     }
@@ -79,6 +88,11 @@ namespace Library.Security
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 
+            // CreationTime
+            if (this.CreationTime != DateTime.MinValue)
+            {
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+            }
             // ExchangeAlgorithm
             if (this.ExchangeAlgorithm != 0)
             {
@@ -116,7 +130,8 @@ namespace Library.Security
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.ExchangeAlgorithm != other.ExchangeAlgorithm
+            if (this.CreationTime != other.CreationTime
+                || this.ExchangeAlgorithm != other.ExchangeAlgorithm
                 || ((this.PublicKey == null) != (other.PublicKey == null))
                 || ((this.PrivateKey == null) != (other.PrivateKey == null)))
             {
@@ -164,6 +179,26 @@ namespace Library.Security
             }
 
             return null;
+        }
+
+        [DataMember(Name = "CreationTime")]
+        public DateTime CreationTime
+        {
+            get
+            {
+                lock (_thisLock)
+                {
+                    return _creationTime;
+                }
+            }
+            set
+            {
+                lock (_thisLock)
+                {
+                    var utc = value.ToUniversalTime();
+                    _creationTime = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, DateTimeKind.Utc);
+                }
+            }
         }
 
         [DataMember(Name = "ExchangeAlgorithm")]

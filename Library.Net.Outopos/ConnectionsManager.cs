@@ -994,6 +994,72 @@ namespace Library.Net.Outopos
                                 }
                             }
 
+                            // Unicast
+                            {
+                                var trustSignature = new HashSet<string>(lockSignatures);
+
+                                {
+                                    var now = DateTime.UtcNow;
+
+                                    var removeUnicastMessageHeaders = new HashSet<UnicastMessageHeader>();
+
+                                    foreach (var targetSignature in _settings.HeaderManager.GetUnicastSignatures())
+                                    {
+                                        // UnicastMessage
+                                        {
+                                            var trustHeaders = new Dictionary<string, List<UnicastMessageHeader>>();
+                                            var untrustHeaders = new Dictionary<string, List<UnicastMessageHeader>>();
+
+                                            foreach (var header in _settings.HeaderManager.GetUnicastMessageHeaders(targetSignature))
+                                            {
+                                                var signature = header.Certificate.ToString();
+
+                                                if (trustSignature.Contains(signature))
+                                                {
+                                                    List<UnicastMessageHeader> list;
+
+                                                    if (!trustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<UnicastMessageHeader>();
+                                                        trustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                                else
+                                                {
+                                                    List<UnicastMessageHeader> list;
+
+                                                    if (!untrustHeaders.TryGetValue(signature, out list))
+                                                    {
+                                                        list = new List<UnicastMessageHeader>();
+                                                        untrustHeaders[signature] = list;
+                                                    }
+
+                                                    list.Add(header);
+                                                }
+                                            }
+
+                                            removeUnicastMessageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+
+                                            foreach (var list in trustHeaders.Values.Concat(untrustHeaders.Values))
+                                            {
+                                                if (list.Count <= 32) continue;
+
+                                                list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
+                                                removeUnicastMessageHeaders.UnionWith(list.Take(list.Count - 32));
+                                            }
+                                        }
+                                    }
+
+                                    foreach (var header in removeUnicastMessageHeaders)
+                                    {
+                                        _settings.HeaderManager.RemoveHeader(header);
+                                    }
+                                }
+                            }
+
+                            // Multicast
                             {
                                 var trustSignature = new HashSet<string>(lockSignatures);
 

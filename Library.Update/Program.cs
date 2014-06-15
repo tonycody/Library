@@ -36,25 +36,14 @@ namespace Library.Update
                 }
 
                 {
-                    var temp = Program.GetUniqueDirectoryPath(targetDirectoryPath);
-                    Program.CopyDirectory(targetDirectoryPath, temp);
-
-                    bool flag = false;
-                    Random random = new Random();
-                    string errorInfo = "";
+                    var tempDirectoryPath = Program.GetUniqueDirectoryPath(targetDirectoryPath);
 
                     for (int i = 0; i < 100; i++)
                     {
                         try
                         {
-                            foreach (var path in Directory.GetFiles(targetDirectoryPath, "*", SearchOption.AllDirectories).OrderBy(n => random.Next()))
-                            {
-                                errorInfo = path;
-
-                                File.Delete(path);
-                            }
-
-                            flag = true;
+                            Program.CopyDirectory(targetDirectoryPath, tempDirectoryPath);
+                            Directory.Delete(targetDirectoryPath, true);
 
                             break;
                         }
@@ -66,20 +55,48 @@ namespace Library.Update
                         Thread.Sleep(1000);
                     }
 
-                    if (!flag) throw new Exception(errorInfo);
+                    for (int i = 0; i < 100; i++)
+                    {
+                        try
+                        {
+                            Program.CopyDirectory(sourceDirectoryPath, targetDirectoryPath);
+                            Directory.Delete(sourceDirectoryPath, true);
 
-                    Program.CopyDirectory(sourceDirectoryPath, targetDirectoryPath);
-                    Directory.Delete(temp, true);
+                            break;
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
+                        Thread.Sleep(1000);
+                    }
+
+                    for (int i = 0; i < 100; i++)
+                    {
+                        try
+                        {
+                            Directory.Delete(tempDirectoryPath, true);
+
+                            break;
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
+                        Thread.Sleep(1000);
+                    }
                 }
-
-                Directory.Delete(sourceDirectoryPath, true);
 
                 for (int i = 0; i < 100; i++)
                 {
                     try
                     {
                         if (File.Exists(zipFilePath))
+                        {
                             File.Delete(zipFilePath);
+                        }
 
                         break;
                     }
