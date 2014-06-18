@@ -34,8 +34,8 @@ namespace Library.Net.Outopos
                 foreach (var messageManager in _messageManagerDictionary.Values.ToArray())
                 {
                     messageManager.StockBlocks.TrimExcess();
-                    messageManager.StockBroadcastProfileHeaders.TrimExcess();
-                    messageManager.StockUnicastMessageHeaders.TrimExcess();
+                    messageManager.StockProfileHeaders.TrimExcess();
+                    messageManager.StockSignatureMessageHeaders.TrimExcess();
                     messageManager.StockWikiPageHeaders.TrimExcess();
                     messageManager.StockChatTopicHeaders.TrimExcess();
                     messageManager.StockChatMessageHeaders.TrimExcess();
@@ -46,17 +46,17 @@ namespace Library.Net.Outopos
                     messageManager.PushBlocksRequest.TrimExcess();
                     messageManager.PullBlocksRequest.TrimExcess();
 
-                    messageManager.PushBroadcastsRequest.TrimExcess();
-                    messageManager.PullBroadcastsRequest.TrimExcess();
+                    messageManager.PushBroadcastSignaturesRequest.TrimExcess();
+                    messageManager.PullBroadcastSignaturesRequest.TrimExcess();
 
-                    messageManager.PushUnicastsRequest.TrimExcess();
-                    messageManager.PullUnicastsRequest.TrimExcess();
+                    messageManager.PushUnicastSignaturesRequest.TrimExcess();
+                    messageManager.PullUnicastSignaturesRequest.TrimExcess();
 
-                    messageManager.PushWikisRequest.TrimExcess();
-                    messageManager.PullWikisRequest.TrimExcess();
+                    messageManager.PushMulticastWikisRequest.TrimExcess();
+                    messageManager.PullMulticastWikisRequest.TrimExcess();
 
-                    messageManager.PushChatsRequest.TrimExcess();
-                    messageManager.PullChatsRequest.TrimExcess();
+                    messageManager.PushMulticastChatsRequest.TrimExcess();
+                    messageManager.PullMulticastChatsRequest.TrimExcess();
                 }
 
                 if (_messageManagerDictionary.Count > 128)
@@ -187,8 +187,8 @@ namespace Library.Net.Outopos
         private DateTime _lastPullTime = DateTime.UtcNow;
 
         private VolatileHashSet<Key> _stockBlocks;
-        private VolatileHashSet<byte[]> _stockBroadcastProfileHeaders;
-        private VolatileHashSet<byte[]> _stockUnicastMessageHeaders;
+        private VolatileHashSet<byte[]> _stockProfileHeaders;
+        private VolatileHashSet<byte[]> _stockSignatureMessageHeaders;
         private VolatileHashSet<byte[]> _stockWikiPageHeaders;
         private VolatileHashSet<byte[]> _stockChatTopicHeaders;
         private VolatileHashSet<byte[]> _stockChatMessageHeaders;
@@ -199,17 +199,17 @@ namespace Library.Net.Outopos
         private VolatileHashSet<Key> _pushBlocksRequest;
         private VolatileHashSet<Key> _pullBlocksRequest;
 
-        private VolatileHashSet<string> _pushBroadcastsRequest;
-        private VolatileHashSet<string> _pullBroadcastsRequest;
+        private VolatileHashSet<string> _pushBroadcastSignaturesRequest;
+        private VolatileHashSet<string> _pullBroadcastSignaturesRequest;
 
-        private VolatileHashSet<string> _pushUnicastsRequest;
-        private VolatileHashSet<string> _pullUnicastsRequest;
+        private VolatileHashSet<string> _pushUnicastSignaturesRequest;
+        private VolatileHashSet<string> _pullUnicastSignaturesRequest;
 
-        private VolatileHashSet<Wiki> _pushWikisRequest;
-        private VolatileHashSet<Wiki> _pullWikisRequest;
+        private VolatileHashSet<Wiki> _pushMulticastWikisRequest;
+        private VolatileHashSet<Wiki> _pullMulticastWikisRequest;
 
-        private VolatileHashSet<Chat> _pushChatsRequest;
-        private VolatileHashSet<Chat> _pullChatsRequest;
+        private VolatileHashSet<Chat> _pushMulticastChatsRequest;
+        private VolatileHashSet<Chat> _pullMulticastChatsRequest;
 
         private readonly object _thisLock = new object();
 
@@ -223,8 +223,8 @@ namespace Library.Net.Outopos
             _sentByteCount = new SafeInteger();
 
             _stockBlocks = new VolatileHashSet<Key>(new TimeSpan(1, 0, 0, 0));
-            _stockBroadcastProfileHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockUnicastMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockProfileHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockSignatureMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _stockWikiPageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _stockChatTopicHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
             _stockChatMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
@@ -235,17 +235,17 @@ namespace Library.Net.Outopos
             _pushBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
             _pullBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
 
-            _pushBroadcastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
-            _pullBroadcastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pushBroadcastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pullBroadcastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
 
-            _pushUnicastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
-            _pullUnicastsRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pushUnicastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pullUnicastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
 
-            _pushWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
-            _pullWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
+            _pushMulticastWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
+            _pullMulticastWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
 
-            _pushChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
-            _pullChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
+            _pushMulticastChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
+            _pullMulticastChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
         }
 
         public int Id
@@ -330,24 +330,24 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockBroadcastProfileHeaders
+        public VolatileHashSet<byte[]> StockProfileHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _stockBroadcastProfileHeaders;
+                    return _stockProfileHeaders;
                 }
             }
         }
 
-        public VolatileHashSet<byte[]> StockUnicastMessageHeaders
+        public VolatileHashSet<byte[]> StockSignatureMessageHeaders
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _stockUnicastMessageHeaders;
+                    return _stockSignatureMessageHeaders;
                 }
             }
         }
@@ -429,90 +429,90 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<string> PushBroadcastsRequest
+        public VolatileHashSet<string> PushBroadcastSignaturesRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushBroadcastsRequest;
+                    return _pushBroadcastSignaturesRequest;
                 }
             }
         }
 
-        public VolatileHashSet<string> PullBroadcastsRequest
+        public VolatileHashSet<string> PullBroadcastSignaturesRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullBroadcastsRequest;
+                    return _pullBroadcastSignaturesRequest;
                 }
             }
         }
 
-        public VolatileHashSet<string> PushUnicastsRequest
+        public VolatileHashSet<string> PushUnicastSignaturesRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushUnicastsRequest;
+                    return _pushUnicastSignaturesRequest;
                 }
             }
         }
 
-        public VolatileHashSet<string> PullUnicastsRequest
+        public VolatileHashSet<string> PullUnicastSignaturesRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullUnicastsRequest;
+                    return _pullUnicastSignaturesRequest;
                 }
             }
         }
 
-        public VolatileHashSet<Wiki> PushWikisRequest
+        public VolatileHashSet<Wiki> PushMulticastWikisRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushWikisRequest;
+                    return _pushMulticastWikisRequest;
                 }
             }
         }
 
-        public VolatileHashSet<Wiki> PullWikisRequest
+        public VolatileHashSet<Wiki> PullMulticastWikisRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullWikisRequest;
+                    return _pullMulticastWikisRequest;
                 }
             }
         }
 
-        public VolatileHashSet<Chat> PushChatsRequest
+        public VolatileHashSet<Chat> PushMulticastChatsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pushChatsRequest;
+                    return _pushMulticastChatsRequest;
                 }
             }
         }
 
-        public VolatileHashSet<Chat> PullChatsRequest
+        public VolatileHashSet<Chat> PullMulticastChatsRequest
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _pullChatsRequest;
+                    return _pullMulticastChatsRequest;
                 }
             }
         }

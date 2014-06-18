@@ -179,7 +179,7 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_Cash()
+        public void Test_Miner()
         {
             {
                 Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 30));
@@ -210,19 +210,26 @@ namespace Library.UnitTest
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                var task = Task.Factory.StartNew(() =>
+                Assert.Throws<AggregateException>(() =>
                 {
-                    Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 1));
+                    Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(1, 0, 0));
 
-                    Cash cash = null;
-
-                    using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                    var task = Task.Factory.StartNew(() =>
                     {
-                        cash = Miner.Create(miner, stream);
-                    }
-                });
+                        Cash cash = null;
 
-                task.Wait();
+                        using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                        {
+                            cash = Miner.Create(miner, stream);
+                        }
+                    });
+
+                    Thread.Sleep(1000);
+
+                    miner.Cancel();
+
+                    task.Wait();
+                });
 
                 sw.Stop();
                 Assert.IsTrue(sw.ElapsedMilliseconds < 1000 * 3);

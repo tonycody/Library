@@ -16,7 +16,7 @@ namespace Library.Net.Outopos
         private enum ConvertCompressionAlgorithm : byte
         {
             None = 0,
-            Xz = 1,
+            Deflate = 1,
         }
 
         private enum ConvertCryptoAlgorithm : byte
@@ -44,26 +44,45 @@ namespace Library.Net.Outopos
             {
                 targetStream.Seek(0, SeekOrigin.Begin);
 
-                BufferStream lzmaBufferStream = null;
+                BufferStream deflateBufferStream = null;
 
                 try
                 {
-                    lzmaBufferStream = new BufferStream(_bufferManager);
+                    deflateBufferStream = new BufferStream(_bufferManager);
 
-                    using (var inStream = new WrapperStream(targetStream, true))
-                    using (var outStream = new WrapperStream(lzmaBufferStream, true))
+                    using (DeflateStream deflateStream = new DeflateStream(deflateBufferStream, CompressionMode.Compress, true))
                     {
-                        Xz.Compress(inStream, outStream, _bufferManager);
+                        byte[] compressBuffer = null;
+
+                        try
+                        {
+                            compressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                            int i = -1;
+
+                            while ((i = targetStream.Read(compressBuffer, 0, compressBuffer.Length)) > 0)
+                            {
+                                deflateStream.Write(compressBuffer, 0, i);
+                            }
+                        }
+                        finally
+                        {
+                            if (compressBuffer != null)
+                            {
+                                _bufferManager.ReturnBuffer(compressBuffer);
+                            }
+                        }
                     }
 
-                    lzmaBufferStream.Seek(0, SeekOrigin.Begin);
-                    list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.Xz, lzmaBufferStream));
+                    deflateBufferStream.Seek(0, SeekOrigin.Begin);
+
+                    list.Add(new KeyValuePair<byte, Stream>((byte)ConvertCompressionAlgorithm.Deflate, deflateBufferStream));
                 }
                 catch (Exception)
                 {
-                    if (lzmaBufferStream != null)
+                    if (deflateBufferStream != null)
                     {
-                        lzmaBufferStream.Dispose();
+                        deflateBufferStream.Dispose();
                     }
                 }
             }
@@ -118,39 +137,57 @@ namespace Library.Net.Outopos
                 {
                     return new RangeStream(targetStream);
                 }
-                else if (type == (byte)ConvertCompressionAlgorithm.Xz)
+                else if (type == (byte)ConvertCompressionAlgorithm.Deflate)
                 {
                     using (Stream dataStream = new WrapperStream(targetStream, true))
                     {
-                        BufferStream lzmaBufferStream = null;
+                        BufferStream deflateBufferStream = null;
 
                         try
                         {
-                            lzmaBufferStream = new BufferStream(_bufferManager);
+                            deflateBufferStream = new BufferStream(_bufferManager);
 
-                            using (var inStream = new WrapperStream(dataStream, true))
-                            using (var outStream = new WrapperStream(lzmaBufferStream, true))
+                            using (DeflateStream deflateStream = new DeflateStream(dataStream, CompressionMode.Decompress, true))
                             {
-                                Xz.Decompress(inStream, outStream, _bufferManager);
+                                byte[] decompressBuffer = null;
+
+                                try
+                                {
+                                    decompressBuffer = _bufferManager.TakeBuffer(1024 * 4);
+
+                                    int i = -1;
+
+                                    while ((i = deflateStream.Read(decompressBuffer, 0, decompressBuffer.Length)) > 0)
+                                    {
+                                        deflateBufferStream.Write(decompressBuffer, 0, i);
+                                    }
+                                }
+                                finally
+                                {
+                                    if (decompressBuffer != null)
+                                    {
+                                        _bufferManager.ReturnBuffer(decompressBuffer);
+                                    }
+                                }
                             }
+
+                            deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
 #if DEBUG
                             Debug.WriteLine("ContentConverter Decompress {3} : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
-                                NetworkConverter.ToSizeString(lzmaBufferStream.Length),
-                                NetworkConverter.ToSizeString(dataStream.Length - lzmaBufferStream.Length),
-                                ConvertCompressionAlgorithm.Xz);
+                                NetworkConverter.ToSizeString(deflateBufferStream.Length),
+                                NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length),
+                                ConvertCompressionAlgorithm.Deflate);
 #endif
 
-                            lzmaBufferStream.Seek(0, SeekOrigin.Begin);
-
-                            return lzmaBufferStream;
+                            return deflateBufferStream;
                         }
                         catch (Exception)
                         {
-                            if (lzmaBufferStream != null)
+                            if (deflateBufferStream != null)
                             {
-                                lzmaBufferStream.Dispose();
+                                deflateBufferStream.Dispose();
                             }
                         }
                     }
@@ -505,7 +542,7 @@ namespace Library.Net.Outopos
             throw new NotSupportedException();
         }
 
-        public static ArraySegment<byte> ToBroadcastProfileContentBlock(BroadcastProfileContent content)
+        public static ArraySegment<byte> ToProfileContentBlock(ProfileContent content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -513,7 +550,7 @@ namespace Library.Net.Outopos
 
             using (Stream contentStream = content.Export(_bufferManager))
             using (Stream compressStream = ContentConverter.Compress(contentStream))
-            using (Stream typeStream = ContentConverter.AddType(compressStream, "BroadcastProfile"))
+            using (Stream typeStream = ContentConverter.AddType(compressStream, "Profile"))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
                 typeStream.Read(value.Array, value.Offset, value.Count);
@@ -522,17 +559,17 @@ namespace Library.Net.Outopos
             return value;
         }
 
-        public static BroadcastProfileContent FromBroadcastProfileContentBlock(ArraySegment<byte> content)
+        public static ProfileContent FromProfileContentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
             try
             {
                 using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "BroadcastProfile"))
+                using (Stream compressStream = ContentConverter.RemoveType(typeStream, "Profile"))
                 using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return BroadcastProfileContent.Import(contentStream, _bufferManager);
+                    return ProfileContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)
@@ -649,7 +686,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static ArraySegment<byte> ToUnicastMessageContentBlock(UnicastMessageContent content, IExchangeEncrypt publicKey)
+        public static ArraySegment<byte> ToSignatureMessageContentBlock(SignatureMessageContent content, IExchangeEncrypt publicKey)
         {
             if (content == null) throw new ArgumentNullException("content");
             if (publicKey == null) throw new ArgumentNullException("publicKey");
@@ -661,7 +698,7 @@ namespace Library.Net.Outopos
             using (Stream paddingStream = ContentConverter.AddPadding(compressStream, 1024 * 256))
             using (Stream hashStream = ContentConverter.AddHash(paddingStream))
             using (Stream cryptostream = ContentConverter.Encrypt(hashStream, publicKey))
-            using (Stream typeStream = ContentConverter.AddType(cryptostream, "UnicastMessage"))
+            using (Stream typeStream = ContentConverter.AddType(cryptostream, "SignatureMessage"))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)typeStream.Length), 0, (int)typeStream.Length);
                 typeStream.Read(value.Array, value.Offset, value.Count);
@@ -670,7 +707,7 @@ namespace Library.Net.Outopos
             return value;
         }
 
-        public static UnicastMessageContent FromUnicastMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt privateKey)
+        public static SignatureMessageContent FromSignatureMessageContentBlock(ArraySegment<byte> content, IExchangeDecrypt privateKey)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
             if (privateKey == null) throw new ArgumentNullException("privateKey");
@@ -678,13 +715,13 @@ namespace Library.Net.Outopos
             try
             {
                 using (Stream typeStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream cryptoStream = ContentConverter.RemoveType(typeStream, "UnicastMessage"))
+                using (Stream cryptoStream = ContentConverter.RemoveType(typeStream, "SignatureMessage"))
                 using (Stream hashStream = ContentConverter.Decrypt(cryptoStream, privateKey))
                 using (Stream paddingStream = ContentConverter.RemoveHash(hashStream))
                 using (Stream compressStream = ContentConverter.RemovePadding(paddingStream))
                 using (Stream contentStream = ContentConverter.Decompress(compressStream))
                 {
-                    return UnicastMessageContent.Import(contentStream, _bufferManager);
+                    return SignatureMessageContent.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)

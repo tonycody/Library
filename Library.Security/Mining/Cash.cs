@@ -26,14 +26,10 @@ namespace Library.Security
         public static readonly int MaxKeyLength = 64;
         public static readonly int MaxValueLength = 64;
 
-        internal Cash(Miner miner, Stream stream)
+        internal Cash(CashAlgorithm cashAlgorithm, byte[] key)
         {
-            if (miner.CashAlgorithm == CashAlgorithm.Version1)
-            {
-                this.Key = Cash_Utilities_1.Create(Sha512.ComputeHash(stream), miner.ComputeTime);
-            }
-
-            this.CashAlgorithm = miner.CashAlgorithm;
+            this.CashAlgorithm = cashAlgorithm;
+            this.Key = key;
         }
 
         protected override void Initialize()
@@ -123,18 +119,6 @@ namespace Library.Security
             }
         }
 
-        internal int Verify(Stream stream)
-        {
-            if (this.CashAlgorithm == Security.CashAlgorithm.Version1)
-            {
-                return Cash_Utilities_1.Verify(this.Key, Sha512.ComputeHash(stream));
-            }
-            else
-            {
-                return 0;
-            }
-        }
-
         [DataMember(Name = "CashAlgorithm")]
         public CashAlgorithm CashAlgorithm
         {
@@ -180,118 +164,6 @@ namespace Library.Security
                 else
                 {
                     _hashCode = 0;
-                }
-            }
-        }
-
-        private class Cash_Utilities_1
-        {
-            private static string _path;
-
-            static Cash_Utilities_1()
-            {
-                OperatingSystem osInfo = Environment.OSVersion;
-
-                if (osInfo.Platform == PlatformID.Win32NT)
-                {
-                    if (System.Environment.Is64BitProcess)
-                    {
-                        _path = "Assemblies/Hashcash_x64.exe";
-                    }
-                    else
-                    {
-                        _path = "Assemblies/Hashcash_x86.exe";
-                    }
-                }
-
-                foreach (var p in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(_path)))
-                {
-                    try
-                    {
-                        if (p.MainModule.FileName == Path.GetFullPath(_path))
-                        {
-                            try
-                            {
-                                p.Kill();
-                                p.WaitForExit();
-                            }
-                            catch (Exception)
-                            {
-
-                            }
-                        }
-                    }
-                    catch (Exception)
-                    {
-
-                    }
-                }
-            }
-
-            public static byte[] Create(byte[] value, TimeSpan computeTime)
-            {
-                if (value == null) throw new ArgumentNullException("value");
-                if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
-                if (computeTime < TimeSpan.Zero) throw new ArgumentOutOfRangeException("computeTime");
-
-                var info = new ProcessStartInfo(_path);
-                info.CreateNoWindow = true;
-                info.UseShellExecute = false;
-                info.RedirectStandardOutput = true;
-
-                info.Arguments = string.Format("hashcash1 create {0} {1}", NetworkConverter.ToHexString(value), (int)computeTime.TotalSeconds);
-
-                using (var process = Process.Start(info))
-                {
-                    process.PriorityClass = ProcessPriorityClass.Idle;
-
-                    try
-                    {
-                        var result = process.StandardOutput.ReadLine();
-
-                        process.WaitForExit();
-                        if (process.ExitCode != 0) return null;
-
-                        return NetworkConverter.FromHexString(result);
-                    }
-                    catch (Exception)
-                    {
-                        return null;
-                    }
-                }
-            }
-
-            public static int Verify(byte[] key, byte[] value)
-            {
-                if (key == null) throw new ArgumentNullException("key");
-                if (key.Length != 64) throw new ArgumentOutOfRangeException("key");
-                if (value == null) throw new ArgumentNullException("value");
-                if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
-
-                var info = new ProcessStartInfo(_path);
-                info.CreateNoWindow = true;
-                info.UseShellExecute = false;
-                info.RedirectStandardOutput = true;
-
-                info.Arguments = string.Format("hashcash1 verify {0} {1}", NetworkConverter.ToHexString(key), NetworkConverter.ToHexString(value));
-
-                using (var process = Process.Start(info))
-                {
-                    process.PriorityClass = ProcessPriorityClass.Idle;
-
-                    try
-                    {
-                        var result = process.StandardOutput.ReadLine();
-
-                        process.WaitForExit();
-                        if (process.ExitCode != 0) return 0;
-
-                        return int.Parse(result);
-                    }
-                    catch (Exception)
-                    {
-                        return 0;
-                    }
                 }
             }
         }

@@ -9,8 +9,8 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "BroadcastProfileContent", Namespace = "http://Library/Net/Outopos")]
-    public sealed class BroadcastProfileContent : ItemBase<BroadcastProfileContent>
+    [DataContract(Name = "ProfileContent", Namespace = "http://Library/Net/Outopos")]
+    public sealed class ProfileContent : ItemBase<ProfileContent>
     {
         private enum SerializeId : byte
         {
@@ -29,7 +29,7 @@ namespace Library.Net.Outopos
         public static readonly int MaxWikiCount = 256;
         public static readonly int MaxChatCount = 256;
 
-        public BroadcastProfileContent(ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
+        public ProfileContent(ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
@@ -120,12 +120,12 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is BroadcastProfileContent)) return false;
+            if ((object)obj == null || !(obj is ProfileContent)) return false;
 
-            return this.Equals((BroadcastProfileContent)obj);
+            return this.Equals((ProfileContent)obj);
         }
 
-        public override bool Equals(BroadcastProfileContent other)
+        public override bool Equals(ProfileContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -188,7 +188,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_trustSignatures == null)
-                    _trustSignatures = new SignatureCollection(BroadcastProfileContent.MaxTrustSignatureCount);
+                    _trustSignatures = new SignatureCollection(ProfileContent.MaxTrustSignatureCount);
 
                 return _trustSignatures;
             }
@@ -213,7 +213,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_wikis == null)
-                    _wikis = new WikiCollection(BroadcastProfileContent.MaxWikiCount);
+                    _wikis = new WikiCollection(ProfileContent.MaxWikiCount);
 
                 return _wikis;
             }
@@ -238,7 +238,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_chats == null)
-                    _chats = new ChatCollection(BroadcastProfileContent.MaxChatCount);
+                    _chats = new ChatCollection(ProfileContent.MaxChatCount);
 
                 return _chats;
             }

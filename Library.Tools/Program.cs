@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -786,7 +787,7 @@ namespace Library.Tools
                                     }
 
                                     builder.AppendLine(string.Format("  <Translate Key=\"{0}\" Value=\"{1}\" />",
-                                        System.Web.HttpUtility.HtmlEncode(key), System.Web.HttpUtility.HtmlEncode(value)));
+                                        Program.HtmlEncode_Hex(key), Program.HtmlEncode_Hex(value)));
                                 }
                             }
                             else if (xml.NodeType == XmlNodeType.Whitespace)
@@ -1020,6 +1021,55 @@ namespace Library.Tools
             {
                 return null;
             }
+        }
+
+        public static string HtmlEncode_Hex(string text)
+        {
+            if (text == null) return null;
+
+            StringBuilder sb = new StringBuilder();
+
+            var list = System.Web.HttpUtility.HtmlEncode(text).ToCharArray();
+
+            {
+                var length = list.Length;
+
+                for (int i = 0; i < length; i++)
+                {
+                    if (list[i] == '&'
+                        && (i + 1) < length && list[i + 1] == '#')
+                    {
+                        i += 2;
+
+                        string code = "";
+
+                        for (; i < length; i++)
+                        {
+                            var c = list[i];
+                            if (c == ';') break;
+
+                            code += c;
+                        }
+
+                        int result;
+
+                        if (int.TryParse(code, out result))
+                        {
+                            sb.Append("&#x" + String.Format("{0:X4}", result) + ";");
+                        }
+                        else
+                        {
+                            sb.Append("&#" + code + ";");
+                        }
+                    }
+                    else
+                    {
+                        sb.Append(list[i]);
+                    }
+                }
+            }
+
+            return sb.ToString();
         }
     }
 }

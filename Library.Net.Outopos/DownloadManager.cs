@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Library.Collections;
@@ -15,6 +16,12 @@ namespace Library.Net.Outopos
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
+        private ConditionalWeakTable<ProfileHeader, ProfileContent> _profileTable = new ConditionalWeakTable<ProfileHeader, ProfileContent>();
+        private ConditionalWeakTable<SignatureMessageHeader, SignatureMessageContent> _signatureMessageTable = new ConditionalWeakTable<SignatureMessageHeader, SignatureMessageContent>();
+        private ConditionalWeakTable<WikiPageHeader, WikiPageContent> _wikiPageTable = new ConditionalWeakTable<WikiPageHeader, WikiPageContent>();
+        private ConditionalWeakTable<ChatTopicHeader, ChatTopicContent> _chatTopicTable = new ConditionalWeakTable<ChatTopicHeader, ChatTopicContent>();
+        private ConditionalWeakTable<ChatMessageHeader, ChatMessageContent> _chatMessageTable = new ConditionalWeakTable<ChatMessageHeader, ChatMessageContent>();
+
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
         private volatile bool _disposed;
@@ -27,210 +34,260 @@ namespace Library.Net.Outopos
             _bufferManager = bufferManager;
         }
 
-        public Task<BroadcastProfileContent> Download(BroadcastProfileHeader header)
+        public ProfileContent GetContent(ProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
-            return Task<BroadcastProfileContent>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Key))
+                    ProfileContent content;
+
+                    if (_profileTable.TryGetValue(header, out content))
                     {
-                        _connectionsManager.Download(header.Key);
-
-                        return null;
-                    }
-                    else
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromBroadcastProfileContentBlock(buffer);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-                        }
-
-                        return null;
+                        return content;
                     }
                 }
-            });
+
+                if (!_cacheManager.Contains(header.Key))
+                {
+                    _connectionsManager.Download(header.Key);
+
+                    return null;
+                }
+                else
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = _cacheManager[header.Key];
+
+                        var content = ContentConverter.FromProfileContentBlock(buffer);
+                        _profileTable.Add(header, content);
+
+                        return content;
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+
+                    return null;
+                }
+            }
         }
 
-        public Task<UnicastMessageContent> Download(UnicastMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        public SignatureMessageContent GetContent(SignatureMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
             if (header == null) throw new ArgumentNullException("header");
             if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
 
-            return Task<UnicastMessageContent>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Key))
+                    SignatureMessageContent content;
+
+                    if (_signatureMessageTable.TryGetValue(header, out content))
                     {
-                        _connectionsManager.Download(header.Key);
-
-                        return null;
-                    }
-                    else
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromUnicastMessageContentBlock(buffer, exchangePrivateKey);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-                        }
-
-                        return null;
+                        return content;
                     }
                 }
-            });
+
+                if (!_cacheManager.Contains(header.Key))
+                {
+                    _connectionsManager.Download(header.Key);
+
+                    return null;
+                }
+                else
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = _cacheManager[header.Key];
+
+                        var content = ContentConverter.FromSignatureMessageContentBlock(buffer, exchangePrivateKey);
+                        _signatureMessageTable.Add(header, content);
+
+                        return content;
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+
+                    return null;
+                }
+            }
         }
 
-        public Task<WikiPageContent> Download(WikiPageHeader header)
+        public WikiPageContent GetContent(WikiPageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
-            return Task<WikiPageContent>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Key))
+                    WikiPageContent content;
+
+                    if (_wikiPageTable.TryGetValue(header, out content))
                     {
-                        _connectionsManager.Download(header.Key);
-
-                        return null;
-                    }
-                    else
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromWikiPageContentBlock(buffer);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-                        }
-
-                        return null;
+                        return content;
                     }
                 }
-            });
+
+                if (!_cacheManager.Contains(header.Key))
+                {
+                    _connectionsManager.Download(header.Key);
+
+                    return null;
+                }
+                else
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = _cacheManager[header.Key];
+
+                        var content = ContentConverter.FromWikiPageContentBlock(buffer);
+                        _wikiPageTable.Add(header, content);
+
+                        return content;
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+
+                    return null;
+                }
+            }
         }
 
-        public Task<ChatTopicContent> Download(ChatTopicHeader header)
+        public ChatTopicContent GetContent(ChatTopicHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
-            return Task<ChatTopicContent>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Key))
+                    ChatTopicContent content;
+
+                    if (_chatTopicTable.TryGetValue(header, out content))
                     {
-                        _connectionsManager.Download(header.Key);
-
-                        return null;
-                    }
-                    else
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromChatTopicContentBlock(buffer);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-                        }
-
-                        return null;
+                        return content;
                     }
                 }
-            });
+
+                if (!_cacheManager.Contains(header.Key))
+                {
+                    _connectionsManager.Download(header.Key);
+
+                    return null;
+                }
+                else
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = _cacheManager[header.Key];
+
+                        var content = ContentConverter.FromChatTopicContentBlock(buffer);
+                        _chatTopicTable.Add(header, content);
+
+                        return content;
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+
+                    return null;
+                }
+            }
         }
 
-        public Task<ChatMessageContent> Download(ChatMessageHeader header)
+        public ChatMessageContent GetContent(ChatMessageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
-            return Task<ChatMessageContent>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                lock (this.ThisLock)
                 {
-                    if (!_cacheManager.Contains(header.Key))
+                    ChatMessageContent content;
+
+                    if (_chatMessageTable.TryGetValue(header, out content))
                     {
-                        _connectionsManager.Download(header.Key);
-
-                        return null;
-                    }
-                    else
-                    {
-                        ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                        try
-                        {
-                            buffer = _cacheManager[header.Key];
-                            return ContentConverter.FromChatMessageContentBlock(buffer);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                        finally
-                        {
-                            if (buffer.Array != null)
-                            {
-                                _bufferManager.ReturnBuffer(buffer.Array);
-                            }
-                        }
-
-                        return null;
+                        return content;
                     }
                 }
-            });
+
+                if (!_cacheManager.Contains(header.Key))
+                {
+                    _connectionsManager.Download(header.Key);
+
+                    return null;
+                }
+                else
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                    try
+                    {
+                        buffer = _cacheManager[header.Key];
+
+                        var content = ContentConverter.FromChatMessageContentBlock(buffer);
+                        _chatMessageTable.Add(header, content);
+
+                        return content;
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    finally
+                    {
+                        if (buffer.Array != null)
+                        {
+                            _bufferManager.ReturnBuffer(buffer.Array);
+                        }
+                    }
+
+                    return null;
+                }
+            }
         }
 
         protected override void Dispose(bool disposing)

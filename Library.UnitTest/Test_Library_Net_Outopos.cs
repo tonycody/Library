@@ -536,7 +536,7 @@ namespace Library.UnitTest
 
                     var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
 
-                    var headers1 = new List<BroadcastProfileHeader>();
+                    var headers1 = new List<ProfileHeader>();
 
                     for (int j = 0; j < 4; j++)
                     {
@@ -544,7 +544,7 @@ namespace Library.UnitTest
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
-                        var header = new BroadcastProfileHeader(DateTime.UtcNow, key, miner, digitalSignature);
+                        var header = new ProfileHeader(DateTime.UtcNow, key, miner, digitalSignature);
 
                         headers1.Add(header);
                     }
@@ -552,7 +552,7 @@ namespace Library.UnitTest
                     senderConnection.PushBroadcastHeaders(headers1);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(CollectionUtilities.Equals(headers1, item.BroadcastProfileHeaders), "ConnectionManager #6.1");
+                    Assert.IsTrue(CollectionUtilities.Equals(headers1, item.ProfileHeaders), "ConnectionManager #6.1");
                 }
 
                 connectionManagers.Randomize();
@@ -598,7 +598,7 @@ namespace Library.UnitTest
 
                     var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
 
-                    var headers1 = new List<UnicastMessageHeader>();
+                    var headers1 = new List<SignatureMessageHeader>();
 
                     for (int j = 0; j < 4; j++)
                     {
@@ -606,7 +606,7 @@ namespace Library.UnitTest
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
-                        var header = new UnicastMessageHeader(digitalSignature.ToString(), DateTime.UtcNow, key, miner, digitalSignature);
+                        var header = new SignatureMessageHeader(digitalSignature.ToString(), DateTime.UtcNow, key, miner, digitalSignature);
 
                         headers1.Add(header);
                     }
@@ -614,11 +614,11 @@ namespace Library.UnitTest
                     senderConnection.PushUnicastHeaders(headers1);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(CollectionUtilities.Equals(headers1, item.UnicastMessageHeaders), "ConnectionManager #8.1");
+                    Assert.IsTrue(CollectionUtilities.Equals(headers1, item.SignatureMessageHeaders), "ConnectionManager #8.1");
                 }
 
                 connectionManagers.Randomize();
-                
+
                 {
                     var queue = new WaitQueue<PullMulticastHeadersRequestEventArgs>();
 

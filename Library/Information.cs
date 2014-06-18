@@ -41,6 +41,11 @@ namespace Library
                 _value = value;
             }
         }
+
+        public override string ToString()
+        {
+            return string.Format("Key = {0}, Value = {1}", this.Key, this.Value);
+        }
     }
 
     [DataContract(Name = "Information", Namespace = "http://Library")]

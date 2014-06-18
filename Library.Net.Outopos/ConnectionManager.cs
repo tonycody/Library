@@ -43,7 +43,7 @@ namespace Library.Net.Outopos
 
     class PullBroadcastHeadersEventArgs : EventArgs
     {
-        public IEnumerable<BroadcastProfileHeader> BroadcastProfileHeaders { get; set; }
+        public IEnumerable<ProfileHeader> ProfileHeaders { get; set; }
     }
 
     class PullUnicastHeadersRequestEventArgs : EventArgs
@@ -53,7 +53,7 @@ namespace Library.Net.Outopos
 
     class PullUnicastHeadersEventArgs : EventArgs
     {
-        public IEnumerable<UnicastMessageHeader> UnicastMessageHeaders { get; set; }
+        public IEnumerable<SignatureMessageHeader> SignatureMessageHeaders { get; set; }
     }
 
     class PullMulticastHeadersRequestEventArgs : EventArgs
@@ -619,7 +619,7 @@ namespace Library.Net.Outopos
 
                                         this.OnPullBroadcastHeaders(new PullBroadcastHeadersEventArgs()
                                         {
-                                            BroadcastProfileHeaders = message.BroadcastProfileHeaders,
+                                            ProfileHeaders = message.ProfileHeaders,
                                         });
                                     }
                                     else if (type == (byte)SerializeId.UnicastHeadersRequest)
@@ -637,7 +637,7 @@ namespace Library.Net.Outopos
 
                                         this.OnPullUnicastHeaders(new PullUnicastHeadersEventArgs()
                                         {
-                                            UnicastMessageHeaders = message.UnicastMessageHeaders,
+                                            SignatureMessageHeaders = message.SignatureMessageHeaders,
                                         });
                                     }
                                     else if (type == (byte)SerializeId.MulticastHeadersRequest)
@@ -978,7 +978,7 @@ namespace Library.Net.Outopos
         }
 
         public void PushBroadcastHeaders(
-            IEnumerable<BroadcastProfileHeader> broadcastProfileHeaders)
+            IEnumerable<ProfileHeader> profileHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -992,7 +992,7 @@ namespace Library.Net.Outopos
                     stream.Flush();
 
                     var message = new BroadcastHeadersMessage(
-                        broadcastProfileHeaders);
+                        profileHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1054,7 +1054,7 @@ namespace Library.Net.Outopos
         }
 
         public void PushUnicastHeaders(
-            IEnumerable<UnicastMessageHeader> UnicastMessageHeaders)
+            IEnumerable<SignatureMessageHeader> SignatureMessageHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1068,7 +1068,7 @@ namespace Library.Net.Outopos
                     stream.Flush();
 
                     var message = new UnicastHeadersMessage(
-                        UnicastMessageHeaders);
+                        SignatureMessageHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1695,15 +1695,15 @@ namespace Library.Net.Outopos
         {
             private enum SerializeId : byte
             {
-                BroadcastProfileHeader = 0,
+                ProfileHeader = 0,
             }
 
-            private LockedList<BroadcastProfileHeader> _broadcastProfileHeaders;
+            private LockedList<ProfileHeader> _profileHeaders;
 
             public BroadcastHeadersMessage(
-                IEnumerable<BroadcastProfileHeader> broadcastProfileHeaders)
+                IEnumerable<ProfileHeader> profileHeaders)
             {
-                if (broadcastProfileHeaders != null) this.ProtectedBroadcastProfileHeaders.AddRange(broadcastProfileHeaders);
+                if (profileHeaders != null) this.ProtectedProfileHeaders.AddRange(profileHeaders);
             }
 
             protected override void Initialize()
@@ -1723,9 +1723,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.BroadcastProfileHeader)
+                        if (id == (byte)SerializeId.ProfileHeader)
                         {
-                            this.ProtectedBroadcastProfileHeaders.Add(BroadcastProfileHeader.Import(rangeStream, bufferManager));
+                            this.ProtectedProfileHeaders.Add(ProfileHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1735,12 +1735,12 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // BroadcastProfileHeaders
-                foreach (var value in this.BroadcastProfileHeaders)
+                // ProfileHeaders
+                foreach (var value in this.ProfileHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.BroadcastProfileHeader, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ProfileHeader, stream);
                     }
                 }
 
@@ -1756,28 +1756,28 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private volatile ReadOnlyCollection<BroadcastProfileHeader> _readOnlyBroadcastProfileHeaders;
+            private volatile ReadOnlyCollection<ProfileHeader> _readOnlyProfileHeaders;
 
-            public IEnumerable<BroadcastProfileHeader> BroadcastProfileHeaders
+            public IEnumerable<ProfileHeader> ProfileHeaders
             {
                 get
                 {
-                    if (_readOnlyBroadcastProfileHeaders == null)
-                        _readOnlyBroadcastProfileHeaders = new ReadOnlyCollection<BroadcastProfileHeader>(this.ProtectedBroadcastProfileHeaders);
+                    if (_readOnlyProfileHeaders == null)
+                        _readOnlyProfileHeaders = new ReadOnlyCollection<ProfileHeader>(this.ProtectedProfileHeaders);
 
-                    return _readOnlyBroadcastProfileHeaders;
+                    return _readOnlyProfileHeaders;
                 }
             }
 
-            [DataMember(Name = "BroadcastProfileHeaders")]
-            private LockedList<BroadcastProfileHeader> ProtectedBroadcastProfileHeaders
+            [DataMember(Name = "ProfileHeaders")]
+            private LockedList<ProfileHeader> ProtectedProfileHeaders
             {
                 get
                 {
-                    if (_broadcastProfileHeaders == null)
-                        _broadcastProfileHeaders = new LockedList<BroadcastProfileHeader>(_maxHeaderCount);
+                    if (_profileHeaders == null)
+                        _profileHeaders = new LockedList<ProfileHeader>(_maxHeaderCount);
 
-                    return _broadcastProfileHeaders;
+                    return _profileHeaders;
                 }
             }
         }
@@ -1873,15 +1873,15 @@ namespace Library.Net.Outopos
         {
             private enum SerializeId : byte
             {
-                UnicastMessageHeader = 0,
+                SignatureMessageHeader = 0,
             }
 
-            private LockedList<UnicastMessageHeader> _unicastMessageHeaders;
+            private LockedList<SignatureMessageHeader> _signatureMessageHeaders;
 
             public UnicastHeadersMessage(
-                IEnumerable<UnicastMessageHeader> unicastMessageHeaders)
+                IEnumerable<SignatureMessageHeader> signatureMessageHeaders)
             {
-                if (unicastMessageHeaders != null) this.ProtectedUnicastMessageHeaders.AddRange(unicastMessageHeaders);
+                if (signatureMessageHeaders != null) this.ProtectedSignatureMessageHeaders.AddRange(signatureMessageHeaders);
             }
 
             protected override void Initialize()
@@ -1901,9 +1901,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.UnicastMessageHeader)
+                        if (id == (byte)SerializeId.SignatureMessageHeader)
                         {
-                            this.ProtectedUnicastMessageHeaders.Add(UnicastMessageHeader.Import(rangeStream, bufferManager));
+                            this.ProtectedSignatureMessageHeaders.Add(SignatureMessageHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1913,12 +1913,12 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // UnicastMessageHeaders
-                foreach (var value in this.UnicastMessageHeaders)
+                // SignatureMessageHeaders
+                foreach (var value in this.SignatureMessageHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.UnicastMessageHeader, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SignatureMessageHeader, stream);
                     }
                 }
 
@@ -1934,28 +1934,28 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private volatile ReadOnlyCollection<UnicastMessageHeader> _readOnlyUnicastMessageHeaders;
+            private volatile ReadOnlyCollection<SignatureMessageHeader> _readOnlySignatureMessageHeaders;
 
-            public IEnumerable<UnicastMessageHeader> UnicastMessageHeaders
+            public IEnumerable<SignatureMessageHeader> SignatureMessageHeaders
             {
                 get
                 {
-                    if (_readOnlyUnicastMessageHeaders == null)
-                        _readOnlyUnicastMessageHeaders = new ReadOnlyCollection<UnicastMessageHeader>(this.ProtectedUnicastMessageHeaders);
+                    if (_readOnlySignatureMessageHeaders == null)
+                        _readOnlySignatureMessageHeaders = new ReadOnlyCollection<SignatureMessageHeader>(this.ProtectedSignatureMessageHeaders);
 
-                    return _readOnlyUnicastMessageHeaders;
+                    return _readOnlySignatureMessageHeaders;
                 }
             }
 
-            [DataMember(Name = "UnicastMessageHeaders")]
-            private LockedList<UnicastMessageHeader> ProtectedUnicastMessageHeaders
+            [DataMember(Name = "SignatureMessageHeaders")]
+            private LockedList<SignatureMessageHeader> ProtectedSignatureMessageHeaders
             {
                 get
                 {
-                    if (_unicastMessageHeaders == null)
-                        _unicastMessageHeaders = new LockedList<UnicastMessageHeader>(_maxHeaderCount);
+                    if (_signatureMessageHeaders == null)
+                        _signatureMessageHeaders = new LockedList<SignatureMessageHeader>(_maxHeaderCount);
 
-                    return _unicastMessageHeaders;
+                    return _signatureMessageHeaders;
                 }
             }
         }

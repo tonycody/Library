@@ -8,8 +8,8 @@ using Library.Io;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "UnicastMessageContent", Namespace = "http://Library/Net/Outopos")]
-    public sealed class UnicastMessageContent : ItemBase<UnicastMessageContent>
+    [DataContract(Name = "SignatureMessageContent", Namespace = "http://Library/Net/Outopos")]
+    public sealed class SignatureMessageContent : ItemBase<SignatureMessageContent>
     {
         private enum SerializeId : byte
         {
@@ -21,7 +21,7 @@ namespace Library.Net.Outopos
         public static readonly int MaxCommentLength = 1024 * 32;
         public static readonly int MaxAnchorCount = 32;
 
-        public UnicastMessageContent(string comment)
+        public SignatureMessageContent(string comment)
         {
             this.Comment = comment;
         }
@@ -73,12 +73,12 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is UnicastMessageContent)) return false;
+            if ((object)obj == null || !(obj is SignatureMessageContent)) return false;
 
-            return this.Equals((UnicastMessageContent)obj);
+            return this.Equals((SignatureMessageContent)obj);
         }
 
-        public override bool Equals(UnicastMessageContent other)
+        public override bool Equals(SignatureMessageContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -100,7 +100,7 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && value.Length > UnicastMessageContent.MaxCommentLength)
+                if (value != null && value.Length > SignatureMessageContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }

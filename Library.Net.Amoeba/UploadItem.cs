@@ -39,7 +39,7 @@ namespace Library.Net.Amoeba
     }
 
     [DataContract(Name = "UploadItem", Namespace = "http://Library/Net/Amoeba")]
-    sealed class UploadItem : ICloneable<UploadItem>
+    sealed class UploadItem 
     {
         private UploadType _type;
         private UploadState _state;
@@ -460,30 +460,6 @@ namespace Library.Net.Amoeba
                         _indexes = new IndexCollection();
 
                     return _indexes;
-                }
-            }
-        }
-
-        public UploadItem Clone()
-        {
-            lock (this.ThisLock)
-            {
-                var ds = new DataContractSerializer(typeof(UploadItem));
-
-                using (BufferStream stream = new BufferStream(BufferManager.Instance))
-                {
-                    using (WrapperStream wrapperStream = new WrapperStream(stream, true))
-                    using (XmlDictionaryWriter xmlDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
-                    {
-                        ds.WriteObject(xmlDictionaryWriter, this);
-                    }
-
-                    stream.Position = 0;
-
-                    using (XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
-                    {
-                        return (UploadItem)ds.ReadObject(xmlDictionaryReader);
-                    }
                 }
             }
         }

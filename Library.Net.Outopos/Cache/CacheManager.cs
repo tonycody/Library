@@ -14,8 +14,6 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    public delegate void CheckBlocksProgressEventHandler(object sender, int badBlockCount, int checkedBlockCount, int blockCount, out bool isStop);
-
     interface ISetOperators<T>
     {
         IEnumerable<T> IntersectFrom(IEnumerable<T> collection);
@@ -328,93 +326,6 @@ namespace Library.Net.Outopos
 
                 _spaceSectors.Clear();
                 _spaceSectorsInitialized = false;
-            }
-        }
-
-        public void CheckBlocks(CheckBlocksProgressEventHandler getProgressEvent)
-        {
-            // 重複するセクタを確保したブロックを検出しRemoveする。
-            lock (this.ThisLock)
-            {
-                _bitmapManager.SetLength((this.Size + ((long)CacheManager.SectorSize - 1)) / (long)CacheManager.SectorSize);
-
-                List<Key> keys = new List<Key>();
-
-                foreach (var pair in _settings.ClusterIndex)
-                {
-                    var key = pair.Key;
-                    var clusterInfo = pair.Value;
-
-                    foreach (var sector in clusterInfo.Indexes)
-                    {
-                        if (!_bitmapManager.Get(sector))
-                        {
-                            _bitmapManager.Set(sector, true);
-                        }
-                        else
-                        {
-                            keys.Add(key);
-
-                            break;
-                        }
-                    }
-                }
-
-                foreach (var key in keys)
-                {
-                    _settings.ClusterIndex.Remove(key);
-                }
-
-                _spaceSectors.Clear();
-                _spaceSectorsInitialized = false;
-            }
-
-            // 読めないブロックを検出しRemoveする。
-            {
-                List<Key> list = null;
-
-                lock (this.ThisLock)
-                {
-                    list = new List<Key>(_settings.ClusterIndex.Keys.Randomize());
-                }
-
-                int badBlockCount = 0;
-                int checkedBlockCount = 0;
-                int blockCount = list.Count;
-                bool isStop;
-
-                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-                if (isStop) return;
-
-                foreach (var item in list)
-                {
-                    checkedBlockCount++;
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = this[item];
-                    }
-                    catch (Exception)
-                    {
-                        badBlockCount++;
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-
-                    if (checkedBlockCount % 8 == 0)
-                        getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
-
-                    if (isStop) return;
-                }
-
-                getProgressEvent.Invoke(this, badBlockCount, checkedBlockCount, blockCount, out isStop);
             }
         }
 

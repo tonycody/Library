@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using Library.Collections;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    class UploadManager : ManagerBase, IThisLock
+    class UploadManager : StateManagerBase, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
@@ -16,7 +17,9 @@ namespace Library.Net.Outopos
 
         private Settings _settings;
 
-        private WatchTimer _watchTimer;
+        private volatile Thread _uploadThread;
+
+        private ManagerState _state = ManagerState.Stop;
 
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
@@ -30,280 +33,294 @@ namespace Library.Net.Outopos
             _bufferManager = bufferManager;
 
             _settings = new Settings(this.ThisLock);
-
-            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 0, 0), new TimeSpan(3, 0, 0));
         }
 
-        private void WatchTimer()
+        private void UploadThread()
         {
-            lock (this.ThisLock)
-            {
-                var now = DateTime.UtcNow;
+            Stopwatch refreshStopwatch = new Stopwatch();
 
-                foreach (var item in _settings.LifeSpans.ToArray())
+            for (; ; )
+            {
+                Thread.Sleep(1000 * 1);
+                if (this.State == ManagerState.Stop) return;
+
+                if (!refreshStopwatch.IsRunning || refreshStopwatch.Elapsed.TotalMinutes >= 30)
                 {
-                    if ((now - item.Value) > new TimeSpan(64, 0, 0, 0))
+                    refreshStopwatch.Restart();
+
+                    lock (this.ThisLock)
                     {
-                        _cacheManager.Unlock(item.Key);
-                        _settings.LifeSpans.Remove(item.Key);
+                        var now = DateTime.UtcNow;
+
+                        foreach (var item in _settings.LifeSpans.ToArray())
+                        {
+                            if ((now - item.Value) > new TimeSpan(64, 0, 0, 0))
+                            {
+                                _cacheManager.Unlock(item.Key);
+                                _settings.LifeSpans.Remove(item.Key);
+                            }
+                        }
+                    }
+                }
+
+                {
+                    UploadItem item = null;
+
+                    lock (this.ThisLock)
+                    {
+                        if (_settings.UploadItems.Count > 0)
+                        {
+                            item = _settings.UploadItems.First.Value;
+                        }
+                    }
+
+                    try
+                    {
+                        if (item != null)
+                        {
+                            ArraySegment<byte> buffer = new ArraySegment<byte>();
+
+                            try
+                            {
+                                if (item.Type == "Profile")
+                                {
+                                    buffer = ContentConverter.ToProfileContentBlock(item.ProfileContent);
+                                }
+                                else if (item.Type == "SignatureMessage")
+                                {
+                                    buffer = ContentConverter.ToSignatureMessageContentBlock(item.SignatureMessageContent, item.ExchangePublicKey);
+                                }
+                                else if (item.Type == "WikiPage")
+                                {
+                                    buffer = ContentConverter.ToWikiPageContentBlock(item.WikiPageContent);
+                                }
+                                else if (item.Type == "ChatTopic")
+                                {
+                                    buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
+                                }
+                                else if (item.Type == "ChatMessage")
+                                {
+                                    buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
+                                }
+
+                                Key key = null;
+
+                                {
+                                    if (_hashAlgorithm == HashAlgorithm.Sha512)
+                                    {
+                                        key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                                    }
+
+                                    _cacheManager.Lock(key);
+                                    _settings.LifeSpans[key] = DateTime.UtcNow;
+                                }
+
+                                _cacheManager[key] = buffer;
+                                _connectionsManager.Upload(key);
+
+                                var miner = new Miner(CashAlgorithm.Version1, item.MiningTime);
+
+                                var task = Task.Factory.StartNew(() =>
+                                {
+                                    if (item.Type == "Profile")
+                                    {
+                                        var header = new ProfileHeader(item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
+                                    }
+                                    else if (item.Type == "SignatureMessage")
+                                    {
+                                        var header = new SignatureMessageHeader(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
+                                    }
+                                    else if (item.Type == "WikiDocument")
+                                    {
+                                        var header = new WikiPageHeader(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
+                                    }
+                                    else if (item.Type == "ChatTopic")
+                                    {
+                                        var header = new ChatTopicHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
+                                    }
+                                    else if (item.Type == "ChatMessage")
+                                    {
+                                        var header = new ChatMessageHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
+                                    }
+                                });
+
+                                while (!task.IsCompleted)
+                                {
+                                    if (this.State == ManagerState.Stop) miner.Cancel();
+                                    Thread.Sleep(1000);
+                                }
+
+                                if (task.Exception != null) throw task.Exception;
+                            }
+                            finally
+                            {
+                                if (buffer.Array != null)
+                                {
+                                    _bufferManager.ReturnBuffer(buffer.Array);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
+
+                    lock (this.ThisLock)
+                    {
+                        if (_settings.UploadItems.Count > 0)
+                        {
+                            _settings.UploadItems.RemoveFirst();
+                        }
                     }
                 }
             }
         }
 
-        public Task<BroadcastProfileHeader> Upload(BroadcastProfileContent content, Miner miner, DigitalSignature digitalSignature)
+        public void Upload(
+            ProfileContent content,
+            TimeSpan miningTime, 
+            DigitalSignature digitalSignature)
         {
-            if (content == null) throw new ArgumentNullException("content");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
-            return Task<BroadcastProfileHeader>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                Key key;
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "Profile";
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.ProfileContent = content;
+                uploadItem.MiningTime = miningTime;
+                uploadItem.DigitalSignature = digitalSignature;
 
-                lock (this.ThisLock)
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = ContentConverter.ToBroadcastProfileContentBlock(content);
-
-                        {
-                            if (_hashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                            }
-
-                            _cacheManager.Lock(key);
-                            _settings.LifeSpans[key] = DateTime.UtcNow;
-                        }
-
-                        _cacheManager[key] = buffer;
-                        _connectionsManager.Upload(key);
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-                }
-
-                var header = new BroadcastProfileHeader(DateTime.UtcNow, key, miner, digitalSignature);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.Upload(header);
-                }
-
-                return header;
-            });
+                _settings.UploadItems.AddLast(uploadItem);
+            }
         }
 
-        public Task<UnicastMessageHeader> Upload(string signature, UnicastMessageContent content, ExchangePublicKey exchangePublicKey, Miner miner, DigitalSignature digitalSignature)
+        public void Upload(string signature,
+            SignatureMessageContent content,
+            ExchangePublicKey exchangePublicKey,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
-            if (signature == null) throw new ArgumentNullException("signature");
-            if (!Signature.Check(signature)) throw new ArgumentException("signature");
-            if (content == null) throw new ArgumentNullException("content");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
-            return Task<UnicastMessageHeader>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                Key key;
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "SignatureMessage";
+                uploadItem.Signature = signature;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.SignatureMessageContent = content;
+                uploadItem.ExchangePublicKey = exchangePublicKey;
+                uploadItem.MiningTime = miningTime;
+                uploadItem.DigitalSignature = digitalSignature;
 
-                lock (this.ThisLock)
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = ContentConverter.ToUnicastMessageContentBlock(content, exchangePublicKey);
-
-                        {
-                            if (_hashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                            }
-
-                            _cacheManager.Lock(key);
-                            _settings.LifeSpans[key] = DateTime.UtcNow;
-                        }
-
-                        _cacheManager[key] = buffer;
-                        _connectionsManager.Upload(key);
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-                }
-
-                var header = new UnicastMessageHeader(signature, DateTime.UtcNow, key, miner, digitalSignature);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.Upload(header);
-                }
-
-                return header;
-            });
+                _settings.UploadItems.AddLast(uploadItem);
+            }
         }
 
-        public Task<WikiPageHeader> Upload(Wiki tag, WikiPageContent content, Miner miner, DigitalSignature digitalSignature)
+        public void Upload(Wiki tag,
+            WikiPageContent content,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
-            if (tag == null) throw new ArgumentNullException("tag");
-            if (content == null) throw new ArgumentNullException("content");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
-            return Task<WikiPageHeader>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                Key key;
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "WikiPage";
+                uploadItem.Wiki = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.WikiPageContent = content;
+                uploadItem.MiningTime = miningTime;
+                uploadItem.DigitalSignature = digitalSignature;
 
-                lock (this.ThisLock)
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = ContentConverter.ToWikiPageContentBlock(content);
-
-                        {
-                            if (_hashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                            }
-
-                            _cacheManager.Lock(key);
-                            _settings.LifeSpans[key] = DateTime.UtcNow;
-                        }
-
-                        _cacheManager[key] = buffer;
-                        _connectionsManager.Upload(key);
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-                }
-
-                var header = new WikiPageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.Upload(header);
-                }
-
-                return header;
-            });
+                _settings.UploadItems.AddLast(uploadItem);
+            }
         }
 
-        public Task<ChatTopicHeader> Upload(Chat tag, ChatTopicContent content, Miner miner, DigitalSignature digitalSignature)
+        public void Upload(Chat tag,
+            ChatTopicContent content,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
-            if (tag == null) throw new ArgumentNullException("tag");
-            if (content == null) throw new ArgumentNullException("content");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
-            return Task<ChatTopicHeader>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                Key key;
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "ChatTopic";
+                uploadItem.Chat = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.ChatTopicContent = content;
+                uploadItem.MiningTime = miningTime;
+                uploadItem.DigitalSignature = digitalSignature;
 
-                lock (this.ThisLock)
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = ContentConverter.ToChatTopicContentBlock(content);
-
-                        {
-                            if (_hashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                            }
-
-                            _cacheManager.Lock(key);
-                            _settings.LifeSpans[key] = DateTime.UtcNow;
-                        }
-
-                        _cacheManager[key] = buffer;
-                        _connectionsManager.Upload(key);
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
-                }
-
-                var header = new ChatTopicHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
-
-                lock (this.ThisLock)
-                {
-                    _connectionsManager.Upload(header);
-                }
-
-                return header;
-            });
+                _settings.UploadItems.AddLast(uploadItem);
+            }
         }
 
-        public Task<ChatMessageHeader> Upload(Chat tag, ChatMessageContent content, Miner miner, DigitalSignature digitalSignature)
+        public void Upload(Chat tag,
+            ChatMessageContent content,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
-            if (tag == null) throw new ArgumentNullException("tag");
-            if (content == null) throw new ArgumentNullException("content");
-            if (digitalSignature == null) throw new ArgumentNullException("digitalSignature");
-
-            return Task<ChatMessageHeader>.Factory.StartNew(() =>
+            lock (this.ThisLock)
             {
-                Key key;
+                var uploadItem = new UploadItem();
+                uploadItem.Type = "ChatMessage";
+                uploadItem.Chat = tag;
+                uploadItem.CreationTime = DateTime.UtcNow;
+                uploadItem.ChatMessageContent = content;
+                uploadItem.MiningTime = miningTime;
+                uploadItem.DigitalSignature = digitalSignature;
 
+                _settings.UploadItems.AddLast(uploadItem);
+            }
+        }
+
+        public override ManagerState State
+        {
+            get
+            {
                 lock (this.ThisLock)
                 {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
-                    {
-                        buffer = ContentConverter.ToChatMessageContentBlock(content);
-
-                        {
-                            if (_hashAlgorithm == HashAlgorithm.Sha512)
-                            {
-                                key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
-                            }
-
-                            _cacheManager.Lock(key);
-                            _settings.LifeSpans[key] = DateTime.UtcNow;
-                        }
-
-                        _cacheManager[key] = buffer;
-                        _connectionsManager.Upload(key);
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
-                        {
-                            _bufferManager.ReturnBuffer(buffer.Array);
-                        }
-                    }
+                    return _state;
                 }
+            }
+        }
 
-                var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+        private readonly object _stateLock = new object();
 
+        public override void Start()
+        {
+            lock (_stateLock)
+            {
                 lock (this.ThisLock)
                 {
-                    _connectionsManager.Upload(header);
+                    if (this.State == ManagerState.Start) return;
+                    _state = ManagerState.Start;
+
+                    _uploadThread = new Thread(this.UploadThread);
+                    _uploadThread.Priority = ThreadPriority.Lowest;
+                    _uploadThread.Name = "UploadManager_UploadManagerThread";
+                    _uploadThread.Start();
+                }
+            }
+        }
+
+        public override void Stop()
+        {
+            lock (_stateLock)
+            {
+                lock (this.ThisLock)
+                {
+                    if (this.State == ManagerState.Stop) return;
+                    _state = ManagerState.Stop;
                 }
 
-                return header;
-            });
+                _uploadThread.Join();
+                _uploadThread = null;
+            }
         }
 
         #region ISettings
@@ -337,7 +354,8 @@ namespace Library.Net.Outopos
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
-                    new Library.Configuration.SettingContent<LockedHashDictionary<Key, DateTime>>() { Name = "LifeSpans", Value = new LockedHashDictionary<Key, DateTime>() },
+                    new Library.Configuration.SettingContent<LinkedList<UploadItem>>() { Name = "UploadItems", Value = new LinkedList<UploadItem>() },
+                    new Library.Configuration.SettingContent<Dictionary<Key, DateTime>>() { Name = "LifeSpans", Value = new Dictionary<Key, DateTime>() },
                 })
             {
                 _thisLock = lockObject;
@@ -359,13 +377,24 @@ namespace Library.Net.Outopos
                 }
             }
 
-            public LockedHashDictionary<Key, DateTime> LifeSpans
+            public LinkedList<UploadItem> UploadItems
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedHashDictionary<Key, DateTime>)this["LifeSpans"];
+                        return (LinkedList<UploadItem>)this["UploadItems"];
+                    }
+                }
+            }
+
+            public Dictionary<Key, DateTime> LifeSpans
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (Dictionary<Key, DateTime>)this["LifeSpans"];
                     }
                 }
             }
