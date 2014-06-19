@@ -305,10 +305,7 @@ namespace Library.Net.Amoeba
 
                             item.Groups.Add(group);
 
-                            for (int i = 0; i < length; i++)
-                            {
-                                item.Keys.RemoveAt(0);
-                            }
+                            item.Keys.RemoveRange(0, length);
                         }
                     }
                     else if (item.Groups.Count > 0 && item.Keys.Count == 0)

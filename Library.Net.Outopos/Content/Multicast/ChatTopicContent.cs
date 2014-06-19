@@ -8,23 +8,20 @@ using Library.Io;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "ChatTopicContent", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatTopicContent : ItemBase<ChatTopicContent>, IHypertext
+    public sealed class ChatTopicContent : ItemBase<ChatTopicContent>
     {
         private enum SerializeId : byte
         {
-            FormatType = 0,
-            Hypertext = 1,
+            Comment = 0,
         }
 
-        private HypertextFormatType _formatType;
-        private string _hypertext;
+        private string _comment;
 
-        public static readonly int MaxHypertextLength = 1024 * 32;
+        public static readonly int MaxCommentLength = 1024 * 4;
 
-        public ChatTopicContent(HypertextFormatType formatType, string hypertext)
+        public ChatTopicContent(string comment)
         {
-            this.FormatType = formatType;
-            this.Hypertext = hypertext;
+            this.Comment = comment;
         }
 
         protected override void Initialize()
@@ -44,13 +41,9 @@ namespace Library.Net.Outopos
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.FormatType)
+                    if (id == (byte)SerializeId.Comment)
                     {
-                        this.FormatType = (HypertextFormatType)Enum.Parse(typeof(HypertextFormatType), ItemUtilities.GetString(rangeStream));
-                    }
-                    else if (id == (byte)SerializeId.Hypertext)
-                    {
-                        this.Hypertext = ItemUtilities.GetString(rangeStream);
+                        this.Comment = ItemUtilities.GetString(rangeStream);
                     }
                 }
             }
@@ -60,15 +53,10 @@ namespace Library.Net.Outopos
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 
-            // FormatType
-            if (this.FormatType != 0)
+            // Comment
+            if (this.Comment != null)
             {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.FormatType, this.FormatType.ToString());
-            }
-            // Hypertext
-            if (this.Hypertext != null)
-            {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.Hypertext, this.Hypertext);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -77,8 +65,8 @@ namespace Library.Net.Outopos
 
         public override int GetHashCode()
         {
-            if (this.Hypertext == null) return 0;
-            else return this.Hypertext.GetHashCode();
+            if (this.Comment == null) return 0;
+            else return this.Comment.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -93,8 +81,7 @@ namespace Library.Net.Outopos
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.FormatType != other.FormatType
-                || this.Hypertext != other.Hypertext)
+            if (this.Comment != other.Comment)
             {
                 return false;
             }
@@ -102,42 +89,22 @@ namespace Library.Net.Outopos
             return true;
         }
 
-        [DataMember(Name = "FormatType")]
-        public HypertextFormatType FormatType
+        [DataMember(Name = "Comment")]
+        public string Comment
         {
             get
             {
-                return _formatType;
-            }
-            set
-            {
-                if (!Enum.IsDefined(typeof(HypertextFormatType), value))
-                {
-                    throw new ArgumentException();
-                }
-                else
-                {
-                    _formatType = value;
-                }
-            }
-        }
-
-        [DataMember(Name = "Hypertext")]
-        public string Hypertext
-        {
-            get
-            {
-                return _hypertext;
+                return _comment;
             }
             private set
             {
-                if (value != null && value.Length > ChatTopicContent.MaxHypertextLength)
+                if (value != null && value.Length > ChatTopicContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _hypertext = value;
+                    _comment = value;
                 }
             }
         }

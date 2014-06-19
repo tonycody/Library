@@ -181,8 +181,15 @@ namespace Library.UnitTest
         [Test]
         public void Test_Miner()
         {
+            //{
+            //    var key = NetworkConverter.FromHexString("e0ee19d617ee6ea9ea592afbdf71bafba6eecde2beba0d3cdc51419522fe5dbdf18f6830081be1615969b1fe43344fac3c312cd86a487cb1bd04f2c44cddca11");
+            //    var value = NetworkConverter.FromHexString("01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101");
+
+            //    var count = Verify_1(key, value);
+            //}
+
             {
-                Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 30));
+                Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 5));
 
                 Cash cash = null;
 
@@ -194,10 +201,15 @@ namespace Library.UnitTest
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                int c = 1024;
+
+                for (int i = 0; i < c; i++)
                 {
-                    var count = Miner.Verify(cash, stream);
-                    Assert.IsTrue(count > 4);
+                    using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                    {
+                        int count = Miner.Verify(cash, stream);
+                        Assert.IsTrue(count > 8);
+                    }
                 }
 
                 sw.Stop();
@@ -235,5 +247,49 @@ namespace Library.UnitTest
                 Assert.IsTrue(sw.ElapsedMilliseconds < 1000 * 3);
             }
         }
+
+        //public int Verify_1(byte[] key, byte[] value)
+        //{
+        //    if (key == null) throw new ArgumentNullException("key");
+        //    if (key.Length != 64) throw new ArgumentOutOfRangeException("key");
+        //    if (value == null) throw new ArgumentNullException("value");
+        //    if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
+
+        //    var bufferManager = BufferManager.Instance;
+
+        //    try
+        //    {
+
+        //        byte[] result;
+
+        //        {
+        //            byte[] buffer = bufferManager.TakeBuffer(128);
+        //            Unsafe.Copy(key, 0, buffer, 0, 64);
+        //            Unsafe.Copy(value, 0, buffer, 64, 64);
+
+        //            result = Sha512.ComputeHash(buffer, 0, 128);
+
+        //            bufferManager.ReturnBuffer(buffer);
+        //        }
+
+        //        int count = 0;
+
+        //        for (int i = 0; i < 64; i++)
+        //        {
+        //            for (int j = 0; j < 8; j++)
+        //            {
+        //                if (((result[i] << j) & 0x80) == 0) count++;
+        //                else goto End;
+        //            }
+        //        }
+        //    End:
+
+        //        return count;
+        //    }
+        //    catch (Exception)
+        //    {
+        //        return 0;
+        //    }
+        //}
     }
 }

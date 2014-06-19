@@ -6,10 +6,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Library.Collections;
 using Library.Security;
+using System.IO;
 
 namespace Library.Net.Outopos
 {
-    class UploadManager : StateManagerBase, IThisLock
+    class UploadManager : StateManagerBase, Library.Configuration.ISettings, IThisLock
     {
         private ConnectionsManager _connectionsManager;
         private CacheManager _cacheManager;
@@ -184,7 +185,7 @@ namespace Library.Net.Outopos
 
         public void Upload(
             ProfileContent content,
-            TimeSpan miningTime, 
+            TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)

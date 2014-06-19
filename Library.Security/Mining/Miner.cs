@@ -195,30 +195,40 @@ namespace Library.Security
                 if (value == null) throw new ArgumentNullException("value");
                 if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
 
-                var info = new ProcessStartInfo(_path);
-                info.CreateNoWindow = true;
-                info.UseShellExecute = false;
-                info.RedirectStandardOutput = true;
+                var bufferManager = BufferManager.Instance;
 
-                info.Arguments = string.Format("hashcash1 verify {0} {1}", NetworkConverter.ToHexString(key), NetworkConverter.ToHexString(value));
-
-                using (var process = Process.Start(info))
+                try
                 {
-                    process.PriorityClass = ProcessPriorityClass.Idle;
 
-                    try
+                    byte[] result;
+
                     {
-                        var result = process.StandardOutput.ReadLine();
+                        byte[] buffer = bufferManager.TakeBuffer(128);
+                        Unsafe.Copy(key, 0, buffer, 0, 64);
+                        Unsafe.Copy(value, 0, buffer, 64, 64);
 
-                        process.WaitForExit();
-                        if (process.ExitCode != 0) return 0;
+                        result = Sha512.ComputeHash(buffer, 0, 128);
 
-                        return int.Parse(result);
+                        bufferManager.ReturnBuffer(buffer);
                     }
-                    catch (Exception)
+
+                    int count = 0;
+
+                    for (int i = 0; i < 64; i++)
                     {
-                        return 0;
+                        for (int j = 0; j < 8; j++)
+                        {
+                            if (((result[i] << j) & 0x80) == 0) count++;
+                            else goto End;
+                        }
                     }
+                End:
+
+                    return count;
+                }
+                catch (Exception)
+                {
+                    return 0;
                 }
             }
 

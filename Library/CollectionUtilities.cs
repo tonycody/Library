@@ -11,6 +11,28 @@ namespace Library
             throw new NotImplementedException();
         }
 
+        public static IEnumerable<T> Unite<T>(params IEnumerable<T>[] source)
+        {
+            foreach (var collection in source)
+            {
+                foreach (var item in collection)
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        public static IEnumerable<T> Unite<T>(IEnumerable<IEnumerable<T>> source)
+        {
+            foreach (var collection in source)
+            {
+                foreach (var item in collection)
+                {
+                    yield return item;
+                }
+            }
+        }
+
         public static bool Equals<T>(IList<T> source, IList<T> destination, IEqualityComparer<T> equalityComparer)
         {
             if (source == null) throw new ArgumentNullException("source");

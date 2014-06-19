@@ -340,22 +340,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        private int? _coin;
-
-        public int Coin
-        {
-            get
-            {
-                lock (_thisLock)
-                {
-                    if (_coin == null)
-                        _coin = this.VerifyCash(this.Certificate.ToString());
-
-                    return (int)_coin;
-                }
-            }
-        }
-
         [DataMember(Name = "Key")]
         public Key Key
         {
@@ -371,6 +355,22 @@ namespace Library.Net.Outopos
                 lock (_thisLock)
                 {
                     _key = value;
+                }
+            }
+        }
+
+        private int? _coin;
+
+        public int Coin
+        {
+            get
+            {
+                lock (_thisLock)
+                {
+                    if (_coin == null)
+                        _coin = this.VerifyCash(this.Certificate.ToString());
+
+                    return (int)_coin;
                 }
             }
         }

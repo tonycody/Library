@@ -104,6 +104,9 @@
     <Compile Include="Cache\Metadata\_Base\Multicast\Tag.cs" />
     <Compile Include="Cache\_Interface\Metadata\Unicast\Header\IUnicastHeader.cs" />
     <Compile Include="Cache\_Interface\Metadata\Broadcast\Header\IBroadcastHeader.cs" />
+    <Compile Include="Content\Anchor.cs" />
+    <Compile Include="Content\AnchorCollection.cs" />
+    <Compile Include="Content\_Interface\IAnchor.cs" />
     <Compile Include="Content\Multicast\ChatMessageContent.cs" />
     <Compile Include="Content\Multicast\ChatTopicContent.cs" />
     <Compile Include="Content\Multicast\WikiPageContent.cs" />

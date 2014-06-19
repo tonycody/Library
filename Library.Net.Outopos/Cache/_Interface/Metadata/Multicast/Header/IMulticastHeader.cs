@@ -8,7 +8,7 @@ namespace Library.Net.Outopos
     {
         TTag Tag { get; }
         DateTime CreationTime { get; }
-        int Coin { get; }
         Key Key { get; }
+        int Coin { get; }
     }
 }

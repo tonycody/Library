@@ -7,7 +7,7 @@ namespace Library.Net.Outopos
     {
         string Signature { get; }
         DateTime CreationTime { get; }
-        int Coin { get; }
         Key Key { get; }
+        int Coin { get; }
     }
 }

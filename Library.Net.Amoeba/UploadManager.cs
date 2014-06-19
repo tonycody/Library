@@ -443,10 +443,7 @@ namespace Library.Net.Amoeba
                                     return sumLength;
                                 });
 
-                                for (int i = 0; i < length; i++)
-                                {
-                                    item.Keys.RemoveAt(0);
-                                }
+                                item.Keys.RemoveRange(0, length);
                             }
                         }
                         else if (item.Groups.Count > 0 && item.Keys.Count == 0)
@@ -550,6 +547,22 @@ namespace Library.Net.Amoeba
                                 continue;
                             }
 
+                            var groups = new List<Group>();
+
+                            for (int i = 0, remain = keys.Count; 0 < remain; i++, remain -= 256)
+                            {
+                                var tempKeys = keys.GetRange(i * 256, Math.Min(remain, 256));
+
+                                Group group = new Group();
+                                group.CorrectionAlgorithm = CorrectionAlgorithm.None;
+                                group.InformationLength = tempKeys.Count;
+                                group.BlockLength = item.BlockLength;
+                                group.Length = tempKeys.Sum(n => (long)_cacheManager.GetLength(n));
+                                group.Keys.AddRange(tempKeys);
+
+                                groups.Add(group);
+                            }
+
                             lock (this.ThisLock)
                             {
                                 item.EncodingBytes = 0;
@@ -561,19 +574,12 @@ namespace Library.Net.Amoeba
                                 }
                                 else
                                 {
-                                    Group group = new Group();
-                                    group.CorrectionAlgorithm = CorrectionAlgorithm.None;
-                                    group.InformationLength = keys.Count;
-                                    group.BlockLength = item.BlockLength;
-                                    group.Length = item.Seed.Length;
-                                    group.Keys.AddRange(keys);
-
                                     foreach (var key in keys)
                                     {
                                         item.UploadKeys.Add(key);
                                     }
 
-                                    item.Groups.Add(group);
+                                    item.Groups.AddRange(groups);
                                 }
 
                                 item.State = UploadState.Encoding;
@@ -690,10 +696,7 @@ namespace Library.Net.Amoeba
                                     return sumLength;
                                 });
 
-                                for (int i = 0; i < length; i++)
-                                {
-                                    item.Keys.RemoveAt(0);
-                                }
+                                item.Keys.RemoveRange(0, length);
                             }
                         }
                         else if (item.Groups.Count > 0 && item.Keys.Count == 0)

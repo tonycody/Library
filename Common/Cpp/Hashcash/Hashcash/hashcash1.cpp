@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "hashcash1.h"
 
-#include "xor.h"
 #include "Xorshift.h"
 
 using std::cout;
@@ -15,106 +14,72 @@ using CryptoPP::Exception;
 #include "sha.h"
 using CryptoPP::SHA512;
 
-byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
+byte* hashcash1_Create(byte* value, int32_t timeout)
 {
     try
     {
         clock_t clockStart, clockEnd;
         clockStart = clock();
 
-        const size_t bufferSize = 1024 * 1024;
-        byte* buffer = (byte*)calloc(bufferSize, sizeof(byte));
-
         SHA512 hash;
         Xorshift xorshift;
 
         const size_t hashSize = 64;
 
-        byte currentKey[hashSize];
+        byte currentState[hashSize * 2];
         byte currentResult[hashSize];
 
-        byte* finalKey = (byte*)malloc(hashSize);
+        byte finalState[hashSize * 2];
         byte finalResult[hashSize];
 
-        byte hashTemp[hashSize];
-        byte xorTemp[hashSize];
-
-        const size_t blockSize = (hashSize * 2) + valueSize;
-        byte* block = (byte*)malloc(blockSize);
+        memcpy(currentState + hashSize, value, hashSize);
+        memcpy(finalState + hashSize, value, hashSize);
 
         // Initialize
         {
-            memset(xorTemp, 0, hashSize);
+            ((uint32_t*)currentState)[0] = xorshift.next();
+            ((uint32_t*)currentState)[1] = xorshift.next();
+            ((uint32_t*)currentState)[2] = xorshift.next();
+            ((uint32_t*)currentState)[3] = xorshift.next();
+            ((uint32_t*)currentState)[4] = xorshift.next();
+            ((uint32_t*)currentState)[5] = xorshift.next();
+            ((uint32_t*)currentState)[6] = xorshift.next();
+            ((uint32_t*)currentState)[7] = xorshift.next();
+            ((uint32_t*)currentState)[8] = xorshift.next();
+            ((uint32_t*)currentState)[9] = xorshift.next();
+            ((uint32_t*)currentState)[10] = xorshift.next();
+            ((uint32_t*)currentState)[11] = xorshift.next();
+            ((uint32_t*)currentState)[12] = xorshift.next();
+            ((uint32_t*)currentState)[13] = xorshift.next();
+            ((uint32_t*)currentState)[14] = xorshift.next();
+            ((uint32_t*)currentState)[15] = xorshift.next();
 
-            ((uint32_t*)currentKey)[0] = xorshift.next();
-            ((uint32_t*)currentKey)[1] = xorshift.next();
-            ((uint32_t*)currentKey)[2] = xorshift.next();
-            ((uint32_t*)currentKey)[3] = xorshift.next();
-            ((uint32_t*)currentKey)[4] = xorshift.next();
-            ((uint32_t*)currentKey)[5] = xorshift.next();
-            ((uint32_t*)currentKey)[6] = xorshift.next();
-            ((uint32_t*)currentKey)[7] = xorshift.next();
-            ((uint32_t*)currentKey)[8] = xorshift.next();
-            ((uint32_t*)currentKey)[9] = xorshift.next();
-            ((uint32_t*)currentKey)[10] = xorshift.next();
-            ((uint32_t*)currentKey)[11] = xorshift.next();
-            ((uint32_t*)currentKey)[12] = xorshift.next();
-            ((uint32_t*)currentKey)[13] = xorshift.next();
-            ((uint32_t*)currentKey)[14] = xorshift.next();
-            ((uint32_t*)currentKey)[15] = xorshift.next();
-
-            memcpy(block, currentKey, hashSize);
-            memcpy(block + hashSize, value, valueSize);
-
-            for (int32_t i = (bufferSize / hashSize) - 1; i >= 0 ; i--)
-            {
-                memcpy(block + hashSize + valueSize, xorTemp, hashSize);
-                hash.CalculateDigest(hashTemp, block, blockSize);
-                xor(hashTemp, xorTemp, xorTemp, hashSize);
-        
-                memcpy(buffer + (i * hashSize), xorTemp, hashSize);
-            }
-
-            hash.CalculateDigest(currentResult, buffer, bufferSize);
-
-            memcpy(finalKey, currentKey, hashSize);
-            memcpy(finalResult, currentResult, hashSize);
+            hash.CalculateDigest(currentResult, currentState, hashSize * 2);
         }
+
+        memcpy(finalState, currentState, hashSize * 2);
+        memcpy(finalResult, currentResult, hashSize);
 
         for (;;)
         {
-            memset(xorTemp, 0, hashSize);
+            ((uint32_t*)currentState)[0] = xorshift.next();
+            ((uint32_t*)currentState)[1] = xorshift.next();
+            ((uint32_t*)currentState)[2] = xorshift.next();
+            ((uint32_t*)currentState)[3] = xorshift.next();
+            ((uint32_t*)currentState)[4] = xorshift.next();
+            ((uint32_t*)currentState)[5] = xorshift.next();
+            ((uint32_t*)currentState)[6] = xorshift.next();
+            ((uint32_t*)currentState)[7] = xorshift.next();
+            ((uint32_t*)currentState)[8] = xorshift.next();
+            ((uint32_t*)currentState)[9] = xorshift.next();
+            ((uint32_t*)currentState)[10] = xorshift.next();
+            ((uint32_t*)currentState)[11] = xorshift.next();
+            ((uint32_t*)currentState)[12] = xorshift.next();
+            ((uint32_t*)currentState)[13] = xorshift.next();
+            ((uint32_t*)currentState)[14] = xorshift.next();
+            ((uint32_t*)currentState)[15] = xorshift.next();
 
-            ((uint32_t*)currentKey)[0] = xorshift.next();
-            ((uint32_t*)currentKey)[1] = xorshift.next();
-            ((uint32_t*)currentKey)[2] = xorshift.next();
-            ((uint32_t*)currentKey)[3] = xorshift.next();
-            ((uint32_t*)currentKey)[4] = xorshift.next();
-            ((uint32_t*)currentKey)[5] = xorshift.next();
-            ((uint32_t*)currentKey)[6] = xorshift.next();
-            ((uint32_t*)currentKey)[7] = xorshift.next();
-            ((uint32_t*)currentKey)[8] = xorshift.next();
-            ((uint32_t*)currentKey)[9] = xorshift.next();
-            ((uint32_t*)currentKey)[10] = xorshift.next();
-            ((uint32_t*)currentKey)[11] = xorshift.next();
-            ((uint32_t*)currentKey)[12] = xorshift.next();
-            ((uint32_t*)currentKey)[13] = xorshift.next();
-            ((uint32_t*)currentKey)[14] = xorshift.next();
-            ((uint32_t*)currentKey)[15] = xorshift.next();
-
-            memcpy(block, currentKey, hashSize);
-            memcpy(block + hashSize, value, valueSize);
-
-            for (int32_t i = (bufferSize / hashSize) - 1; i >= 0 ; i--)
-            {
-                memcpy(block + hashSize + valueSize, xorTemp, hashSize);
-                hash.CalculateDigest(hashTemp, block, blockSize);
-                xor(hashTemp, xorTemp, xorTemp, hashSize);
-        
-                memcpy(buffer + (i * hashSize), xorTemp, hashSize);
-            }
-
-            hash.CalculateDigest(currentResult, buffer, bufferSize);
+            hash.CalculateDigest(currentResult, currentState, hashSize * 2);
 
             for (int32_t i = 0; i < hashSize; i++)
             {
@@ -130,7 +95,7 @@ byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
                 }
                 else
                 {
-                    memcpy(finalKey, currentKey, hashSize);
+                    memcpy(finalState, currentState, hashSize * 2);
                     memcpy(finalResult, currentResult, hashSize);
 
                     break;
@@ -145,10 +110,10 @@ byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
             }
         }
 
-        free(buffer);
-        free(block);
+        byte* key = (byte*)malloc(hashSize);
+        memcpy(key, finalState, hashSize);
 
-        return finalKey;
+        return key;
     }
     catch (exception& e)
     {
@@ -156,63 +121,32 @@ byte* hashcash1_Create(byte* value, size_t valueSize, int32_t timeout)
     }
 }
 
-int32_t hashcash1_Verify(byte* key, byte* value, size_t valueSize)
+int32_t hashcash1_Verify(byte* key, byte* value)
 {
-    try
+    SHA512 hash;
+    Xorshift xorshift;
+
+    const size_t hashSize = 64;
+
+    byte currentState[hashSize * 2];
+    byte currentResult[hashSize];
+
+    memcpy(currentState, key, hashSize);
+    memcpy(currentState + hashSize, value, hashSize);
+
+    hash.CalculateDigest(currentResult, currentState, hashSize * 2);
+
+    int32_t count = 0;
+
+    for (int32_t i = 0; i < hashSize; i++)
     {
-        const size_t bufferSize = 1024 * 1024;
-        byte* buffer = (byte*)calloc(bufferSize, sizeof(byte));
-
-        SHA512 hash;
-
-        const size_t hashSize = 64;
-
-        byte result[hashSize];
-
-        byte hashTemp[hashSize];
-        byte xorTemp[hashSize];
-
-        const size_t blockSize = (hashSize * 2) + valueSize;
-        byte* block = (byte*)malloc(blockSize);
-
-        // Initialize
+        for (int32_t j = 0; j < 8; j++)
         {
-            memset(xorTemp, 0, hashSize);
-
-            memcpy(block, key, hashSize);
-            memcpy(block + hashSize, value, valueSize);
-
-            for (int32_t i = (bufferSize / hashSize) - 1; i >= 0 ; i--)
-            {
-                memcpy(block + hashSize + valueSize, xorTemp, hashSize);
-                hash.CalculateDigest(hashTemp, block, blockSize);
-                xor(hashTemp, xorTemp, xorTemp, hashSize);
-        
-                memcpy(buffer + (i * hashSize), xorTemp, hashSize);
-            }
-
-            hash.CalculateDigest(result, buffer, bufferSize);
+            if(((currentResult[i] << j) & 0x80) == 0) count++;
+            else goto End;
         }
-
-        free(buffer);
-        free(block);
-
-        int32_t count = 0;
-
-        for (int32_t i = 0; i < hashSize; i++)
-        {
-            for (int32_t j = 0; j < 8; j++)
-            {
-                if(((result[i] << j) & 0x80) == 0) count++;
-                else goto End;
-            }
-        }
+    }
 End:
 
-        return count;
-    }
-    catch (exception& e)
-    {
-        throw e;
-    }
+    return count;
 }

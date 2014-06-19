@@ -15,19 +15,19 @@ namespace Library.Net.Outopos
         private enum SerializeId : byte
         {
             Comment = 0,
-            AnchorSignature = 1,
+            Anchor = 1,
         }
 
         private string _comment;
-        private SignatureCollection _anchorSignatures;
+        private AnchorCollection _anchors;
 
         public static readonly int MaxCommentLength = 1024 * 4;
-        public static readonly int MaxAnchorSignatureCount = 32;
+        public static readonly int MaxAnchorCount = 32;
 
-        public ChatMessageContent(string comment, IEnumerable<string> anchorSignatrues)
+        public ChatMessageContent(string comment, IEnumerable<Anchor> anchors)
         {
             this.Comment = comment;
-            if (anchorSignatrues != null) this.ProtectedAnchorSignatures.AddRange(anchorSignatrues);
+            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         protected override void Initialize()
@@ -51,9 +51,9 @@ namespace Library.Net.Outopos
                     {
                         this.Comment = ItemUtilities.GetString(rangeStream);
                     }
-                    else if (id == (byte)SerializeId.AnchorSignature)
+                    else if (id == (byte)SerializeId.Anchor)
                     {
-                        this.ProtectedAnchorSignatures.Add(ItemUtilities.GetString(rangeStream));
+                        this.ProtectedAnchors.Add(Anchor.Import(rangeStream, bufferManager));
                     }
                 }
             }
@@ -68,10 +68,13 @@ namespace Library.Net.Outopos
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
             }
-            // AnchorSignatures
-            foreach (var value in this.AnchorSignatures)
+            // Anchors
+            foreach (var value in this.Anchors)
             {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.AnchorSignature, value);
+                using (var stream = value.Export(bufferManager))
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Anchor, stream);
+                }
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -97,14 +100,14 @@ namespace Library.Net.Outopos
             if (object.ReferenceEquals(this, other)) return true;
 
             if (this.Comment != other.Comment
-                || (this.AnchorSignatures == null) != (other.AnchorSignatures == null))
+                || (this.Anchors == null) != (other.Anchors == null))
             {
                 return false;
             }
 
-            if (this.AnchorSignatures != null && other.AnchorSignatures != null)
+            if (this.Anchors != null && other.Anchors != null)
             {
-                if (!CollectionUtilities.Equals(this.AnchorSignatures, other.AnchorSignatures)) return false;
+                if (!CollectionUtilities.Equals(this.Anchors, other.Anchors)) return false;
             }
 
             return true;
@@ -130,28 +133,28 @@ namespace Library.Net.Outopos
             }
         }
 
-        private volatile ReadOnlyCollection<string> _readOnlySignatureAnchors;
+        private volatile ReadOnlyCollection<Anchor> _readOnlyAnchors;
 
-        public IEnumerable<string> AnchorSignatures
+        public IEnumerable<Anchor> Anchors
         {
             get
             {
-                if (_readOnlySignatureAnchors == null)
-                    _readOnlySignatureAnchors = new ReadOnlyCollection<string>(this.ProtectedAnchorSignatures);
+                if (_readOnlyAnchors == null)
+                    _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors);
 
-                return _readOnlySignatureAnchors;
+                return _readOnlyAnchors;
             }
         }
 
-        [DataMember(Name = "AnchorSignatures")]
-        private SignatureCollection ProtectedAnchorSignatures
+        [DataMember(Name = "Anchors")]
+        private AnchorCollection ProtectedAnchors
         {
             get
             {
-                if (_anchorSignatures == null)
-                    _anchorSignatures = new SignatureCollection(ChatMessageContent.MaxAnchorSignatureCount);
+                if (_anchors == null)
+                    _anchors = new AnchorCollection(ChatMessageContent.MaxAnchorCount);
 
-                return _anchorSignatures;
+                return _anchors;
             }
         }
     }

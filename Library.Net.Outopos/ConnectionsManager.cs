@@ -1050,7 +1050,7 @@ namespace Library.Net.Outopos
 
                                             removeSignatureMessageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
 
-                                            foreach (var list in trustHeaders.Values.Concat(untrustHeaders.Values))
+                                            foreach (var list in CollectionUtilities.Unite(trustHeaders.Values, untrustHeaders.Values))
                                             {
                                                 if (list.Count <= 32) continue;
 
@@ -1115,7 +1115,7 @@ namespace Library.Net.Outopos
 
                                             removeWikiPageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
 
-                                            foreach (var list in trustHeaders.Values.Concat(untrustHeaders.Values))
+                                            foreach (var list in CollectionUtilities.Unite(trustHeaders.Values, untrustHeaders.Values))
                                             {
                                                 if (list.Count <= 32) continue;
 
@@ -1193,7 +1193,7 @@ namespace Library.Net.Outopos
 
                                             removeChatMessageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
 
-                                            foreach (var list in trustHeaders.Values.Concat(untrustHeaders.Values))
+                                            foreach (var list in CollectionUtilities.Unite(trustHeaders.Values, untrustHeaders.Values))
                                             {
                                                 if (list.Count <= 32) continue;
 
@@ -3928,7 +3928,7 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
@@ -3955,7 +3955,7 @@ namespace Library.Net.Outopos
 
                     if (header == null
                         || !Signature.Check(header.Signature)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return false;
 
                     HashSet<SignatureMessageHeader> hashset;
@@ -3987,7 +3987,7 @@ namespace Library.Net.Outopos
                         || header.Tag == null
                             || header.Tag.Id == null || header.Tag.Id.Length == 0
                             || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
@@ -4029,7 +4029,7 @@ namespace Library.Net.Outopos
                         || header.Tag == null
                             || header.Tag.Id == null || header.Tag.Id.Length == 0
                             || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
@@ -4066,7 +4066,7 @@ namespace Library.Net.Outopos
                         || header.Tag == null
                             || header.Tag.Id == null || header.Tag.Id.Length == 0
                             || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return false;
 
                     var signature = header.Certificate.ToString();
@@ -4105,7 +4105,7 @@ namespace Library.Net.Outopos
                     var now = DateTime.UtcNow;
 
                     if (header == null
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
@@ -4122,7 +4122,7 @@ namespace Library.Net.Outopos
 
                     if (header == null
                         || !Signature.Check(header.Signature)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return;
 
                     HashSet<SignatureMessageHeader> hashset;
@@ -4147,7 +4147,7 @@ namespace Library.Net.Outopos
                         || header.Tag == null
                             || header.Tag.Id == null || header.Tag.Id.Length == 0
                             || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
@@ -4182,7 +4182,7 @@ namespace Library.Net.Outopos
                         || header.Tag == null
                             || header.Tag.Id == null || header.Tag.Id.Length == 0
                             || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
@@ -4215,7 +4215,7 @@ namespace Library.Net.Outopos
                         || header.Tag == null
                             || header.Tag.Id == null || header.Tag.Id.Length == 0
                             || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now) > new TimeSpan(0, 30, 0)
+                        || (header.CreationTime - now).Minutes > 30
                         || header.Certificate == null) return;
 
                     var signature = header.Certificate.ToString();
