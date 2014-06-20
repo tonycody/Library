@@ -280,25 +280,15 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static string ToWikiString(Wiki item, string option)
+        public static string ToWikiString(Wiki item)
         {
             if (item == null) throw new ArgumentNullException("Wiki");
 
             try
             {
-                if (option != null)
+                using (Stream stream = OutoposConverter.ToStream<Wiki>(item))
                 {
-                    using (Stream stream = OutoposConverter.ToStream<Wiki>(item))
-                    {
-                        return "Wiki:" + OutoposConverter.ToBase64String(stream) + "," + option;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Wiki>(item))
-                    {
-                        return "Wiki:" + OutoposConverter.ToBase64String(stream);
-                    }
+                    return "Wiki:" + OutoposConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -307,32 +297,16 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static Wiki FromWikiString(string item, out string option)
+        public static Wiki FromWikiString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
             if (!item.StartsWith("Wiki:") && !item.StartsWith("Wiki@")) throw new ArgumentException("item");
 
-            option = null;
-
             try
             {
-                if (item.Contains(","))
+                using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Wiki:".Length)))
                 {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    option = list[1];
-
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Wiki:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Wiki>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Wiki:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Wiki>(stream);
-                    }
+                    return OutoposConverter.FromStream<Wiki>(stream);
                 }
             }
             catch (Exception)
@@ -341,25 +315,15 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static string ToChatString(Chat item, string option)
+        public static string ToChatString(Chat item)
         {
             if (item == null) throw new ArgumentNullException("Chat");
 
             try
             {
-                if (option != null)
+                using (Stream stream = OutoposConverter.ToStream<Chat>(item))
                 {
-                    using (Stream stream = OutoposConverter.ToStream<Chat>(item))
-                    {
-                        return "Chat:" + OutoposConverter.ToBase64String(stream) + "," + option;
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.ToStream<Chat>(item))
-                    {
-                        return "Chat:" + OutoposConverter.ToBase64String(stream);
-                    }
+                    return "Chat:" + OutoposConverter.ToBase64String(stream);
                 }
             }
             catch (Exception)
@@ -368,32 +332,16 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static Chat FromChatString(string item, out string option)
+        public static Chat FromChatString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
             if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
 
-            option = null;
-
             try
             {
-                if (item.Contains(","))
+                using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
                 {
-                    var list = item.Split(new char[] { ',' }, 2);
-
-                    option = list[1];
-
-                    using (Stream stream = OutoposConverter.FromBase64String(list[0].Remove(0, "Chat:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Chat>(stream);
-                    }
-                }
-                else
-                {
-                    using (Stream stream = OutoposConverter.FromBase64String(item.Remove(0, "Chat:".Length)))
-                    {
-                        return OutoposConverter.FromStream<Chat>(stream);
-                    }
+                    return OutoposConverter.FromStream<Chat>(stream);
                 }
             }
             catch (Exception)
