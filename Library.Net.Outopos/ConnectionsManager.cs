@@ -2627,6 +2627,7 @@ namespace Library.Net.Outopos
                                 foreach (var signature in signatures)
                                 {
                                     var header = _settings.HeaderManager.GetProfileHeader(signature);
+                                    if (header == null) continue;
 
                                     if (!messageManager.StockProfileHeaders.Contains(header.CreateHash(_hashAlgorithm)))
                                     {
