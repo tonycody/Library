@@ -611,6 +611,8 @@ namespace Library.Net.Outopos
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
+
+                _cacheManager.CheckInformation();
             }
         }
 

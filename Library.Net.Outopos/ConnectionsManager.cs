@@ -2423,40 +2423,53 @@ namespace Library.Net.Outopos
                                     }
                                 }
 
-                                if (wikiList != null
-                                    || chatList != null)
+                                if (wikiList != null || chatList != null)
                                 {
                                     try
                                     {
                                         connectionManager.PushMulticastHeadersRequest(wikiList, chatList);
 
-                                        foreach (var item in wikiList)
+                                        int tagCount = 0;
+
+                                        if (wikiList != null)
                                         {
-                                            _pushMulticastWikisRequestList.Remove(item);
+                                            foreach (var item in wikiList)
+                                            {
+                                                _pushMulticastWikisRequestList.Remove(item);
+                                            }
+
+                                            tagCount += wikiList.Count;
                                         }
 
-                                        foreach (var item in chatList)
+                                        if (chatList != null)
                                         {
-                                            _pushMulticastChatsRequestList.Remove(item);
-                                        }
+                                            foreach (var item in chatList)
+                                            {
+                                                _pushMulticastChatsRequestList.Remove(item);
+                                            }
 
-                                        int tagCount =
-                                            wikiList.Count
-                                            + chatList.Count;
+                                            tagCount += chatList.Count;
+                                        }
 
                                         Debug.WriteLine(string.Format("ConnectionManager: Push MulticastHeadersRequest ({0})", tagCount));
                                         _pushHeaderRequestCount.Add(tagCount);
                                     }
                                     catch (Exception e)
                                     {
-                                        foreach (var item in wikiList)
+                                        if (wikiList != null)
                                         {
-                                            messageManager.PushMulticastWikisRequest.Remove(item);
+                                            foreach (var item in wikiList)
+                                            {
+                                                messageManager.PushMulticastWikisRequest.Remove(item);
+                                            }
                                         }
 
-                                        foreach (var item in chatList)
+                                        if (chatList != null)
                                         {
-                                            messageManager.PushMulticastChatsRequest.Remove(item);
+                                            foreach (var item in chatList)
+                                            {
+                                                messageManager.PushMulticastChatsRequest.Remove(item);
+                                            }
                                         }
 
                                         throw e;
