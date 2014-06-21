@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Library.Collections;
+using Library.Io;
 
 namespace Library.Security
 {
@@ -94,6 +95,25 @@ namespace Library.Security
             }
 
             return 0;
+        }
+
+        public static int GetSample(TimeSpan computationTime)
+        {
+            var miner = new Miner(CashAlgorithm.Version1, computationTime);
+
+            var buffer = new byte[64];
+            {
+                var random = new Random();
+                random.NextBytes(buffer);
+            }
+
+            using (var stream = new MemoryStream(buffer))
+            {
+                var cash = Miner.Create(miner, new WrapperStream(stream, true));
+
+                stream.Seek(0, SeekOrigin.Begin);
+                return Miner.Verify(cash, new WrapperStream(stream, true));
+            }
         }
 
         private class MinerUtilities
