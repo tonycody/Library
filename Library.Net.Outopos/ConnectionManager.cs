@@ -1280,7 +1280,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyNodes == null)
-                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes);
+                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes.ToArray());
 
                     return _readOnlyNodes;
                 }
@@ -1370,7 +1370,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyKeys == null)
-                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys.ToArray());
 
                     return _readOnlyKeys;
                 }
@@ -1460,7 +1460,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyKeys == null)
-                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys.ToArray());
 
                     return _readOnlyKeys;
                 }
@@ -1672,7 +1672,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlySignatures == null)
-                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
+                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures.ToArray());
 
                     return _readOnlySignatures;
                 }
@@ -1763,7 +1763,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyProfileHeaders == null)
-                        _readOnlyProfileHeaders = new ReadOnlyCollection<ProfileHeader>(this.ProtectedProfileHeaders);
+                        _readOnlyProfileHeaders = new ReadOnlyCollection<ProfileHeader>(this.ProtectedProfileHeaders.ToArray());
 
                     return _readOnlyProfileHeaders;
                 }
@@ -1850,7 +1850,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlySignatures == null)
-                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
+                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures.ToArray());
 
                     return _readOnlySignatures;
                 }
@@ -1941,7 +1941,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlySignatureMessageHeaders == null)
-                        _readOnlySignatureMessageHeaders = new ReadOnlyCollection<SignatureMessageHeader>(this.ProtectedSignatureMessageHeaders);
+                        _readOnlySignatureMessageHeaders = new ReadOnlyCollection<SignatureMessageHeader>(this.ProtectedSignatureMessageHeaders.ToArray());
 
                     return _readOnlySignatureMessageHeaders;
                 }
@@ -2048,7 +2048,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyWikis == null)
-                        _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis);
+                        _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis.ToArray());
 
                     return _readOnlyWikis;
                 }
@@ -2073,7 +2073,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyChats == null)
-                        _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats);
+                        _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats.ToArray());
 
                     return _readOnlyChats;
                 }
@@ -2196,7 +2196,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyWikiPageHeaders == null)
-                        _readOnlyWikiPageHeaders = new ReadOnlyCollection<WikiPageHeader>(this.ProtectedWikiPageHeaders);
+                        _readOnlyWikiPageHeaders = new ReadOnlyCollection<WikiPageHeader>(this.ProtectedWikiPageHeaders.ToArray());
 
                     return _readOnlyWikiPageHeaders;
                 }
@@ -2221,7 +2221,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyChatTopicHeaders == null)
-                        _readOnlyChatTopicHeaders = new ReadOnlyCollection<ChatTopicHeader>(this.ProtectedChatTopicHeaders);
+                        _readOnlyChatTopicHeaders = new ReadOnlyCollection<ChatTopicHeader>(this.ProtectedChatTopicHeaders.ToArray());
 
                     return _readOnlyChatTopicHeaders;
                 }
@@ -2246,7 +2246,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_readOnlyChatMessageHeaders == null)
-                        _readOnlyChatMessageHeaders = new ReadOnlyCollection<ChatMessageHeader>(this.ProtectedChatMessageHeaders);
+                        _readOnlyChatMessageHeaders = new ReadOnlyCollection<ChatMessageHeader>(this.ProtectedChatMessageHeaders.ToArray());
 
                     return _readOnlyChatMessageHeaders;
                 }

@@ -169,7 +169,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_readOnlyUris == null)
-                    _readOnlyUris = new ReadOnlyCollection<string>(this.ProtectedUris);
+                    _readOnlyUris = new ReadOnlyCollection<string>(this.ProtectedUris.ToArray());
 
                 return _readOnlyUris;
             }

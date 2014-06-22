@@ -997,7 +997,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_readOnlyNodes == null)
-                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes);
+                        _readOnlyNodes = new ReadOnlyCollection<Node>(this.ProtectedNodes.ToArray());
 
                     return _readOnlyNodes;
                 }
@@ -1087,7 +1087,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_readOnlyKeys == null)
-                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys.ToArray());
 
                     return _readOnlyKeys;
                 }
@@ -1177,7 +1177,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_readOnlyKeys == null)
-                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys);
+                        _readOnlyKeys = new ReadOnlyCollection<Key>(this.ProtectedKeys.ToArray());
 
                     return _readOnlyKeys;
                 }
@@ -1389,7 +1389,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_readOnlySignatures == null)
-                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures);
+                        _readOnlySignatures = new ReadOnlyCollection<string>(this.ProtectedSignatures.ToArray());
 
                     return _readOnlySignatures;
                 }
@@ -1479,7 +1479,7 @@ namespace Library.Net.Amoeba
                 get
                 {
                     if (_readOnlySeeds == null)
-                        _readOnlySeeds = new ReadOnlyCollection<Seed>(this.ProtectedSeeds);
+                        _readOnlySeeds = new ReadOnlyCollection<Seed>(this.ProtectedSeeds.ToArray());
 
                     return _readOnlySeeds;
                 }

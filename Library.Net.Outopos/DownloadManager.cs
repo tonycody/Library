@@ -16,12 +16,6 @@ namespace Library.Net.Outopos
         private CacheManager _cacheManager;
         private BufferManager _bufferManager;
 
-        private ConditionalWeakTable<ProfileHeader, ProfileContent> _profileTable = new ConditionalWeakTable<ProfileHeader, ProfileContent>();
-        private ConditionalWeakTable<SignatureMessageHeader, SignatureMessageContent> _signatureMessageTable = new ConditionalWeakTable<SignatureMessageHeader, SignatureMessageContent>();
-        private ConditionalWeakTable<WikiPageHeader, WikiPageContent> _wikiPageTable = new ConditionalWeakTable<WikiPageHeader, WikiPageContent>();
-        private ConditionalWeakTable<ChatTopicHeader, ChatTopicContent> _chatTopicTable = new ConditionalWeakTable<ChatTopicHeader, ChatTopicContent>();
-        private ConditionalWeakTable<ChatMessageHeader, ChatMessageContent> _chatMessageTable = new ConditionalWeakTable<ChatMessageHeader, ChatMessageContent>();
-
         private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
 
         private volatile bool _disposed;
@@ -40,15 +34,6 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                {
-                    ProfileContent content;
-
-                    if (_profileTable.TryGetValue(header, out content))
-                    {
-                        return content;
-                    }
-                }
-
                 if (!_cacheManager.Contains(header.Key))
                 {
                     _connectionsManager.Download(header.Key);
@@ -63,10 +48,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        var content = ContentConverter.FromProfileContentBlock(buffer);
-                        _profileTable.Add(header, content);
-
-                        return content;
+                        return ContentConverter.FromProfileContentBlock(buffer);
                     }
                     catch (Exception)
                     {
@@ -92,15 +74,6 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                {
-                    SignatureMessageContent content;
-
-                    if (_signatureMessageTable.TryGetValue(header, out content))
-                    {
-                        return content;
-                    }
-                }
-
                 if (!_cacheManager.Contains(header.Key))
                 {
                     _connectionsManager.Download(header.Key);
@@ -115,10 +88,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        var content = ContentConverter.FromSignatureMessageContentBlock(buffer, exchangePrivateKey);
-                        _signatureMessageTable.Add(header, content);
-
-                        return content;
+                        return ContentConverter.FromSignatureMessageContentBlock(buffer, exchangePrivateKey);
                     }
                     catch (Exception)
                     {
@@ -143,15 +113,6 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                {
-                    WikiPageContent content;
-
-                    if (_wikiPageTable.TryGetValue(header, out content))
-                    {
-                        return content;
-                    }
-                }
-
                 if (!_cacheManager.Contains(header.Key))
                 {
                     _connectionsManager.Download(header.Key);
@@ -166,10 +127,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        var content = ContentConverter.FromWikiPageContentBlock(buffer);
-                        _wikiPageTable.Add(header, content);
-
-                        return content;
+                        return ContentConverter.FromWikiPageContentBlock(buffer);
                     }
                     catch (Exception)
                     {
@@ -194,15 +152,6 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                {
-                    ChatTopicContent content;
-
-                    if (_chatTopicTable.TryGetValue(header, out content))
-                    {
-                        return content;
-                    }
-                }
-
                 if (!_cacheManager.Contains(header.Key))
                 {
                     _connectionsManager.Download(header.Key);
@@ -217,10 +166,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        var content = ContentConverter.FromChatTopicContentBlock(buffer);
-                        _chatTopicTable.Add(header, content);
-
-                        return content;
+                        return ContentConverter.FromChatTopicContentBlock(buffer);
                     }
                     catch (Exception)
                     {
@@ -245,15 +191,6 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                {
-                    ChatMessageContent content;
-
-                    if (_chatMessageTable.TryGetValue(header, out content))
-                    {
-                        return content;
-                    }
-                }
-
                 if (!_cacheManager.Contains(header.Key))
                 {
                     _connectionsManager.Download(header.Key);
@@ -268,10 +205,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        var content = ContentConverter.FromChatMessageContentBlock(buffer);
-                        _chatMessageTable.Add(header, content);
-
-                        return content;
+                        return ContentConverter.FromChatMessageContentBlock(buffer);
                     }
                     catch (Exception)
                     {

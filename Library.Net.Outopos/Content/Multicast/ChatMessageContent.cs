@@ -140,7 +140,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_readOnlyAnchors == null)
-                    _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors);
+                    _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors.ToArray());
 
                 return _readOnlyAnchors;
             }

@@ -176,7 +176,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_readOnlyTrustSignatures == null)
-                    _readOnlyTrustSignatures = new ReadOnlyCollection<string>(this.ProtectedTrustSignatures);
+                    _readOnlyTrustSignatures = new ReadOnlyCollection<string>(this.ProtectedTrustSignatures.ToArray());
 
                 return _readOnlyTrustSignatures;
             }
@@ -201,7 +201,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_readOnlyWikis == null)
-                    _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis);
+                    _readOnlyWikis = new ReadOnlyCollection<Wiki>(this.ProtectedWikis.ToArray());
 
                 return _readOnlyWikis;
             }
@@ -226,7 +226,7 @@ namespace Library.Net.Outopos
             get
             {
                 if (_readOnlyChats == null)
-                    _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats);
+                    _readOnlyChats = new ReadOnlyCollection<Chat>(this.ProtectedChats.ToArray());
 
                 return _readOnlyChats;
             }
