@@ -121,7 +121,7 @@ namespace Library.Net.Outopos
                     {
                         if (_settings.UploadItems.Count > 0)
                         {
-                            item = _settings.UploadItems.First.Value;
+                            item = _settings.UploadItems[0];
                         }
                     }
 
@@ -224,10 +224,7 @@ namespace Library.Net.Outopos
 
                     lock (this.ThisLock)
                     {
-                        if (_settings.UploadItems.Count > 0)
-                        {
-                            _settings.UploadItems.RemoveFirst();
-                        }
+                        _settings.UploadItems.Remove(item);
                     }
                 }
             }
@@ -249,7 +246,13 @@ namespace Library.Net.Outopos
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
-                _settings.UploadItems.AddLast(uploadItem);
+                _settings.UploadItems.RemoveAll((target) =>
+                {
+                    return target.Type == uploadItem.Type
+                        && target.DigitalSignature == digitalSignature;
+                });
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -272,7 +275,7 @@ namespace Library.Net.Outopos
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
-                _settings.UploadItems.AddLast(uploadItem);
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -293,7 +296,14 @@ namespace Library.Net.Outopos
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
-                _settings.UploadItems.AddLast(uploadItem);
+                _settings.UploadItems.RemoveAll((target) =>
+                {
+                    return target.Type == uploadItem.Type
+                        && target.Wiki == uploadItem.Wiki
+                        && target.DigitalSignature == digitalSignature;
+                });
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -314,7 +324,14 @@ namespace Library.Net.Outopos
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
-                _settings.UploadItems.AddLast(uploadItem);
+                _settings.UploadItems.RemoveAll((target) =>
+                {
+                    return target.Type == uploadItem.Type
+                        && target.Chat == uploadItem.Chat
+                        && target.DigitalSignature == digitalSignature;
+                });
+
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -335,7 +352,7 @@ namespace Library.Net.Outopos
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
-                _settings.UploadItems.AddLast(uploadItem);
+                _settings.UploadItems.Add(uploadItem);
             }
         }
 
@@ -415,7 +432,7 @@ namespace Library.Net.Outopos
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
-                    new Library.Configuration.SettingContent<LinkedList<UploadItem>>() { Name = "UploadItems", Value = new LinkedList<UploadItem>() },
+                    new Library.Configuration.SettingContent<List<UploadItem>>() { Name = "UploadItems", Value = new List<UploadItem>() },
                     new Library.Configuration.SettingContent<Dictionary<Key, DateTime>>() { Name = "LifeSpans", Value = new Dictionary<Key, DateTime>() },
                 })
             {
@@ -438,13 +455,13 @@ namespace Library.Net.Outopos
                 }
             }
 
-            public LinkedList<UploadItem> UploadItems
+            public List<UploadItem> UploadItems
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LinkedList<UploadItem>)this["UploadItems"];
+                        return (List<UploadItem>)this["UploadItems"];
                     }
                 }
             }
