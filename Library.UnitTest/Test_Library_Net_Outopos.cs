@@ -47,14 +47,11 @@ namespace Library.UnitTest
         {
             Wiki tag1 = new Wiki("oooo", new byte[64]);
             Wiki tag2;
-            string option1 = "ABCD";
-            string option2;
 
-            var stringTagAndOption = OutoposConverter.ToWikiString(tag1, option1);
-            tag2 = OutoposConverter.FromWikiString(stringTagAndOption, out option2);
+            var stringTagAndOption = OutoposConverter.ToWikiString(tag1);
+            tag2 = OutoposConverter.FromWikiString(stringTagAndOption);
 
-            Assert.AreEqual(tag1, tag2, "OutoposConverter #4");
-            Assert.AreEqual(option1, option2, "OutoposConverter #5");
+            Assert.AreEqual(tag1, tag2, "OutoposConverter #2");
         }
 
         [Test]
@@ -62,14 +59,11 @@ namespace Library.UnitTest
         {
             Chat tag1 = new Chat("oooo", new byte[64]);
             Chat tag2;
-            string option1 = "ABCD";
-            string option2;
 
-            var stringTagAndOption = OutoposConverter.ToChatString(tag1, option1);
-            tag2 = OutoposConverter.FromChatString(stringTagAndOption, out option2);
+            var stringTagAndOption = OutoposConverter.ToChatString(tag1);
+            tag2 = OutoposConverter.FromChatString(stringTagAndOption);
 
-            Assert.AreEqual(tag1, tag2, "OutoposConverter #6");
-            Assert.AreEqual(option1, option2, "OutoposConverter #7");
+            Assert.AreEqual(tag1, tag2, "OutoposConverter #3ll");
         }
 
         [Test]
@@ -164,7 +158,7 @@ namespace Library.UnitTest
                 _random.NextBytes(id);
                 var key = new Key(id, HashAlgorithm.Sha512);
                 var tag = new Chat("oooo", new byte[64]);
-                var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 1));
+                var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                 var digitalSignature = new DigitalSignature("123", a);
                 var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
@@ -543,7 +537,7 @@ namespace Library.UnitTest
                         var id = new byte[64];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
-                        var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
+                        var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var header = new ProfileHeader(DateTime.UtcNow, key, miner, digitalSignature);
 
                         headers1.Add(header);
@@ -605,7 +599,7 @@ namespace Library.UnitTest
                         var id = new byte[64];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
-                        var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
+                        var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var header = new SignatureMessageHeader(digitalSignature.ToString(), DateTime.UtcNow, key, miner, digitalSignature);
 
                         headers1.Add(header);
@@ -683,7 +677,7 @@ namespace Library.UnitTest
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var tag = new Wiki("oooo", new byte[64]);
-                        var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
+                        var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var header = new WikiPageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                         headers1.Add(header);
@@ -695,7 +689,7 @@ namespace Library.UnitTest
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var tag = new Chat("oooo", new byte[64]);
-                        var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
+                        var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var header = new ChatTopicHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                         headers2.Add(header);
@@ -707,7 +701,7 @@ namespace Library.UnitTest
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var tag = new Chat("oooo", new byte[64]);
-                        var miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 0));
+                        var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
                         headers3.Add(header);

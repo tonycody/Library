@@ -222,6 +222,20 @@ namespace Library.Net.Outopos
             }
         }
 
+        public IEnumerable<Information> UploadingInformation
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+                if (!_isLoaded) throw new OutoposManagerException("AmoebaManager is not loaded.");
+
+                lock (this.ThisLock)
+                {
+                    return _uploadManager.UploadingInformation;
+                }
+            }
+        }
+
         public Node BaseNode
         {
             get
@@ -501,53 +515,53 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void Upload(ProfileContent content, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(ProfileContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(content, miningTime, digitalSignature);
+                _uploadManager.Upload(content, miningLimit, miningTime, digitalSignature);
             }
         }
 
-        public void Upload(string signature, SignatureMessageContent content, ExchangePublicKey exchangePublicKey, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(string signature, SignatureMessageContent content, ExchangePublicKey exchangePublicKey, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(signature, content, exchangePublicKey, miningTime, digitalSignature);
+                _uploadManager.Upload(signature, content, exchangePublicKey, miningLimit, miningTime, digitalSignature);
             }
         }
 
-        public void Upload(Wiki tag, WikiPageContent content, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(Wiki tag, WikiPageContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningTime, digitalSignature);
+                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag, ChatTopicContent content, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(Chat tag, ChatTopicContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningTime, digitalSignature);
+                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag, ChatMessageContent content, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(Chat tag, ChatMessageContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningTime, digitalSignature);
+                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
             }
         }
 

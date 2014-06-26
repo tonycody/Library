@@ -189,33 +189,47 @@ namespace Library.UnitTest
             //}
 
             {
-                Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(0, 0, 5));
+                Miner miner = new Miner(CashAlgorithm.Version1, -1, new TimeSpan(0, 0, 1));
+
+                Cash cash = null;
+
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
+                {
+                    cash = miner.Create(stream);
+                }
+
+                sw.Stop();
+                Assert.IsTrue(sw.ElapsedMilliseconds < 1000 * 30);
+            }
+
+            {
+                Miner miner = new Miner(CashAlgorithm.Version1, 20, new TimeSpan(1, 0, 0));
 
                 Cash cash = null;
 
                 using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
                 {
-                    cash = Miner.Create(miner, stream);
+                    cash = miner.Create(stream);
+
+                    stream.Seek(0, SeekOrigin.Begin);
+                    Assert.IsTrue(Miner.Verify(cash, stream) == 20);
                 }
+            }
 
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
+            {
+                Miner miner = new Miner(CashAlgorithm.Version1, 0, TimeSpan.Zero);
 
-                int c = 1024;
+                Cash cash = null;
 
-                for (int i = 0; i < c; i++)
+                using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
                 {
-                    using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
-                    {
-                        int count = Miner.Verify(cash, stream);
-                        Assert.IsTrue(count > 8);
-                    }
+                    cash = miner.Create(stream);
                 }
 
-                sw.Stop();
-
-                Console.WriteLine("Miner.Verify :" + sw.Elapsed.ToString());
-                Console.Write(Environment.NewLine);
+                Assert.IsTrue(cash == null);
             }
 
             {
@@ -224,7 +238,7 @@ namespace Library.UnitTest
 
                 Assert.Throws<AggregateException>(() =>
                 {
-                    Miner miner = new Miner(CashAlgorithm.Version1, new TimeSpan(1, 0, 0));
+                    Miner miner = new Miner(CashAlgorithm.Version1, -1, new TimeSpan(1, 0, 0));
 
                     var task = Task.Factory.StartNew(() =>
                     {
@@ -232,7 +246,7 @@ namespace Library.UnitTest
 
                         using (MemoryStream stream = new MemoryStream(NetworkConverter.FromHexString("0101010101010101")))
                         {
-                            cash = Miner.Create(miner, stream);
+                            cash = miner.Create(stream);
                         }
                     });
 

@@ -17,7 +17,7 @@ namespace Library.Net.Outopos
 
         private string _comment;
 
-        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxCommentLength = 1024 * 32;
 
         public ChatTopicContent(string comment)
         {

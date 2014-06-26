@@ -118,9 +118,10 @@ int main(int argc, char* argv[])
                 size_t valueSize;
                 byte* value = fromHexString((string)argv[3], valueSize);
                 
-                int32_t timeout = atoi(argv[4]);
+                int32_t limit = atoi(argv[4]);
+                int32_t timeout = atoi(argv[5]);
 
-                byte* key = hashcash1_Create(value, timeout);
+                byte* key = hashcash1_Create(value, limit, timeout);
 
                 cout << toHexString(key, 64) << endl;
 
@@ -163,13 +164,14 @@ int main(int argc, char* argv[])
     clockStart = clock();
 
     //{
-    //    const int32_t count = 5;
+    //    const int32_t count = 6;
 
     //    char* arguments[count];
     //    arguments[1] = "hashcash1";
     //    arguments[2] = "create";
     //    arguments[3] = "01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101";
-    //    arguments[4] = "1800";
+    //    arguments[4] = "22";
+    //    arguments[5] = "-1";
 
     //    main2(count, arguments);
     //}

@@ -25,7 +25,10 @@ namespace Library.Net.Outopos
         [DataMember(Name = "DigitalSignature")]
         public DigitalSignature DigitalSignature { get; set; }
 
-        [DataMember(Name = "MiningTime ")]
+        [DataMember(Name = "MiningLimit")]
+        public int MiningLimit { get; set; }
+
+        [DataMember(Name = "MiningTime")]
         public TimeSpan MiningTime { get; set; }
 
         [DataMember(Name = "ExchangePublicKey")]

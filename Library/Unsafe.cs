@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 
 namespace Library
@@ -13,10 +14,14 @@ namespace Library
 #else
         private static NativeLibraryManager _nativeLibraryManager;
 
+        [SuppressUnmanagedCodeSecurity]
         private delegate void CopyDelegate(byte* source, byte* destination, int len);
+        [SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.U1)]
         private delegate bool EqualsDelegate(byte* source1, byte* source2, int len);
+        [SuppressUnmanagedCodeSecurity]
         private delegate int CompareDelegate(byte* source1, byte* source2, int len);
+        [SuppressUnmanagedCodeSecurity]
         private delegate void XorDelegate(byte* source1, byte* source2, byte* result, int len);
 
         private static CopyDelegate _copy;

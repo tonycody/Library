@@ -172,7 +172,7 @@ namespace Library.Net.Outopos
                         ItemUtilities.Write(stream, byte.MaxValue, signature);
                         stream.Seek(0, SeekOrigin.Begin);
 
-                        tempCash = Miner.Create(miner, stream);
+                        tempCash = miner.Create(stream);
                     }
                 }
                 finally
@@ -343,35 +343,29 @@ namespace Library.Net.Outopos
 
         #region IComputeHash
 
-        private byte[] _sha512_hash;
+        private volatile byte[] _sha512_hash;
 
         public byte[] CreateHash(HashAlgorithm hashAlgorithm)
         {
-            lock (_thisLock)
+            if (_sha512_hash == null)
             {
-                if (_sha512_hash == null)
+                using (var stream = this.Export(BufferManager.Instance))
                 {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        _sha512_hash = Sha512.ComputeHash(stream);
-                    }
+                    _sha512_hash = Sha512.ComputeHash(stream);
                 }
-
-                if (hashAlgorithm == HashAlgorithm.Sha512)
-                {
-                    return _sha512_hash;
-                }
-
-                return null;
             }
+
+            if (hashAlgorithm == HashAlgorithm.Sha512)
+            {
+                return _sha512_hash;
+            }
+
+            return null;
         }
 
         public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
         {
-            lock (_thisLock)
-            {
-                return Unsafe.Equals(this.CreateHash(hashAlgorithm), hash);
-            }
+            return Unsafe.Equals(this.CreateHash(hashAlgorithm), hash);
         }
 
         #endregion

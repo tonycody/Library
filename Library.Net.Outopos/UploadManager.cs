@@ -36,6 +36,56 @@ namespace Library.Net.Outopos
             _settings = new Settings(this.ThisLock);
         }
 
+        public IEnumerable<Information> UploadingInformation
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    List<Information> list = new List<Information>();
+
+                    foreach (var item in _settings.UploadItems.ToArray())
+                    {
+                        List<InformationContext> contexts = new List<InformationContext>();
+
+                        contexts.Add(new InformationContext("Type", item.Type));
+
+                        if (item.Signature != null) contexts.Add(new InformationContext("Signature", item.Signature));
+                        if (item.Wiki != null) contexts.Add(new InformationContext("Wiki", item.Wiki));
+                        if (item.Chat != null) contexts.Add(new InformationContext("Chat", item.Chat));
+
+                        contexts.Add(new InformationContext("CreationTime", item.CreationTime));
+                        contexts.Add(new InformationContext("DigitalSignature", item.DigitalSignature));
+
+                        if (item.Type == "Profile")
+                        {
+                            contexts.Add(new InformationContext("Content", item.ProfileContent));
+                        }
+                        else if (item.Type == "SignatureMessage")
+                        {
+                            contexts.Add(new InformationContext("Content", item.SignatureMessageContent));
+                        }
+                        else if (item.Type == "WikiPage")
+                        {
+                            contexts.Add(new InformationContext("Content", item.WikiPageContent));
+                        }
+                        else if (item.Type == "ChatTopic")
+                        {
+                            contexts.Add(new InformationContext("Content", item.ChatTopicContent));
+                        }
+                        else if (item.Type == "ChatMessage")
+                        {
+                            contexts.Add(new InformationContext("Content", item.ChatMessageContent));
+                        }
+
+                        list.Add(new Information(contexts));
+                    }
+
+                    return list;
+                }
+            }
+        }
+
         private void UploadThread()
         {
             Stopwatch refreshStopwatch = new Stopwatch();
@@ -119,7 +169,7 @@ namespace Library.Net.Outopos
                                 _cacheManager[key] = buffer;
                                 _connectionsManager.Upload(key);
 
-                                var miner = new Miner(CashAlgorithm.Version1, item.MiningTime);
+                                var miner = new Miner(CashAlgorithm.Version1, item.MiningLimit, item.MiningTime);
 
                                 var task = Task.Factory.StartNew(() =>
                                 {
@@ -185,6 +235,7 @@ namespace Library.Net.Outopos
 
         public void Upload(
             ProfileContent content,
+            int miningLimit,
             TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
@@ -194,6 +245,7 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "Profile";
                 uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.ProfileContent = content;
+                uploadItem.MiningLimit = miningLimit;
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
@@ -204,6 +256,7 @@ namespace Library.Net.Outopos
         public void Upload(string signature,
             SignatureMessageContent content,
             ExchangePublicKey exchangePublicKey,
+            int miningLimit,
             TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
@@ -215,6 +268,7 @@ namespace Library.Net.Outopos
                 uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.SignatureMessageContent = content;
                 uploadItem.ExchangePublicKey = exchangePublicKey;
+                uploadItem.MiningLimit = miningLimit;
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
@@ -224,6 +278,7 @@ namespace Library.Net.Outopos
 
         public void Upload(Wiki tag,
             WikiPageContent content,
+            int miningLimit,
             TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
@@ -234,6 +289,7 @@ namespace Library.Net.Outopos
                 uploadItem.Wiki = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.WikiPageContent = content;
+                uploadItem.MiningLimit = miningLimit;
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
@@ -243,6 +299,7 @@ namespace Library.Net.Outopos
 
         public void Upload(Chat tag,
             ChatTopicContent content,
+            int miningLimit,
             TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
@@ -253,6 +310,7 @@ namespace Library.Net.Outopos
                 uploadItem.Chat = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.ChatTopicContent = content;
+                uploadItem.MiningLimit = miningLimit;
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
@@ -262,6 +320,7 @@ namespace Library.Net.Outopos
 
         public void Upload(Chat tag,
             ChatMessageContent content,
+            int miningLimit,
             TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
@@ -272,6 +331,7 @@ namespace Library.Net.Outopos
                 uploadItem.Chat = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.ChatMessageContent = content;
+                uploadItem.MiningLimit = miningLimit;
                 uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 

@@ -14,12 +14,16 @@ using CryptoPP::Exception;
 #include "sha.h"
 using CryptoPP::SHA512;
 
-byte* hashcash1_Create(byte* value, int32_t timeout)
+byte* hashcash1_Create(byte* value, int32_t limit, int32_t timeout)
 {
     try
     {
         clock_t clockStart, clockEnd;
-        clockStart = clock();
+
+        if (timeout != -1)
+        {
+            clockStart = clock();
+        }
 
         SHA512 hash;
         Xorshift xorshift;
@@ -60,6 +64,24 @@ byte* hashcash1_Create(byte* value, int32_t timeout)
         memcpy(finalState, currentState, hashSize * 2);
         memcpy(finalResult, currentResult, hashSize);
 
+        // コイン数の算出
+        if (limit != -1)
+        {
+            int32_t count = 0;
+
+            for (int32_t i = 0; i < hashSize; i++)
+            {
+                for (int32_t j = 0; j < 8; j++)
+                {
+                    if(((finalResult[i] << j) & 0x80) == 0) count++;
+                    else goto End1;
+                }
+            }
+        End1:
+
+            if (count >= limit) goto HIT;
+        }
+
         for (;;)
         {
             ((uint32_t*)currentState)[0] = xorshift.next();
@@ -98,17 +120,40 @@ byte* hashcash1_Create(byte* value, int32_t timeout)
                     memcpy(finalState, currentState, hashSize * 2);
                     memcpy(finalResult, currentResult, hashSize);
 
+                    // コイン数の算出
+                    if (limit != -1)
+                    {
+                        int32_t count = 0;
+
+                        for (int32_t i = 0; i < hashSize; i++)
+                        {
+                            for (int32_t j = 0; j < 8; j++)
+                            {
+                                if(((finalResult[i] << j) & 0x80) == 0) count++;
+                                else goto End2;
+                            }
+                        }
+                    End2:
+
+                        if (count >= limit) goto HIT;
+                    }
+
                     break;
                 }
             }
 
-            clockEnd = clock();
-            
-            if (((clockEnd - clockStart) / CLOCKS_PER_SEC) > timeout)
+            if (timeout != -1)
             {
-                break;
+                clockEnd = clock();
+            
+                if (((clockEnd - clockStart) / CLOCKS_PER_SEC) > timeout)
+                {
+                    break;
+                }
             }
         }
+
+    HIT:
 
         byte* key = (byte*)malloc(hashSize);
         memcpy(key, finalState, hashSize);

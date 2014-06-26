@@ -53,6 +53,14 @@ namespace Library
         }
     }
 
+    public static class StringExtensions
+    {
+        public static bool Contains(this string target, string value, StringComparison comparisonType)
+        {
+            return target.IndexOf(value, comparisonType) != -1;
+        }
+    }
+
     public static class RandomExtensions
     {
         public static void Shuffle<T>(this Random random, IList<T> collection)

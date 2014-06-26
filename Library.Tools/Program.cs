@@ -234,7 +234,7 @@ namespace Library.Tools
 
                     StringBuilder builder = new StringBuilder();
                     StringBuilder builder2 = new StringBuilder();
-                    Regex regex = new Regex("new Library\\.Configuration\\.SettingContent<(.*)>\\(\\) { Name = \"(.*)\", Value = (.*) },");
+                    Regex regex = new Regex("new Library\\.Configuration\\.SettingContent<(.*)>\\(\\) { Name = \"(.*)\", Value = .* },(.*)$");
 
                     using (FileStream inStream = new FileStream(settingsPath, FileMode.Open))
                     using (StreamReader reader = new StreamReader(inStream))
@@ -275,7 +275,24 @@ namespace Library.Tools
                         {
                             Match match = regex.Match(item);
 
-                            builder.AppendLine(string.Format(
+                            var attributeBuilder = new StringBuilder();
+
+                            {
+                                var text = match.Groups[3].Value;
+
+                                if (!string.IsNullOrWhiteSpace(text))
+                                {
+                                    text = text.Trim().TrimStart('/').Replace("]", "]\n");
+
+                                    foreach (var line in text.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(n => n.Trim()))
+                                    {
+                                        attributeBuilder.AppendLine("        " + line);
+                                    }
+                                }
+                            }
+
+                            builder.AppendLine(attributeBuilder.ToString() + string.Format(
                                 "        public {0} {1}\r\n" +
                                 "        {{\r\n" +
                                 "            get\r\n" +
@@ -293,8 +310,8 @@ namespace Library.Tools
                                 "                }}\r\n" +
                                 "            }}\r\n" +
                                 "        }}\r\n",
-                            match.Groups[1].Value,
-                            match.Groups[2].Value));
+                                match.Groups[1].Value,
+                                match.Groups[2].Value));
                         }
                     }
 

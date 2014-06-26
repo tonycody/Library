@@ -13,14 +13,16 @@ namespace Library.Security
 {
     public class Miner
     {
-        private CashAlgorithm _cashAlgorithm;
-        private TimeSpan _computationTime;
+        private readonly CashAlgorithm _cashAlgorithm;
+        private readonly int _limit;
+        private readonly TimeSpan _computationTime;
 
-        private bool _isCanceled;
+        private volatile bool _isCanceled;
 
-        public Miner(CashAlgorithm cashAlgorithm, TimeSpan computationTime)
+        public Miner(CashAlgorithm cashAlgorithm, int limit, TimeSpan computationTime)
         {
             _cashAlgorithm = cashAlgorithm;
+            _limit = limit;
             _computationTime = computationTime;
         }
 
@@ -29,6 +31,14 @@ namespace Library.Security
             get
             {
                 return _cashAlgorithm;
+            }
+        }
+
+        public int Limit
+        {
+            get
+            {
+                return _limit;
             }
         }
 
@@ -45,14 +55,15 @@ namespace Library.Security
             _isCanceled = true;
         }
 
-        public static Cash Create(Miner miner, Stream stream)
+        public Cash Create(Stream stream)
         {
             if (stream == null) throw new ArgumentNullException("stream");
-            if (miner == null || miner.ComputationTime <= TimeSpan.Zero) return null;
 
-            if (miner.CashAlgorithm == CashAlgorithm.Version1)
+            if (this == null || this.Limit == 0) return null;
+
+            if (this.CashAlgorithm == CashAlgorithm.Version1)
             {
-                miner._isCanceled = false;
+                _isCanceled = false;
 
                 var minerUtilities = new MinerUtilities();
 
@@ -60,13 +71,13 @@ namespace Library.Security
                 {
                     var task = Task.Factory.StartNew(() =>
                     {
-                        var key = minerUtilities.Create_1(Sha512.ComputeHash(stream), miner.ComputationTime);
+                        var key = minerUtilities.Create_1(Sha512.ComputeHash(stream), this.Limit, this.ComputationTime);
                         return new Cash(CashAlgorithm.Version1, key);
                     });
 
                     while (!task.IsCompleted)
                     {
-                        if (miner._isCanceled) minerUtilities.Cancel();
+                        if (_isCanceled) minerUtilities.Cancel();
 
                         Thread.Sleep(1000);
                     }
@@ -85,6 +96,7 @@ namespace Library.Security
         public static int Verify(Cash cash, Stream stream)
         {
             if (stream == null) throw new ArgumentNullException("stream");
+
             if (cash == null) return 0;
 
             if (cash.CashAlgorithm == CashAlgorithm.Version1)
@@ -97,9 +109,9 @@ namespace Library.Security
             return 0;
         }
 
-        public static int GetSample(TimeSpan computationTime)
+        public static int Sample(TimeSpan computationTime)
         {
-            var miner = new Miner(CashAlgorithm.Version1, computationTime);
+            var miner = new Miner(CashAlgorithm.Version1, -1, computationTime);
 
             var buffer = new byte[64];
             {
@@ -109,7 +121,7 @@ namespace Library.Security
 
             using (var stream = new MemoryStream(buffer))
             {
-                var cash = Miner.Create(miner, new WrapperStream(stream, true));
+                var cash = miner.Create(new WrapperStream(stream, true));
 
                 stream.Seek(0, SeekOrigin.Begin);
                 return Miner.Verify(cash, new WrapperStream(stream, true));
@@ -162,18 +174,30 @@ namespace Library.Security
 
             private LockedList<Process> _processes = new LockedList<Process>();
 
-            public byte[] Create_1(byte[] value, TimeSpan computationTime)
+            public byte[] Create_1(byte[] value, int limit, TimeSpan computationTime)
             {
                 if (value == null) throw new ArgumentNullException("value");
                 if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
-                if (computationTime < TimeSpan.Zero) throw new ArgumentOutOfRangeException("computationTime");
 
                 var info = new ProcessStartInfo(_path);
                 info.CreateNoWindow = true;
                 info.UseShellExecute = false;
                 info.RedirectStandardOutput = true;
 
-                info.Arguments = string.Format("hashcash1 create {0} {1}", NetworkConverter.ToHexString(value), (int)computationTime.TotalSeconds);
+                {
+                    if (limit < 0) limit = -1;
+
+                    int timeout;
+
+                    if (computationTime < TimeSpan.Zero) timeout = -1;
+                    else timeout = (int)computationTime.TotalSeconds;
+
+                    info.Arguments = string.Format(
+                        "hashcash1 create {0} {1} {2}",
+                        NetworkConverter.ToHexString(value),
+                        limit,
+                        timeout);
+                }
 
                 using (var process = Process.Start(info))
                 {
