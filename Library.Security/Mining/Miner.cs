@@ -59,7 +59,7 @@ namespace Library.Security
         {
             if (stream == null) throw new ArgumentNullException("stream");
 
-            if (this == null || this.Limit == 0) return null;
+            if (this == null || this.Limit == 0 || this.ComputationTime <= TimeSpan.Zero) return null;
 
             if (this.CashAlgorithm == CashAlgorithm.Version1)
             {

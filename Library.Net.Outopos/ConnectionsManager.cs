@@ -2166,8 +2166,6 @@ namespace Library.Net.Outopos
             {
                 var messageManager = _messagesManager[connectionManager.Node];
 
-                Stopwatch checkTime = new Stopwatch();
-                checkTime.Start();
                 Stopwatch nodeUpdateTime = new Stopwatch();
                 Stopwatch updateTime = new Stopwatch();
                 updateTime.Start();
@@ -2187,25 +2185,6 @@ namespace Library.Net.Outopos
                     lock (this.ThisLock)
                     {
                         connectionCount = _connectionManagers.Count;
-                    }
-
-                    // Check
-                    if (messageManager.Priority < 0 && checkTime.Elapsed.TotalSeconds >= 5)
-                    {
-                        checkTime.Restart();
-
-                        if ((DateTime.UtcNow - messageManager.LastPullTime).TotalMinutes >= 10)
-                        {
-                            lock (this.ThisLock)
-                            {
-                                this.RemoveNode(connectionManager.Node);
-                            }
-
-                            connectionManager.PushCancel();
-
-                            Debug.WriteLine("ConnectionManager: Push Cancel");
-                            return;
-                        }
                     }
 
                     // PushNodes

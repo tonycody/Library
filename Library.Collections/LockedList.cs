@@ -258,6 +258,14 @@ namespace Library.Collections
             }
         }
 
+        public void InsertRange(int index, IEnumerable<T> collection)
+        {
+            lock (this.ThisLock)
+            {
+                _list.InsertRange(index, collection);
+            }
+        }
+
         public bool Remove(T item)
         {
             lock (this.ThisLock)
@@ -279,6 +287,14 @@ namespace Library.Collections
             lock (this.ThisLock)
             {
                 _list.RemoveRange(index, count);
+            }
+        }
+
+        public int RemoveAll(Predicate<T> match)
+        {
+            lock (this.ThisLock)
+            {
+                return _list.RemoveAll(match);
             }
         }
 

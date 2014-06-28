@@ -154,6 +154,11 @@ namespace Library.Collections
             _list.Insert(index, item);
         }
 
+        public void InsertRange(int index, IEnumerable<T> collection)
+        {
+            _list.InsertRange(index, collection);
+        }
+
         public bool Remove(T item)
         {
             return _list.Remove(item);
@@ -167,6 +172,11 @@ namespace Library.Collections
         public void RemoveRange(int index, int count)
         {
             _list.RemoveRange(index, count);
+        }
+
+        public int RemoveAll(Predicate<T> match)
+        {
+            return _list.RemoveAll(match);
         }
 
         public void TrimExcess()

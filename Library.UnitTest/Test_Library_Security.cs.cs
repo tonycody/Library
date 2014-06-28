@@ -215,7 +215,7 @@ namespace Library.UnitTest
                     cash = miner.Create(stream);
 
                     stream.Seek(0, SeekOrigin.Begin);
-                    Assert.IsTrue(Miner.Verify(cash, stream) == 20);
+                    Assert.IsTrue(Miner.Verify(cash, stream) >= 20);
                 }
             }
 
