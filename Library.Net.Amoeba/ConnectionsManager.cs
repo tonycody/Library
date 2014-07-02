@@ -902,19 +902,23 @@ namespace Library.Net.Amoeba
                     pushBlockDiffusionStopwatch.Restart();
 
                     // 拡散アップロードするブロック数を10000以下に抑える。
-                    lock (_settings.DiffusionBlocksRequest.ThisLock)
+                    lock (this.ThisLock)
                     {
-                        if (_settings.DiffusionBlocksRequest.Count > 10000)
+                        lock (_settings.DiffusionBlocksRequest.ThisLock)
                         {
-                            foreach (var key in _settings.DiffusionBlocksRequest.ToArray().Randomize()
-                                .Take(_settings.DiffusionBlocksRequest.Count - 10000).ToList())
+                            if (_settings.DiffusionBlocksRequest.Count > 10000)
                             {
-                                _settings.DiffusionBlocksRequest.Remove(key);
+                                foreach (var key in _settings.DiffusionBlocksRequest.ToArray().Randomize()
+                                    .Take(_settings.DiffusionBlocksRequest.Count - 10000).ToList())
+                                {
+                                    _settings.DiffusionBlocksRequest.Remove(key);
+                                }
                             }
                         }
                     }
 
                     // 存在しないブロックのKeyをRemoveする。
+                    lock (this.ThisLock)
                     {
                         lock (_settings.DiffusionBlocksRequest.ThisLock)
                         {
@@ -988,14 +992,13 @@ namespace Library.Net.Amoeba
                             {
                                 var requestNodes = new List<Node>();
 
-                                // 自分より距離が2～3番目に遠いノードにもアップロードを試みる。
-                                foreach (var node in Kademlia<Node>.Search(key.Hash, otherNodes, 2))
+                                // 自分より距離が遠いノードにもアップロードを試みる。
+                                foreach (var node in Kademlia<Node>.Search(key.Hash, otherNodes, 3))
                                 {
-                                    if (messageManagers[node].StockBlocks.Contains(key)) continue;
                                     requestNodes.Add(node);
                                 }
 
-                                if (requestNodes.Count == 0)
+                                if (requestNodes.Any(n => _messagesManager[n].StockBlocks.Contains(key)))
                                 {
                                     _settings.UploadBlocksRequest.Remove(key);
                                     _settings.DiffusionBlocksRequest.Remove(key);
@@ -1005,7 +1008,7 @@ namespace Library.Net.Amoeba
                                     continue;
                                 }
 
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < requestNodes.Count; i++)
                                 {
                                     SortedSet<Key> collection;
 

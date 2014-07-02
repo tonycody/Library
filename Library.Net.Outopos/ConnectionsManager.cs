@@ -1233,19 +1233,23 @@ namespace Library.Net.Outopos
                     pushBlockDiffusionStopwatch.Restart();
 
                     // 拡散アップロードするブロック数を10000以下に抑える。
-                    lock (_settings.DiffusionBlocksRequest.ThisLock)
+                    lock (this.ThisLock)
                     {
-                        if (_settings.DiffusionBlocksRequest.Count > 10000)
+                        lock (_settings.DiffusionBlocksRequest.ThisLock)
                         {
-                            foreach (var key in _settings.DiffusionBlocksRequest.ToArray().Randomize()
-                                .Take(_settings.DiffusionBlocksRequest.Count - 10000).ToList())
+                            if (_settings.DiffusionBlocksRequest.Count > 10000)
                             {
-                                _settings.DiffusionBlocksRequest.Remove(key);
+                                foreach (var key in _settings.DiffusionBlocksRequest.ToArray().Randomize()
+                                    .Take(_settings.DiffusionBlocksRequest.Count - 10000).ToList())
+                                {
+                                    _settings.DiffusionBlocksRequest.Remove(key);
+                                }
                             }
                         }
                     }
 
                     // 存在しないブロックのKeyをRemoveする。
+                    lock (this.ThisLock)
                     {
                         lock (_settings.DiffusionBlocksRequest.ThisLock)
                         {

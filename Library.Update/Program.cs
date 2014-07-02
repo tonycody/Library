@@ -38,12 +38,12 @@ namespace Library.Update
                 {
                     var tempDirectoryPath = Program.GetUniqueDirectoryPath(targetDirectoryPath);
 
-                    for (int i = 0; i < 100; i++)
+                    for (int i = 0; i < 128; i++)
                     {
                         try
                         {
                             Program.CopyDirectory(targetDirectoryPath, tempDirectoryPath);
-                            Directory.Delete(targetDirectoryPath, true);
+                            Program.DeleteDirectory(targetDirectoryPath);
 
                             break;
                         }
@@ -55,12 +55,12 @@ namespace Library.Update
                         Thread.Sleep(1000);
                     }
 
-                    for (int i = 0; i < 100; i++)
+                    for (int i = 0; i < 128; i++)
                     {
                         try
                         {
                             Program.CopyDirectory(sourceDirectoryPath, targetDirectoryPath);
-                            Directory.Delete(sourceDirectoryPath, true);
+                            Program.DeleteDirectory(sourceDirectoryPath);
 
                             break;
                         }
@@ -72,11 +72,11 @@ namespace Library.Update
                         Thread.Sleep(1000);
                     }
 
-                    for (int i = 0; i < 100; i++)
+                    for (int i = 0; i < 128; i++)
                     {
                         try
                         {
-                            Directory.Delete(tempDirectoryPath, true);
+                            Program.DeleteDirectory(tempDirectoryPath);
 
                             break;
                         }
@@ -89,7 +89,7 @@ namespace Library.Update
                     }
                 }
 
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < 128; i++)
                 {
                     try
                     {
@@ -139,6 +139,22 @@ namespace Library.Update
             {
                 CopyDirectory(dir, Path.Combine(destDirectoryPath, Path.GetFileName(dir)));
             }
+        }
+
+        public static void DeleteDirectory(string target_dir)
+        {
+            foreach (string file in Directory.GetFiles(target_dir))
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
+            }
+
+            foreach (string dir in Directory.GetDirectories(target_dir))
+            {
+                DeleteDirectory(dir);
+            }
+
+            Directory.Delete(target_dir, false);
         }
 
         private static string GetUniqueDirectoryPath(string path)

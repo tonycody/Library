@@ -183,7 +183,7 @@ namespace Library.Net.Outopos
                                         var header = new SignatureMessageHeader(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
                                         _connectionsManager.Upload(header);
                                     }
-                                    else if (item.Type == "WikiDocument")
+                                    else if (item.Type == "WikiPage")
                                     {
                                         var header = new WikiPageHeader(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
                                         _connectionsManager.Upload(header);
@@ -203,6 +203,15 @@ namespace Library.Net.Outopos
                                 while (!task.IsCompleted)
                                 {
                                     if (this.State == ManagerState.Stop) miner.Cancel();
+
+                                    lock (this.ThisLock)
+                                    {
+                                        if (_settings.UploadItems.Count > 0)
+                                        {
+                                            item = _settings.UploadItems[0];
+                                        }
+                                    }
+
                                     Thread.Sleep(1000);
                                 }
 
