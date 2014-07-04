@@ -676,7 +676,7 @@ namespace Library.Net.Amoeba
                                     item.DecodingBytes = 0;
                                     item.DecodeBytes = 0;
 
-                                    _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
+                                    _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes.Select(n => n.Clone()).ToArray());
                                     _settings.DownloadedSeeds.Add(item.Seed.Clone());
 
                                     if (item.Seed.Key != null)
@@ -896,7 +896,7 @@ namespace Library.Net.Amoeba
                                     item.DecodingBytes = 0;
                                     item.DecodeBytes = 0;
 
-                                    _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
+                                    _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes.Select(n => n.Clone()).ToArray());
                                     _settings.DownloadedSeeds.Add(item.Seed.Clone());
 
                                     if (item.Seed.Key != null)

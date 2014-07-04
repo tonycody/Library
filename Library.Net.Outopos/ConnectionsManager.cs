@@ -1323,14 +1323,13 @@ namespace Library.Net.Outopos
                             {
                                 var requestNodes = new List<Node>();
 
-                                // 自分より距離が2～3番目に遠いノードにもアップロードを試みる。
-                                foreach (var node in Kademlia<Node>.Search(key.Hash, otherNodes, 2))
+                                // 自分より距離が遠いノードにもアップロードを試みる。
+                                foreach (var node in Kademlia<Node>.Search(key.Hash, otherNodes, 3))
                                 {
-                                    if (messageManagers[node].StockBlocks.Contains(key)) continue;
                                     requestNodes.Add(node);
                                 }
 
-                                if (requestNodes.Count == 0)
+                                if (requestNodes.Any(n => _messagesManager[n].StockBlocks.Contains(key)))
                                 {
                                     _settings.UploadBlocksRequest.Remove(key);
                                     _settings.DiffusionBlocksRequest.Remove(key);
@@ -1338,7 +1337,7 @@ namespace Library.Net.Outopos
                                     continue;
                                 }
 
-                                for (int i = 0; i < 1 && i < requestNodes.Count; i++)
+                                for (int i = 0; i < requestNodes.Count; i++)
                                 {
                                     SortedSet<Key> collection;
 

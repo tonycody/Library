@@ -362,7 +362,7 @@ namespace Library.Net.Amoeba
 
                                 this.CheckState(item);
 
-                                _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes);
+                                _cacheManager.SetSeed(item.Seed.Clone(), item.Indexes.Select(n => n.Clone()).ToArray());
                                 item.Indexes.Clear();
 
                                 foreach (var key in item.LockedKeys)
@@ -615,7 +615,7 @@ namespace Library.Net.Amoeba
 
                                 this.CheckState(item);
 
-                                _cacheManager.SetSeed(item.Seed.Clone(), item.FilePath, item.Indexes);
+                                _cacheManager.SetSeed(item.Seed.Clone(), item.FilePath, item.Indexes.Select(n => n.Clone()).ToArray());
                                 item.Indexes.Clear();
 
                                 foreach (var key in item.LockedKeys)

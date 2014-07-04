@@ -141,9 +141,9 @@ namespace Library.Net.Outopos
         private byte[] _pingHash;
         private Stopwatch _responseStopwatch = new Stopwatch();
 
-        private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 3, 0);
-        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 3, 0);
-        private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 1, 0);
+        private readonly TimeSpan _sendTimeSpan = new TimeSpan(0, 6, 0);
+        private readonly TimeSpan _receiveTimeSpan = new TimeSpan(0, 6, 0);
+        private readonly TimeSpan _aliveTimeSpan = new TimeSpan(0, 3, 0);
 
         private WatchTimer _aliveTimer;
         private Stopwatch _aliveStopwatch = new Stopwatch();
