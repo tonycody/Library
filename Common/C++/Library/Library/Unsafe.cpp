@@ -5,7 +5,7 @@
 //#define PORTABLE_32_BIT_TEST
 
 #ifndef PORTABLE_32_BIT_TEST
-    #if  _WIN64 || __amd64__
+    #if _WIN64 || __amd64__
     #define PORTABLE_64_BIT
     #else
     #define PORTABLE_32_BIT
