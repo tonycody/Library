@@ -81,9 +81,3 @@ Library.Net.Outopos\Utilities\WatchTimer.cs
 
 ..\Amoeba\Amoeba\Windows\NameWindow.xaml.cs
 ..\Outopos\Outopos\Windows\NameWindow.xaml.cs
-
-..\Amoeba\Amoeba\Windows\ProgressWindow.xaml
-..\Outopos\Outopos\Windows\ProgressWindow.xaml
-
-..\Amoeba\Amoeba\Windows\ProgressWindow.xaml.cs
-..\Outopos\Outopos\Windows\ProgressWindow.xaml.cs

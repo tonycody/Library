@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -12,4 +12,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c8169ee0-b01b-42e1-baa8-10aa7703b32c")]
-[assembly: AssemblyVersion("0.0.0.4")] // oLPgmvnyjv1YQ01s5rZj9YP0+MutNT4zv/pg9aagsPPTj6pGhKes0PJk/2cyi+TBAF7JfiTQvdWg6M6bLGOMPg==
+[assembly: AssemblyVersion("0.0.0.5")] // Q+MAbAm/GaYbQpbq/2Zca4+n0iiDtGERRtr3tDPR+T3zPKoEu+QQ1CWcH/qHmCBaQT9LHL+keicMPXq6IYfANA==
