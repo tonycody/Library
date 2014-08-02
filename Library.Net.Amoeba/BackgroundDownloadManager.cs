@@ -122,13 +122,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void CheckState(BackgroundDownloadItem item)
+        private void CheckState(Index index)
         {
             lock (this.ThisLock)
             {
-                if (item.Index == null) return;
+                if (index == null) return;
 
-                foreach (var group in item.Index.Groups)
+                foreach (var group in index.Groups)
                 {
                     _existManager.Add(group);
 
@@ -140,13 +140,13 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void UncheckState(BackgroundDownloadItem item)
+        private void UncheckState(Index index)
         {
             lock (this.ThisLock)
             {
-                if (item.Index == null) return;
+                if (index == null) return;
 
-                foreach (var group in item.Index.Groups)
+                foreach (var group in index.Groups)
                 {
                     _existManager.Remove(group);
                 }
@@ -439,7 +439,11 @@ namespace Library.Net.Amoeba
 
                                 lock (this.ThisLock)
                                 {
+                                    this.UncheckState(item.Index);
+
                                     item.Index = index;
+
+                                    this.CheckState(item.Index);
 
                                     foreach (var group in item.Index.Groups)
                                     {
@@ -452,8 +456,6 @@ namespace Library.Net.Amoeba
                                     item.Indexes.Add(index);
 
                                     item.Rank++;
-
-                                    this.CheckState(item);
 
                                     item.State = BackgroundDownloadState.Downloading;
                                 }
@@ -618,7 +620,11 @@ namespace Library.Net.Amoeba
 
                                 lock (this.ThisLock)
                                 {
+                                    this.UncheckState(item.Index);
+
                                     item.Index = index;
+
+                                    this.CheckState(item.Index);
 
                                     foreach (var group in item.Index.Groups)
                                     {
@@ -631,8 +637,6 @@ namespace Library.Net.Amoeba
                                     item.Indexes.Add(index);
 
                                     item.Rank++;
-
-                                    this.CheckState(item);
 
                                     item.State = BackgroundDownloadState.Downloading;
                                 }
@@ -892,7 +896,7 @@ namespace Library.Net.Amoeba
                     }
                 }
 
-                this.UncheckState(item);
+                this.UncheckState(item.Index);
 
                 _settings.BackgroundDownloadItems.Remove(item);
             }
@@ -1087,7 +1091,7 @@ namespace Library.Net.Amoeba
                 {
                     try
                     {
-                        this.CheckState(item);
+                        this.CheckState(item.Index);
                     }
                     catch (Exception)
                     {
