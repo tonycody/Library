@@ -355,18 +355,18 @@ namespace Library.Net.Outopos
             }
         }
 
-        private int? _coin;
+        private int? _cost;
 
-        public int Coin
+        public int Cost
         {
             get
             {
                 lock (_thisLock)
                 {
-                    if (_coin == null)
-                        _coin = this.VerifyCash(this.Certificate.ToString());
+                    if (_cost == null)
+                        _cost = this.VerifyCash(this.Certificate.ToString());
 
-                    return (int)_coin;
+                    return (int)_cost;
                 }
             }
         }

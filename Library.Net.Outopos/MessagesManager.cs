@@ -66,7 +66,7 @@ namespace Library.Net.Outopos
 
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
-                        var lockedNodes = new HashSet<Node>();
+                        var lockedNodes = new SortedSet<Node>();
 
                         if (this.GetLockNodesEvent != null)
                         {
@@ -186,30 +186,30 @@ namespace Library.Net.Outopos
 
         private DateTime _lastPullTime = DateTime.UtcNow;
 
-        private VolatileHashSet<Key> _stockBlocks;
-        private VolatileHashSet<byte[]> _stockProfileHeaders;
-        private VolatileHashSet<byte[]> _stockSignatureMessageHeaders;
-        private VolatileHashSet<byte[]> _stockWikiPageHeaders;
-        private VolatileHashSet<byte[]> _stockChatTopicHeaders;
-        private VolatileHashSet<byte[]> _stockChatMessageHeaders;
+        private VolatileSortedSet<Key> _stockBlocks;
+        private VolatileSortedSet<byte[]> _stockProfileHeaders;
+        private VolatileSortedSet<byte[]> _stockSignatureMessageHeaders;
+        private VolatileSortedSet<byte[]> _stockWikiPageHeaders;
+        private VolatileSortedSet<byte[]> _stockChatTopicHeaders;
+        private VolatileSortedSet<byte[]> _stockChatMessageHeaders;
 
-        private VolatileHashSet<Key> _pushBlocksLink;
-        private VolatileHashSet<Key> _pullBlocksLink;
+        private VolatileSortedSet<Key> _pushBlocksLink;
+        private VolatileSortedSet<Key> _pullBlocksLink;
 
-        private VolatileHashSet<Key> _pushBlocksRequest;
-        private VolatileHashSet<Key> _pullBlocksRequest;
+        private VolatileSortedSet<Key> _pushBlocksRequest;
+        private VolatileSortedSet<Key> _pullBlocksRequest;
 
-        private VolatileHashSet<string> _pushBroadcastSignaturesRequest;
-        private VolatileHashSet<string> _pullBroadcastSignaturesRequest;
+        private VolatileSortedSet<string> _pushBroadcastSignaturesRequest;
+        private VolatileSortedSet<string> _pullBroadcastSignaturesRequest;
 
-        private VolatileHashSet<string> _pushUnicastSignaturesRequest;
-        private VolatileHashSet<string> _pullUnicastSignaturesRequest;
+        private VolatileSortedSet<string> _pushUnicastSignaturesRequest;
+        private VolatileSortedSet<string> _pullUnicastSignaturesRequest;
 
-        private VolatileHashSet<Wiki> _pushMulticastWikisRequest;
-        private VolatileHashSet<Wiki> _pullMulticastWikisRequest;
+        private VolatileSortedSet<Wiki> _pushMulticastWikisRequest;
+        private VolatileSortedSet<Wiki> _pullMulticastWikisRequest;
 
-        private VolatileHashSet<Chat> _pushMulticastChatsRequest;
-        private VolatileHashSet<Chat> _pullMulticastChatsRequest;
+        private VolatileSortedSet<Chat> _pushMulticastChatsRequest;
+        private VolatileSortedSet<Chat> _pullMulticastChatsRequest;
 
         private readonly object _thisLock = new object();
 
@@ -222,30 +222,30 @@ namespace Library.Net.Outopos
             _receivedByteCount = new SafeInteger();
             _sentByteCount = new SafeInteger();
 
-            _stockBlocks = new VolatileHashSet<Key>(new TimeSpan(1, 0, 0, 0));
-            _stockProfileHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockSignatureMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockWikiPageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockChatTopicHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
-            _stockChatMessageHeaders = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0, 0), new ByteArrayEqualityComparer());
+            _stockBlocks = new VolatileSortedSet<Key>(new TimeSpan(1, 0, 0, 0), new KeyComparer());
+            _stockProfileHeaders = new VolatileSortedSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayComparer());
+            _stockSignatureMessageHeaders = new VolatileSortedSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayComparer());
+            _stockWikiPageHeaders = new VolatileSortedSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayComparer());
+            _stockChatTopicHeaders = new VolatileSortedSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayComparer());
+            _stockChatMessageHeaders = new VolatileSortedSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayComparer());
 
-            _pushBlocksLink = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
-            _pullBlocksLink = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
+            _pushBlocksLink = new VolatileSortedSet<Key>(new TimeSpan(0, 30, 0), new KeyComparer());
+            _pullBlocksLink = new VolatileSortedSet<Key>(new TimeSpan(0, 30, 0), new KeyComparer());
 
-            _pushBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
-            _pullBlocksRequest = new VolatileHashSet<Key>(new TimeSpan(0, 30, 0));
+            _pushBlocksRequest = new VolatileSortedSet<Key>(new TimeSpan(0, 30, 0), new KeyComparer());
+            _pullBlocksRequest = new VolatileSortedSet<Key>(new TimeSpan(0, 30, 0), new KeyComparer());
 
-            _pushBroadcastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
-            _pullBroadcastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pushBroadcastSignaturesRequest = new VolatileSortedSet<string>(new TimeSpan(0, 30, 0));
+            _pullBroadcastSignaturesRequest = new VolatileSortedSet<string>(new TimeSpan(0, 30, 0));
 
-            _pushUnicastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
-            _pullUnicastSignaturesRequest = new VolatileHashSet<string>(new TimeSpan(0, 30, 0));
+            _pushUnicastSignaturesRequest = new VolatileSortedSet<string>(new TimeSpan(0, 30, 0));
+            _pullUnicastSignaturesRequest = new VolatileSortedSet<string>(new TimeSpan(0, 30, 0));
 
-            _pushMulticastWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
-            _pullMulticastWikisRequest = new VolatileHashSet<Wiki>(new TimeSpan(0, 30, 0));
+            _pushMulticastWikisRequest = new VolatileSortedSet<Wiki>(new TimeSpan(0, 30, 0), new WikiComparer());
+            _pullMulticastWikisRequest = new VolatileSortedSet<Wiki>(new TimeSpan(0, 30, 0), new WikiComparer());
 
-            _pushMulticastChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
-            _pullMulticastChatsRequest = new VolatileHashSet<Chat>(new TimeSpan(0, 30, 0));
+            _pushMulticastChatsRequest = new VolatileSortedSet<Chat>(new TimeSpan(0, 30, 0), new ChatComparer());
+            _pullMulticastChatsRequest = new VolatileSortedSet<Chat>(new TimeSpan(0, 30, 0), new ChatComparer());
         }
 
         public int Id
@@ -319,7 +319,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Key> StockBlocks
+        public VolatileSortedSet<Key> StockBlocks
         {
             get
             {
@@ -330,7 +330,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockProfileHeaders
+        public VolatileSortedSet<byte[]> StockProfileHeaders
         {
             get
             {
@@ -341,7 +341,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockSignatureMessageHeaders
+        public VolatileSortedSet<byte[]> StockSignatureMessageHeaders
         {
             get
             {
@@ -352,7 +352,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockWikiPageHeaders
+        public VolatileSortedSet<byte[]> StockWikiPageHeaders
         {
             get
             {
@@ -363,7 +363,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockChatTopicHeaders
+        public VolatileSortedSet<byte[]> StockChatTopicHeaders
         {
             get
             {
@@ -374,7 +374,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockChatMessageHeaders
+        public VolatileSortedSet<byte[]> StockChatMessageHeaders
         {
             get
             {
@@ -385,7 +385,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Key> PushBlocksLink
+        public VolatileSortedSet<Key> PushBlocksLink
         {
             get
             {
@@ -396,7 +396,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Key> PullBlocksLink
+        public VolatileSortedSet<Key> PullBlocksLink
         {
             get
             {
@@ -407,7 +407,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Key> PushBlocksRequest
+        public VolatileSortedSet<Key> PushBlocksRequest
         {
             get
             {
@@ -418,7 +418,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Key> PullBlocksRequest
+        public VolatileSortedSet<Key> PullBlocksRequest
         {
             get
             {
@@ -429,7 +429,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<string> PushBroadcastSignaturesRequest
+        public VolatileSortedSet<string> PushBroadcastSignaturesRequest
         {
             get
             {
@@ -440,7 +440,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<string> PullBroadcastSignaturesRequest
+        public VolatileSortedSet<string> PullBroadcastSignaturesRequest
         {
             get
             {
@@ -451,7 +451,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<string> PushUnicastSignaturesRequest
+        public VolatileSortedSet<string> PushUnicastSignaturesRequest
         {
             get
             {
@@ -462,7 +462,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<string> PullUnicastSignaturesRequest
+        public VolatileSortedSet<string> PullUnicastSignaturesRequest
         {
             get
             {
@@ -473,7 +473,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Wiki> PushMulticastWikisRequest
+        public VolatileSortedSet<Wiki> PushMulticastWikisRequest
         {
             get
             {
@@ -484,7 +484,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Wiki> PullMulticastWikisRequest
+        public VolatileSortedSet<Wiki> PullMulticastWikisRequest
         {
             get
             {
@@ -495,7 +495,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Chat> PushMulticastChatsRequest
+        public VolatileSortedSet<Chat> PushMulticastChatsRequest
         {
             get
             {
@@ -506,7 +506,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<Chat> PullMulticastChatsRequest
+        public VolatileSortedSet<Chat> PullMulticastChatsRequest
         {
             get
             {

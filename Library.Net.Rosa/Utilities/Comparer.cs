@@ -27,4 +27,12 @@ namespace Library.Net.Rosa
             return 0;
         }
     }
+
+    class ByteArrayComparer : IComparer<byte[]>
+    {
+        public int Compare(byte[] x, byte[] y)
+        {
+            return Unsafe.Compare(x, y);
+        }
+    }
 }

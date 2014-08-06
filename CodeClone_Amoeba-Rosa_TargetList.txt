@@ -1,9 +1,3 @@
-Library.Net.Amoeba\Utilities\EqualityComparer.cs
-Library.Net.Rosa\Utilities\EqualityComparer.cs
-
-Library.Net.Amoeba\Utilities\Comparer.cs
-Library.Net.Rosa\Utilities\Comparer.cs
-
 Library.Net.Amoeba\Utilities\WatchTimer.cs
 Library.Net.Rosa\Utilities\WatchTimer.cs
 

@@ -7,6 +7,6 @@ namespace Library.Net.Outopos
     {
         DateTime CreationTime { get; }
         Key Key { get; }
-        int Coin { get; }
+        int Cost { get; }
     }
 }
