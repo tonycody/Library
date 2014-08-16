@@ -20,7 +20,7 @@ namespace Library.UnitTest
 
             var flags = new int[] { 0, 1 };
 
-            for (int i = 0; i < 1024; i++)
+            for (int i = 0; i < 1024 * 4; i++)
             {
                 byte[] x;
                 byte[] y;

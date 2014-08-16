@@ -18,9 +18,9 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _downloadManagerThread;
-        private volatile Thread _decodeManagerThread;
-        private volatile Thread _watchThread;
+        private Thread _downloadManagerThread;
+        private Thread _decodeManagerThread;
+        private Thread _watchThread;
         private string _workDirectory = Path.GetTempPath();
         private ExistManager _existManager = new ExistManager();
 

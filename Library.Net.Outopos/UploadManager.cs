@@ -18,7 +18,7 @@ namespace Library.Net.Outopos
 
         private Settings _settings;
 
-        private volatile Thread _uploadThread;
+        private Thread _uploadThread;
 
         private ManagerState _state = ManagerState.Stop;
 

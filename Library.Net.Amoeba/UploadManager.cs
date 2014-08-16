@@ -19,7 +19,8 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _uploadManagerThread;
+        private List<Thread> _uploadManagerThreads = new List<Thread>();
+
         private SortedDictionary<int, UploadItem> _ids = new SortedDictionary<int, UploadItem>();
         private SortedDictionary<string, List<int>> _shareLink = new SortedDictionary<string, List<int>>();
         private int _id;
@@ -36,6 +37,8 @@ namespace Library.Net.Amoeba
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
+        private int _threadCount = 2;
+
         public UploadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _connectionsManager = connectionsManager;
@@ -43,6 +46,8 @@ namespace Library.Net.Amoeba
             _bufferManager = bufferManager;
 
             _settings = new Settings(this.ThisLock);
+
+            _threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
 
             _connectionsManager.UploadedEvent += (object sender, IEnumerable<Key> keys) =>
             {
@@ -239,6 +244,8 @@ namespace Library.Net.Amoeba
             }
         }
 
+        LockedHashSet<string> _workingPaths = new LockedHashSet<string>();
+
         private void UploadManagerThread()
         {
             for (; ; )
@@ -258,7 +265,10 @@ namespace Library.Net.Amoeba
                                 .Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ParityEncoding)
                                 .Where(n => n.Priority != 0)
                                 .OrderBy(n => -n.Priority)
+                                .Where(n => !_workingPaths.Contains(n.FilePath))
                                 .FirstOrDefault();
+
+                            _workingPaths.Add(item.FilePath);
                         }
                     }
                 }
@@ -782,6 +792,10 @@ namespace Library.Net.Amoeba
 
                     Log.Error(e);
                 }
+                finally
+                {
+                    _workingPaths.Remove(item.FilePath);
+                }
             }
         }
 
@@ -982,10 +996,15 @@ namespace Library.Net.Amoeba
                     if (this.EncodeState == ManagerState.Start) return;
                     _encodeState = ManagerState.Start;
 
-                    _uploadManagerThread = new Thread(this.UploadManagerThread);
-                    _uploadManagerThread.Priority = ThreadPriority.BelowNormal;
-                    _uploadManagerThread.Name = "UploadManager_UploadManagerThread";
-                    _uploadManagerThread.Start();
+                    for (int i = 0; i < _threadCount; i++)
+                    {
+                        var thread = new Thread(this.UploadManagerThread);
+                        thread.Priority = ThreadPriority.BelowNormal;
+                        thread.Name = "UploadManager_UploadManagerThread";
+                        thread.Start();
+
+                        _uploadManagerThreads.Add(thread);
+                    }
                 }
             }
         }
@@ -1000,8 +1019,14 @@ namespace Library.Net.Amoeba
                     _encodeState = ManagerState.Stop;
                 }
 
-                _uploadManagerThread.Join();
-                _uploadManagerThread = null;
+                {
+                    foreach (var thread in _uploadManagerThreads)
+                    {
+                        thread.Join();
+                    }
+
+                    _uploadManagerThreads.Clear();
+                }
             }
         }
 

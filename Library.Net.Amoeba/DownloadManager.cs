@@ -18,8 +18,8 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _downloadManagerThread;
-        private volatile Thread _decodeManagerThread;
+        private Thread _downloadManagerThread;
+        private Thread _decodeManagerThread;
         private string _workDirectory = Path.GetTempPath();
         private ExistManager _existManager = new ExistManager();
         private SortedDictionary<int, DownloadItem> _ids = new SortedDictionary<int, DownloadItem>();

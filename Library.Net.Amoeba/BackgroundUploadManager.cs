@@ -18,8 +18,8 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private volatile Thread _uploadManagerThread;
-        private volatile Thread _watchThread;
+        private Thread _uploadManagerThread;
+        private Thread _watchThread;
 
         private volatile ManagerState _state = ManagerState.Stop;
 

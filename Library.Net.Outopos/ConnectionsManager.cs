@@ -64,13 +64,13 @@ namespace Library.Net.Outopos
         private LockedHashDictionary<Wiki, DateTime> _multicastWikiLastAccessTimes = new LockedHashDictionary<Wiki, DateTime>();
         private LockedHashDictionary<Chat, DateTime> _multicastChatLastAccessTimes = new LockedHashDictionary<Chat, DateTime>();
 
-        private volatile Thread _connectionsManagerThread;
-        private volatile Thread _createConnection1Thread;
-        private volatile Thread _createConnection2Thread;
-        private volatile Thread _createConnection3Thread;
-        private volatile Thread _acceptConnection1Thread;
-        private volatile Thread _acceptConnection2Thread;
-        private volatile Thread _acceptConnection3Thread;
+        private Thread _connectionsManagerThread;
+        private Thread _createConnection1Thread;
+        private Thread _createConnection2Thread;
+        private Thread _createConnection3Thread;
+        private Thread _acceptConnection1Thread;
+        private Thread _acceptConnection2Thread;
+        private Thread _acceptConnection3Thread;
 
         private volatile ManagerState _state = ManagerState.Stop;
 

@@ -54,13 +54,13 @@ namespace Library.Net.Amoeba
 
         private LockedHashDictionary<string, DateTime> _seedLastAccessTimes = new LockedHashDictionary<string, DateTime>();
 
-        private volatile Thread _connectionsManagerThread;
-        private volatile Thread _createConnection1Thread;
-        private volatile Thread _createConnection2Thread;
-        private volatile Thread _createConnection3Thread;
-        private volatile Thread _acceptConnection1Thread;
-        private volatile Thread _acceptConnection2Thread;
-        private volatile Thread _acceptConnection3Thread;
+        private Thread _connectionsManagerThread;
+        private Thread _createConnection1Thread;
+        private Thread _createConnection2Thread;
+        private Thread _createConnection3Thread;
+        private Thread _acceptConnection1Thread;
+        private Thread _acceptConnection2Thread;
+        private Thread _acceptConnection3Thread;
 
         private volatile ManagerState _state = ManagerState.Stop;
 
@@ -1679,7 +1679,7 @@ namespace Library.Net.Amoeba
                         }
                     }
 
-                    if (blockDiffusionTime.Elapsed.TotalSeconds >= 5)
+                    if (blockDiffusionTime.Elapsed.TotalSeconds >= connectionCount)
                     {
                         blockDiffusionTime.Restart();
 
