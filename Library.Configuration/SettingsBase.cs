@@ -285,7 +285,7 @@ namespace Library.Configuration
                 }
                 catch (IOException)
                 {
-                    throw;
+
                 }
             }
 

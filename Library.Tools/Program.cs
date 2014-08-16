@@ -860,7 +860,7 @@ namespace Library.Tools
                 }
                 catch (IOException)
                 {
-                    throw;
+
                 }
             }
 

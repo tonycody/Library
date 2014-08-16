@@ -19,7 +19,8 @@ namespace Library.Net.Amoeba
         private Settings _settings;
 
         private Thread _downloadManagerThread;
-        private Thread _decodeManagerThread;
+        private List<Thread> _decodeManagerThreads = new List<Thread>();
+
         private string _workDirectory = Path.GetTempPath();
         private ExistManager _existManager = new ExistManager();
         private SortedDictionary<int, DownloadItem> _ids = new SortedDictionary<int, DownloadItem>();
@@ -37,6 +38,8 @@ namespace Library.Net.Amoeba
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
+        private int _threadCount = 2;
+
         public DownloadManager(ConnectionsManager connectionsManager, CacheManager cacheManager, BufferManager bufferManager)
         {
             _connectionsManager = connectionsManager;
@@ -44,6 +47,8 @@ namespace Library.Net.Amoeba
             _bufferManager = bufferManager;
 
             _settings = new Settings(this.ThisLock);
+
+            _threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
 
             _cacheManager.SetKeyEvent += (object sender, IEnumerable<Key> keys) =>
             {
@@ -276,7 +281,7 @@ namespace Library.Net.Amoeba
                 }
                 catch (IOException)
                 {
-                    throw;
+
                 }
             }
 
@@ -468,6 +473,8 @@ namespace Library.Net.Amoeba
             }
         }
 
+        LockedHashSet<Seed> _workingSeeds = new LockedHashSet<Seed>();
+
         private void DecodeManagerThread()
         {
             Random random = new Random();
@@ -490,7 +497,13 @@ namespace Library.Net.Amoeba
                                 .Where(n => n.Priority != 0)
                                 .OrderBy(n => (n.Rank != n.Seed.Rank) ? 0 : 1)
                                 .OrderBy(n => (n.State == DownloadState.Decoding) ? 0 : 1)
+                                .Where(n => !_workingSeeds.Contains(n.Seed))
                                 .FirstOrDefault();
+
+                            if (item != null)
+                            {
+                                _workingSeeds.Add(item.Seed);
+                            }
                         }
                     }
                 }
@@ -524,7 +537,8 @@ namespace Library.Net.Amoeba
                                     item.DecodeBytes = _cacheManager.GetLength(item.Seed.Key);
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
@@ -630,7 +644,8 @@ namespace Library.Net.Amoeba
                                     item.DecodeBytes = _cacheManager.GetLength(item.Seed.Key);
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(downloadDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
@@ -747,7 +762,8 @@ namespace Library.Net.Amoeba
                                     item.DecodingBytes = 0;
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
@@ -852,7 +868,8 @@ namespace Library.Net.Amoeba
                                     item.DecodingBytes = 0;
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(downloadDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
@@ -984,6 +1001,10 @@ namespace Library.Net.Amoeba
                     item.State = DownloadState.Error;
 
                     Log.Error(e);
+                }
+                finally
+                {
+                    _workingSeeds.Remove(item.Seed);
                 }
             }
         }
@@ -1141,10 +1162,15 @@ namespace Library.Net.Amoeba
                     if (this.DecodeState == ManagerState.Start) return;
                     _decodeState = ManagerState.Start;
 
-                    _decodeManagerThread = new Thread(this.DecodeManagerThread);
-                    _decodeManagerThread.Priority = ThreadPriority.BelowNormal;
-                    _decodeManagerThread.Name = "DownloadManager_DecodeManagerThread";
-                    _decodeManagerThread.Start();
+                    for (int i = 0; i < _threadCount; i++)
+                    {
+                        var thread = new Thread(this.DecodeManagerThread);
+                        thread.Priority = ThreadPriority.BelowNormal;
+                        thread.Name = "UploadManager_DecodeManagerThread";
+                        thread.Start();
+
+                        _decodeManagerThreads.Add(thread);
+                    }
                 }
             }
         }
@@ -1159,8 +1185,14 @@ namespace Library.Net.Amoeba
                     _decodeState = ManagerState.Stop;
                 }
 
-                _decodeManagerThread.Join();
-                _decodeManagerThread = null;
+                {
+                    foreach (var thread in _decodeManagerThreads)
+                    {
+                        thread.Join();
+                    }
+
+                    _decodeManagerThreads.Clear();
+                }
             }
         }
 

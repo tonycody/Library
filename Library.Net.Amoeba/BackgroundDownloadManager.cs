@@ -167,7 +167,7 @@ namespace Library.Net.Amoeba
                 }
                 catch (IOException)
                 {
-                    throw;
+
                 }
             }
 

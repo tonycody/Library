@@ -19,7 +19,7 @@ namespace Library.Net.Amoeba
 
         private Settings _settings;
 
-        private List<Thread> _uploadManagerThreads = new List<Thread>();
+        private List<Thread> _encodeManagerThreads = new List<Thread>();
 
         private SortedDictionary<int, UploadItem> _ids = new SortedDictionary<int, UploadItem>();
         private SortedDictionary<string, List<int>> _shareLink = new SortedDictionary<string, List<int>>();
@@ -246,7 +246,7 @@ namespace Library.Net.Amoeba
 
         LockedHashSet<string> _workingPaths = new LockedHashSet<string>();
 
-        private void UploadManagerThread()
+        private void EncodeManagerThread()
         {
             for (; ; )
             {
@@ -268,7 +268,10 @@ namespace Library.Net.Amoeba
                                 .Where(n => !_workingPaths.Contains(n.FilePath))
                                 .FirstOrDefault();
 
-                            _workingPaths.Add(item.FilePath);
+                            if (item != null)
+                            {
+                                _workingPaths.Add(item.FilePath);
+                            }
                         }
                     }
                 }
@@ -293,7 +296,8 @@ namespace Library.Net.Amoeba
                             try
                             {
                                 using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                using(CacheStream cacheStream = new CacheStream(stream, 1024*1024, _bufferManager))
+                                using (ProgressStream hashProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                 {
                                     isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
@@ -537,7 +541,8 @@ namespace Library.Net.Amoeba
                             try
                             {
                                 using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
+                                using (ProgressStream hashProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                 {
                                     isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
@@ -998,12 +1003,12 @@ namespace Library.Net.Amoeba
 
                     for (int i = 0; i < _threadCount; i++)
                     {
-                        var thread = new Thread(this.UploadManagerThread);
+                        var thread = new Thread(this.EncodeManagerThread);
                         thread.Priority = ThreadPriority.BelowNormal;
-                        thread.Name = "UploadManager_UploadManagerThread";
+                        thread.Name = "UploadManager_EncodeManagerThread";
                         thread.Start();
 
-                        _uploadManagerThreads.Add(thread);
+                        _encodeManagerThreads.Add(thread);
                     }
                 }
             }
@@ -1020,12 +1025,12 @@ namespace Library.Net.Amoeba
                 }
 
                 {
-                    foreach (var thread in _uploadManagerThreads)
+                    foreach (var thread in _encodeManagerThreads)
                     {
                         thread.Join();
                     }
 
-                    _uploadManagerThreads.Clear();
+                    _encodeManagerThreads.Clear();
                 }
             }
         }
