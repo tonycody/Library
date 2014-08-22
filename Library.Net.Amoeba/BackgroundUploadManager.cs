@@ -75,8 +75,6 @@ namespace Library.Net.Amoeba
                                         if (item.UploadKeys.Count == 0)
                                         {
                                             item.State = BackgroundUploadState.Completed;
-
-                                            _connectionsManager.Upload(item.Seed);
                                         }
                                     }
                                 }
@@ -112,8 +110,6 @@ namespace Library.Net.Amoeba
                     if (item.UploadKeys.Count == 0)
                     {
                         item.State = BackgroundUploadState.Completed;
-
-                        _connectionsManager.Upload(item.Seed);
                     }
                 }
             }
@@ -275,6 +271,8 @@ namespace Library.Net.Amoeba
                             item.LockedKeys.Clear();
 
                             item.State = BackgroundUploadState.Uploading;
+
+                            _connectionsManager.Upload(item.Seed);
                         }
                     }
                     else if (item.Keys.Count > 0)

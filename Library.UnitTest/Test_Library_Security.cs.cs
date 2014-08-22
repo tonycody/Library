@@ -258,7 +258,7 @@ namespace Library.UnitTest
                 });
 
                 sw.Stop();
-                Assert.IsTrue(sw.ElapsedMilliseconds < 1000 * 3);
+                Assert.IsTrue(sw.ElapsedMilliseconds < 1000 * 30);
             }
         }
 
