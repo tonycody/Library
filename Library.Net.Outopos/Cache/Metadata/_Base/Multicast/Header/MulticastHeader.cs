@@ -186,6 +186,7 @@ namespace Library.Net.Outopos
                 {
                     using (var stream = this.Export(BufferManager.Instance))
                     {
+                        stream.Seek(0, SeekOrigin.End);
                         ItemUtilities.Write(stream, byte.MaxValue, signature);
                         stream.Seek(0, SeekOrigin.Begin);
 
@@ -214,6 +215,7 @@ namespace Library.Net.Outopos
                 {
                     using (var stream = this.Export(BufferManager.Instance))
                     {
+                        stream.Seek(0, SeekOrigin.End);
                         ItemUtilities.Write(stream, byte.MaxValue, signature);
                         stream.Seek(0, SeekOrigin.Begin);
 

@@ -206,9 +206,9 @@ namespace Library.Net.Outopos
 
                                     lock (this.ThisLock)
                                     {
-                                        if (_settings.UploadItems.Count > 0)
+                                        if (!_settings.UploadItems.Contains(item))
                                         {
-                                            item = _settings.UploadItems[0];
+                                            miner.Cancel();
                                         }
                                     }
 
@@ -216,6 +216,11 @@ namespace Library.Net.Outopos
                                 }
 
                                 if (task.Exception != null) throw task.Exception;
+
+                                lock (this.ThisLock)
+                                {
+                                    _settings.UploadItems.Remove(item);
+                                }
                             }
                             finally
                             {
@@ -228,12 +233,7 @@ namespace Library.Net.Outopos
                     }
                     catch (Exception)
                     {
-                        return;
-                    }
 
-                    lock (this.ThisLock)
-                    {
-                        _settings.UploadItems.Remove(item);
                     }
                 }
             }
