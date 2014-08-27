@@ -28,199 +28,215 @@ namespace Library.Net.Outopos
             _bufferManager = bufferManager;
         }
 
-        public Profile GetInformation(ProfileMetadata metadata)
+        public IEnumerable<Profile> GetProfiles()
         {
-            if (metadata == null) throw new ArgumentNullException("metadata");
-
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(metadata.Key))
+                var list = new List<Profile>();
+
+                foreach (var signature in _connectionsManager.TrustSignatures)
                 {
-                    _connectionsManager.Download(metadata.Key);
+                    var metadata = _connectionsManager.GetProfileMetadata(signature);
 
-                    return null;
-                }
-                else
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
+                    if (!_cacheManager.Contains(metadata.Key))
                     {
-                        buffer = _cacheManager[metadata.Key];
-
-                        return InformationConverter.FromProfileBlock(buffer);
+                        _connectionsManager.Download(metadata.Key);
                     }
-                    catch (Exception)
+                    else
                     {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
+                        try
                         {
-                            _bufferManager.ReturnBuffer(buffer.Array);
+                            buffer = _cacheManager[metadata.Key];
+
+                            list.Add(InformationConverter.FromProfileBlock(buffer));
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
                         }
                     }
-
-                    return null;
                 }
+
+                return list;
             }
         }
 
-        public SignatureMessage GetInformation(SignatureMessageMetadata metadata, ExchangePrivateKey exchangePrivateKey)
+        public IEnumerable<SignatureMessage> GetSignatureMessages(string signature, int limit, ExchangePrivateKey exchangePrivateKey)
         {
-            if (metadata == null) throw new ArgumentNullException("metadata");
+            if (signature == null) throw new ArgumentNullException("signature");
+            if (!Signature.Check(signature)) throw new ArgumentException("signature");
             if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(metadata.Key))
+                var list = new List<SignatureMessage>();
+
+                foreach (var metadata in _connectionsManager.GetSignatureMessageMetadatas(signature))
                 {
-                    _connectionsManager.Download(metadata.Key);
-
-                    return null;
-                }
-                else
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
+                    if (!_cacheManager.Contains(metadata.Key))
                     {
-                        buffer = _cacheManager[metadata.Key];
-
-                        return InformationConverter.FromSignatureMessageBlock(buffer, exchangePrivateKey);
+                        _connectionsManager.Download(metadata.Key);
                     }
-                    catch (Exception)
+                    else
                     {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
+                        try
                         {
-                            _bufferManager.ReturnBuffer(buffer.Array);
+                            buffer = _cacheManager[metadata.Key];
+
+                            list.Add(InformationConverter.FromSignatureMessageBlock(buffer, exchangePrivateKey));
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
                         }
                     }
-
-                    return null;
                 }
+
+                return list;
             }
         }
 
-        public WikiPage GetInformation(WikiPageMetadata metadata)
+        public IEnumerable<WikiPage> GetWikiPages(Wiki tag)
         {
-            if (metadata == null) throw new ArgumentNullException("metadata");
+            if (tag == null) throw new ArgumentNullException("tag");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(metadata.Key))
+                var list = new List<WikiPage>();
+
+                foreach (var metadata in _connectionsManager.GetWikiPageMetadatas(tag))
                 {
-                    _connectionsManager.Download(metadata.Key);
-
-                    return null;
-                }
-                else
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
+                    if (!_cacheManager.Contains(metadata.Key))
                     {
-                        buffer = _cacheManager[metadata.Key];
-
-                        return InformationConverter.FromWikiPageBlock(buffer);
+                        _connectionsManager.Download(metadata.Key);
                     }
-                    catch (Exception)
+                    else
                     {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
+                        try
                         {
-                            _bufferManager.ReturnBuffer(buffer.Array);
+                            buffer = _cacheManager[metadata.Key];
+
+                            list.Add(InformationConverter.FromWikiPageBlock(buffer));
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
                         }
                     }
-
-                    return null;
                 }
+
+                return list;
             }
         }
 
-        public ChatTopic GetInformation(ChatTopicMetadata metadata)
+        public IEnumerable<ChatTopic> GetChatTopics(Chat tag)
         {
-            if (metadata == null) throw new ArgumentNullException("metadata");
+            if (tag == null) throw new ArgumentNullException("tag");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(metadata.Key))
+                var list = new List<ChatTopic>();
+
+                foreach (var metadata in _connectionsManager.GetChatTopicMetadatas(tag))
                 {
-                    _connectionsManager.Download(metadata.Key);
-
-                    return null;
-                }
-                else
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
+                    if (!_cacheManager.Contains(metadata.Key))
                     {
-                        buffer = _cacheManager[metadata.Key];
-
-                        return InformationConverter.FromChatTopicBlock(buffer);
+                        _connectionsManager.Download(metadata.Key);
                     }
-                    catch (Exception)
+                    else
                     {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
+                        try
                         {
-                            _bufferManager.ReturnBuffer(buffer.Array);
+                            buffer = _cacheManager[metadata.Key];
+
+                            list.Add(InformationConverter.FromChatTopicBlock(buffer));
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
                         }
                     }
-
-                    return null;
                 }
+
+                return list;
             }
         }
 
-        public ChatMessage GetInformation(ChatMessageMetadata metadata)
+        public IEnumerable<ChatMessage> GetChatMessages(Chat tag)
         {
-            if (metadata == null) throw new ArgumentNullException("metadata");
+            if (tag == null) throw new ArgumentNullException("tag");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(metadata.Key))
+                var list = new List<ChatMessage>();
+
+                foreach (var metadata in _connectionsManager.GetChatMessageMetadatas(tag))
                 {
-                    _connectionsManager.Download(metadata.Key);
-
-                    return null;
-                }
-                else
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>();
-
-                    try
+                    if (!_cacheManager.Contains(metadata.Key))
                     {
-                        buffer = _cacheManager[metadata.Key];
-
-                        return InformationConverter.FromChatMessageBlock(buffer);
+                        _connectionsManager.Download(metadata.Key);
                     }
-                    catch (Exception)
+                    else
                     {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>();
 
-                    }
-                    finally
-                    {
-                        if (buffer.Array != null)
+                        try
                         {
-                            _bufferManager.ReturnBuffer(buffer.Array);
+                            buffer = _cacheManager[metadata.Key];
+
+                            list.Add(InformationConverter.FromChatMessageBlock(buffer));
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        finally
+                        {
+                            if (buffer.Array != null)
+                            {
+                                _bufferManager.ReturnBuffer(buffer.Array);
+                            }
                         }
                     }
-
-                    return null;
                 }
+
+                return list;
             }
         }
 

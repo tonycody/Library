@@ -122,6 +122,24 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public void SetSearchSignatures(IEnumerable<string> signatures)
+        {
+            lock (this.ThisLock)
+            {
+                lock (_settings.Signatures.ThisLock)
+                {
+                    _settings.Signatures.Clear();
+
+                    foreach (var signature in signatures)
+                    {
+                        if (signature == null || !Signature.Check(signature)) continue;
+
+                        _settings.Signatures.Add(signature);
+                    }
+                }
+            }
+        }
+
         private void CheckState(Index index)
         {
             lock (this.ThisLock)
@@ -955,18 +973,6 @@ namespace Library.Net.Amoeba
             }
         }
 
-        public void SetSearchSignatures(IEnumerable<string> signatures)
-        {
-            lock (this.ThisLock)
-            {
-                lock (_settings.Signatures.ThisLock)
-                {
-                    _settings.Signatures.Clear();
-                    _settings.Signatures.AddRange(signatures);
-                }
-            }
-        }
-
         public Link GetLink(string signature)
         {
             lock (this.ThisLock)
@@ -1118,7 +1124,7 @@ namespace Library.Net.Amoeba
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<LockedList<BackgroundDownloadItem>>() { Name = "BackgroundDownloadItems", Value = new LockedList<BackgroundDownloadItem>() },
-                    new Library.Configuration.SettingContent<SignatureCollection>() { Name = "Signatures", Value = new SignatureCollection() },
+                    new Library.Configuration.SettingContent<LockedHashSet<string>>() { Name = "Signatures", Value = new LockedHashSet<string>() },
                 })
             {
                 _thisLock = lockObject;
@@ -1151,13 +1157,13 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public SignatureCollection Signatures
+            public LockedHashSet<string> Signatures
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (SignatureCollection)this["Signatures"];
+                        return (LockedHashSet<string>)this["Signatures"];
                     }
                 }
             }

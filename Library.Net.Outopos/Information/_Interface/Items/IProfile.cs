@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Library.Security;
 
 namespace Library.Net.Outopos
@@ -8,8 +9,8 @@ namespace Library.Net.Outopos
         DateTime CreationTime { get; }
         int Cost { get; }
         ExchangePublicKey ExchangePublicKey { get; }
-        SignatureCollection TrustSignatures { get; }
-        WikiCollection Wikis { get; }
-        ChatCollection Chats { get; }
+        IEnumerable<string> TrustSignatures { get; }
+        IEnumerable<Wiki> Wikis { get; }
+        IEnumerable<Chat> Chats { get; }
     }
 }

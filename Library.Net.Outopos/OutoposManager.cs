@@ -27,7 +27,6 @@ namespace Library.Net.Outopos
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
         private CheckUriEventHandler _checkUriEvent;
-        private GetSignaturesEventHandler _getLockSignaturesEvent;
         private GetWikisEventHandler _getLockWikisEvent;
         private GetChatsEventHandler _getLockChatsEvent;
 
@@ -92,16 +91,6 @@ namespace Library.Net.Outopos
                 return true;
             };
 
-            _connectionsManager.GetLockSignaturesEvent = (object sender) =>
-            {
-                if (_getLockSignaturesEvent != null)
-                {
-                    return _getLockSignaturesEvent(this);
-                }
-
-                return null;
-            };
-
             _connectionsManager.GetLockWikisEvent = (object sender) =>
             {
                 if (_getLockWikisEvent != null)
@@ -152,17 +141,6 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     _checkUriEvent = value;
-                }
-            }
-        }
-
-        public GetSignaturesEventHandler GetLockSignaturesEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _getLockSignaturesEvent = value;
                 }
             }
         }
@@ -415,103 +393,53 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ProfileMetadata GetProfileMetadata(string signature)
+        private IEnumerable<Profile> GetProfiles()
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetProfileMetadata(signature);
+                return _downloadManager.GetProfiles();
             }
         }
 
-        public IEnumerable<SignatureMessageMetadata> GetSignatureMessageMetadatas(string signature)
+        private IEnumerable<SignatureMessage> GetSignatureMessages(string signature, int limit, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetSignatureMessageMetadatas(signature);
+                return _downloadManager.GetSignatureMessages(signature, limit, exchangePrivateKey);
             }
         }
 
-        public IEnumerable<WikiPageMetadata> GetWikiPageMetadatas(Wiki tag)
+        private IEnumerable<WikiPage> GetWikiPages(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetWikiPageMetadatas(tag);
+                return _downloadManager.GetWikiPages(tag);
             }
         }
 
-        public IEnumerable<ChatTopicMetadata> GetChatTopicMetadatas(Chat tag)
+        private IEnumerable<ChatTopic> GetChatTopics(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetChatTopicMetadatas(tag);
+                return _downloadManager.GetChatTopics(tag);
             }
         }
 
-        public IEnumerable<ChatMessageMetadata> GetChatMessageMetadatas(Chat tag)
+        private IEnumerable<ChatMessage> GetChatMessages(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetChatMessageMetadatas(tag);
-            }
-        }
-
-        public Profile GetInformation(ProfileMetadata metadata)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _downloadManager.GetInformation(metadata);
-            }
-        }
-
-        public SignatureMessage GetInformation(SignatureMessageMetadata metadata, ExchangePrivateKey exchangePrivateKey)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _downloadManager.GetInformation(metadata, exchangePrivateKey);
-            }
-        }
-
-        public WikiPage GetInformation(WikiPageMetadata metadata)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _downloadManager.GetInformation(metadata);
-            }
-        }
-
-        public ChatTopic GetInformation(ChatTopicMetadata metadata)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _downloadManager.GetInformation(metadata);
-            }
-        }
-
-        public ChatMessage GetInformation(ChatMessageMetadata metadata)
-        {
-            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
-
-            lock (this.ThisLock)
-            {
-                return _downloadManager.GetInformation(metadata);
+                return _downloadManager.GetChatMessages(tag);
             }
         }
 

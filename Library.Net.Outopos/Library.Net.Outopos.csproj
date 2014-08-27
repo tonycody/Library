@@ -145,7 +145,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Information\_Interface\IHypertext.cs" />
-    <Compile Include="ContentConverter.cs" />
+    <Compile Include="InformationConverter.cs" />
     <Compile Include="OutoposManager.cs" />
     <Compile Include="DownloadManager.cs" />
     <Compile Include="ClientManager.cs" />

@@ -10,7 +10,7 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "SignatureMessage", Namespace = "http://Library/Net/Outopos")]
-    sealed class SignatureMessage : ImmutableCertificateItemBase<SignatureMessage>, ISignatureMessage
+    public sealed class SignatureMessage : ImmutableCertificateItemBase<SignatureMessage>, ISignatureMessage
     {
         private enum SerializeId : byte
         {
@@ -239,5 +239,34 @@ namespace Library.Net.Outopos
                 }
             }
         }
+
+        #region IComputeHash
+
+        private volatile byte[] _sha512_hash;
+
+        public byte[] CreateHash(HashAlgorithm hashAlgorithm)
+        {
+            if (_sha512_hash == null)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    _sha512_hash = Sha512.ComputeHash(stream);
+                }
+            }
+
+            if (hashAlgorithm == HashAlgorithm.Sha512)
+            {
+                return _sha512_hash;
+            }
+
+            return null;
+        }
+
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        {
+            return Unsafe.Equals(this.CreateHash(hashAlgorithm), hash);
+        }
+
+        #endregion
     }
 }

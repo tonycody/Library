@@ -10,7 +10,7 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "Profile", Namespace = "http://Library/Net/Outopos")]
-    sealed class Profile : ImmutableCertificateItemBase<Profile>, IProfile
+    public sealed class Profile : ImmutableCertificateItemBase<Profile>, IProfile
     {
         private enum SerializeId : byte
         {
@@ -272,8 +272,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IBroadcastMetadata<TTag>
-
         [DataMember(Name = "CreationTime")]
         public DateTime CreationTime
         {
@@ -423,6 +421,33 @@ namespace Library.Net.Outopos
                     return _chats;
                 }
             }
+        }
+
+        #region IComputeHash
+
+        private volatile byte[] _sha512_hash;
+
+        public byte[] CreateHash(HashAlgorithm hashAlgorithm)
+        {
+            if (_sha512_hash == null)
+            {
+                using (var stream = this.Export(BufferManager.Instance))
+                {
+                    _sha512_hash = Sha512.ComputeHash(stream);
+                }
+            }
+
+            if (hashAlgorithm == HashAlgorithm.Sha512)
+            {
+                return _sha512_hash;
+            }
+
+            return null;
+        }
+
+        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
+        {
+            return Unsafe.Equals(this.CreateHash(hashAlgorithm), hash);
         }
 
         #endregion

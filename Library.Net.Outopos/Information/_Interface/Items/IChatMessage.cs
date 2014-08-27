@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Library.Security;
 
 namespace Library.Net.Outopos
@@ -8,6 +9,6 @@ namespace Library.Net.Outopos
         Chat Tag { get; }
         DateTime CreationTime { get; }
         string Comment { get; }
-        private AnchorCollection Anchors { get; }
+        IEnumerable<Anchor> Anchors { get; }
     }
 }

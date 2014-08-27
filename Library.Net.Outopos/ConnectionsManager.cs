@@ -11,7 +11,6 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    public delegate IEnumerable<string> GetSignaturesEventHandler(object sender);
     public delegate IEnumerable<Wiki> GetWikisEventHandler(object sender);
     public delegate IEnumerable<Chat> GetChatsEventHandler(object sender);
 
@@ -101,7 +100,6 @@ namespace Library.Net.Outopos
         private readonly SafeInteger _connectConnectionCount = new SafeInteger();
         private readonly SafeInteger _acceptConnectionCount = new SafeInteger();
 
-        private GetSignaturesEventHandler _getLockSignaturesEvent;
         private GetWikisEventHandler _getLockWikisEvent;
         private GetChatsEventHandler _getLockChatsEvent;
 
@@ -184,17 +182,6 @@ namespace Library.Net.Outopos
             _pushMulticastChatsRequestList.TrimExcess();
 
             _relayBlocks.TrimExcess();
-        }
-
-        public GetSignaturesEventHandler GetLockSignaturesEvent
-        {
-            set
-            {
-                lock (this.ThisLock)
-                {
-                    _getLockSignaturesEvent = value;
-                }
-            }
         }
 
         public GetWikisEventHandler GetLockWikisEvent
@@ -287,6 +274,35 @@ namespace Library.Net.Outopos
                     _settings.BandwidthLimit = value;
                     _bandwidthLimit.In = value;
                     _bandwidthLimit.Out = value;
+                }
+            }
+        }
+
+        public IEnumerable<string> TrustSignatures
+        {
+            get
+            {
+                lock (this.ThisLock)
+                {
+                    return _settings.TrustSignatures.ToArray();
+                }
+            }
+        }
+
+        public void SetTrustSignatures(IEnumerable<string> signatures)
+        {
+            lock (this.ThisLock)
+            {
+                lock (_settings.TrustSignatures.ThisLock)
+                {
+                    _settings.TrustSignatures.Clear();
+
+                    foreach (var signature in signatures)
+                    {
+                        if (signature == null || !Signature.Check(signature)) continue;
+
+                        _settings.TrustSignatures.Add(signature);
+                    }
                 }
             }
         }
@@ -397,16 +413,6 @@ namespace Library.Net.Outopos
                     return _sentByteCount + _connectionManagers.Sum(n => n.SentByteCount);
                 }
             }
-        }
-
-        protected virtual IEnumerable<string> OnLockSignaturesEvent()
-        {
-            if (_getLockSignaturesEvent != null)
-            {
-                return _getLockSignaturesEvent(this);
-            }
-
-            return null;
         }
 
         protected virtual IEnumerable<Wiki> OnLockWikisEvent()
@@ -876,8 +882,7 @@ namespace Library.Net.Outopos
 
                         try
                         {
-                            var lockSignatures = this.OnLockSignaturesEvent();
-                            if (lockSignatures == null) return;
+                            var trustSignature = new HashSet<string>(this.TrustSignatures);
 
                             var lockWikis = this.OnLockWikisEvent();
                             if (lockWikis == null) return;
@@ -891,7 +896,7 @@ namespace Library.Net.Outopos
                                 {
                                     var removeSignatures = new SortedSet<string>();
                                     removeSignatures.UnionWith(_settings.MetadataManager.GetBroadcastSignatures());
-                                    removeSignatures.ExceptWith(lockSignatures);
+                                    removeSignatures.ExceptWith(trustSignature);
 
                                     var sortList = removeSignatures
                                         .OrderBy(n =>
@@ -921,7 +926,7 @@ namespace Library.Net.Outopos
                                 {
                                     var removeSignatures = new SortedSet<string>();
                                     removeSignatures.UnionWith(_settings.MetadataManager.GetUnicastSignatures());
-                                    removeSignatures.ExceptWith(lockSignatures);
+                                    removeSignatures.ExceptWith(trustSignature);
 
                                     var sortList = removeSignatures
                                         .OrderBy(n =>
@@ -1004,8 +1009,6 @@ namespace Library.Net.Outopos
 
                             // Unicast
                             {
-                                var trustSignature = new HashSet<string>(lockSignatures);
-
                                 {
                                     var now = DateTime.UtcNow;
 
@@ -1069,8 +1072,6 @@ namespace Library.Net.Outopos
 
                             // Multicast
                             {
-                                var trustSignature = new HashSet<string>(lockSignatures);
-
                                 {
                                     var now = DateTime.UtcNow;
 
@@ -3466,6 +3467,7 @@ namespace Library.Net.Outopos
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
+                    new Library.Configuration.SettingContent<LockedHashSet<string>>() { Name = "TrustSignatures", Value = new LockedHashSet<string>() },
                     new Library.Configuration.SettingContent<List<ProfileMetadata>>() { Name = "ProfileMetadatas", Value = new List<ProfileMetadata>() },
                     new Library.Configuration.SettingContent<List<SignatureMessageMetadata>>() { Name = "SignatureMessageMetadatas", Value = new List<SignatureMessageMetadata>() },
                     new Library.Configuration.SettingContent<List<WikiPageMetadata>>() { Name = "WikiPageMetadatas", Value = new List<WikiPageMetadata>() },
@@ -3618,6 +3620,17 @@ namespace Library.Net.Outopos
                     lock (_thisLock)
                     {
                         return (LockedHashSet<Key>)this["UploadBlocksRequest"];
+                    }
+                }
+            }
+
+            public LockedHashSet<string> TrustSignatures
+            {
+                get
+                {
+                    lock (_thisLock)
+                    {
+                        return (LockedHashSet<string>)this["TrustSignatures"];
                     }
                 }
             }
