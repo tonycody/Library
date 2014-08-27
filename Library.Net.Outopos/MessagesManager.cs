@@ -36,7 +36,7 @@ namespace Library.Net.Outopos
                     messageManager.StockBlocks.TrimExcess();
                     messageManager.StockProfileMetadatas.TrimExcess();
                     messageManager.StockSignatureMessageMetadatas.TrimExcess();
-                    messageManager.StockWikiPageMetadatas.TrimExcess();
+                    messageManager.StockWikiDocumentMetadatas.TrimExcess();
                     messageManager.StockChatTopicMetadatas.TrimExcess();
                     messageManager.StockChatMessageMetadatas.TrimExcess();
 
@@ -189,7 +189,7 @@ namespace Library.Net.Outopos
         private VolatileHashSet<Key> _stockBlocks;
         private VolatileHashSet<byte[]> _stockProfileMetadatas;
         private VolatileHashSet<byte[]> _stockSignatureMessageMetadatas;
-        private VolatileHashSet<byte[]> _stockWikiPageMetadatas;
+        private VolatileHashSet<byte[]> _stockWikiDocumentMetadatas;
         private VolatileHashSet<byte[]> _stockChatTopicMetadatas;
         private VolatileHashSet<byte[]> _stockChatMessageMetadatas;
 
@@ -225,7 +225,7 @@ namespace Library.Net.Outopos
             _stockBlocks = new VolatileHashSet<Key>(new TimeSpan(1, 0, 0, 0));
             _stockProfileMetadatas = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayEqualityComparer());
             _stockSignatureMessageMetadatas = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayEqualityComparer());
-            _stockWikiPageMetadatas = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayEqualityComparer());
+            _stockWikiDocumentMetadatas = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayEqualityComparer());
             _stockChatTopicMetadatas = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayEqualityComparer());
             _stockChatMessageMetadatas = new VolatileHashSet<byte[]>(new TimeSpan(1, 0, 0), new ByteArrayEqualityComparer());
 
@@ -352,13 +352,13 @@ namespace Library.Net.Outopos
             }
         }
 
-        public VolatileHashSet<byte[]> StockWikiPageMetadatas
+        public VolatileHashSet<byte[]> StockWikiDocumentMetadatas
         {
             get
             {
                 lock (this.ThisLock)
                 {
-                    return _stockWikiPageMetadatas;
+                    return _stockWikiDocumentMetadatas;
                 }
             }
         }

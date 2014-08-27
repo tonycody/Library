@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Library.Security;
 
 namespace Library.Net.Outopos
@@ -413,13 +411,13 @@ namespace Library.Net.Outopos
             }
         }
 
-        private IEnumerable<WikiPage> GetWikiPages(Wiki tag)
+        private IEnumerable<WikiDocument> GetWikiDocuments(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetWikiPages(tag);
+                return _downloadManager.GetWikiDocuments(tag);
             }
         }
 
@@ -477,8 +475,7 @@ namespace Library.Net.Outopos
         }
 
         public void Upload(Wiki tag,
-            HypertextFormatType formatType,
-            string hypertext,
+            IEnumerable<WikiPage> wikiPages,
 
             int miningLimit,
             DigitalSignature digitalSignature)
@@ -487,7 +484,7 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, formatType, hypertext, miningLimit, digitalSignature);
+                _uploadManager.Upload(tag, wikiPages, miningLimit, digitalSignature);
             }
         }
 

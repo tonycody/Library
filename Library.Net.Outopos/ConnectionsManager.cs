@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
-using Library;
 using Library.Collections;
 using Library.Net.Connections;
 using Library.Security;
@@ -1075,26 +1074,26 @@ namespace Library.Net.Outopos
                                 {
                                     var now = DateTime.UtcNow;
 
-                                    var removeWikiPageMetadatas = new HashSet<WikiPageMetadata>();
+                                    var removeWikiDocumentMetadatas = new HashSet<WikiDocumentMetadata>();
 
                                     foreach (var wiki in _settings.MetadataManager.GetMulticastWikis())
                                     {
-                                        // WikiPage
+                                        // WikiDocument
                                         {
-                                            var trustMetadatas = new Dictionary<string, List<WikiPageMetadata>>();
-                                            var untrustMetadatas = new Dictionary<string, List<WikiPageMetadata>>();
+                                            var trustMetadatas = new Dictionary<string, List<WikiDocumentMetadata>>();
+                                            var untrustMetadatas = new Dictionary<string, List<WikiDocumentMetadata>>();
 
-                                            foreach (var metadata in _settings.MetadataManager.GetWikiPageMetadatas(wiki))
+                                            foreach (var metadata in _settings.MetadataManager.GetWikiDocumentMetadatas(wiki))
                                             {
                                                 var signature = metadata.Certificate.ToString();
 
                                                 if (trustSignature.Contains(signature))
                                                 {
-                                                    List<WikiPageMetadata> list;
+                                                    List<WikiDocumentMetadata> list;
 
                                                     if (!trustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<WikiPageMetadata>();
+                                                        list = new List<WikiDocumentMetadata>();
                                                         trustMetadatas[signature] = list;
                                                     }
 
@@ -1102,11 +1101,11 @@ namespace Library.Net.Outopos
                                                 }
                                                 else
                                                 {
-                                                    List<WikiPageMetadata> list;
+                                                    List<WikiDocumentMetadata> list;
 
                                                     if (!untrustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<WikiPageMetadata>();
+                                                        list = new List<WikiDocumentMetadata>();
                                                         untrustMetadatas[signature] = list;
                                                     }
 
@@ -1114,19 +1113,19 @@ namespace Library.Net.Outopos
                                                 }
                                             }
 
-                                            removeWikiPageMetadatas.UnionWith(untrustMetadatas.Randomize().Skip(32).SelectMany(n => n.Value));
+                                            removeWikiDocumentMetadatas.UnionWith(untrustMetadatas.Randomize().Skip(32).SelectMany(n => n.Value));
 
                                             foreach (var list in CollectionUtilities.Unite(trustMetadatas.Values, untrustMetadatas.Values))
                                             {
                                                 if (list.Count <= 32) continue;
 
                                                 list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeWikiPageMetadatas.UnionWith(list.Take(list.Count - 32));
+                                                removeWikiDocumentMetadatas.UnionWith(list.Take(list.Count - 32));
                                             }
                                         }
                                     }
 
-                                    foreach (var metadata in removeWikiPageMetadatas)
+                                    foreach (var metadata in removeWikiDocumentMetadatas)
                                     {
                                         _settings.MetadataManager.RemoveMetadata(metadata);
                                     }
@@ -2691,24 +2690,24 @@ namespace Library.Net.Outopos
                                 var wikis = messageManager.PullMulticastWikisRequest.ToArray();
                                 var chats = messageManager.PullMulticastChatsRequest.ToArray();
 
-                                var wikiPageMetadatas = new List<WikiPageMetadata>();
+                                var wikiDocumentMetadatas = new List<WikiDocumentMetadata>();
                                 var chatTopicMetadatas = new List<ChatTopicMetadata>();
                                 var chatMessageMetadatas = new List<ChatMessageMetadata>();
 
                                 _random.Shuffle(wikis);
                                 foreach (var tag in wikis)
                                 {
-                                    foreach (var metadata in _settings.MetadataManager.GetWikiPageMetadatas(tag))
+                                    foreach (var metadata in _settings.MetadataManager.GetWikiDocumentMetadatas(tag))
                                     {
-                                        if (!messageManager.StockWikiPageMetadatas.Contains(metadata.CreateHash(_hashAlgorithm)))
+                                        if (!messageManager.StockWikiDocumentMetadatas.Contains(metadata.CreateHash(_hashAlgorithm)))
                                         {
-                                            wikiPageMetadatas.Add(metadata);
+                                            wikiDocumentMetadatas.Add(metadata);
 
-                                            if (wikiPageMetadatas.Count >= _maxMetadataCount) break;
+                                            if (wikiDocumentMetadatas.Count >= _maxMetadataCount) break;
                                         }
                                     }
 
-                                    if (wikiPageMetadatas.Count >= _maxMetadataCount) break;
+                                    if (wikiDocumentMetadatas.Count >= _maxMetadataCount) break;
                                 }
 
                                 _random.Shuffle(chats);
@@ -2738,26 +2737,26 @@ namespace Library.Net.Outopos
                                     if (chatMessageMetadatas.Count >= _maxMetadataCount) break;
                                 }
 
-                                if (wikiPageMetadatas.Count > 0
+                                if (wikiDocumentMetadatas.Count > 0
                                     || chatTopicMetadatas.Count > 0
                                     || chatMessageMetadatas.Count > 0)
                                 {
                                     connectionManager.PushMulticastMetadatas(
-                                        wikiPageMetadatas,
+                                        wikiDocumentMetadatas,
                                         chatTopicMetadatas,
                                         chatMessageMetadatas);
 
                                     var metadataCount =
-                                        wikiPageMetadatas.Count
+                                        wikiDocumentMetadatas.Count
                                         + chatTopicMetadatas.Count
                                         + chatMessageMetadatas.Count;
 
                                     Debug.WriteLine(string.Format("ConnectionManager: Push MulticastMetadatas ({0})", metadataCount));
                                     _pushMetadataCount.Add(metadataCount);
 
-                                    foreach (var metadata in wikiPageMetadatas)
+                                    foreach (var metadata in wikiDocumentMetadatas)
                                     {
-                                        messageManager.StockWikiPageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
+                                        messageManager.StockWikiDocumentMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
                                     }
 
                                     foreach (var metadata in chatTopicMetadatas)
@@ -3028,20 +3027,20 @@ namespace Library.Net.Outopos
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.StockWikiPageMetadatas.Count > _maxMetadataCount * messageManager.StockWikiPageMetadatas.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockWikiDocumentMetadatas.Count > _maxMetadataCount * messageManager.StockWikiDocumentMetadatas.SurvivalTime.TotalMinutes) return;
             if (messageManager.StockChatTopicMetadatas.Count > _maxMetadataCount * messageManager.StockChatTopicMetadatas.SurvivalTime.TotalMinutes) return;
             if (messageManager.StockChatMessageMetadatas.Count > _maxMetadataCount * messageManager.StockChatMessageMetadatas.SurvivalTime.TotalMinutes) return;
 
             Debug.WriteLine(string.Format("ConnectionManager: Pull MulticastMetadatas ({0})",
-                e.WikiPageMetadatas.Count()
+                e.WikiDocumentMetadatas.Count()
                 + e.ChatTopicMetadatas.Count()
                 + e.ChatMessageMetadatas.Count()));
 
-            foreach (var metadata in e.WikiPageMetadatas.Take(_maxMetadataCount))
+            foreach (var metadata in e.WikiDocumentMetadatas.Take(_maxMetadataCount))
             {
                 if (_settings.MetadataManager.SetMetadata(metadata))
                 {
-                    messageManager.StockWikiPageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
+                    messageManager.StockWikiDocumentMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
 
                     _multicastWikiLastAccessTimes[metadata.Tag] = DateTime.UtcNow;
                 }
@@ -3218,7 +3217,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public IEnumerable<WikiPageMetadata> GetWikiPageMetadatas(Wiki tag)
+        public IEnumerable<WikiDocumentMetadata> GetWikiDocumentMetadatas(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3226,7 +3225,7 @@ namespace Library.Net.Outopos
             {
                 _pushMulticastWikisRequestList.Add(tag);
 
-                return _settings.MetadataManager.GetWikiPageMetadatas(tag);
+                return _settings.MetadataManager.GetWikiDocumentMetadatas(tag);
             }
         }
 
@@ -3274,7 +3273,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void Upload(WikiPageMetadata metadata)
+        public void Upload(WikiDocumentMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3470,7 +3469,7 @@ namespace Library.Net.Outopos
                     new Library.Configuration.SettingContent<LockedHashSet<string>>() { Name = "TrustSignatures", Value = new LockedHashSet<string>() },
                     new Library.Configuration.SettingContent<List<ProfileMetadata>>() { Name = "ProfileMetadatas", Value = new List<ProfileMetadata>() },
                     new Library.Configuration.SettingContent<List<SignatureMessageMetadata>>() { Name = "SignatureMessageMetadatas", Value = new List<SignatureMessageMetadata>() },
-                    new Library.Configuration.SettingContent<List<WikiPageMetadata>>() { Name = "WikiPageMetadatas", Value = new List<WikiPageMetadata>() },
+                    new Library.Configuration.SettingContent<List<WikiDocumentMetadata>>() { Name = "WikiDocumentMetadatas", Value = new List<WikiDocumentMetadata>() },
                     new Library.Configuration.SettingContent<List<ChatTopicMetadata>>() { Name = "ChatTopicMetadatas", Value = new List<ChatTopicMetadata>() },
                     new Library.Configuration.SettingContent<List<ChatMessageMetadata>>() { Name = "ChatMessageMetadatas", Value = new List<ChatMessageMetadata>() },
                 })
@@ -3494,7 +3493,7 @@ namespace Library.Net.Outopos
                         _metadataManager.SetMetadata(metadata);
                     }
 
-                    foreach (var metadata in this.WikiPageMetadatas)
+                    foreach (var metadata in this.WikiDocumentMetadatas)
                     {
                         _metadataManager.SetMetadata(metadata);
                     }
@@ -3511,7 +3510,7 @@ namespace Library.Net.Outopos
 
                     this.ProfileMetadatas.Clear();
                     this.SignatureMessageMetadatas.Clear();
-                    this.WikiPageMetadatas.Clear();
+                    this.WikiDocumentMetadatas.Clear();
                     this.ChatTopicMetadatas.Clear();
                     this.ChatMessageMetadatas.Clear();
                 }
@@ -3523,7 +3522,7 @@ namespace Library.Net.Outopos
                 {
                     this.ProfileMetadatas.AddRange(_metadataManager.GetProfileMetadatas());
                     this.SignatureMessageMetadatas.AddRange(_metadataManager.GetSignatureMessageMetadatas());
-                    this.WikiPageMetadatas.AddRange(_metadataManager.GetWikiPageMetadatas());
+                    this.WikiDocumentMetadatas.AddRange(_metadataManager.GetWikiDocumentMetadatas());
                     this.ChatTopicMetadatas.AddRange(_metadataManager.GetChatTopicMetadatas());
                     this.ChatMessageMetadatas.AddRange(_metadataManager.GetChatMessageMetadatas());
 
@@ -3531,7 +3530,7 @@ namespace Library.Net.Outopos
 
                     this.ProfileMetadatas.Clear();
                     this.SignatureMessageMetadatas.Clear();
-                    this.WikiPageMetadatas.Clear();
+                    this.WikiDocumentMetadatas.Clear();
                     this.ChatTopicMetadatas.Clear();
                     this.ChatMessageMetadatas.Clear();
                 }
@@ -3662,11 +3661,11 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private List<WikiPageMetadata> WikiPageMetadatas
+            private List<WikiDocumentMetadata> WikiDocumentMetadatas
             {
                 get
                 {
-                    return (List<WikiPageMetadata>)this["WikiPageMetadatas"];
+                    return (List<WikiDocumentMetadata>)this["WikiDocumentMetadatas"];
                 }
             }
 
@@ -3691,7 +3690,7 @@ namespace Library.Net.Outopos
         {
             private Dictionary<string, ProfileMetadata> _profileMetadatas = new Dictionary<string, ProfileMetadata>();
             private Dictionary<string, HashSet<SignatureMessageMetadata>> _signatureMessageMetadatas = new Dictionary<string, HashSet<SignatureMessageMetadata>>();
-            private Dictionary<Wiki, Dictionary<string, HashSet<WikiPageMetadata>>> _wikiPageMetadatas = new Dictionary<Wiki, Dictionary<string, HashSet<WikiPageMetadata>>>();
+            private Dictionary<Wiki, Dictionary<string, HashSet<WikiDocumentMetadata>>> _wikiDocumentMetadatas = new Dictionary<Wiki, Dictionary<string, HashSet<WikiDocumentMetadata>>>();
             private Dictionary<Chat, Dictionary<string, ChatTopicMetadata>> _chatTopicMetadatas = new Dictionary<Chat, Dictionary<string, ChatTopicMetadata>>();
             private Dictionary<Chat, Dictionary<string, HashSet<ChatMessageMetadata>>> _chatMessageMetadatas = new Dictionary<Chat, Dictionary<string, HashSet<ChatMessageMetadata>>>();
 
@@ -3712,7 +3711,7 @@ namespace Library.Net.Outopos
 
                         count += _profileMetadatas.Count;
                         count += _signatureMessageMetadatas.Values.Sum(n => n.Count);
-                        count += _wikiPageMetadatas.Values.Sum(n => n.Values.Sum(m => m.Count));
+                        count += _wikiDocumentMetadatas.Values.Sum(n => n.Values.Sum(m => m.Count));
                         count += _chatTopicMetadatas.Values.Sum(n => n.Values.Count);
                         count += _chatMessageMetadatas.Values.Sum(n => n.Values.Sum(m => m.Count));
 
@@ -3751,7 +3750,7 @@ namespace Library.Net.Outopos
                 {
                     var hashset = new HashSet<Wiki>();
 
-                    hashset.UnionWith(_wikiPageMetadatas.Keys);
+                    hashset.UnionWith(_wikiDocumentMetadatas.Keys);
 
                     return hashset;
                 }
@@ -3798,7 +3797,7 @@ namespace Library.Net.Outopos
                 {
                     foreach (var wiki in tags)
                     {
-                        _wikiPageMetadatas.Remove(wiki);
+                        _wikiDocumentMetadatas.Remove(wiki);
                     }
                 }
             }
@@ -3861,26 +3860,26 @@ namespace Library.Net.Outopos
                 }
             }
 
-            public IEnumerable<WikiPageMetadata> GetWikiPageMetadatas()
+            public IEnumerable<WikiDocumentMetadata> GetWikiDocumentMetadatas()
             {
                 lock (_thisLock)
                 {
-                    return _wikiPageMetadatas.Values.SelectMany(n => n.Values.Extract()).ToArray();
+                    return _wikiDocumentMetadatas.Values.SelectMany(n => n.Values.Extract()).ToArray();
                 }
             }
 
-            public IEnumerable<WikiPageMetadata> GetWikiPageMetadatas(Wiki tag)
+            public IEnumerable<WikiDocumentMetadata> GetWikiDocumentMetadatas(Wiki tag)
             {
                 lock (_thisLock)
                 {
-                    Dictionary<string, HashSet<WikiPageMetadata>> dic = null;
+                    Dictionary<string, HashSet<WikiDocumentMetadata>> dic = null;
 
-                    if (_wikiPageMetadatas.TryGetValue(tag, out dic))
+                    if (_wikiDocumentMetadatas.TryGetValue(tag, out dic))
                     {
                         return dic.Values.Extract().ToArray();
                     }
 
-                    return new WikiPageMetadata[0];
+                    return new WikiDocumentMetadata[0];
                 }
             }
 
@@ -3986,7 +3985,7 @@ namespace Library.Net.Outopos
                 }
             }
 
-            public bool SetMetadata(WikiPageMetadata metadata)
+            public bool SetMetadata(WikiDocumentMetadata metadata)
             {
                 lock (_thisLock)
                 {
@@ -4001,19 +4000,19 @@ namespace Library.Net.Outopos
 
                     var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, HashSet<WikiPageMetadata>> dic;
+                    Dictionary<string, HashSet<WikiDocumentMetadata>> dic;
 
-                    if (!_wikiPageMetadatas.TryGetValue(metadata.Tag, out dic))
+                    if (!_wikiDocumentMetadatas.TryGetValue(metadata.Tag, out dic))
                     {
-                        dic = new Dictionary<string, HashSet<WikiPageMetadata>>();
-                        _wikiPageMetadatas[metadata.Tag] = dic;
+                        dic = new Dictionary<string, HashSet<WikiDocumentMetadata>>();
+                        _wikiDocumentMetadatas[metadata.Tag] = dic;
                     }
 
-                    HashSet<WikiPageMetadata> hashset;
+                    HashSet<WikiDocumentMetadata> hashset;
 
                     if (!dic.TryGetValue(signature, out hashset))
                     {
-                        hashset = new HashSet<WikiPageMetadata>();
+                        hashset = new HashSet<WikiDocumentMetadata>();
                         dic[signature] = hashset;
                     }
 
@@ -4146,7 +4145,7 @@ namespace Library.Net.Outopos
                 }
             }
 
-            public void RemoveMetadata(WikiPageMetadata metadata)
+            public void RemoveMetadata(WikiDocumentMetadata metadata)
             {
                 lock (_thisLock)
                 {
@@ -4161,10 +4160,10 @@ namespace Library.Net.Outopos
 
                     var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, HashSet<WikiPageMetadata>> dic;
-                    if (!_wikiPageMetadatas.TryGetValue(metadata.Tag, out dic)) return;
+                    Dictionary<string, HashSet<WikiDocumentMetadata>> dic;
+                    if (!_wikiDocumentMetadatas.TryGetValue(metadata.Tag, out dic)) return;
 
-                    HashSet<WikiPageMetadata> hashset;
+                    HashSet<WikiDocumentMetadata> hashset;
                     if (!dic.TryGetValue(signature, out hashset)) return;
 
                     hashset.Remove(metadata);
@@ -4175,7 +4174,7 @@ namespace Library.Net.Outopos
 
                         if (dic.Count == 0)
                         {
-                            _wikiPageMetadatas.Remove(metadata.Tag);
+                            _wikiDocumentMetadatas.Remove(metadata.Tag);
                         }
                     }
                 }

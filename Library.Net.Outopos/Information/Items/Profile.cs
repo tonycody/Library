@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Text;
 using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "Profile", Namespace = "http://Library/Net/Outopos")]
-    public sealed class Profile : ImmutableCertificateItemBase<Profile>, IProfile
+    public sealed class Profile : ImmutableCertificateItemBase<Profile>, IBroadcastHeader
     {
         private enum SerializeId : byte
         {

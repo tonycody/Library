@@ -1,42 +1,40 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Text;
 using Library.Io;
-using System.Collections.ObjectModel;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "WikiPage", Namespace = "http://Library/Net/Outopos")]
-    public sealed class WikiPage : ImmutableCertificateItemBase<WikiPage>, IWikiPage
+    [DataContract(Name = "WikiDocument", Namespace = "http://Library/Net/Outopos")]
+    public sealed class WikiDocument : ImmutableCertificateItemBase<WikiDocument>, IMulticastHeader<Wiki>
     {
         private enum SerializeId : byte
         {
             Tag = 0,
             CreationTime = 1,
-            FormatType = 2,
-            Hypertext = 3,
+            WikiPage = 2,
+
+            Certificate = 3,
         }
 
         private Wiki _tag;
         private DateTime _creationTime;
-        private HypertextFormatType _formatType;
-        private string _hypertext;
+        private WikiPageCollection _wikiPages;
 
         private Certificate _certificate;
 
         private volatile object _thisLock;
 
-        public static readonly int MaxHypertextLength = 1024 * 32;
+        public static readonly int MaxWikiPageCount = 256;
 
-        public WikiPage(Wiki tag, DateTime creationTime, HypertextFormatType formatType, string hypertext)
+        public WikiDocument(Wiki tag, DateTime creationTime, IEnumerable<WikiPage> wikiPages)
         {
             this.Tag = tag;
             this.CreationTime = creationTime;
-            this.FormatType = formatType;
-            this.Hypertext = hypertext;
+            if (wikiPages != null) this.ProtectedWikiPages.AddRange(wikiPages);
         }
 
         protected override void Initialize()
@@ -64,13 +62,14 @@ namespace Library.Net.Outopos
                     {
                         this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                     }
-                    else if (id == (byte)SerializeId.FormatType)
+                    else if (id == (byte)SerializeId.WikiPage)
                     {
-                        this.FormatType = (HypertextFormatType)Enum.Parse(typeof(HypertextFormatType), ItemUtilities.GetString(rangeStream));
+                        this.ProtectedWikiPages.Add(WikiPage.Import(rangeStream, bufferManager));
                     }
-                    else if (id == (byte)SerializeId.Hypertext)
+
+                    else if (id == (byte)SerializeId.Certificate)
                     {
-                        this.Hypertext = ItemUtilities.GetString(rangeStream);
+                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
                     }
                 }
             }
@@ -93,15 +92,22 @@ namespace Library.Net.Outopos
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
             }
-            // FormatType
-            if (this.FormatType != 0)
+            // WikiPages
+            foreach (var value in this.WikiPages)
             {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.FormatType, this.FormatType.ToString());
+                using (var stream = value.Export(bufferManager))
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiPage, stream);
+                }
             }
-            // Hypertext
-            if (this.Hypertext != null)
+
+            // Certificate
+            if (this.Certificate != null)
             {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.Hypertext, this.Hypertext);
+                using (var stream = this.Certificate.Export(bufferManager))
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                }
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -110,28 +116,31 @@ namespace Library.Net.Outopos
 
         public override int GetHashCode()
         {
-            if (this.Hypertext == null) return 0;
-            else return this.Hypertext.GetHashCode();
+            return this.CreationTime.GetHashCode();
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is WikiPage)) return false;
+            if ((object)obj == null || !(obj is WikiDocument)) return false;
 
-            return this.Equals((WikiPage)obj);
+            return this.Equals((WikiDocument)obj);
         }
 
-        public override bool Equals(WikiPage other)
+        public override bool Equals(WikiDocument other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
             if (this.Tag != other.Tag
                 || this.CreationTime != other.CreationTime
-                || this.FormatType != other.FormatType
-                || this.Hypertext != other.Hypertext)
+                || (this.WikiPages == null) != (other.WikiPages == null))
             {
                 return false;
+            }
+
+            if (this.WikiPages != null && other.WikiPages != null)
+            {
+                if (!CollectionUtilities.Equals(this.WikiPages, other.WikiPages)) return false;
             }
 
             return true;
@@ -165,7 +174,7 @@ namespace Library.Net.Outopos
                     using (var stream = this.Export(BufferManager.Instance))
                     {
                         stream.Seek(0, SeekOrigin.End);
-                        ItemUtilities.Write(stream, byte.MaxValue, "WikiPage");
+                        ItemUtilities.Write(stream, byte.MaxValue, "WikiDocument");
                         stream.Seek(0, SeekOrigin.Begin);
 
                         return this.Export(BufferManager.Instance);
@@ -235,54 +244,33 @@ namespace Library.Net.Outopos
             }
         }
 
-        [DataMember(Name = "FormatType")]
-        public HypertextFormatType FormatType
+        private volatile ReadOnlyCollection<WikiPage> _readOnlyWikiPages;
+
+        public IEnumerable<WikiPage> WikiPages
         {
             get
             {
                 lock (_thisLock)
                 {
-                    return _formatType;
-                }
-            }
-            set
-            {
-                lock (_thisLock)
-                {
-                    if (!Enum.IsDefined(typeof(HypertextFormatType), value))
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _formatType = value;
-                    }
+                    if (_readOnlyWikiPages == null)
+                        _readOnlyWikiPages = new ReadOnlyCollection<WikiPage>(this.ProtectedWikiPages.ToArray());
+
+                    return _readOnlyWikiPages;
                 }
             }
         }
 
-        [DataMember(Name = "Hypertext")]
-        public string Hypertext
+        [DataMember(Name = "WikiPages")]
+        private WikiPageCollection ProtectedWikiPages
         {
             get
             {
                 lock (_thisLock)
                 {
-                    return _hypertext;
-                }
-            }
-            private set
-            {
-                lock (_thisLock)
-                {
-                    if (value != null && value.Length > WikiPage.MaxHypertextLength)
-                    {
-                        throw new ArgumentException();
-                    }
-                    else
-                    {
-                        _hypertext = value;
-                    }
+                    if (_wikiPages == null)
+                        _wikiPages = new WikiPageCollection(WikiDocument.MaxWikiPageCount);
+
+                    return _wikiPages;
                 }
             }
         }

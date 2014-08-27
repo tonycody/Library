@@ -150,7 +150,7 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_Header()
+        public void Test_Metadata()
         {
             foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
             {
@@ -160,40 +160,40 @@ namespace Library.UnitTest
                 var tag = new Chat("oooo", new byte[64]);
                 var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                 var digitalSignature = new DigitalSignature("123", a);
-                var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+                var metadata = new ChatMessageMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
-                ChatMessageHeader header2;
+                ChatMessageMetadata metadata2;
                 {
-                    var ds = new DataContractSerializer(typeof(ChatMessageHeader));
+                    var ds = new DataContractSerializer(typeof(ChatMessageMetadata));
 
                     using (BufferStream stream = new BufferStream(BufferManager.Instance))
                     {
                         using (WrapperStream wrapperStream = new WrapperStream(stream, true))
                         using (XmlDictionaryWriter xmlDictionaryWriter = XmlDictionaryWriter.CreateBinaryWriter(wrapperStream))
                         {
-                            ds.WriteObject(xmlDictionaryWriter, header);
+                            ds.WriteObject(xmlDictionaryWriter, metadata);
                         }
 
                         stream.Position = 0;
 
                         using (XmlDictionaryReader xmlDictionaryReader = XmlDictionaryReader.CreateBinaryReader(stream, XmlDictionaryReaderQuotas.Max))
                         {
-                            header2 = (ChatMessageHeader)ds.ReadObject(xmlDictionaryReader);
+                            metadata2 = (ChatMessageMetadata)ds.ReadObject(xmlDictionaryReader);
                         }
                     }
                 }
 
-                Assert.AreEqual(header, header2, "Header #1");
+                Assert.AreEqual(metadata, metadata2, "Metadata #1");
 
-                ChatMessageHeader header3;
+                ChatMessageMetadata metadata3;
 
-                using (var headerStream = header.Export(_bufferManager))
+                using (var metadataStream = metadata.Export(_bufferManager))
                 {
-                    header3 = ChatMessageHeader.Import(headerStream, _bufferManager);
+                    metadata3 = ChatMessageMetadata.Import(metadataStream, _bufferManager);
                 }
 
-                Assert.AreEqual(header, header3, "Header #2");
-                Assert.IsTrue(header3.VerifyCertificate(), "Header #3");
+                Assert.AreEqual(metadata, metadata3, "Metadata #2");
+                Assert.IsTrue(metadata3.VerifyCertificate(), "Metadata #3");
             }
         }
 
@@ -490,12 +490,12 @@ namespace Library.UnitTest
                 connectionManagers.Randomize();
 
                 {
-                    var queue = new WaitQueue<PullBroadcastHeadersRequestEventArgs>();
+                    var queue = new WaitQueue<PullBroadcastMetadatasRequestEventArgs>();
 
                     var receiverConnection = connectionManagers[0];
                     var senderConnection = connectionManagers[1];
 
-                    receiverConnection.PullBroadcastHeadersRequestEvent += (object sender, PullBroadcastHeadersRequestEventArgs e) =>
+                    receiverConnection.PullBroadcastMetadatasRequestEvent += (object sender, PullBroadcastMetadatasRequestEventArgs e) =>
                     {
                         queue.Enqueue(e);
                     };
@@ -509,7 +509,7 @@ namespace Library.UnitTest
                         signatures.Add(digitalSignature.ToString());
                     }
 
-                    senderConnection.PushBroadcastHeadersRequest(signatures);
+                    senderConnection.PushBroadcastMetadatasRequest(signatures);
 
                     var item = queue.Dequeue();
                     Assert.IsTrue(CollectionUtilities.Equals(signatures, item.Signatures), "ConnectionManager #5.1");
@@ -518,19 +518,19 @@ namespace Library.UnitTest
                 connectionManagers.Randomize();
 
                 {
-                    var queue = new WaitQueue<PullBroadcastHeadersEventArgs>();
+                    var queue = new WaitQueue<PullBroadcastMetadatasEventArgs>();
 
                     var receiverConnection = connectionManagers[0];
                     var senderConnection = connectionManagers[1];
 
-                    receiverConnection.PullBroadcastHeadersEvent += (object sender, PullBroadcastHeadersEventArgs e) =>
+                    receiverConnection.PullBroadcastMetadatasEvent += (object sender, PullBroadcastMetadatasEventArgs e) =>
                     {
                         queue.Enqueue(e);
                     };
 
                     var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
 
-                    var headers1 = new List<ProfileHeader>();
+                    var metadatas1 = new List<ProfileMetadata>();
 
                     for (int j = 0; j < 4; j++)
                     {
@@ -538,26 +538,26 @@ namespace Library.UnitTest
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
-                        var header = new ProfileHeader(DateTime.UtcNow, key, miner, digitalSignature);
+                        var metadata = new ProfileMetadata(DateTime.UtcNow, key, miner, digitalSignature);
 
-                        headers1.Add(header);
+                        metadatas1.Add(metadata);
                     }
 
-                    senderConnection.PushBroadcastHeaders(headers1);
+                    senderConnection.PushBroadcastMetadatas(metadatas1);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(CollectionUtilities.Equals(headers1, item.ProfileHeaders), "ConnectionManager #6.1");
+                    Assert.IsTrue(CollectionUtilities.Equals(metadatas1, item.ProfileMetadatas), "ConnectionManager #6.1");
                 }
 
                 connectionManagers.Randomize();
 
                 {
-                    var queue = new WaitQueue<PullUnicastHeadersRequestEventArgs>();
+                    var queue = new WaitQueue<PullUnicastMetadatasRequestEventArgs>();
 
                     var receiverConnection = connectionManagers[0];
                     var senderConnection = connectionManagers[1];
 
-                    receiverConnection.PullUnicastHeadersRequestEvent += (object sender, PullUnicastHeadersRequestEventArgs e) =>
+                    receiverConnection.PullUnicastMetadatasRequestEvent += (object sender, PullUnicastMetadatasRequestEventArgs e) =>
                     {
                         queue.Enqueue(e);
                     };
@@ -571,7 +571,7 @@ namespace Library.UnitTest
                         signatures.Add(digitalSignature.ToString());
                     }
 
-                    senderConnection.PushUnicastHeadersRequest(signatures);
+                    senderConnection.PushUnicastMetadatasRequest(signatures);
 
                     var item = queue.Dequeue();
                     Assert.IsTrue(CollectionUtilities.Equals(signatures, item.Signatures), "ConnectionManager #7.1");
@@ -580,19 +580,19 @@ namespace Library.UnitTest
                 connectionManagers.Randomize();
 
                 {
-                    var queue = new WaitQueue<PullUnicastHeadersEventArgs>();
+                    var queue = new WaitQueue<PullUnicastMetadatasEventArgs>();
 
                     var receiverConnection = connectionManagers[0];
                     var senderConnection = connectionManagers[1];
 
-                    receiverConnection.PullUnicastHeadersEvent += (object sender, PullUnicastHeadersEventArgs e) =>
+                    receiverConnection.PullUnicastMetadatasEvent += (object sender, PullUnicastMetadatasEventArgs e) =>
                     {
                         queue.Enqueue(e);
                     };
 
                     var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
 
-                    var headers1 = new List<SignatureMessageHeader>();
+                    var metadatas1 = new List<SignatureMessageMetadata>();
 
                     for (int j = 0; j < 4; j++)
                     {
@@ -600,26 +600,26 @@ namespace Library.UnitTest
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
-                        var header = new SignatureMessageHeader(digitalSignature.ToString(), DateTime.UtcNow, key, miner, digitalSignature);
+                        var metadata = new SignatureMessageMetadata(digitalSignature.ToString(), DateTime.UtcNow, key, miner, digitalSignature);
 
-                        headers1.Add(header);
+                        metadatas1.Add(metadata);
                     }
 
-                    senderConnection.PushUnicastHeaders(headers1);
+                    senderConnection.PushUnicastMetadatas(metadatas1);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(CollectionUtilities.Equals(headers1, item.SignatureMessageHeaders), "ConnectionManager #8.1");
+                    Assert.IsTrue(CollectionUtilities.Equals(metadatas1, item.SignatureMessageMetadatas), "ConnectionManager #8.1");
                 }
 
                 connectionManagers.Randomize();
 
                 {
-                    var queue = new WaitQueue<PullMulticastHeadersRequestEventArgs>();
+                    var queue = new WaitQueue<PullMulticastMetadatasRequestEventArgs>();
 
                     var receiverConnection = connectionManagers[0];
                     var senderConnection = connectionManagers[1];
 
-                    receiverConnection.PullMulticastHeadersRequestEvent += (object sender, PullMulticastHeadersRequestEventArgs e) =>
+                    receiverConnection.PullMulticastMetadatasRequestEvent += (object sender, PullMulticastMetadatasRequestEventArgs e) =>
                     {
                         queue.Enqueue(e);
                     };
@@ -645,7 +645,7 @@ namespace Library.UnitTest
                         chats.Add(new Chat(RandomString.GetValue(256), id));
                     }
 
-                    senderConnection.PushMulticastHeadersRequest(wikis, chats);
+                    senderConnection.PushMulticastMetadatasRequest(wikis, chats);
 
                     var item = queue.Dequeue();
                     Assert.IsTrue(CollectionUtilities.Equals(wikis, item.Wikis), "ConnectionManager #9.1");
@@ -655,21 +655,21 @@ namespace Library.UnitTest
                 connectionManagers.Randomize();
 
                 {
-                    var queue = new WaitQueue<PullMulticastHeadersEventArgs>();
+                    var queue = new WaitQueue<PullMulticastMetadatasEventArgs>();
 
                     var receiverConnection = connectionManagers[0];
                     var senderConnection = connectionManagers[1];
 
-                    receiverConnection.PullMulticastHeadersEvent += (object sender, PullMulticastHeadersEventArgs e) =>
+                    receiverConnection.PullMulticastMetadatasEvent += (object sender, PullMulticastMetadatasEventArgs e) =>
                     {
                         queue.Enqueue(e);
                     };
 
                     var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
 
-                    var headers1 = new List<WikiPageHeader>();
-                    var headers2 = new List<ChatTopicHeader>();
-                    var headers3 = new List<ChatMessageHeader>();
+                    var metadatas1 = new List<WikiDocumentMetadata>();
+                    var metadatas2 = new List<ChatTopicMetadata>();
+                    var metadatas3 = new List<ChatMessageMetadata>();
 
                     for (int j = 0; j < 4; j++)
                     {
@@ -678,9 +678,9 @@ namespace Library.UnitTest
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var tag = new Wiki("oooo", new byte[64]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
-                        var header = new WikiPageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+                        var metadata = new WikiDocumentMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
-                        headers1.Add(header);
+                        metadatas1.Add(metadata);
                     }
 
                     for (int j = 0; j < 4; j++)
@@ -690,9 +690,9 @@ namespace Library.UnitTest
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var tag = new Chat("oooo", new byte[64]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
-                        var header = new ChatTopicHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+                        var metadata = new ChatTopicMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
-                        headers2.Add(header);
+                        metadatas2.Add(metadata);
                     }
 
                     for (int j = 0; j < 4; j++)
@@ -702,17 +702,17 @@ namespace Library.UnitTest
                         var key = new Key(id, HashAlgorithm.Sha512);
                         var tag = new Chat("oooo", new byte[64]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
-                        var header = new ChatMessageHeader(tag, DateTime.UtcNow, key, miner, digitalSignature);
+                        var metadata = new ChatMessageMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
-                        headers3.Add(header);
+                        metadatas3.Add(metadata);
                     }
 
-                    senderConnection.PushMulticastHeaders(headers1, headers2, headers3);
+                    senderConnection.PushMulticastMetadatas(metadatas1, metadatas2, metadatas3);
 
                     var item = queue.Dequeue();
-                    Assert.IsTrue(CollectionUtilities.Equals(headers1, item.WikiPageHeaders), "ConnectionManager #10.1");
-                    Assert.IsTrue(CollectionUtilities.Equals(headers2, item.ChatTopicHeaders), "ConnectionManager #10.2");
-                    Assert.IsTrue(CollectionUtilities.Equals(headers3, item.ChatMessageHeaders), "ConnectionManager #10.3");
+                    Assert.IsTrue(CollectionUtilities.Equals(metadatas1, item.WikiDocumentMetadatas), "ConnectionManager #10.1");
+                    Assert.IsTrue(CollectionUtilities.Equals(metadatas2, item.ChatTopicMetadatas), "ConnectionManager #10.2");
+                    Assert.IsTrue(CollectionUtilities.Equals(metadatas3, item.ChatMessageMetadatas), "ConnectionManager #10.3");
                 }
 
                 foreach (var connectionManager in connectionManagers)

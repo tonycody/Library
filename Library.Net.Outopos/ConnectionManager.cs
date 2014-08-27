@@ -64,7 +64,7 @@ namespace Library.Net.Outopos
 
     class PullMulticastMetadatasEventArgs : EventArgs
     {
-        public IEnumerable<WikiPageMetadata> WikiPageMetadatas { get; set; }
+        public IEnumerable<WikiDocumentMetadata> WikiDocumentMetadatas { get; set; }
         public IEnumerable<ChatTopicMetadata> ChatTopicMetadatas { get; set; }
         public IEnumerable<ChatMessageMetadata> ChatMessageMetadatas { get; set; }
     }
@@ -656,7 +656,7 @@ namespace Library.Net.Outopos
 
                                         this.OnPullMulticastMetadatas(new PullMulticastMetadatasEventArgs()
                                         {
-                                            WikiPageMetadatas = message.WikiPageMetadatas,
+                                            WikiDocumentMetadatas = message.WikiDocumentMetadatas,
                                             ChatTopicMetadatas = message.ChatTopicMetadatas,
                                             ChatMessageMetadatas = message.ChatMessageMetadatas,
                                         });
@@ -1134,7 +1134,7 @@ namespace Library.Net.Outopos
         }
 
         public void PushMulticastMetadatas(
-            IEnumerable<WikiPageMetadata> wikiPageMetadatas,
+            IEnumerable<WikiDocumentMetadata> wikiDocumentMetadatas,
             IEnumerable<ChatTopicMetadata> chatTopicMetadatas,
             IEnumerable<ChatMessageMetadata> chatMessageMetadatas)
         {
@@ -1150,7 +1150,7 @@ namespace Library.Net.Outopos
                     stream.Flush();
 
                     var message = new MulticastMetadatasMessage(
-                        wikiPageMetadatas,
+                        wikiDocumentMetadatas,
                         chatTopicMetadatas,
                         chatMessageMetadatas);
 
@@ -2096,21 +2096,21 @@ namespace Library.Net.Outopos
         {
             private enum SerializeId : byte
             {
-                WikiPageMetadata = 0,
+                WikiDocumentMetadata = 0,
                 ChatTopicMetadata = 1,
                 ChatMessageMetadata = 2,
             }
 
-            private LockedList<WikiPageMetadata> _wikiPageMetadatas;
+            private LockedList<WikiDocumentMetadata> _wikiDocumentMetadatas;
             private LockedList<ChatTopicMetadata> _chatTopicMetadatas;
             private LockedList<ChatMessageMetadata> _chatMessageMetadatas;
 
             public MulticastMetadatasMessage(
-                IEnumerable<WikiPageMetadata> wikiPageMetadatas,
+                IEnumerable<WikiDocumentMetadata> wikiDocumentMetadatas,
                 IEnumerable<ChatTopicMetadata> chatTopicMetadatas,
                 IEnumerable<ChatMessageMetadata> chatMessageMetadatas)
             {
-                if (wikiPageMetadatas != null) this.ProtectedWikiPageMetadatas.AddRange(wikiPageMetadatas);
+                if (wikiDocumentMetadatas != null) this.ProtectedWikiDocumentMetadatas.AddRange(wikiDocumentMetadatas);
                 if (chatTopicMetadatas != null) this.ProtectedChatTopicMetadatas.AddRange(chatTopicMetadatas);
                 if (chatMessageMetadatas != null) this.ProtectedChatMessageMetadatas.AddRange(chatMessageMetadatas);
             }
@@ -2132,9 +2132,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.WikiPageMetadata)
+                        if (id == (byte)SerializeId.WikiDocumentMetadata)
                         {
-                            this.ProtectedWikiPageMetadatas.Add(WikiPageMetadata.Import(rangeStream, bufferManager));
+                            this.ProtectedWikiDocumentMetadatas.Add(WikiDocumentMetadata.Import(rangeStream, bufferManager));
                         }
                         else if (id == (byte)SerializeId.ChatTopicMetadata)
                         {
@@ -2152,12 +2152,12 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // WikiPageMetadatas
-                foreach (var value in this.WikiPageMetadatas)
+                // WikiDocumentMetadatas
+                foreach (var value in this.WikiDocumentMetadatas)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiPageMetadata, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiDocumentMetadata, stream);
                     }
                 }
                 // ChatTopicMetadatas
@@ -2189,28 +2189,28 @@ namespace Library.Net.Outopos
                 }
             }
 
-            private volatile ReadOnlyCollection<WikiPageMetadata> _readOnlyWikiPageMetadatas;
+            private volatile ReadOnlyCollection<WikiDocumentMetadata> _readOnlyWikiDocumentMetadatas;
 
-            public IEnumerable<WikiPageMetadata> WikiPageMetadatas
+            public IEnumerable<WikiDocumentMetadata> WikiDocumentMetadatas
             {
                 get
                 {
-                    if (_readOnlyWikiPageMetadatas == null)
-                        _readOnlyWikiPageMetadatas = new ReadOnlyCollection<WikiPageMetadata>(this.ProtectedWikiPageMetadatas.ToArray());
+                    if (_readOnlyWikiDocumentMetadatas == null)
+                        _readOnlyWikiDocumentMetadatas = new ReadOnlyCollection<WikiDocumentMetadata>(this.ProtectedWikiDocumentMetadatas.ToArray());
 
-                    return _readOnlyWikiPageMetadatas;
+                    return _readOnlyWikiDocumentMetadatas;
                 }
             }
 
-            [DataMember(Name = "WikiPageMetadatas")]
-            private LockedList<WikiPageMetadata> ProtectedWikiPageMetadatas
+            [DataMember(Name = "WikiDocumentMetadatas")]
+            private LockedList<WikiDocumentMetadata> ProtectedWikiDocumentMetadatas
             {
                 get
                 {
-                    if (_wikiPageMetadatas == null)
-                        _wikiPageMetadatas = new LockedList<WikiPageMetadata>(_maxMetadataCount);
+                    if (_wikiDocumentMetadatas == null)
+                        _wikiDocumentMetadatas = new LockedList<WikiDocumentMetadata>(_maxMetadataCount);
 
-                    return _wikiPageMetadatas;
+                    return _wikiDocumentMetadatas;
                 }
             }
 

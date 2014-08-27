@@ -1,22 +1,21 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Text;
 using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "SignatureMessage", Namespace = "http://Library/Net/Outopos")]
-    public sealed class SignatureMessage : ImmutableCertificateItemBase<SignatureMessage>, ISignatureMessage
+    public sealed class SignatureMessage : ImmutableCertificateItemBase<SignatureMessage>, IUnicastHeader
     {
         private enum SerializeId : byte
         {
             Signature = 0,
             CreationTime = 1,
             Comment = 2,
+
+            Certificate = 3,
         }
 
         private string _signature;
@@ -66,6 +65,11 @@ namespace Library.Net.Outopos
                     {
                         this.Comment = ItemUtilities.GetString(rangeStream);
                     }
+
+                    else if (id == (byte)SerializeId.Certificate)
+                    {
+                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                    }
                 }
             }
         }
@@ -88,6 +92,15 @@ namespace Library.Net.Outopos
             if (this.Comment != null)
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
+            }
+
+            // Certificate
+            if (this.Certificate != null)
+            {
+                using (var stream = this.Certificate.Export(bufferManager))
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                }
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);

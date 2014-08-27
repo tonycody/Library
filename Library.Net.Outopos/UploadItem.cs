@@ -37,8 +37,8 @@ namespace Library.Net.Outopos
         [DataMember(Name = "SignatureMessage")]
         public SignatureMessage SignatureMessage { get; set; }
 
-        [DataMember(Name = "WikiPage")]
-        public WikiPage WikiPage { get; set; }
+        [DataMember(Name = "WikiDocument")]
+        public WikiDocument WikiDocument { get; set; }
 
         [DataMember(Name = "ChatTopic")]
         public ChatTopic ChatTopic { get; set; }

@@ -1,11 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Library.Collections;
 using Library.Security;
 
 namespace Library.Net.Outopos
@@ -114,15 +108,15 @@ namespace Library.Net.Outopos
             }
         }
 
-        public IEnumerable<WikiPage> GetWikiPages(Wiki tag)
+        public IEnumerable<WikiDocument> GetWikiDocuments(Wiki tag)
         {
             if (tag == null) throw new ArgumentNullException("tag");
 
             lock (this.ThisLock)
             {
-                var list = new List<WikiPage>();
+                var list = new List<WikiDocument>();
 
-                foreach (var metadata in _connectionsManager.GetWikiPageMetadatas(tag))
+                foreach (var metadata in _connectionsManager.GetWikiDocumentMetadatas(tag))
                 {
                     if (!_cacheManager.Contains(metadata.Key))
                     {
@@ -136,7 +130,7 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[metadata.Key];
 
-                            list.Add(InformationConverter.FromWikiPageBlock(buffer));
+                            list.Add(InformationConverter.FromWikiDocumentBlock(buffer));
                         }
                         catch (Exception)
                         {

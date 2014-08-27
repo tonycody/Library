@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
-using System.Text;
-using Library.Compression;
 using Library.Io;
 using Library.Security;
 
@@ -524,7 +522,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public static ArraySegment<byte> ToWikiPageBlock(WikiPage content)
+        public static ArraySegment<byte> ToWikiDocumentBlock(WikiDocument content)
         {
             if (content == null) throw new ArgumentNullException("content");
 
@@ -540,7 +538,7 @@ namespace Library.Net.Outopos
             return value;
         }
 
-        public static WikiPage FromWikiPageBlock(ArraySegment<byte> content)
+        public static WikiDocument FromWikiDocumentBlock(ArraySegment<byte> content)
         {
             if (content.Array == null) throw new ArgumentNullException("content.Array");
 
@@ -549,7 +547,7 @@ namespace Library.Net.Outopos
                 using (Stream compressStream = new MemoryStream(content.Array, content.Offset, content.Count))
                 using (Stream contentStream = InformationConverter.Decompress(compressStream))
                 {
-                    return WikiPage.Import(contentStream, _bufferManager);
+                    return WikiDocument.Import(contentStream, _bufferManager);
                 }
             }
             catch (Exception)

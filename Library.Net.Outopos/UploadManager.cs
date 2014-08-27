@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Library.Collections;
 using Library.Security;
 
 namespace Library.Net.Outopos
@@ -65,9 +63,9 @@ namespace Library.Net.Outopos
                         {
                             contexts.Add(new InformationContext("Information", item.SignatureMessage));
                         }
-                        else if (item.Type == "WikiPage")
+                        else if (item.Type == "WikiDocument")
                         {
-                            contexts.Add(new InformationContext("Information", item.WikiPage));
+                            contexts.Add(new InformationContext("Information", item.WikiDocument));
                         }
                         else if (item.Type == "ChatTopic")
                         {
@@ -141,9 +139,9 @@ namespace Library.Net.Outopos
                                 {
                                     buffer = InformationConverter.ToSignatureMessageBlock(item.SignatureMessage, item.ExchangePublicKey);
                                 }
-                                else if (item.Type == "WikiPage")
+                                else if (item.Type == "WikiDocument")
                                 {
-                                    buffer = InformationConverter.ToWikiPageBlock(item.WikiPage);
+                                    buffer = InformationConverter.ToWikiDocumentBlock(item.WikiDocument);
                                 }
                                 else if (item.Type == "ChatTopic")
                                 {
@@ -183,9 +181,9 @@ namespace Library.Net.Outopos
                                         var metadata = new SignatureMessageMetadata(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
                                         _connectionsManager.Upload(metadata);
                                     }
-                                    else if (item.Type == "WikiPage")
+                                    else if (item.Type == "WikiDocument")
                                     {
-                                        var metadata = new WikiPageMetadata(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
+                                        var metadata = new WikiDocumentMetadata(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
                                         _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "ChatTopic")
@@ -291,8 +289,7 @@ namespace Library.Net.Outopos
         }
 
         public void Upload(Wiki tag,
-            HypertextFormatType formatType,
-            string hypertext,
+            IEnumerable<WikiPage> wikiPages,
 
             int miningLimit,
             DigitalSignature digitalSignature)
@@ -300,10 +297,10 @@ namespace Library.Net.Outopos
             lock (this.ThisLock)
             {
                 var uploadItem = new UploadItem();
-                uploadItem.Type = "WikiPage";
+                uploadItem.Type = "WikiDocument";
                 uploadItem.Wiki = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.WikiPage = new WikiPage(uploadItem.Wiki, uploadItem.CreationTime, formatType, hypertext);
+                uploadItem.WikiDocument = new WikiDocument(uploadItem.Wiki, uploadItem.CreationTime, wikiPages);
                 uploadItem.MiningLimit = miningLimit;
                 uploadItem.DigitalSignature = digitalSignature;
 

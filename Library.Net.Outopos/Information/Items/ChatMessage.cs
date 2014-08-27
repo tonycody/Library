@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Text;
 using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "ChatMessage", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatMessage : ImmutableCertificateItemBase<ChatMessage>, IChatMessage
+    public sealed class ChatMessage : ImmutableCertificateItemBase<ChatMessage>, IMulticastHeader<Chat>
     {
         private enum SerializeId : byte
         {
@@ -18,6 +17,8 @@ namespace Library.Net.Outopos
             CreationTime = 1,
             Comment = 2,
             Anchor = 3,
+
+            Certificate = 4,
         }
 
         private Chat _tag;
@@ -75,6 +76,11 @@ namespace Library.Net.Outopos
                         {
                             this.ProtectedAnchors.Add(Anchor.Import(rangeStream, bufferManager));
                         }
+
+                        else if (id == (byte)SerializeId.Certificate)
+                        {
+                            this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        }
                     }
                 }
             }
@@ -110,6 +116,15 @@ namespace Library.Net.Outopos
                     using (var stream = value.Export(bufferManager))
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.Anchor, stream);
+                    }
+                }
+
+                // Certificate
+                if (this.Certificate != null)
+                {
+                    using (var stream = this.Certificate.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
                     }
                 }
 

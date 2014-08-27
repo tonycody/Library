@@ -1,21 +1,21 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Text;
 using Library.Io;
 using Library.Security;
 
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "ChatTopic", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatTopic : ImmutableCertificateItemBase<ChatTopic>, IChatTopic
+    public sealed class ChatTopic : ImmutableCertificateItemBase<ChatTopic>, IMulticastHeader<Chat>
     {
         private enum SerializeId : byte
         {
             Tag = 0,
             CreationTime = 1,
             Comment = 2,
+
+            Certificate = 3,
         }
 
         private Chat _tag;
@@ -66,6 +66,11 @@ namespace Library.Net.Outopos
                         {
                             this.Comment = ItemUtilities.GetString(rangeStream);
                         }
+
+                        else if (id == (byte)SerializeId.Certificate)
+                        {
+                            this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        }
                     }
                 }
             }
@@ -94,6 +99,15 @@ namespace Library.Net.Outopos
                 if (this.Comment != null)
                 {
                     ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
+                }
+
+                // Certificate
+                if (this.Certificate != null)
+                {
+                    using (var stream = this.Certificate.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    }
                 }
 
                 bufferStream.Seek(0, SeekOrigin.Begin);
