@@ -8,10 +8,10 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "ChatMessageHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatMessageHeader : MulticastHeader<ChatMessageHeader, Chat>
+    [DataContract(Name = "WikiPageHeader", Namespace = "http://Library/Net/Outopos")]
+    sealed class WikiPageHeader : MulticastHeader<WikiPageHeader, Wiki>
     {
-        public ChatMessageHeader(Chat tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+        public WikiPageHeader(Wiki tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
             : base(tag, creationTime, key, miner, digitalSignature)
         {
 

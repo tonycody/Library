@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
@@ -9,38 +9,35 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "MulticastHeader", Namespace = "http://Library/Net/Outopos")]
-    public abstract class MulticastHeader<THeader, TTag> : ImmutableCertificateItemBase<THeader>, IMulticastHeader<TTag>
-        where THeader : MulticastHeader<THeader, TTag>
-        where TTag : ItemBase<TTag>, ITag
+    [DataContract(Name = "ChatMessage", Namespace = "http://Library/Net/Outopos")]
+    sealed class ChatMessage : ImmutableCertificateItemBase<ChatMessage>, IChatMessage
     {
         private enum SerializeId : byte
         {
             Tag = 0,
             CreationTime = 1,
-            Key = 2,
-            Cash = 3,
-
-            Certificate = 4,
+            Comment = 2,
+            Anchor = 3,
         }
 
-        private TTag _tag;
+        private Chat _tag;
         private DateTime _creationTime;
-        private Key _key;
-        private Cash _cash;
+        private string _comment;
+        private AnchorCollection _anchors;
 
         private Certificate _certificate;
 
         private volatile object _thisLock;
 
-        internal MulticastHeader(TTag tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxAnchorCount = 32;
+
+        public ChatMessage(Chat tag, DateTime creationTime, string comment, IEnumerable<Anchor> anchors)
         {
             this.Tag = tag;
             this.CreationTime = creationTime;
-            this.Key = key;
-            this.CreateCash(miner, digitalSignature.ToString());
-
-            this.CreateCertificate(digitalSignature);
+            this.Comment = comment;
+            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         protected override void Initialize()
@@ -64,24 +61,19 @@ namespace Library.Net.Outopos
                     {
                         if (id == (byte)SerializeId.Tag)
                         {
-                            this.Tag = ItemBase<TTag>.Import(rangeStream, bufferManager);
+                            this.Tag = Chat.Import(rangeStream, bufferManager);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
                             this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
-                        else if (id == (byte)SerializeId.Key)
+                        else if (id == (byte)SerializeId.Comment)
                         {
-                            this.Key = Key.Import(rangeStream, bufferManager);
+                            this.Comment = ItemUtilities.GetString(rangeStream);
                         }
-                        else if (id == (byte)SerializeId.Cash)
+                        else if (id == (byte)SerializeId.Anchor)
                         {
-                            this.Cash = Cash.Import(rangeStream, bufferManager);
-                        }
-
-                        else if (id == (byte)SerializeId.Certificate)
-                        {
-                            this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                            this.ProtectedAnchors.Add(Anchor.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -107,29 +99,17 @@ namespace Library.Net.Outopos
                 {
                     ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
-                // Key
-                if (this.Key != null)
+                // Comment
+                if (this.Comment != null)
                 {
-                    using (var stream = this.Key.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
-                    }
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
                 }
-                // Cash
-                if (this.Cash != null)
+                // Anchors
+                foreach (var value in this.Anchors)
                 {
-                    using (var stream = this.Cash.Export(bufferManager))
+                    using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Cash, stream);
-                    }
-                }
-
-                // Certificate
-                if (this.Certificate != null)
-                {
-                    using (var stream = this.Certificate.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Anchor, stream);
                     }
                 }
 
@@ -142,111 +122,37 @@ namespace Library.Net.Outopos
         {
             lock (_thisLock)
             {
-                if (this.Key == null) return 0;
-                else return this.Key.GetHashCode();
+                if (this.Comment == null) return 0;
+                else return this.Comment.GetHashCode();
             }
         }
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is THeader)) return false;
+            if ((object)obj == null || !(obj is ChatMessage)) return false;
 
-            return this.Equals((THeader)obj);
+            return this.Equals((ChatMessage)obj);
         }
 
-        public override bool Equals(THeader other)
+        public override bool Equals(ChatMessage other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
             if (this.Tag != other.Tag
                 || this.CreationTime != other.CreationTime
-                || this.Key != other.Key
-                || this.Cash != other.Cash
-
-                || this.Certificate != other.Certificate)
+                || this.Comment != other.Comment
+                || (this.Anchors == null) != (other.Anchors == null))
             {
                 return false;
             }
 
+            if (this.Anchors != null && other.Anchors != null)
+            {
+                if (!CollectionUtilities.Equals(this.Anchors, other.Anchors)) return false;
+            }
+
             return true;
-        }
-
-        protected virtual void CreateCash(Miner miner, string signature)
-        {
-            lock (_thisLock)
-            {
-                var tempCertificate = this.Certificate;
-                this.Certificate = null;
-
-                var tempCash = this.Cash;
-                this.Cash = null;
-
-                try
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        stream.Seek(0, SeekOrigin.End);
-                        ItemUtilities.Write(stream, byte.MaxValue, signature);
-                        stream.Seek(0, SeekOrigin.Begin);
-
-                        tempCash = miner.Create(stream);
-                    }
-                }
-                finally
-                {
-                    this.Certificate = tempCertificate;
-                    this.Cash = tempCash;
-                }
-            }
-        }
-
-        protected virtual int VerifyCash(string signature)
-        {
-            lock (_thisLock)
-            {
-                var tempCertificate = this.Certificate;
-                this.Certificate = null;
-
-                var tempCash = this.Cash;
-                this.Cash = null;
-
-                try
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        stream.Seek(0, SeekOrigin.End);
-                        ItemUtilities.Write(stream, byte.MaxValue, signature);
-                        stream.Seek(0, SeekOrigin.Begin);
-
-                        return Miner.Verify(tempCash, stream);
-                    }
-                }
-                finally
-                {
-                    this.Certificate = tempCertificate;
-                    this.Cash = tempCash;
-                }
-            }
-        }
-
-        [DataMember(Name = "Cash")]
-        protected virtual Cash Cash
-        {
-            get
-            {
-                lock (_thisLock)
-                {
-                    return _cash;
-                }
-            }
-            set
-            {
-                lock (_thisLock)
-                {
-                    _cash = value;
-                }
-            }
         }
 
         protected override void CreateCertificate(DigitalSignature digitalSignature)
@@ -274,7 +180,14 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    return this.Export(BufferManager.Instance);
+                    using (var stream = this.Export(BufferManager.Instance))
+                    {
+                        stream.Seek(0, SeekOrigin.End);
+                        ItemUtilities.Write(stream, byte.MaxValue, "ChatMessage");
+                        stream.Seek(0, SeekOrigin.Begin);
+
+                        return this.Export(BufferManager.Instance);
+                    }
                 }
                 finally
                 {
@@ -301,10 +214,8 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IMulticastHeader<TTag>
-
         [DataMember(Name = "Tag")]
-        public TTag Tag
+        public Chat Tag
         {
             get
             {
@@ -342,70 +253,61 @@ namespace Library.Net.Outopos
             }
         }
 
-        [DataMember(Name = "Key")]
-        public Key Key
+        [DataMember(Name = "Comment")]
+        public string Comment
         {
             get
             {
                 lock (_thisLock)
                 {
-                    return _key;
+                    return _comment;
                 }
             }
             private set
             {
                 lock (_thisLock)
                 {
-                    _key = value;
+                    if (value != null && value.Length > ChatMessage.MaxCommentLength)
+                    {
+                        throw new ArgumentException();
+                    }
+                    else
+                    {
+                        _comment = value;
+                    }
                 }
             }
         }
 
-        private int? _cost;
+        private volatile ReadOnlyCollection<Anchor> _readOnlyAnchors;
 
-        public int Cost
+        public IEnumerable<Anchor> Anchors
         {
             get
             {
                 lock (_thisLock)
                 {
-                    if (_cost == null)
-                        _cost = this.VerifyCash(this.Certificate.ToString());
+                    if (_readOnlyAnchors == null)
+                        _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors.ToArray());
 
-                    return (int)_cost;
+                    return _readOnlyAnchors;
                 }
             }
         }
 
-        #endregion
-
-        #region IComputeHash
-
-        private volatile byte[] _sha512_hash;
-
-        public byte[] CreateHash(HashAlgorithm hashAlgorithm)
+        [DataMember(Name = "Anchors")]
+        private AnchorCollection ProtectedAnchors
         {
-            if (_sha512_hash == null)
+            get
             {
-                using (var stream = this.Export(BufferManager.Instance))
+                lock (_thisLock)
                 {
-                    _sha512_hash = Sha512.ComputeHash(stream);
+                    if (_anchors == null)
+                        _anchors = new AnchorCollection(ChatMessage.MaxAnchorCount);
+
+                    return _anchors;
                 }
             }
-
-            if (hashAlgorithm == HashAlgorithm.Sha512)
-            {
-                return _sha512_hash;
-            }
-
-            return null;
         }
-
-        public bool VerifyHash(byte[] hash, HashAlgorithm hashAlgorithm)
-        {
-            return Unsafe.Equals(this.CreateHash(hashAlgorithm), hash);
-        }
-
-        #endregion
     }
 }

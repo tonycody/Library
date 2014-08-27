@@ -9,12 +9,13 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "BroadcastHeader", Namespace = "http://Library/Net/Outopos")]
-    public abstract class BroadcastHeader<THeader> : ImmutableCertificateItemBase<THeader>, IBroadcastHeader
-        where THeader : BroadcastHeader<THeader>
+    [DataContract(Name = "UnicastHeader", Namespace = "http://Library/Net/Outopos")]
+    abstract class UnicastHeader<THeader> : ImmutableCertificateItemBase<THeader>, IUnicastHeader
+        where THeader : UnicastHeader<THeader>
     {
         private enum SerializeId : byte
         {
+            Signature = 0,
             CreationTime = 1,
             Key = 2,
             Cash = 3,
@@ -22,6 +23,7 @@ namespace Library.Net.Outopos
             Certificate = 4,
         }
 
+        private string _signature;
         private DateTime _creationTime;
         private Key _key;
         private Cash _cash;
@@ -30,8 +32,9 @@ namespace Library.Net.Outopos
 
         private volatile object _thisLock;
 
-        internal BroadcastHeader(DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+        internal UnicastHeader(string signature, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
         {
+            this.Signature = signature;
             this.CreationTime = creationTime;
             this.Key = key;
             this.CreateCash(miner, digitalSignature.ToString());
@@ -58,7 +61,11 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.CreationTime)
+                        if (id == (byte)SerializeId.Signature)
+                        {
+                            this.Signature = ItemUtilities.GetString(rangeStream);
+                        }
+                        else if (id == (byte)SerializeId.CreationTime)
                         {
                             this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
@@ -86,6 +93,11 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
+                // Signature
+                if (this.Signature != null)
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
+                }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
@@ -143,7 +155,8 @@ namespace Library.Net.Outopos
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.CreationTime != other.CreationTime
+            if (this.Signature != other.Signature
+                || this.CreationTime != other.CreationTime
                 || this.Key != other.Key
                 || this.Cash != other.Cash
 
@@ -284,7 +297,26 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IBroadcastHeader<TTag>
+        #region IUnicastHeader
+
+        [DataMember(Name = "Signature")]
+        public string Signature
+        {
+            get
+            {
+                lock (_thisLock)
+                {
+                    return _signature;
+                }
+            }
+            private set
+            {
+                lock (_thisLock)
+                {
+                    _signature = value;
+                }
+            }
+        }
 
         [DataMember(Name = "CreationTime")]
         public DateTime CreationTime

@@ -9,7 +9,7 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "ProfileHeader", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ProfileHeader : BroadcastHeader<ProfileHeader>
+    sealed class ProfileHeader : BroadcastHeader<ProfileHeader>
     {
         public ProfileHeader(DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
             : base(creationTime, key, miner, digitalSignature)

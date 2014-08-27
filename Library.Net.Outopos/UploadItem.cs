@@ -22,14 +22,11 @@ namespace Library.Net.Outopos
         [DataMember(Name = "CreationTime")]
         public DateTime CreationTime { get; set; }
 
-        [DataMember(Name = "DigitalSignature")]
-        public DigitalSignature DigitalSignature { get; set; }
-
         [DataMember(Name = "MiningLimit")]
         public int MiningLimit { get; set; }
 
-        [DataMember(Name = "MiningTime")]
-        public TimeSpan MiningTime { get; set; }
+        [DataMember(Name = "DigitalSignature")]
+        public DigitalSignature DigitalSignature { get; set; }
 
         [DataMember(Name = "ExchangePublicKey")]
         public ExchangePublicKey ExchangePublicKey { get; set; }

@@ -28,7 +28,7 @@ namespace Library.Net.Outopos
             _bufferManager = bufferManager;
         }
 
-        public ProfileContent GetContent(ProfileHeader header)
+        public Profile GetContent(ProfileHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -48,7 +48,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        return ContentConverter.FromProfileContentBlock(buffer);
+                        return ContentConverter.FromProfileBlock(buffer);
                     }
                     catch (Exception)
                     {
@@ -67,7 +67,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public SignatureMessageContent GetContent(SignatureMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        public SignatureMessage GetContent(SignatureMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
             if (header == null) throw new ArgumentNullException("header");
             if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
@@ -88,7 +88,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        return ContentConverter.FromSignatureMessageContentBlock(buffer, exchangePrivateKey);
+                        return ContentConverter.FromSignatureMessageBlock(buffer, exchangePrivateKey);
                     }
                     catch (Exception)
                     {
@@ -107,7 +107,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public WikiPageContent GetContent(WikiPageHeader header)
+        public WikiPage GetContent(WikiPageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -127,7 +127,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        return ContentConverter.FromWikiPageContentBlock(buffer);
+                        return ContentConverter.FromWikiPageBlock(buffer);
                     }
                     catch (Exception)
                     {
@@ -146,7 +146,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopicHeader header)
+        public ChatTopic GetContent(ChatTopicHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -166,7 +166,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        return ContentConverter.FromChatTopicContentBlock(buffer);
+                        return ContentConverter.FromChatTopicBlock(buffer);
                     }
                     catch (Exception)
                     {
@@ -185,7 +185,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessageHeader header)
+        public ChatMessage GetContent(ChatMessageHeader header)
         {
             if (header == null) throw new ArgumentNullException("header");
 
@@ -205,7 +205,7 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[header.Key];
 
-                        return ContentConverter.FromChatMessageContentBlock(buffer);
+                        return ContentConverter.FromChatMessageBlock(buffer);
                     }
                     catch (Exception)
                     {

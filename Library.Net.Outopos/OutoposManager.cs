@@ -515,53 +515,80 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void Upload(ProfileContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(
+            int cost,
+            ExchangePublicKey exchangePublicKey,
+            IEnumerable<string> trustSignatures,
+            IEnumerable<Wiki> wikis,
+            IEnumerable<Chat> chats,
+
+            int miningLimit,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(content, miningLimit, miningTime, digitalSignature);
+                _uploadManager.Upload(cost, exchangePublicKey, trustSignatures, wikis, chats, miningLimit, digitalSignature);
             }
         }
 
-        public void Upload(string signature, SignatureMessageContent content, ExchangePublicKey exchangePublicKey, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(string signature,
+            string comment,
+
+            int miningLimit,
+            DigitalSignature digitalSignature,
+            ExchangePublicKey exchangePublicKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(signature, content, exchangePublicKey, miningLimit, miningTime, digitalSignature);
+                _uploadManager.Upload(signature, comment, miningLimit, digitalSignature, exchangePublicKey);
             }
         }
 
-        public void Upload(Wiki tag, WikiPageContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(Wiki tag,
+            HypertextFormatType formatType,
+            string hypertext,
+
+            int miningLimit,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+                _uploadManager.Upload(tag, formatType, hypertext, miningLimit, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag, ChatTopicContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(Chat tag,
+            string comment,
+
+            int miningLimit,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+                _uploadManager.Upload(tag, comment, miningLimit, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag, ChatMessageContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(Chat tag,
+            string comment,
+            IEnumerable<Anchor> anchors,
+
+            int miningLimit,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+                _uploadManager.Upload(tag, comment, anchors, miningLimit, digitalSignature);
             }
         }
 
