@@ -272,7 +272,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IBroadcastHeader<TTag>
+        #region IBroadcastMetadata<TTag>
 
         [DataMember(Name = "CreationTime")]
         public DateTime CreationTime

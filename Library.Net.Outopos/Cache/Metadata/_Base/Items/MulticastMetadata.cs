@@ -9,12 +9,14 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "BroadcastHeader", Namespace = "http://Library/Net/Outopos")]
-    abstract class BroadcastHeader<THeader> : ImmutableCertificateItemBase<THeader>, IBroadcastHeader
-        where THeader : BroadcastHeader<THeader>
+    [DataContract(Name = "MulticastMetadata", Namespace = "http://Library/Net/Outopos")]
+    abstract class MulticastMetadata<TMetadata, TTag> : ImmutableCertificateItemBase<TMetadata>, IMulticastMetadata<TTag>
+        where TMetadata : MulticastMetadata<TMetadata, TTag>
+        where TTag : ItemBase<TTag>, ITag
     {
         private enum SerializeId : byte
         {
+            Tag = 0,
             CreationTime = 1,
             Key = 2,
             Cash = 3,
@@ -22,6 +24,7 @@ namespace Library.Net.Outopos
             Certificate = 4,
         }
 
+        private TTag _tag;
         private DateTime _creationTime;
         private Key _key;
         private Cash _cash;
@@ -30,8 +33,9 @@ namespace Library.Net.Outopos
 
         private volatile object _thisLock;
 
-        internal BroadcastHeader(DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+        internal MulticastMetadata(TTag tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
         {
+            this.Tag = tag;
             this.CreationTime = creationTime;
             this.Key = key;
             this.CreateCash(miner, digitalSignature.ToString());
@@ -58,7 +62,11 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.CreationTime)
+                        if (id == (byte)SerializeId.Tag)
+                        {
+                            this.Tag = ItemBase<TTag>.Import(rangeStream, bufferManager);
+                        }
+                        else if (id == (byte)SerializeId.CreationTime)
                         {
                             this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                         }
@@ -86,6 +94,14 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
+                // Tag
+                if (this.Tag != null)
+                {
+                    using (var stream = this.Tag.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
+                    }
+                }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
                 {
@@ -133,17 +149,18 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is THeader)) return false;
+            if ((object)obj == null || !(obj is TMetadata)) return false;
 
-            return this.Equals((THeader)obj);
+            return this.Equals((TMetadata)obj);
         }
 
-        public override bool Equals(THeader other)
+        public override bool Equals(TMetadata other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.CreationTime != other.CreationTime
+            if (this.Tag != other.Tag
+                || this.CreationTime != other.CreationTime
                 || this.Key != other.Key
                 || this.Cash != other.Cash
 
@@ -284,7 +301,26 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IBroadcastHeader<TTag>
+        #region IMulticastMetadata<TTag>
+
+        [DataMember(Name = "Tag")]
+        public TTag Tag
+        {
+            get
+            {
+                lock (_thisLock)
+                {
+                    return _tag;
+                }
+            }
+            private set
+            {
+                lock (_thisLock)
+                {
+                    _tag = value;
+                }
+            }
+        }
 
         [DataMember(Name = "CreationTime")]
         public DateTime CreationTime

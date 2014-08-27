@@ -11,7 +11,7 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    static class ContentConverter
+    static class InformationConverter
     {
         private enum ConvertCompressionAlgorithm : byte
         {
@@ -104,7 +104,7 @@ namespace Library.Net.Outopos
 #if DEBUG
             if (list[0].Value.Length != targetStream.Length)
             {
-                Debug.WriteLine("ContentConverter Compress {3} : {0}→{1} {2}",
+                Debug.WriteLine("InformationConverter Compress {3} : {0}→{1} {2}",
                     NetworkConverter.ToSizeString(targetStream.Length),
                     NetworkConverter.ToSizeString(list[0].Value.Length),
                     NetworkConverter.ToSizeString(list[0].Value.Length - targetStream.Length),
@@ -117,10 +117,10 @@ namespace Library.Net.Outopos
                 list[i].Value.Dispose();
             }
 
-            BufferStream headerStream = new BufferStream(_bufferManager);
-            headerStream.WriteByte((byte)list[0].Key);
+            BufferStream metadataStream = new BufferStream(_bufferManager);
+            metadataStream.WriteByte((byte)list[0].Key);
 
-            return new UniteStream(headerStream, list[0].Value);
+            return new UniteStream(metadataStream, list[0].Value);
         }
 
         private static Stream Decompress(Stream stream)
@@ -174,7 +174,7 @@ namespace Library.Net.Outopos
                             deflateBufferStream.Seek(0, SeekOrigin.Begin);
 
 #if DEBUG
-                            Debug.WriteLine("ContentConverter Decompress {3} : {0}→{1} {2}",
+                            Debug.WriteLine("InformationConverter Decompress {3} : {0}→{1} {2}",
                                 NetworkConverter.ToSizeString(dataStream.Length),
                                 NetworkConverter.ToSizeString(deflateBufferStream.Length),
                                 NetworkConverter.ToSizeString(dataStream.Length - deflateBufferStream.Length),
@@ -368,9 +368,9 @@ namespace Library.Net.Outopos
                 _random.GetBytes(seedBuffer);
                 Random random = new Random(NetworkConverter.ToInt32(seedBuffer));
 
-                BufferStream headerStream = new BufferStream(_bufferManager);
+                BufferStream metadataStream = new BufferStream(_bufferManager);
                 byte[] lengthBuffer = NetworkConverter.GetBytes((int)stream.Length);
-                headerStream.Write(lengthBuffer, 0, lengthBuffer.Length);
+                metadataStream.Write(lengthBuffer, 0, lengthBuffer.Length);
 
                 int paddingLength = size - ((int)stream.Length + 4);
 
@@ -399,7 +399,7 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                return new UniteStream(headerStream, new WrapperStream(stream, true), paddingStream);
+                return new UniteStream(metadataStream, new WrapperStream(stream, true), paddingStream);
             }
             catch (Exception e)
             {
@@ -433,8 +433,8 @@ namespace Library.Net.Outopos
             {
                 var targetStream = new RangeStream(stream, true);
 
-                BufferStream headerStream = new BufferStream(_bufferManager);
-                headerStream.WriteByte((byte)ConvertHashAlgorithm.Sha512);
+                BufferStream metadataStream = new BufferStream(_bufferManager);
+                metadataStream.WriteByte((byte)ConvertHashAlgorithm.Sha512);
 
                 targetStream.Seek(0, SeekOrigin.Begin);
                 var hash = Sha512.ComputeHash(targetStream);
@@ -442,7 +442,7 @@ namespace Library.Net.Outopos
                 BufferStream hashStream = new BufferStream(_bufferManager);
                 hashStream.Write(hash, 0, hash.Length);
 
-                return new UniteStream(headerStream, targetStream, hashStream);
+                return new UniteStream(metadataStream, targetStream, hashStream);
             }
             catch (Exception e)
             {
@@ -497,7 +497,7 @@ namespace Library.Net.Outopos
             ArraySegment<byte> value;
 
             using (Stream contentStream = content.Export(_bufferManager))
-            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream compressStream = InformationConverter.Compress(contentStream))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)compressStream.Length), 0, (int)compressStream.Length);
                 compressStream.Read(value.Array, value.Offset, value.Count);
@@ -513,7 +513,7 @@ namespace Library.Net.Outopos
             try
             {
                 using (Stream compressStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream contentStream = ContentConverter.Decompress(compressStream))
+                using (Stream contentStream = InformationConverter.Decompress(compressStream))
                 {
                     return Profile.Import(contentStream, _bufferManager);
                 }
@@ -531,7 +531,7 @@ namespace Library.Net.Outopos
             ArraySegment<byte> value;
 
             using (Stream contentStream = content.Export(_bufferManager))
-            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream compressStream = InformationConverter.Compress(contentStream))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)compressStream.Length), 0, (int)compressStream.Length);
                 compressStream.Read(value.Array, value.Offset, value.Count);
@@ -547,7 +547,7 @@ namespace Library.Net.Outopos
             try
             {
                 using (Stream compressStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream contentStream = ContentConverter.Decompress(compressStream))
+                using (Stream contentStream = InformationConverter.Decompress(compressStream))
                 {
                     return WikiPage.Import(contentStream, _bufferManager);
                 }
@@ -565,7 +565,7 @@ namespace Library.Net.Outopos
             ArraySegment<byte> value;
 
             using (Stream contentStream = content.Export(_bufferManager))
-            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream compressStream = InformationConverter.Compress(contentStream))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)compressStream.Length), 0, (int)compressStream.Length);
                 compressStream.Read(value.Array, value.Offset, value.Count);
@@ -581,7 +581,7 @@ namespace Library.Net.Outopos
             try
             {
                 using (Stream compressStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream contentStream = ContentConverter.Decompress(compressStream))
+                using (Stream contentStream = InformationConverter.Decompress(compressStream))
                 {
                     return ChatTopic.Import(contentStream, _bufferManager);
                 }
@@ -599,7 +599,7 @@ namespace Library.Net.Outopos
             ArraySegment<byte> value;
 
             using (Stream contentStream = content.Export(_bufferManager))
-            using (Stream compressStream = ContentConverter.Compress(contentStream))
+            using (Stream compressStream = InformationConverter.Compress(contentStream))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)compressStream.Length), 0, (int)compressStream.Length);
                 compressStream.Read(value.Array, value.Offset, value.Count);
@@ -615,7 +615,7 @@ namespace Library.Net.Outopos
             try
             {
                 using (Stream compressStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream contentStream = ContentConverter.Decompress(compressStream))
+                using (Stream contentStream = InformationConverter.Decompress(compressStream))
                 {
                     return ChatMessage.Import(contentStream, _bufferManager);
                 }
@@ -634,10 +634,10 @@ namespace Library.Net.Outopos
             ArraySegment<byte> value;
 
             using (Stream contentStream = content.Export(_bufferManager))
-            using (Stream compressStream = ContentConverter.Compress(contentStream))
-            using (Stream paddingStream = ContentConverter.AddPadding(compressStream, 1024 * 256))
-            using (Stream hashStream = ContentConverter.AddHash(paddingStream))
-            using (Stream cryptostream = ContentConverter.Encrypt(hashStream, publicKey))
+            using (Stream compressStream = InformationConverter.Compress(contentStream))
+            using (Stream paddingStream = InformationConverter.AddPadding(compressStream, 1024 * 256))
+            using (Stream hashStream = InformationConverter.AddHash(paddingStream))
+            using (Stream cryptostream = InformationConverter.Encrypt(hashStream, publicKey))
             {
                 value = new ArraySegment<byte>(_bufferManager.TakeBuffer((int)cryptostream.Length), 0, (int)cryptostream.Length);
                 cryptostream.Read(value.Array, value.Offset, value.Count);
@@ -654,10 +654,10 @@ namespace Library.Net.Outopos
             try
             {
                 using (Stream cryptoStream = new MemoryStream(content.Array, content.Offset, content.Count))
-                using (Stream hashStream = ContentConverter.Decrypt(cryptoStream, privateKey))
-                using (Stream paddingStream = ContentConverter.RemoveHash(hashStream))
-                using (Stream compressStream = ContentConverter.RemovePadding(paddingStream))
-                using (Stream contentStream = ContentConverter.Decompress(compressStream))
+                using (Stream hashStream = InformationConverter.Decrypt(cryptoStream, privateKey))
+                using (Stream paddingStream = InformationConverter.RemoveHash(hashStream))
+                using (Stream compressStream = InformationConverter.RemovePadding(paddingStream))
+                using (Stream contentStream = InformationConverter.Decompress(compressStream))
                 {
                     return SignatureMessage.Import(contentStream, _bufferManager);
                 }

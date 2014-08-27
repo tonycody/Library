@@ -9,14 +9,13 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "MulticastHeader", Namespace = "http://Library/Net/Outopos")]
-    abstract class MulticastHeader<THeader, TTag> : ImmutableCertificateItemBase<THeader>, IMulticastHeader<TTag>
-        where THeader : MulticastHeader<THeader, TTag>
-        where TTag : ItemBase<TTag>, ITag
+    [DataContract(Name = "UnicastMetadata", Namespace = "http://Library/Net/Outopos")]
+    abstract class UnicastMetadata<TMetadata> : ImmutableCertificateItemBase<TMetadata>, IUnicastMetadata
+        where TMetadata : UnicastMetadata<TMetadata>
     {
         private enum SerializeId : byte
         {
-            Tag = 0,
+            Signature = 0,
             CreationTime = 1,
             Key = 2,
             Cash = 3,
@@ -24,7 +23,7 @@ namespace Library.Net.Outopos
             Certificate = 4,
         }
 
-        private TTag _tag;
+        private string _signature;
         private DateTime _creationTime;
         private Key _key;
         private Cash _cash;
@@ -33,9 +32,9 @@ namespace Library.Net.Outopos
 
         private volatile object _thisLock;
 
-        internal MulticastHeader(TTag tag, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+        internal UnicastMetadata(string signature, DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
         {
-            this.Tag = tag;
+            this.Signature = signature;
             this.CreationTime = creationTime;
             this.Key = key;
             this.CreateCash(miner, digitalSignature.ToString());
@@ -62,9 +61,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.Tag)
+                        if (id == (byte)SerializeId.Signature)
                         {
-                            this.Tag = ItemBase<TTag>.Import(rangeStream, bufferManager);
+                            this.Signature = ItemUtilities.GetString(rangeStream);
                         }
                         else if (id == (byte)SerializeId.CreationTime)
                         {
@@ -94,13 +93,10 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // Tag
-                if (this.Tag != null)
+                // Signature
+                if (this.Signature != null)
                 {
-                    using (var stream = this.Tag.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
-                    }
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
                 }
                 // CreationTime
                 if (this.CreationTime != DateTime.MinValue)
@@ -149,17 +145,17 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is THeader)) return false;
+            if ((object)obj == null || !(obj is TMetadata)) return false;
 
-            return this.Equals((THeader)obj);
+            return this.Equals((TMetadata)obj);
         }
 
-        public override bool Equals(THeader other)
+        public override bool Equals(TMetadata other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.Tag != other.Tag
+            if (this.Signature != other.Signature
                 || this.CreationTime != other.CreationTime
                 || this.Key != other.Key
                 || this.Cash != other.Cash
@@ -301,23 +297,23 @@ namespace Library.Net.Outopos
             }
         }
 
-        #region IMulticastHeader<TTag>
+        #region IUnicastMetadata
 
-        [DataMember(Name = "Tag")]
-        public TTag Tag
+        [DataMember(Name = "Signature")]
+        public string Signature
         {
             get
             {
                 lock (_thisLock)
                 {
-                    return _tag;
+                    return _signature;
                 }
             }
             private set
             {
                 lock (_thisLock)
                 {
-                    _tag = value;
+                    _signature = value;
                 }
             }
         }

@@ -31,19 +31,19 @@ namespace Library.Net.Outopos
         [DataMember(Name = "ExchangePublicKey")]
         public ExchangePublicKey ExchangePublicKey { get; set; }
 
-        [DataMember(Name = "ProfileContent")]
-        public ProfileContent ProfileContent { get; set; }
+        [DataMember(Name = "Profile")]
+        public Profile Profile { get; set; }
 
-        [DataMember(Name = "SignatureMessageContent")]
-        public SignatureMessageContent SignatureMessageContent { get; set; }
+        [DataMember(Name = "SignatureMessage")]
+        public SignatureMessage SignatureMessage { get; set; }
 
-        [DataMember(Name = "WikiPageContent")]
-        public WikiPageContent WikiPageContent { get; set; }
+        [DataMember(Name = "WikiPage")]
+        public WikiPage WikiPage { get; set; }
 
-        [DataMember(Name = "ChatTopicContent")]
-        public ChatTopicContent ChatTopicContent { get; set; }
+        [DataMember(Name = "ChatTopic")]
+        public ChatTopic ChatTopic { get; set; }
 
-        [DataMember(Name = "ChatMessageContent")]
-        public ChatMessageContent ChatMessageContent { get; set; }
+        [DataMember(Name = "ChatMessage")]
+        public ChatMessage ChatMessage { get; set; }
     }
 }

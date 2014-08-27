@@ -3,10 +3,8 @@ using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    public interface IMulticastHeader<TTag> : IComputeHash
-        where TTag : ITag
+    public interface IBroadcastMetadata : IComputeHash
     {
-        TTag Tag { get; }
         DateTime CreationTime { get; }
         Key Key { get; }
         int Cost { get; }

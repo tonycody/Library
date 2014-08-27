@@ -85,15 +85,15 @@ namespace Library.Net.Outopos
         private readonly SafeInteger _pushBlockLinkCount = new SafeInteger();
         private readonly SafeInteger _pushBlockRequestCount = new SafeInteger();
         private readonly SafeInteger _pushBlockCount = new SafeInteger();
-        private readonly SafeInteger _pushHeaderRequestCount = new SafeInteger();
-        private readonly SafeInteger _pushHeaderCount = new SafeInteger();
+        private readonly SafeInteger _pushMetadataRequestCount = new SafeInteger();
+        private readonly SafeInteger _pushMetadataCount = new SafeInteger();
 
         private readonly SafeInteger _pullNodeCount = new SafeInteger();
         private readonly SafeInteger _pullBlockLinkCount = new SafeInteger();
         private readonly SafeInteger _pullBlockRequestCount = new SafeInteger();
         private readonly SafeInteger _pullBlockCount = new SafeInteger();
-        private readonly SafeInteger _pullHeaderRequestCount = new SafeInteger();
-        private readonly SafeInteger _pullHeaderCount = new SafeInteger();
+        private readonly SafeInteger _pullMetadataRequestCount = new SafeInteger();
+        private readonly SafeInteger _pullMetadataCount = new SafeInteger();
 
         private VolatileHashSet<Key> _relayBlocks;
         private readonly SafeInteger _relayBlockCount = new SafeInteger();
@@ -111,8 +111,8 @@ namespace Library.Net.Outopos
         private const int _maxNodeCount = 128;
         private const int _maxBlockLinkCount = 8192;
         private const int _maxBlockRequestCount = 8192;
-        private const int _maxHeaderRequestCount = 1024;
-        private const int _maxHeaderCount = 1024;
+        private const int _maxMetadataRequestCount = 1024;
+        private const int _maxMetadataCount = 1024;
 
         private const int _routeTableMinCount = 100;
 
@@ -337,15 +337,15 @@ namespace Library.Net.Outopos
                     contexts.Add(new InformationContext("PushBlockLinkCount", (long)_pushBlockLinkCount));
                     contexts.Add(new InformationContext("PushBlockRequestCount", (long)_pushBlockRequestCount));
                     contexts.Add(new InformationContext("PushBlockCount", (long)_pushBlockCount));
-                    contexts.Add(new InformationContext("PushHeaderRequestCount", (long)_pushHeaderRequestCount));
-                    contexts.Add(new InformationContext("PushHeaderCount", (long)_pushHeaderCount));
+                    contexts.Add(new InformationContext("PushMetadataRequestCount", (long)_pushMetadataRequestCount));
+                    contexts.Add(new InformationContext("PushMetadataCount", (long)_pushMetadataCount));
 
                     contexts.Add(new InformationContext("PullNodeCount", (long)_pullNodeCount));
                     contexts.Add(new InformationContext("PullBlockLinkCount", (long)_pullBlockLinkCount));
                     contexts.Add(new InformationContext("PullBlockRequestCount", (long)_pullBlockRequestCount));
                     contexts.Add(new InformationContext("PullBlockCount", (long)_pullBlockCount));
-                    contexts.Add(new InformationContext("PullHeaderRequestCount", (long)_pullHeaderRequestCount));
-                    contexts.Add(new InformationContext("PullHeaderCount", (long)_pullHeaderCount));
+                    contexts.Add(new InformationContext("PullMetadataRequestCount", (long)_pullMetadataRequestCount));
+                    contexts.Add(new InformationContext("PullMetadataCount", (long)_pullMetadataCount));
 
                     contexts.Add(new InformationContext("CreateConnectionCount", (long)_connectConnectionCount));
                     contexts.Add(new InformationContext("AcceptConnectionCount", (long)_acceptConnectionCount));
@@ -366,7 +366,7 @@ namespace Library.Net.Outopos
                     contexts.Add(new InformationContext("BlockCount", _cacheManager.Count));
                     contexts.Add(new InformationContext("RelayBlockCount", (long)_relayBlockCount));
 
-                    contexts.Add(new InformationContext("HeaderCount", _settings.HeaderManager.Count));
+                    contexts.Add(new InformationContext("MetadataCount", _settings.MetadataManager.Count));
 
                     return new Information(contexts);
                 }
@@ -518,12 +518,12 @@ namespace Library.Net.Outopos
                 connectionManager.PullBlocksLinkEvent += this.connectionManager_BlocksLinkEvent;
                 connectionManager.PullBlocksRequestEvent += this.connectionManager_BlocksRequestEvent;
                 connectionManager.PullBlockEvent += this.connectionManager_BlockEvent;
-                connectionManager.PullBroadcastHeadersRequestEvent += this.connectionManager_PullBroadcastHeadersRequestEvent;
-                connectionManager.PullBroadcastHeadersEvent += this.connectionManager_PullBroadcastHeadersEvent;
-                connectionManager.PullUnicastHeadersRequestEvent += this.connectionManager_PullUnicastHeadersRequestEvent;
-                connectionManager.PullUnicastHeadersEvent += this.connectionManager_PullUnicastHeadersEvent;
-                connectionManager.PullMulticastHeadersRequestEvent += this.connectionManager_PullMulticastHeadersRequestEvent;
-                connectionManager.PullMulticastHeadersEvent += this.connectionManager_PullMulticastHeadersEvent;
+                connectionManager.PullBroadcastMetadatasRequestEvent += this.connectionManager_PullBroadcastMetadatasRequestEvent;
+                connectionManager.PullBroadcastMetadatasEvent += this.connectionManager_PullBroadcastMetadatasEvent;
+                connectionManager.PullUnicastMetadatasRequestEvent += this.connectionManager_PullUnicastMetadatasRequestEvent;
+                connectionManager.PullUnicastMetadatasEvent += this.connectionManager_PullUnicastMetadatasEvent;
+                connectionManager.PullMulticastMetadatasRequestEvent += this.connectionManager_PullMulticastMetadatasRequestEvent;
+                connectionManager.PullMulticastMetadatasEvent += this.connectionManager_PullMulticastMetadatasEvent;
                 connectionManager.PullCancelEvent += this.connectionManager_PullCancelEvent;
                 connectionManager.CloseEvent += this.connectionManager_CloseEvent;
 
@@ -787,10 +787,10 @@ namespace Library.Net.Outopos
             Stopwatch pushBlockDownloadStopwatch = new Stopwatch();
             pushBlockDownloadStopwatch.Start();
 
-            Stopwatch pushHeaderUploadStopwatch = new Stopwatch();
-            pushHeaderUploadStopwatch.Start();
-            Stopwatch pushHeaderDownloadStopwatch = new Stopwatch();
-            pushHeaderDownloadStopwatch.Start();
+            Stopwatch pushMetadataUploadStopwatch = new Stopwatch();
+            pushMetadataUploadStopwatch.Start();
+            Stopwatch pushMetadataDownloadStopwatch = new Stopwatch();
+            pushMetadataDownloadStopwatch.Start();
 
             for (; ; )
             {
@@ -868,7 +868,7 @@ namespace Library.Net.Outopos
                 {
                     refreshStopwatch.Restart();
 
-                    // トラストにより必要なHeaderを選択し、不要なHeaderを削除する。
+                    // トラストにより必要なMetadataを選択し、不要なMetadataを削除する。
                     ThreadPool.QueueUserWorkItem((object wstate) =>
                     {
                         if (_refreshThreadRunning) return;
@@ -890,7 +890,7 @@ namespace Library.Net.Outopos
                                 // Signature
                                 {
                                     var removeSignatures = new SortedSet<string>();
-                                    removeSignatures.UnionWith(_settings.HeaderManager.GetBroadcastSignatures());
+                                    removeSignatures.UnionWith(_settings.MetadataManager.GetBroadcastSignatures());
                                     removeSignatures.ExceptWith(lockSignatures);
 
                                     var sortList = removeSignatures
@@ -902,9 +902,9 @@ namespace Library.Net.Outopos
                                             return t;
                                         }).ToList();
 
-                                    _settings.HeaderManager.RemoveProfileSignatures(sortList.Take(sortList.Count - 1024));
+                                    _settings.MetadataManager.RemoveProfileSignatures(sortList.Take(sortList.Count - 1024));
 
-                                    var liveSignatures = new SortedSet<string>(_settings.HeaderManager.GetBroadcastSignatures());
+                                    var liveSignatures = new SortedSet<string>(_settings.MetadataManager.GetBroadcastSignatures());
 
                                     foreach (var signature in _broadcastSignatureLastAccessTimes.Keys.ToArray())
                                     {
@@ -920,7 +920,7 @@ namespace Library.Net.Outopos
                                 // Signature
                                 {
                                     var removeSignatures = new SortedSet<string>();
-                                    removeSignatures.UnionWith(_settings.HeaderManager.GetUnicastSignatures());
+                                    removeSignatures.UnionWith(_settings.MetadataManager.GetUnicastSignatures());
                                     removeSignatures.ExceptWith(lockSignatures);
 
                                     var sortList = removeSignatures
@@ -932,9 +932,9 @@ namespace Library.Net.Outopos
                                             return t;
                                         }).ToList();
 
-                                    _settings.HeaderManager.RemoveUnicastSignatures(sortList.Take(sortList.Count - 1024));
+                                    _settings.MetadataManager.RemoveUnicastSignatures(sortList.Take(sortList.Count - 1024));
 
-                                    var liveSignatures = new SortedSet<string>(_settings.HeaderManager.GetUnicastSignatures());
+                                    var liveSignatures = new SortedSet<string>(_settings.MetadataManager.GetUnicastSignatures());
 
                                     foreach (var signature in _unicastSignatureLastAccessTimes.Keys.ToArray())
                                     {
@@ -950,7 +950,7 @@ namespace Library.Net.Outopos
                                 // Wiki
                                 {
                                     var removeWikis = new HashSet<Wiki>();
-                                    removeWikis.UnionWith(_settings.HeaderManager.GetMulticastWikis());
+                                    removeWikis.UnionWith(_settings.MetadataManager.GetMulticastWikis());
                                     removeWikis.ExceptWith(lockWikis);
 
                                     var sortList = removeWikis
@@ -962,9 +962,9 @@ namespace Library.Net.Outopos
                                             return t;
                                         }).ToList();
 
-                                    _settings.HeaderManager.RemoveMulticastTags(sortList.Take(sortList.Count - 1024));
+                                    _settings.MetadataManager.RemoveMulticastTags(sortList.Take(sortList.Count - 1024));
 
-                                    var liveWikis = new HashSet<Wiki>(_settings.HeaderManager.GetMulticastWikis());
+                                    var liveWikis = new HashSet<Wiki>(_settings.MetadataManager.GetMulticastWikis());
 
                                     foreach (var section in _multicastWikiLastAccessTimes.Keys.ToArray())
                                     {
@@ -977,7 +977,7 @@ namespace Library.Net.Outopos
                                 // Chat
                                 {
                                     var removeChats = new HashSet<Chat>();
-                                    removeChats.UnionWith(_settings.HeaderManager.GetMulticastChats());
+                                    removeChats.UnionWith(_settings.MetadataManager.GetMulticastChats());
                                     removeChats.ExceptWith(lockChats);
 
                                     var sortList = removeChats
@@ -989,9 +989,9 @@ namespace Library.Net.Outopos
                                             return t;
                                         }).ToList();
 
-                                    _settings.HeaderManager.RemoveMulticastTags(sortList.Take(sortList.Count - 1024));
+                                    _settings.MetadataManager.RemoveMulticastTags(sortList.Take(sortList.Count - 1024));
 
-                                    var liveChats = new HashSet<Chat>(_settings.HeaderManager.GetMulticastChats());
+                                    var liveChats = new HashSet<Chat>(_settings.MetadataManager.GetMulticastChats());
 
                                     foreach (var section in _multicastChatLastAccessTimes.Keys.ToArray())
                                     {
@@ -1009,60 +1009,60 @@ namespace Library.Net.Outopos
                                 {
                                     var now = DateTime.UtcNow;
 
-                                    var removeSignatureMessageHeaders = new HashSet<SignatureMessageHeader>();
+                                    var removeSignatureMessageMetadatas = new HashSet<SignatureMessageMetadata>();
 
-                                    foreach (var targetSignature in _settings.HeaderManager.GetUnicastSignatures())
+                                    foreach (var targetSignature in _settings.MetadataManager.GetUnicastSignatures())
                                     {
                                         // SignatureMessage
                                         {
-                                            var trustHeaders = new Dictionary<string, List<SignatureMessageHeader>>();
-                                            var untrustHeaders = new Dictionary<string, List<SignatureMessageHeader>>();
+                                            var trustMetadatas = new Dictionary<string, List<SignatureMessageMetadata>>();
+                                            var untrustMetadatas = new Dictionary<string, List<SignatureMessageMetadata>>();
 
-                                            foreach (var header in _settings.HeaderManager.GetSignatureMessageHeaders(targetSignature))
+                                            foreach (var metadata in _settings.MetadataManager.GetSignatureMessageMetadatas(targetSignature))
                                             {
-                                                var signature = header.Certificate.ToString();
+                                                var signature = metadata.Certificate.ToString();
 
                                                 if (trustSignature.Contains(signature))
                                                 {
-                                                    List<SignatureMessageHeader> list;
+                                                    List<SignatureMessageMetadata> list;
 
-                                                    if (!trustHeaders.TryGetValue(signature, out list))
+                                                    if (!trustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<SignatureMessageHeader>();
-                                                        trustHeaders[signature] = list;
+                                                        list = new List<SignatureMessageMetadata>();
+                                                        trustMetadatas[signature] = list;
                                                     }
 
-                                                    list.Add(header);
+                                                    list.Add(metadata);
                                                 }
                                                 else
                                                 {
-                                                    List<SignatureMessageHeader> list;
+                                                    List<SignatureMessageMetadata> list;
 
-                                                    if (!untrustHeaders.TryGetValue(signature, out list))
+                                                    if (!untrustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<SignatureMessageHeader>();
-                                                        untrustHeaders[signature] = list;
+                                                        list = new List<SignatureMessageMetadata>();
+                                                        untrustMetadatas[signature] = list;
                                                     }
 
-                                                    list.Add(header);
+                                                    list.Add(metadata);
                                                 }
                                             }
 
-                                            removeSignatureMessageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+                                            removeSignatureMessageMetadatas.UnionWith(untrustMetadatas.Randomize().Skip(32).SelectMany(n => n.Value));
 
-                                            foreach (var list in CollectionUtilities.Unite(trustHeaders.Values, untrustHeaders.Values))
+                                            foreach (var list in CollectionUtilities.Unite(trustMetadatas.Values, untrustMetadatas.Values))
                                             {
                                                 if (list.Count <= 32) continue;
 
                                                 list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeSignatureMessageHeaders.UnionWith(list.Take(list.Count - 32));
+                                                removeSignatureMessageMetadatas.UnionWith(list.Take(list.Count - 32));
                                             }
                                         }
                                     }
 
-                                    foreach (var header in removeSignatureMessageHeaders)
+                                    foreach (var metadata in removeSignatureMessageMetadatas)
                                     {
-                                        _settings.HeaderManager.RemoveHeader(header);
+                                        _settings.MetadataManager.RemoveMetadata(metadata);
                                     }
                                 }
                             }
@@ -1074,143 +1074,143 @@ namespace Library.Net.Outopos
                                 {
                                     var now = DateTime.UtcNow;
 
-                                    var removeWikiPageHeaders = new HashSet<WikiPageHeader>();
+                                    var removeWikiPageMetadatas = new HashSet<WikiPageMetadata>();
 
-                                    foreach (var wiki in _settings.HeaderManager.GetMulticastWikis())
+                                    foreach (var wiki in _settings.MetadataManager.GetMulticastWikis())
                                     {
                                         // WikiPage
                                         {
-                                            var trustHeaders = new Dictionary<string, List<WikiPageHeader>>();
-                                            var untrustHeaders = new Dictionary<string, List<WikiPageHeader>>();
+                                            var trustMetadatas = new Dictionary<string, List<WikiPageMetadata>>();
+                                            var untrustMetadatas = new Dictionary<string, List<WikiPageMetadata>>();
 
-                                            foreach (var header in _settings.HeaderManager.GetWikiPageHeaders(wiki))
+                                            foreach (var metadata in _settings.MetadataManager.GetWikiPageMetadatas(wiki))
                                             {
-                                                var signature = header.Certificate.ToString();
+                                                var signature = metadata.Certificate.ToString();
 
                                                 if (trustSignature.Contains(signature))
                                                 {
-                                                    List<WikiPageHeader> list;
+                                                    List<WikiPageMetadata> list;
 
-                                                    if (!trustHeaders.TryGetValue(signature, out list))
+                                                    if (!trustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<WikiPageHeader>();
-                                                        trustHeaders[signature] = list;
+                                                        list = new List<WikiPageMetadata>();
+                                                        trustMetadatas[signature] = list;
                                                     }
 
-                                                    list.Add(header);
+                                                    list.Add(metadata);
                                                 }
                                                 else
                                                 {
-                                                    List<WikiPageHeader> list;
+                                                    List<WikiPageMetadata> list;
 
-                                                    if (!untrustHeaders.TryGetValue(signature, out list))
+                                                    if (!untrustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<WikiPageHeader>();
-                                                        untrustHeaders[signature] = list;
+                                                        list = new List<WikiPageMetadata>();
+                                                        untrustMetadatas[signature] = list;
                                                     }
 
-                                                    list.Add(header);
+                                                    list.Add(metadata);
                                                 }
                                             }
 
-                                            removeWikiPageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+                                            removeWikiPageMetadatas.UnionWith(untrustMetadatas.Randomize().Skip(32).SelectMany(n => n.Value));
 
-                                            foreach (var list in CollectionUtilities.Unite(trustHeaders.Values, untrustHeaders.Values))
+                                            foreach (var list in CollectionUtilities.Unite(trustMetadatas.Values, untrustMetadatas.Values))
                                             {
                                                 if (list.Count <= 32) continue;
 
                                                 list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeWikiPageHeaders.UnionWith(list.Take(list.Count - 32));
+                                                removeWikiPageMetadatas.UnionWith(list.Take(list.Count - 32));
                                             }
                                         }
                                     }
 
-                                    foreach (var header in removeWikiPageHeaders)
+                                    foreach (var metadata in removeWikiPageMetadatas)
                                     {
-                                        _settings.HeaderManager.RemoveHeader(header);
+                                        _settings.MetadataManager.RemoveMetadata(metadata);
                                     }
                                 }
 
                                 {
                                     var now = DateTime.UtcNow;
 
-                                    var removeChatTopicHeaders = new HashSet<ChatTopicHeader>();
-                                    var removeChatMessageHeaders = new HashSet<ChatMessageHeader>();
+                                    var removeChatTopicMetadatas = new HashSet<ChatTopicMetadata>();
+                                    var removeChatMessageMetadatas = new HashSet<ChatMessageMetadata>();
 
-                                    foreach (var chat in _settings.HeaderManager.GetMulticastChats())
+                                    foreach (var chat in _settings.MetadataManager.GetMulticastChats())
                                     {
                                         // ChatTopic
                                         {
-                                            var untrustHeaders = new List<ChatTopicHeader>();
+                                            var untrustMetadatas = new List<ChatTopicMetadata>();
 
-                                            foreach (var header in _settings.HeaderManager.GetChatTopicHeaders(chat))
+                                            foreach (var metadata in _settings.MetadataManager.GetChatTopicMetadatas(chat))
                                             {
-                                                var signature = header.Certificate.ToString();
+                                                var signature = metadata.Certificate.ToString();
 
                                                 if (!trustSignature.Contains(signature))
                                                 {
-                                                    untrustHeaders.Add(header);
+                                                    untrustMetadatas.Add(metadata);
                                                 }
                                             }
 
-                                            removeChatTopicHeaders.UnionWith(untrustHeaders.Randomize().Skip(32));
+                                            removeChatTopicMetadatas.UnionWith(untrustMetadatas.Randomize().Skip(32));
                                         }
 
                                         // ChatMessage
                                         {
-                                            var trustHeaders = new Dictionary<string, List<ChatMessageHeader>>();
-                                            var untrustHeaders = new Dictionary<string, List<ChatMessageHeader>>();
+                                            var trustMetadatas = new Dictionary<string, List<ChatMessageMetadata>>();
+                                            var untrustMetadatas = new Dictionary<string, List<ChatMessageMetadata>>();
 
-                                            foreach (var header in _settings.HeaderManager.GetChatMessageHeaders(chat))
+                                            foreach (var metadata in _settings.MetadataManager.GetChatMessageMetadatas(chat))
                                             {
-                                                var signature = header.Certificate.ToString();
+                                                var signature = metadata.Certificate.ToString();
 
                                                 if (trustSignature.Contains(signature))
                                                 {
-                                                    List<ChatMessageHeader> list;
+                                                    List<ChatMessageMetadata> list;
 
-                                                    if (!trustHeaders.TryGetValue(signature, out list))
+                                                    if (!trustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<ChatMessageHeader>();
-                                                        trustHeaders[signature] = list;
+                                                        list = new List<ChatMessageMetadata>();
+                                                        trustMetadatas[signature] = list;
                                                     }
 
-                                                    list.Add(header);
+                                                    list.Add(metadata);
                                                 }
                                                 else
                                                 {
-                                                    List<ChatMessageHeader> list;
+                                                    List<ChatMessageMetadata> list;
 
-                                                    if (!untrustHeaders.TryGetValue(signature, out list))
+                                                    if (!untrustMetadatas.TryGetValue(signature, out list))
                                                     {
-                                                        list = new List<ChatMessageHeader>();
-                                                        untrustHeaders[signature] = list;
+                                                        list = new List<ChatMessageMetadata>();
+                                                        untrustMetadatas[signature] = list;
                                                     }
 
-                                                    list.Add(header);
+                                                    list.Add(metadata);
                                                 }
                                             }
 
-                                            removeChatMessageHeaders.UnionWith(untrustHeaders.Randomize().Skip(32).SelectMany(n => n.Value));
+                                            removeChatMessageMetadatas.UnionWith(untrustMetadatas.Randomize().Skip(32).SelectMany(n => n.Value));
 
-                                            foreach (var list in CollectionUtilities.Unite(trustHeaders.Values, untrustHeaders.Values))
+                                            foreach (var list in CollectionUtilities.Unite(trustMetadatas.Values, untrustMetadatas.Values))
                                             {
                                                 if (list.Count <= 32) continue;
 
                                                 list.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
-                                                removeChatMessageHeaders.UnionWith(list.Take(list.Count - 32));
+                                                removeChatMessageMetadatas.UnionWith(list.Take(list.Count - 32));
                                             }
                                         }
                                     }
 
-                                    foreach (var header in removeChatTopicHeaders)
+                                    foreach (var metadata in removeChatTopicMetadatas)
                                     {
-                                        _settings.HeaderManager.RemoveHeader(header);
+                                        _settings.MetadataManager.RemoveMetadata(metadata);
                                     }
 
-                                    foreach (var header in removeChatMessageHeaders)
+                                    foreach (var metadata in removeChatMessageMetadatas)
                                     {
-                                        _settings.HeaderManager.RemoveHeader(header);
+                                        _settings.MetadataManager.RemoveMetadata(metadata);
                                     }
                                 }
                             }
@@ -1641,11 +1641,11 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                // Headerのアップロード
+                // Metadataのアップロード
                 if (connectionCount >= _uploadingConnectionCountLowerLimit
-                    && pushHeaderUploadStopwatch.Elapsed.TotalMinutes >= 3)
+                    && pushMetadataUploadStopwatch.Elapsed.TotalMinutes >= 3)
                 {
-                    pushHeaderUploadStopwatch.Restart();
+                    pushMetadataUploadStopwatch.Restart();
 
                     var baseNode = this.BaseNode;
 
@@ -1664,7 +1664,7 @@ namespace Library.Net.Outopos
                     }
 
                     // Broadcast
-                    foreach (var signature in _settings.HeaderManager.GetBroadcastSignatures())
+                    foreach (var signature in _settings.MetadataManager.GetBroadcastSignatures())
                     {
                         try
                         {
@@ -1687,7 +1687,7 @@ namespace Library.Net.Outopos
                     }
 
                     // Unicast
-                    foreach (var signature in _settings.HeaderManager.GetUnicastSignatures())
+                    foreach (var signature in _settings.MetadataManager.GetUnicastSignatures())
                     {
                         try
                         {
@@ -1711,7 +1711,7 @@ namespace Library.Net.Outopos
 
                     // Multicast
                     {
-                        foreach (var tag in _settings.HeaderManager.GetMulticastWikis())
+                        foreach (var tag in _settings.MetadataManager.GetMulticastWikis())
                         {
                             try
                             {
@@ -1733,7 +1733,7 @@ namespace Library.Net.Outopos
                             }
                         }
 
-                        foreach (var tag in _settings.HeaderManager.GetMulticastChats())
+                        foreach (var tag in _settings.MetadataManager.GetMulticastChats())
                         {
                             try
                             {
@@ -1757,11 +1757,11 @@ namespace Library.Net.Outopos
                     }
                 }
 
-                // Headerのダウンロード
+                // Metadataのダウンロード
                 if (connectionCount >= _downloadingConnectionCountLowerLimit
-                    && pushHeaderDownloadStopwatch.Elapsed.TotalSeconds >= 60)
+                    && pushMetadataDownloadStopwatch.Elapsed.TotalSeconds >= 60)
                 {
-                    pushHeaderDownloadStopwatch.Restart();
+                    pushMetadataDownloadStopwatch.Restart();
 
                     var baseNode = this.BaseNode;
 
@@ -1790,7 +1790,7 @@ namespace Library.Net.Outopos
                             var array = _pushBroadcastSignaturesRequestList.ToArray();
                             _random.Shuffle(array);
 
-                            int count = _maxHeaderRequestCount;
+                            int count = _maxMetadataRequestCount;
 
                             for (int i = 0; count > 0 && i < array.Length; i++)
                             {
@@ -1812,7 +1812,7 @@ namespace Library.Net.Outopos
                                 var array = messageManager.PullBroadcastSignaturesRequest.ToArray();
                                 _random.Shuffle(array);
 
-                                int count = _maxHeaderRequestCount;
+                                int count = _maxMetadataRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
@@ -1833,7 +1833,7 @@ namespace Library.Net.Outopos
                             var array = _pushUnicastSignaturesRequestList.ToArray();
                             _random.Shuffle(array);
 
-                            int count = _maxHeaderRequestCount;
+                            int count = _maxMetadataRequestCount;
 
                             for (int i = 0; count > 0 && i < array.Length; i++)
                             {
@@ -1855,7 +1855,7 @@ namespace Library.Net.Outopos
                                 var array = messageManager.PullUnicastSignaturesRequest.ToArray();
                                 _random.Shuffle(array);
 
-                                int count = _maxHeaderRequestCount;
+                                int count = _maxMetadataRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
@@ -1877,7 +1877,7 @@ namespace Library.Net.Outopos
                                 var array = _pushMulticastWikisRequestList.ToArray();
                                 _random.Shuffle(array);
 
-                                int count = _maxHeaderRequestCount;
+                                int count = _maxMetadataRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
@@ -1894,7 +1894,7 @@ namespace Library.Net.Outopos
                                 var array = _pushMulticastChatsRequestList.ToArray();
                                 _random.Shuffle(array);
 
-                                int count = _maxHeaderRequestCount;
+                                int count = _maxMetadataRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
@@ -1917,7 +1917,7 @@ namespace Library.Net.Outopos
                                 var array = messageManager.PullMulticastWikisRequest.ToArray();
                                 _random.Shuffle(array);
 
-                                int count = _maxHeaderRequestCount;
+                                int count = _maxMetadataRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
@@ -1934,7 +1934,7 @@ namespace Library.Net.Outopos
                                 var array = messageManager.PullMulticastChatsRequest.ToArray();
                                 _random.Shuffle(array);
 
-                                int count = _maxHeaderRequestCount;
+                                int count = _maxMetadataRequestCount;
 
                                 for (int i = 0; count > 0 && i < array.Length; i++)
                                 {
@@ -1979,7 +1979,7 @@ namespace Library.Net.Outopos
                                         pushBroadcastSignaturesRequestDictionary[requestNodes[i]] = collection;
                                     }
 
-                                    if (collection.Count < _maxHeaderRequestCount)
+                                    if (collection.Count < _maxMetadataRequestCount)
                                     {
                                         collection.Add(signature);
                                     }
@@ -2030,7 +2030,7 @@ namespace Library.Net.Outopos
                                         pushUnicastSignaturesRequestDictionary[requestNodes[i]] = collection;
                                     }
 
-                                    if (collection.Count < _maxHeaderRequestCount)
+                                    if (collection.Count < _maxMetadataRequestCount)
                                     {
                                         collection.Add(signature);
                                     }
@@ -2082,7 +2082,7 @@ namespace Library.Net.Outopos
                                         pushMulticastWikisRequestDictionary[requestNodes[i]] = collection;
                                     }
 
-                                    if (collection.Count < _maxHeaderRequestCount)
+                                    if (collection.Count < _maxMetadataRequestCount)
                                     {
                                         collection.Add(tag);
                                     }
@@ -2115,7 +2115,7 @@ namespace Library.Net.Outopos
                                         pushMulticastChatsRequestDictionary[requestNodes[i]] = collection;
                                     }
 
-                                    if (collection.Count < _maxHeaderRequestCount)
+                                    if (collection.Count < _maxMetadataRequestCount)
                                     {
                                         collection.Add(tag);
                                     }
@@ -2174,8 +2174,8 @@ namespace Library.Net.Outopos
                 updateTime.Start();
                 Stopwatch blockDiffusionTime = new Stopwatch();
                 blockDiffusionTime.Start();
-                Stopwatch headerUpdateTime = new Stopwatch();
-                headerUpdateTime.Start();
+                Stopwatch metadataUpdateTime = new Stopwatch();
+                metadataUpdateTime.Start();
 
                 for (; ; )
                 {
@@ -2300,7 +2300,7 @@ namespace Library.Net.Outopos
                             }
                         }
 
-                        // PushBroadcastHeadersRequest
+                        // PushBroadcastMetadatasRequest
                         if (connectionCount >= _downloadingConnectionCountLowerLimit)
                         {
                             List<string> targetList = null;
@@ -2318,15 +2318,15 @@ namespace Library.Net.Outopos
                             {
                                 try
                                 {
-                                    connectionManager.PushBroadcastHeadersRequest(targetList);
+                                    connectionManager.PushBroadcastMetadatasRequest(targetList);
 
                                     foreach (var item in targetList)
                                     {
                                         _pushBroadcastSignaturesRequestList.Remove(item);
                                     }
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push BroadcastHeadersRequest ({0})", targetList.Count));
-                                    _pushHeaderRequestCount.Add(targetList.Count);
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push BroadcastMetadatasRequest ({0})", targetList.Count));
+                                    _pushMetadataRequestCount.Add(targetList.Count);
                                 }
                                 catch (Exception e)
                                 {
@@ -2340,7 +2340,7 @@ namespace Library.Net.Outopos
                             }
                         }
 
-                        // PushUnicastHeadersRequest
+                        // PushUnicastMetadatasRequest
                         if (connectionCount >= _downloadingConnectionCountLowerLimit)
                         {
                             List<string> targetList = null;
@@ -2358,15 +2358,15 @@ namespace Library.Net.Outopos
                             {
                                 try
                                 {
-                                    connectionManager.PushUnicastHeadersRequest(targetList);
+                                    connectionManager.PushUnicastMetadatasRequest(targetList);
 
                                     foreach (var item in targetList)
                                     {
                                         _pushUnicastSignaturesRequestList.Remove(item);
                                     }
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push UnicastHeadersRequest ({0})", targetList.Count));
-                                    _pushHeaderRequestCount.Add(targetList.Count);
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push UnicastMetadatasRequest ({0})", targetList.Count));
+                                    _pushMetadataRequestCount.Add(targetList.Count);
                                 }
                                 catch (Exception e)
                                 {
@@ -2380,7 +2380,7 @@ namespace Library.Net.Outopos
                             }
                         }
 
-                        // PushMulticastHeadersRequest
+                        // PushMulticastMetadatasRequest
                         if (connectionCount >= _downloadingConnectionCountLowerLimit)
                         {
                             {
@@ -2409,7 +2409,7 @@ namespace Library.Net.Outopos
                                 {
                                     try
                                     {
-                                        connectionManager.PushMulticastHeadersRequest(wikiList, chatList);
+                                        connectionManager.PushMulticastMetadatasRequest(wikiList, chatList);
 
                                         int tagCount = 0;
 
@@ -2433,8 +2433,8 @@ namespace Library.Net.Outopos
                                             tagCount += chatList.Count;
                                         }
 
-                                        Debug.WriteLine(string.Format("ConnectionManager: Push MulticastHeadersRequest ({0})", tagCount));
-                                        _pushHeaderRequestCount.Add(tagCount);
+                                        Debug.WriteLine(string.Format("ConnectionManager: Push MulticastMetadatasRequest ({0})", tagCount));
+                                        _pushMetadataRequestCount.Add(tagCount);
                                     }
                                     catch (Exception e)
                                     {
@@ -2593,180 +2593,180 @@ namespace Library.Net.Outopos
                         }
                     }
 
-                    if (headerUpdateTime.Elapsed.TotalSeconds >= 60)
+                    if (metadataUpdateTime.Elapsed.TotalSeconds >= 60)
                     {
-                        headerUpdateTime.Restart();
+                        metadataUpdateTime.Restart();
 
-                        // PushBroadcastHeaders
+                        // PushBroadcastMetadatas
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
                         {
                             {
                                 var signatures = messageManager.PullBroadcastSignaturesRequest.ToArray();
 
-                                var profileHeaders = new List<ProfileHeader>();
+                                var profileMetadatas = new List<ProfileMetadata>();
 
                                 _random.Shuffle(signatures);
                                 foreach (var signature in signatures)
                                 {
-                                    var header = _settings.HeaderManager.GetProfileHeader(signature);
-                                    if (header == null) continue;
+                                    var metadata = _settings.MetadataManager.GetProfileMetadata(signature);
+                                    if (metadata == null) continue;
 
-                                    if (!messageManager.StockProfileHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                    if (!messageManager.StockProfileMetadatas.Contains(metadata.CreateHash(_hashAlgorithm)))
                                     {
-                                        profileHeaders.Add(header);
+                                        profileMetadatas.Add(metadata);
 
-                                        if (profileHeaders.Count >= _maxHeaderCount) break;
+                                        if (profileMetadatas.Count >= _maxMetadataCount) break;
                                     }
 
-                                    if (profileHeaders.Count >= _maxHeaderCount) break;
+                                    if (profileMetadatas.Count >= _maxMetadataCount) break;
                                 }
 
-                                if (profileHeaders.Count > 0)
+                                if (profileMetadatas.Count > 0)
                                 {
-                                    connectionManager.PushBroadcastHeaders(
-                                        profileHeaders);
+                                    connectionManager.PushBroadcastMetadatas(
+                                        profileMetadatas);
 
-                                    var headerCount =
-                                        profileHeaders.Count;
+                                    var metadataCount =
+                                        profileMetadatas.Count;
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push BroadcastHeaders ({0})", headerCount));
-                                    _pushHeaderCount.Add(headerCount);
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push BroadcastMetadatas ({0})", metadataCount));
+                                    _pushMetadataCount.Add(metadataCount);
 
-                                    foreach (var header in profileHeaders)
+                                    foreach (var metadata in profileMetadatas)
                                     {
-                                        messageManager.StockProfileHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                        messageManager.StockProfileMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
                                     }
                                 }
                             }
                         }
 
-                        // PushUnicastHeaders
+                        // PushUnicastMetadatas
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
                         {
                             {
                                 var signatures = messageManager.PullUnicastSignaturesRequest.ToArray();
 
-                                var signatureMessageHeaders = new List<SignatureMessageHeader>();
+                                var signatureMessageMetadatas = new List<SignatureMessageMetadata>();
 
                                 _random.Shuffle(signatures);
                                 foreach (var signature in signatures)
                                 {
-                                    foreach (var header in _settings.HeaderManager.GetSignatureMessageHeaders(signature))
+                                    foreach (var metadata in _settings.MetadataManager.GetSignatureMessageMetadatas(signature))
                                     {
-                                        if (!messageManager.StockSignatureMessageHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        if (!messageManager.StockSignatureMessageMetadatas.Contains(metadata.CreateHash(_hashAlgorithm)))
                                         {
-                                            signatureMessageHeaders.Add(header);
+                                            signatureMessageMetadatas.Add(metadata);
 
-                                            if (signatureMessageHeaders.Count >= _maxHeaderCount) break;
+                                            if (signatureMessageMetadatas.Count >= _maxMetadataCount) break;
                                         }
                                     }
 
-                                    if (signatureMessageHeaders.Count >= _maxHeaderCount) break;
+                                    if (signatureMessageMetadatas.Count >= _maxMetadataCount) break;
                                 }
 
-                                if (signatureMessageHeaders.Count > 0)
+                                if (signatureMessageMetadatas.Count > 0)
                                 {
-                                    connectionManager.PushUnicastHeaders(
-                                        signatureMessageHeaders);
+                                    connectionManager.PushUnicastMetadatas(
+                                        signatureMessageMetadatas);
 
-                                    var headerCount =
-                                        signatureMessageHeaders.Count;
+                                    var metadataCount =
+                                        signatureMessageMetadatas.Count;
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push UnicastHeaders ({0})", headerCount));
-                                    _pushHeaderCount.Add(headerCount);
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push UnicastMetadatas ({0})", metadataCount));
+                                    _pushMetadataCount.Add(metadataCount);
 
-                                    foreach (var header in signatureMessageHeaders)
+                                    foreach (var metadata in signatureMessageMetadatas)
                                     {
-                                        messageManager.StockSignatureMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                        messageManager.StockSignatureMessageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
                                     }
                                 }
                             }
                         }
 
-                        // PushMulticastHeaders
+                        // PushMulticastMetadatas
                         if (connectionCount >= _uploadingConnectionCountLowerLimit)
                         {
                             {
                                 var wikis = messageManager.PullMulticastWikisRequest.ToArray();
                                 var chats = messageManager.PullMulticastChatsRequest.ToArray();
 
-                                var wikiPageHeaders = new List<WikiPageHeader>();
-                                var chatTopicHeaders = new List<ChatTopicHeader>();
-                                var chatMessageHeaders = new List<ChatMessageHeader>();
+                                var wikiPageMetadatas = new List<WikiPageMetadata>();
+                                var chatTopicMetadatas = new List<ChatTopicMetadata>();
+                                var chatMessageMetadatas = new List<ChatMessageMetadata>();
 
                                 _random.Shuffle(wikis);
                                 foreach (var tag in wikis)
                                 {
-                                    foreach (var header in _settings.HeaderManager.GetWikiPageHeaders(tag))
+                                    foreach (var metadata in _settings.MetadataManager.GetWikiPageMetadatas(tag))
                                     {
-                                        if (!messageManager.StockWikiPageHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        if (!messageManager.StockWikiPageMetadatas.Contains(metadata.CreateHash(_hashAlgorithm)))
                                         {
-                                            wikiPageHeaders.Add(header);
+                                            wikiPageMetadatas.Add(metadata);
 
-                                            if (wikiPageHeaders.Count >= _maxHeaderCount) break;
+                                            if (wikiPageMetadatas.Count >= _maxMetadataCount) break;
                                         }
                                     }
 
-                                    if (wikiPageHeaders.Count >= _maxHeaderCount) break;
+                                    if (wikiPageMetadatas.Count >= _maxMetadataCount) break;
                                 }
 
                                 _random.Shuffle(chats);
                                 foreach (var tag in chats)
                                 {
-                                    foreach (var header in _settings.HeaderManager.GetChatTopicHeaders(tag))
+                                    foreach (var metadata in _settings.MetadataManager.GetChatTopicMetadatas(tag))
                                     {
-                                        if (!messageManager.StockChatTopicHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        if (!messageManager.StockChatTopicMetadatas.Contains(metadata.CreateHash(_hashAlgorithm)))
                                         {
-                                            chatTopicHeaders.Add(header);
+                                            chatTopicMetadatas.Add(metadata);
 
-                                            if (chatTopicHeaders.Count >= _maxHeaderCount) break;
+                                            if (chatTopicMetadatas.Count >= _maxMetadataCount) break;
                                         }
                                     }
 
-                                    foreach (var header in _settings.HeaderManager.GetChatMessageHeaders(tag))
+                                    foreach (var metadata in _settings.MetadataManager.GetChatMessageMetadatas(tag))
                                     {
-                                        if (!messageManager.StockChatMessageHeaders.Contains(header.CreateHash(_hashAlgorithm)))
+                                        if (!messageManager.StockChatMessageMetadatas.Contains(metadata.CreateHash(_hashAlgorithm)))
                                         {
-                                            chatMessageHeaders.Add(header);
+                                            chatMessageMetadatas.Add(metadata);
 
-                                            if (chatMessageHeaders.Count >= _maxHeaderCount) break;
+                                            if (chatMessageMetadatas.Count >= _maxMetadataCount) break;
                                         }
                                     }
 
-                                    if (chatTopicHeaders.Count >= _maxHeaderCount) break;
-                                    if (chatMessageHeaders.Count >= _maxHeaderCount) break;
+                                    if (chatTopicMetadatas.Count >= _maxMetadataCount) break;
+                                    if (chatMessageMetadatas.Count >= _maxMetadataCount) break;
                                 }
 
-                                if (wikiPageHeaders.Count > 0
-                                    || chatTopicHeaders.Count > 0
-                                    || chatMessageHeaders.Count > 0)
+                                if (wikiPageMetadatas.Count > 0
+                                    || chatTopicMetadatas.Count > 0
+                                    || chatMessageMetadatas.Count > 0)
                                 {
-                                    connectionManager.PushMulticastHeaders(
-                                        wikiPageHeaders,
-                                        chatTopicHeaders,
-                                        chatMessageHeaders);
+                                    connectionManager.PushMulticastMetadatas(
+                                        wikiPageMetadatas,
+                                        chatTopicMetadatas,
+                                        chatMessageMetadatas);
 
-                                    var headerCount =
-                                        wikiPageHeaders.Count
-                                        + chatTopicHeaders.Count
-                                        + chatMessageHeaders.Count;
+                                    var metadataCount =
+                                        wikiPageMetadatas.Count
+                                        + chatTopicMetadatas.Count
+                                        + chatMessageMetadatas.Count;
 
-                                    Debug.WriteLine(string.Format("ConnectionManager: Push MulticastHeaders ({0})", headerCount));
-                                    _pushHeaderCount.Add(headerCount);
+                                    Debug.WriteLine(string.Format("ConnectionManager: Push MulticastMetadatas ({0})", metadataCount));
+                                    _pushMetadataCount.Add(metadataCount);
 
-                                    foreach (var header in wikiPageHeaders)
+                                    foreach (var metadata in wikiPageMetadatas)
                                     {
-                                        messageManager.StockWikiPageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                        messageManager.StockWikiPageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
                                     }
 
-                                    foreach (var header in chatTopicHeaders)
+                                    foreach (var metadata in chatTopicMetadatas)
                                     {
-                                        messageManager.StockChatTopicHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                        messageManager.StockChatTopicMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
                                     }
 
-                                    foreach (var header in chatMessageHeaders)
+                                    foreach (var metadata in chatMessageMetadatas)
                                     {
-                                        messageManager.StockChatMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                                        messageManager.StockChatMessageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
                                     }
                                 }
                             }
@@ -2887,189 +2887,189 @@ namespace Library.Net.Outopos
             }
         }
 
-        private void connectionManager_PullBroadcastHeadersRequestEvent(object sender, PullBroadcastHeadersRequestEventArgs e)
+        private void connectionManager_PullBroadcastMetadatasRequestEvent(object sender, PullBroadcastMetadatasRequestEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.PullBroadcastSignaturesRequest.Count > _maxHeaderRequestCount * messageManager.PullBroadcastSignaturesRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullBroadcastSignaturesRequest.Count > _maxMetadataRequestCount * messageManager.PullBroadcastSignaturesRequest.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull BroadcastHeadersRequest ({0})",
+            Debug.WriteLine(string.Format("ConnectionManager: Pull BroadcastMetadatasRequest ({0})",
                 e.Signatures.Count()));
 
-            foreach (var signature in e.Signatures.Take(_maxHeaderRequestCount))
+            foreach (var signature in e.Signatures.Take(_maxMetadataRequestCount))
             {
                 if (!Signature.Check(signature)) continue;
 
                 messageManager.PullBroadcastSignaturesRequest.Add(signature);
-                _pullHeaderRequestCount.Increment();
+                _pullMetadataRequestCount.Increment();
 
                 _broadcastSignatureLastAccessTimes[signature] = DateTime.UtcNow;
             }
         }
 
-        private void connectionManager_PullBroadcastHeadersEvent(object sender, PullBroadcastHeadersEventArgs e)
+        private void connectionManager_PullBroadcastMetadatasEvent(object sender, PullBroadcastMetadatasEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.StockProfileHeaders.Count > _maxHeaderCount * messageManager.StockProfileHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockProfileMetadatas.Count > _maxMetadataCount * messageManager.StockProfileMetadatas.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull BroadcastHeaders ({0})",
-                e.ProfileHeaders.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull BroadcastMetadatas ({0})",
+                e.ProfileMetadatas.Count()));
 
-            foreach (var header in e.ProfileHeaders.Take(_maxHeaderCount))
+            foreach (var metadata in e.ProfileMetadatas.Take(_maxMetadataCount))
             {
-                if (_settings.HeaderManager.SetHeader(header))
+                if (_settings.MetadataManager.SetMetadata(metadata))
                 {
-                    messageManager.StockProfileHeaders.Add(header.CreateHash(_hashAlgorithm));
+                    messageManager.StockProfileMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
                     _broadcastSignatureLastAccessTimes[signature] = DateTime.UtcNow;
                 }
 
-                _pullHeaderCount.Increment();
+                _pullMetadataCount.Increment();
             }
         }
 
-        private void connectionManager_PullUnicastHeadersRequestEvent(object sender, PullUnicastHeadersRequestEventArgs e)
+        private void connectionManager_PullUnicastMetadatasRequestEvent(object sender, PullUnicastMetadatasRequestEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.PullUnicastSignaturesRequest.Count > _maxHeaderRequestCount * messageManager.PullUnicastSignaturesRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullUnicastSignaturesRequest.Count > _maxMetadataRequestCount * messageManager.PullUnicastSignaturesRequest.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull UnicastHeadersRequest ({0})",
+            Debug.WriteLine(string.Format("ConnectionManager: Pull UnicastMetadatasRequest ({0})",
                 e.Signatures.Count()));
 
-            foreach (var signature in e.Signatures.Take(_maxHeaderRequestCount))
+            foreach (var signature in e.Signatures.Take(_maxMetadataRequestCount))
             {
                 if (!Signature.Check(signature)) continue;
 
                 messageManager.PullUnicastSignaturesRequest.Add(signature);
-                _pullHeaderRequestCount.Increment();
+                _pullMetadataRequestCount.Increment();
 
                 _unicastSignatureLastAccessTimes[signature] = DateTime.UtcNow;
             }
         }
 
-        private void connectionManager_PullUnicastHeadersEvent(object sender, PullUnicastHeadersEventArgs e)
+        private void connectionManager_PullUnicastMetadatasEvent(object sender, PullUnicastMetadatasEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.StockSignatureMessageHeaders.Count > _maxHeaderCount * messageManager.StockSignatureMessageHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockSignatureMessageMetadatas.Count > _maxMetadataCount * messageManager.StockSignatureMessageMetadatas.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull UnicastHeaders ({0})",
-                e.SignatureMessageHeaders.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull UnicastMetadatas ({0})",
+                e.SignatureMessageMetadatas.Count()));
 
-            foreach (var header in e.SignatureMessageHeaders.Take(_maxHeaderCount))
+            foreach (var metadata in e.SignatureMessageMetadatas.Take(_maxMetadataCount))
             {
-                if (_settings.HeaderManager.SetHeader(header))
+                if (_settings.MetadataManager.SetMetadata(metadata))
                 {
-                    messageManager.StockSignatureMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                    messageManager.StockSignatureMessageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
 
-                    _unicastSignatureLastAccessTimes[header.Signature] = DateTime.UtcNow;
+                    _unicastSignatureLastAccessTimes[metadata.Signature] = DateTime.UtcNow;
                 }
 
-                _pullHeaderCount.Increment();
+                _pullMetadataCount.Increment();
             }
         }
 
-        private void connectionManager_PullMulticastHeadersRequestEvent(object sender, PullMulticastHeadersRequestEventArgs e)
+        private void connectionManager_PullMulticastMetadatasRequestEvent(object sender, PullMulticastMetadatasRequestEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.PullMulticastWikisRequest.Count > _maxHeaderRequestCount * messageManager.PullMulticastWikisRequest.SurvivalTime.TotalMinutes) return;
-            if (messageManager.PullMulticastChatsRequest.Count > _maxHeaderRequestCount * messageManager.PullMulticastChatsRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullMulticastWikisRequest.Count > _maxMetadataRequestCount * messageManager.PullMulticastWikisRequest.SurvivalTime.TotalMinutes) return;
+            if (messageManager.PullMulticastChatsRequest.Count > _maxMetadataRequestCount * messageManager.PullMulticastChatsRequest.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull MulticastHeadersRequest ({0})",
+            Debug.WriteLine(string.Format("ConnectionManager: Pull MulticastMetadatasRequest ({0})",
                 e.Wikis.Count()
                 + e.Chats.Count()));
 
-            foreach (var tag in e.Wikis.Take(_maxHeaderRequestCount))
+            foreach (var tag in e.Wikis.Take(_maxMetadataRequestCount))
             {
                 if (!ConnectionsManager.Check(tag)) continue;
 
                 messageManager.PullMulticastWikisRequest.Add(tag);
-                _pullHeaderRequestCount.Increment();
+                _pullMetadataRequestCount.Increment();
 
                 _multicastWikiLastAccessTimes[tag] = DateTime.UtcNow;
             }
 
-            foreach (var tag in e.Chats.Take(_maxHeaderRequestCount))
+            foreach (var tag in e.Chats.Take(_maxMetadataRequestCount))
             {
                 if (!ConnectionsManager.Check(tag)) continue;
 
                 messageManager.PullMulticastChatsRequest.Add(tag);
-                _pullHeaderRequestCount.Increment();
+                _pullMetadataRequestCount.Increment();
 
                 _multicastChatLastAccessTimes[tag] = DateTime.UtcNow;
             }
         }
 
-        private void connectionManager_PullMulticastHeadersEvent(object sender, PullMulticastHeadersEventArgs e)
+        private void connectionManager_PullMulticastMetadatasEvent(object sender, PullMulticastMetadatasEventArgs e)
         {
             var connectionManager = sender as ConnectionManager;
             if (connectionManager == null) return;
 
             var messageManager = _messagesManager[connectionManager.Node];
 
-            if (messageManager.StockWikiPageHeaders.Count > _maxHeaderCount * messageManager.StockWikiPageHeaders.SurvivalTime.TotalMinutes) return;
-            if (messageManager.StockChatTopicHeaders.Count > _maxHeaderCount * messageManager.StockChatTopicHeaders.SurvivalTime.TotalMinutes) return;
-            if (messageManager.StockChatMessageHeaders.Count > _maxHeaderCount * messageManager.StockChatMessageHeaders.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockWikiPageMetadatas.Count > _maxMetadataCount * messageManager.StockWikiPageMetadatas.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockChatTopicMetadatas.Count > _maxMetadataCount * messageManager.StockChatTopicMetadatas.SurvivalTime.TotalMinutes) return;
+            if (messageManager.StockChatMessageMetadatas.Count > _maxMetadataCount * messageManager.StockChatMessageMetadatas.SurvivalTime.TotalMinutes) return;
 
-            Debug.WriteLine(string.Format("ConnectionManager: Pull MulticastHeaders ({0})",
-                e.WikiPageHeaders.Count()
-                + e.ChatTopicHeaders.Count()
-                + e.ChatMessageHeaders.Count()));
+            Debug.WriteLine(string.Format("ConnectionManager: Pull MulticastMetadatas ({0})",
+                e.WikiPageMetadatas.Count()
+                + e.ChatTopicMetadatas.Count()
+                + e.ChatMessageMetadatas.Count()));
 
-            foreach (var header in e.WikiPageHeaders.Take(_maxHeaderCount))
+            foreach (var metadata in e.WikiPageMetadatas.Take(_maxMetadataCount))
             {
-                if (_settings.HeaderManager.SetHeader(header))
+                if (_settings.MetadataManager.SetMetadata(metadata))
                 {
-                    messageManager.StockWikiPageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                    messageManager.StockWikiPageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
 
-                    _multicastWikiLastAccessTimes[header.Tag] = DateTime.UtcNow;
+                    _multicastWikiLastAccessTimes[metadata.Tag] = DateTime.UtcNow;
                 }
 
-                _pullHeaderCount.Increment();
+                _pullMetadataCount.Increment();
             }
 
-            foreach (var header in e.ChatTopicHeaders.Take(_maxHeaderCount))
+            foreach (var metadata in e.ChatTopicMetadatas.Take(_maxMetadataCount))
             {
-                if (_settings.HeaderManager.SetHeader(header))
+                if (_settings.MetadataManager.SetMetadata(metadata))
                 {
-                    messageManager.StockChatTopicHeaders.Add(header.CreateHash(_hashAlgorithm));
+                    messageManager.StockChatTopicMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
 
-                    _multicastChatLastAccessTimes[header.Tag] = DateTime.UtcNow;
+                    _multicastChatLastAccessTimes[metadata.Tag] = DateTime.UtcNow;
                 }
 
-                _pullHeaderCount.Increment();
+                _pullMetadataCount.Increment();
             }
 
-            foreach (var header in e.ChatMessageHeaders.Take(_maxHeaderCount))
+            foreach (var metadata in e.ChatMessageMetadatas.Take(_maxMetadataCount))
             {
-                if (_settings.HeaderManager.SetHeader(header))
+                if (_settings.MetadataManager.SetMetadata(metadata))
                 {
-                    messageManager.StockChatMessageHeaders.Add(header.CreateHash(_hashAlgorithm));
+                    messageManager.StockChatMessageMetadatas.Add(metadata.CreateHash(_hashAlgorithm));
 
-                    _multicastChatLastAccessTimes[header.Tag] = DateTime.UtcNow;
+                    _multicastChatLastAccessTimes[metadata.Tag] = DateTime.UtcNow;
                 }
 
-                _pullHeaderCount.Increment();
+                _pullMetadataCount.Increment();
             }
         }
 
@@ -3193,7 +3193,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ProfileHeader GetProfileHeader(string signature)
+        public ProfileMetadata GetProfileMetadata(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3201,11 +3201,11 @@ namespace Library.Net.Outopos
             {
                 _pushBroadcastSignaturesRequestList.Add(signature);
 
-                return _settings.HeaderManager.GetProfileHeader(signature);
+                return _settings.MetadataManager.GetProfileMetadata(signature);
             }
         }
 
-        public IEnumerable<SignatureMessageHeader> GetSignatureMessageHeaders(string signature)
+        public IEnumerable<SignatureMessageMetadata> GetSignatureMessageMetadatas(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3213,11 +3213,11 @@ namespace Library.Net.Outopos
             {
                 _pushUnicastSignaturesRequestList.Add(signature);
 
-                return _settings.HeaderManager.GetSignatureMessageHeaders(signature);
+                return _settings.MetadataManager.GetSignatureMessageMetadatas(signature);
             }
         }
 
-        public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
+        public IEnumerable<WikiPageMetadata> GetWikiPageMetadatas(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3225,11 +3225,11 @@ namespace Library.Net.Outopos
             {
                 _pushMulticastWikisRequestList.Add(tag);
 
-                return _settings.HeaderManager.GetWikiPageHeaders(tag);
+                return _settings.MetadataManager.GetWikiPageMetadatas(tag);
             }
         }
 
-        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
+        public IEnumerable<ChatTopicMetadata> GetChatTopicMetadatas(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3237,11 +3237,11 @@ namespace Library.Net.Outopos
             {
                 _pushMulticastChatsRequestList.Add(tag);
 
-                return _settings.HeaderManager.GetChatTopicHeaders(tag);
+                return _settings.MetadataManager.GetChatTopicMetadatas(tag);
             }
         }
 
-        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+        public IEnumerable<ChatMessageMetadata> GetChatMessageMetadatas(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -3249,57 +3249,57 @@ namespace Library.Net.Outopos
             {
                 _pushMulticastChatsRequestList.Add(tag);
 
-                return _settings.HeaderManager.GetChatMessageHeaders(tag);
+                return _settings.MetadataManager.GetChatMessageMetadatas(tag);
             }
         }
 
-        public void Upload(ProfileHeader header)
+        public void Upload(ProfileMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _settings.HeaderManager.SetHeader(header);
+                _settings.MetadataManager.SetMetadata(metadata);
             }
         }
 
-        public void Upload(SignatureMessageHeader header)
+        public void Upload(SignatureMessageMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _settings.HeaderManager.SetHeader(header);
+                _settings.MetadataManager.SetMetadata(metadata);
             }
         }
 
-        public void Upload(WikiPageHeader header)
+        public void Upload(WikiPageMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _settings.HeaderManager.SetHeader(header);
+                _settings.MetadataManager.SetMetadata(metadata);
             }
         }
 
-        public void Upload(ChatTopicHeader header)
+        public void Upload(ChatTopicMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _settings.HeaderManager.SetHeader(header);
+                _settings.MetadataManager.SetMetadata(metadata);
             }
         }
 
-        public void Upload(ChatMessageHeader header)
+        public void Upload(ChatMessageMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _settings.HeaderManager.SetHeader(header);
+                _settings.MetadataManager.SetMetadata(metadata);
             }
         }
 
@@ -3456,7 +3456,7 @@ namespace Library.Net.Outopos
         {
             private volatile object _thisLock;
 
-            private HeaderManager _headerManager = new HeaderManager();
+            private MetadataManager _metadataManager = new MetadataManager();
 
             public Settings(object lockObject)
                 : base(new List<Library.Configuration.ISettingContent>() { 
@@ -3466,11 +3466,11 @@ namespace Library.Net.Outopos
                     new Library.Configuration.SettingContent<int>() { Name = "BandwidthLimit", Value = 0 },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "DiffusionBlocksRequest", Value = new LockedHashSet<Key>() },
                     new Library.Configuration.SettingContent<LockedHashSet<Key>>() { Name = "UploadBlocksRequest", Value = new LockedHashSet<Key>() },
-                    new Library.Configuration.SettingContent<List<ProfileHeader>>() { Name = "ProfileHeaders", Value = new List<ProfileHeader>() },
-                    new Library.Configuration.SettingContent<List<SignatureMessageHeader>>() { Name = "SignatureMessageHeaders", Value = new List<SignatureMessageHeader>() },
-                    new Library.Configuration.SettingContent<List<WikiPageHeader>>() { Name = "WikiPageHeaders", Value = new List<WikiPageHeader>() },
-                    new Library.Configuration.SettingContent<List<ChatTopicHeader>>() { Name = "ChatTopicHeaders", Value = new List<ChatTopicHeader>() },
-                    new Library.Configuration.SettingContent<List<ChatMessageHeader>>() { Name = "ChatMessageHeaders", Value = new List<ChatMessageHeader>() },
+                    new Library.Configuration.SettingContent<List<ProfileMetadata>>() { Name = "ProfileMetadatas", Value = new List<ProfileMetadata>() },
+                    new Library.Configuration.SettingContent<List<SignatureMessageMetadata>>() { Name = "SignatureMessageMetadatas", Value = new List<SignatureMessageMetadata>() },
+                    new Library.Configuration.SettingContent<List<WikiPageMetadata>>() { Name = "WikiPageMetadatas", Value = new List<WikiPageMetadata>() },
+                    new Library.Configuration.SettingContent<List<ChatTopicMetadata>>() { Name = "ChatTopicMetadatas", Value = new List<ChatTopicMetadata>() },
+                    new Library.Configuration.SettingContent<List<ChatMessageMetadata>>() { Name = "ChatMessageMetadatas", Value = new List<ChatMessageMetadata>() },
                 })
             {
                 _thisLock = lockObject;
@@ -3482,36 +3482,36 @@ namespace Library.Net.Outopos
                 {
                     base.Load(directoryPath);
 
-                    foreach (var header in this.ProfileHeaders)
+                    foreach (var metadata in this.ProfileMetadatas)
                     {
-                        _headerManager.SetHeader(header);
+                        _metadataManager.SetMetadata(metadata);
                     }
 
-                    foreach (var header in this.SignatureMessageHeaders)
+                    foreach (var metadata in this.SignatureMessageMetadatas)
                     {
-                        _headerManager.SetHeader(header);
+                        _metadataManager.SetMetadata(metadata);
                     }
 
-                    foreach (var header in this.WikiPageHeaders)
+                    foreach (var metadata in this.WikiPageMetadatas)
                     {
-                        _headerManager.SetHeader(header);
+                        _metadataManager.SetMetadata(metadata);
                     }
 
-                    foreach (var header in this.ChatTopicHeaders)
+                    foreach (var metadata in this.ChatTopicMetadatas)
                     {
-                        _headerManager.SetHeader(header);
+                        _metadataManager.SetMetadata(metadata);
                     }
 
-                    foreach (var header in this.ChatMessageHeaders)
+                    foreach (var metadata in this.ChatMessageMetadatas)
                     {
-                        _headerManager.SetHeader(header);
+                        _metadataManager.SetMetadata(metadata);
                     }
 
-                    this.ProfileHeaders.Clear();
-                    this.SignatureMessageHeaders.Clear();
-                    this.WikiPageHeaders.Clear();
-                    this.ChatTopicHeaders.Clear();
-                    this.ChatMessageHeaders.Clear();
+                    this.ProfileMetadatas.Clear();
+                    this.SignatureMessageMetadatas.Clear();
+                    this.WikiPageMetadatas.Clear();
+                    this.ChatTopicMetadatas.Clear();
+                    this.ChatMessageMetadatas.Clear();
                 }
             }
 
@@ -3519,19 +3519,19 @@ namespace Library.Net.Outopos
             {
                 lock (_thisLock)
                 {
-                    this.ProfileHeaders.AddRange(_headerManager.GetProfileHeaders());
-                    this.SignatureMessageHeaders.AddRange(_headerManager.GetSignatureMessageHeaders());
-                    this.WikiPageHeaders.AddRange(_headerManager.GetWikiPageHeaders());
-                    this.ChatTopicHeaders.AddRange(_headerManager.GetChatTopicHeaders());
-                    this.ChatMessageHeaders.AddRange(_headerManager.GetChatMessageHeaders());
+                    this.ProfileMetadatas.AddRange(_metadataManager.GetProfileMetadatas());
+                    this.SignatureMessageMetadatas.AddRange(_metadataManager.GetSignatureMessageMetadatas());
+                    this.WikiPageMetadatas.AddRange(_metadataManager.GetWikiPageMetadatas());
+                    this.ChatTopicMetadatas.AddRange(_metadataManager.GetChatTopicMetadatas());
+                    this.ChatMessageMetadatas.AddRange(_metadataManager.GetChatMessageMetadatas());
 
                     base.Save(directoryPath);
 
-                    this.ProfileHeaders.Clear();
-                    this.SignatureMessageHeaders.Clear();
-                    this.WikiPageHeaders.Clear();
-                    this.ChatTopicHeaders.Clear();
-                    this.ChatMessageHeaders.Clear();
+                    this.ProfileMetadatas.Clear();
+                    this.SignatureMessageMetadatas.Clear();
+                    this.WikiPageMetadatas.Clear();
+                    this.ChatTopicMetadatas.Clear();
+                    this.ChatMessageMetadatas.Clear();
                 }
             }
 
@@ -3622,69 +3622,69 @@ namespace Library.Net.Outopos
                 }
             }
 
-            public HeaderManager HeaderManager
+            public MetadataManager MetadataManager
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return _headerManager;
+                        return _metadataManager;
                     }
                 }
             }
 
-            private List<ProfileHeader> ProfileHeaders
+            private List<ProfileMetadata> ProfileMetadatas
             {
                 get
                 {
-                    return (List<ProfileHeader>)this["ProfileHeaders"];
+                    return (List<ProfileMetadata>)this["ProfileMetadatas"];
                 }
             }
 
-            private List<SignatureMessageHeader> SignatureMessageHeaders
+            private List<SignatureMessageMetadata> SignatureMessageMetadatas
             {
                 get
                 {
-                    return (List<SignatureMessageHeader>)this["SignatureMessageHeaders"];
+                    return (List<SignatureMessageMetadata>)this["SignatureMessageMetadatas"];
                 }
             }
 
-            private List<WikiPageHeader> WikiPageHeaders
+            private List<WikiPageMetadata> WikiPageMetadatas
             {
                 get
                 {
-                    return (List<WikiPageHeader>)this["WikiPageHeaders"];
+                    return (List<WikiPageMetadata>)this["WikiPageMetadatas"];
                 }
             }
 
-            private List<ChatTopicHeader> ChatTopicHeaders
+            private List<ChatTopicMetadata> ChatTopicMetadatas
             {
                 get
                 {
-                    return (List<ChatTopicHeader>)this["ChatTopicHeaders"];
+                    return (List<ChatTopicMetadata>)this["ChatTopicMetadatas"];
                 }
             }
 
-            private List<ChatMessageHeader> ChatMessageHeaders
+            private List<ChatMessageMetadata> ChatMessageMetadatas
             {
                 get
                 {
-                    return (List<ChatMessageHeader>)this["ChatMessageHeaders"];
+                    return (List<ChatMessageMetadata>)this["ChatMessageMetadatas"];
                 }
             }
         }
 
-        public class HeaderManager
+        public class MetadataManager
         {
-            private Dictionary<string, ProfileHeader> _profileHeaders = new Dictionary<string, ProfileHeader>();
-            private Dictionary<string, HashSet<SignatureMessageHeader>> _signatureMessageHeaders = new Dictionary<string, HashSet<SignatureMessageHeader>>();
-            private Dictionary<Wiki, Dictionary<string, HashSet<WikiPageHeader>>> _wikiPageHeaders = new Dictionary<Wiki, Dictionary<string, HashSet<WikiPageHeader>>>();
-            private Dictionary<Chat, Dictionary<string, ChatTopicHeader>> _chatTopicHeaders = new Dictionary<Chat, Dictionary<string, ChatTopicHeader>>();
-            private Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>> _chatMessageHeaders = new Dictionary<Chat, Dictionary<string, HashSet<ChatMessageHeader>>>();
+            private Dictionary<string, ProfileMetadata> _profileMetadatas = new Dictionary<string, ProfileMetadata>();
+            private Dictionary<string, HashSet<SignatureMessageMetadata>> _signatureMessageMetadatas = new Dictionary<string, HashSet<SignatureMessageMetadata>>();
+            private Dictionary<Wiki, Dictionary<string, HashSet<WikiPageMetadata>>> _wikiPageMetadatas = new Dictionary<Wiki, Dictionary<string, HashSet<WikiPageMetadata>>>();
+            private Dictionary<Chat, Dictionary<string, ChatTopicMetadata>> _chatTopicMetadatas = new Dictionary<Chat, Dictionary<string, ChatTopicMetadata>>();
+            private Dictionary<Chat, Dictionary<string, HashSet<ChatMessageMetadata>>> _chatMessageMetadatas = new Dictionary<Chat, Dictionary<string, HashSet<ChatMessageMetadata>>>();
 
             private readonly object _thisLock = new object();
 
-            public HeaderManager()
+            public MetadataManager()
             {
 
             }
@@ -3697,11 +3697,11 @@ namespace Library.Net.Outopos
                     {
                         int count = 0;
 
-                        count += _profileHeaders.Count;
-                        count += _signatureMessageHeaders.Values.Sum(n => n.Count);
-                        count += _wikiPageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
-                        count += _chatTopicHeaders.Values.Sum(n => n.Values.Count);
-                        count += _chatMessageHeaders.Values.Sum(n => n.Values.Sum(m => m.Count));
+                        count += _profileMetadatas.Count;
+                        count += _signatureMessageMetadatas.Values.Sum(n => n.Count);
+                        count += _wikiPageMetadatas.Values.Sum(n => n.Values.Sum(m => m.Count));
+                        count += _chatTopicMetadatas.Values.Sum(n => n.Values.Count);
+                        count += _chatMessageMetadatas.Values.Sum(n => n.Values.Sum(m => m.Count));
 
                         return count;
                     }
@@ -3714,7 +3714,7 @@ namespace Library.Net.Outopos
                 {
                     var hashset = new HashSet<string>();
 
-                    hashset.UnionWith(_profileHeaders.Keys);
+                    hashset.UnionWith(_profileMetadatas.Keys);
 
                     return hashset;
                 }
@@ -3726,7 +3726,7 @@ namespace Library.Net.Outopos
                 {
                     var hashset = new HashSet<string>();
 
-                    hashset.UnionWith(_signatureMessageHeaders.Keys);
+                    hashset.UnionWith(_signatureMessageMetadatas.Keys);
 
                     return hashset;
                 }
@@ -3738,7 +3738,7 @@ namespace Library.Net.Outopos
                 {
                     var hashset = new HashSet<Wiki>();
 
-                    hashset.UnionWith(_wikiPageHeaders.Keys);
+                    hashset.UnionWith(_wikiPageMetadatas.Keys);
 
                     return hashset;
                 }
@@ -3750,8 +3750,8 @@ namespace Library.Net.Outopos
                 {
                     var hashset = new HashSet<Chat>();
 
-                    hashset.UnionWith(_chatTopicHeaders.Keys);
-                    hashset.UnionWith(_chatMessageHeaders.Keys);
+                    hashset.UnionWith(_chatTopicMetadatas.Keys);
+                    hashset.UnionWith(_chatMessageMetadatas.Keys);
 
                     return hashset;
                 }
@@ -3763,7 +3763,7 @@ namespace Library.Net.Outopos
                 {
                     foreach (var signature in signatures)
                     {
-                        _profileHeaders.Remove(signature);
+                        _profileMetadatas.Remove(signature);
                     }
                 }
             }
@@ -3774,7 +3774,7 @@ namespace Library.Net.Outopos
                 {
                     foreach (var signature in signatures)
                     {
-                        _signatureMessageHeaders.Remove(signature);
+                        _signatureMessageMetadatas.Remove(signature);
                     }
                 }
             }
@@ -3785,7 +3785,7 @@ namespace Library.Net.Outopos
                 {
                     foreach (var wiki in tags)
                     {
-                        _wikiPageHeaders.Remove(wiki);
+                        _wikiPageMetadatas.Remove(wiki);
                     }
                 }
             }
@@ -3796,365 +3796,365 @@ namespace Library.Net.Outopos
                 {
                     foreach (var chat in tags)
                     {
-                        _chatTopicHeaders.Remove(chat);
-                        _chatMessageHeaders.Remove(chat);
+                        _chatTopicMetadatas.Remove(chat);
+                        _chatMessageMetadatas.Remove(chat);
                     }
                 }
             }
 
-            public IEnumerable<ProfileHeader> GetProfileHeaders()
+            public IEnumerable<ProfileMetadata> GetProfileMetadatas()
             {
                 lock (_thisLock)
                 {
-                    return _profileHeaders.Values.ToArray();
+                    return _profileMetadatas.Values.ToArray();
                 }
             }
 
-            public ProfileHeader GetProfileHeader(string signature)
+            public ProfileMetadata GetProfileMetadata(string signature)
             {
                 lock (_thisLock)
                 {
-                    ProfileHeader header;
+                    ProfileMetadata metadata;
 
-                    if (_profileHeaders.TryGetValue(signature, out header))
+                    if (_profileMetadatas.TryGetValue(signature, out metadata))
                     {
-                        return header;
+                        return metadata;
                     }
 
                     return null;
                 }
             }
 
-            public IEnumerable<SignatureMessageHeader> GetSignatureMessageHeaders()
+            public IEnumerable<SignatureMessageMetadata> GetSignatureMessageMetadatas()
             {
                 lock (_thisLock)
                 {
-                    return _signatureMessageHeaders.Values.Extract().ToArray();
+                    return _signatureMessageMetadatas.Values.Extract().ToArray();
                 }
             }
 
-            public IEnumerable<SignatureMessageHeader> GetSignatureMessageHeaders(string signature)
+            public IEnumerable<SignatureMessageMetadata> GetSignatureMessageMetadatas(string signature)
             {
                 lock (_thisLock)
                 {
-                    HashSet<SignatureMessageHeader> hashset;
+                    HashSet<SignatureMessageMetadata> hashset;
 
-                    if (_signatureMessageHeaders.TryGetValue(signature, out hashset))
+                    if (_signatureMessageMetadatas.TryGetValue(signature, out hashset))
                     {
                         return hashset.ToArray();
                     }
 
-                    return new SignatureMessageHeader[0];
+                    return new SignatureMessageMetadata[0];
                 }
             }
 
-            public IEnumerable<WikiPageHeader> GetWikiPageHeaders()
+            public IEnumerable<WikiPageMetadata> GetWikiPageMetadatas()
             {
                 lock (_thisLock)
                 {
-                    return _wikiPageHeaders.Values.SelectMany(n => n.Values.Extract()).ToArray();
+                    return _wikiPageMetadatas.Values.SelectMany(n => n.Values.Extract()).ToArray();
                 }
             }
 
-            public IEnumerable<WikiPageHeader> GetWikiPageHeaders(Wiki tag)
+            public IEnumerable<WikiPageMetadata> GetWikiPageMetadatas(Wiki tag)
             {
                 lock (_thisLock)
                 {
-                    Dictionary<string, HashSet<WikiPageHeader>> dic = null;
+                    Dictionary<string, HashSet<WikiPageMetadata>> dic = null;
 
-                    if (_wikiPageHeaders.TryGetValue(tag, out dic))
+                    if (_wikiPageMetadatas.TryGetValue(tag, out dic))
                     {
                         return dic.Values.Extract().ToArray();
                     }
 
-                    return new WikiPageHeader[0];
+                    return new WikiPageMetadata[0];
                 }
             }
 
-            public IEnumerable<ChatTopicHeader> GetChatTopicHeaders()
+            public IEnumerable<ChatTopicMetadata> GetChatTopicMetadatas()
             {
                 lock (_thisLock)
                 {
-                    return _chatTopicHeaders.Values.SelectMany(n => n.Values).ToArray();
+                    return _chatTopicMetadatas.Values.SelectMany(n => n.Values).ToArray();
                 }
             }
 
-            public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat chat)
+            public IEnumerable<ChatTopicMetadata> GetChatTopicMetadatas(Chat chat)
             {
                 lock (_thisLock)
                 {
-                    Dictionary<string, ChatTopicHeader> dic = null;
+                    Dictionary<string, ChatTopicMetadata> dic = null;
 
-                    if (_chatTopicHeaders.TryGetValue(chat, out dic))
+                    if (_chatTopicMetadatas.TryGetValue(chat, out dic))
                     {
                         return dic.Values.ToArray();
                     }
 
-                    return new ChatTopicHeader[0];
+                    return new ChatTopicMetadata[0];
                 }
             }
 
-            public IEnumerable<ChatMessageHeader> GetChatMessageHeaders()
+            public IEnumerable<ChatMessageMetadata> GetChatMessageMetadatas()
             {
                 lock (_thisLock)
                 {
-                    return _chatMessageHeaders.Values.SelectMany(n => n.Values.Extract()).ToArray();
+                    return _chatMessageMetadatas.Values.SelectMany(n => n.Values.Extract()).ToArray();
                 }
             }
 
-            public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+            public IEnumerable<ChatMessageMetadata> GetChatMessageMetadatas(Chat tag)
             {
                 lock (_thisLock)
                 {
-                    Dictionary<string, HashSet<ChatMessageHeader>> dic = null;
+                    Dictionary<string, HashSet<ChatMessageMetadata>> dic = null;
 
-                    if (_chatMessageHeaders.TryGetValue(tag, out dic))
+                    if (_chatMessageMetadatas.TryGetValue(tag, out dic))
                     {
                         return dic.Values.Extract().ToArray();
                     }
 
-                    return new ChatMessageHeader[0];
+                    return new ChatMessageMetadata[0];
                 }
             }
 
-            public bool SetHeader(ProfileHeader header)
+            public bool SetMetadata(ProfileMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return false;
+                    if (metadata == null
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return false;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    ProfileHeader tempHeader;
+                    ProfileMetadata tempMetadata;
 
-                    if (!_profileHeaders.TryGetValue(signature, out tempHeader)
-                        || header.CreationTime > tempHeader.CreationTime)
+                    if (!_profileMetadatas.TryGetValue(signature, out tempMetadata)
+                        || metadata.CreationTime > tempMetadata.CreationTime)
                     {
-                        if (!header.VerifyCertificate()) throw new CertificateException();
+                        if (!metadata.VerifyCertificate()) throw new CertificateException();
 
-                        _profileHeaders[signature] = header;
+                        _profileMetadatas[signature] = metadata;
                     }
 
-                    return (tempHeader == null || header.CreationTime >= tempHeader.CreationTime);
+                    return (tempMetadata == null || metadata.CreationTime >= tempMetadata.CreationTime);
                 }
             }
 
-            public bool SetHeader(SignatureMessageHeader header)
+            public bool SetMetadata(SignatureMessageMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || !Signature.Check(header.Signature)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return false;
+                    if (metadata == null
+                        || !Signature.Check(metadata.Signature)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return false;
 
-                    HashSet<SignatureMessageHeader> hashset;
+                    HashSet<SignatureMessageMetadata> hashset;
 
-                    if (!_signatureMessageHeaders.TryGetValue(header.Signature, out hashset))
+                    if (!_signatureMessageMetadatas.TryGetValue(metadata.Signature, out hashset))
                     {
-                        hashset = new HashSet<SignatureMessageHeader>();
-                        _signatureMessageHeaders[header.Signature] = hashset;
+                        hashset = new HashSet<SignatureMessageMetadata>();
+                        _signatureMessageMetadatas[metadata.Signature] = hashset;
                     }
 
-                    if (!hashset.Contains(header))
+                    if (!hashset.Contains(metadata))
                     {
-                        if (!header.VerifyCertificate()) throw new CertificateException();
+                        if (!metadata.VerifyCertificate()) throw new CertificateException();
 
-                        hashset.Add(header);
+                        hashset.Add(metadata);
                     }
 
                     return true;
                 }
             }
 
-            public bool SetHeader(WikiPageHeader header)
+            public bool SetMetadata(WikiPageMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || header.Tag == null
-                            || header.Tag.Id == null || header.Tag.Id.Length == 0
-                            || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return false;
+                    if (metadata == null
+                        || metadata.Tag == null
+                            || metadata.Tag.Id == null || metadata.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(metadata.Tag.Name)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return false;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, HashSet<WikiPageHeader>> dic;
+                    Dictionary<string, HashSet<WikiPageMetadata>> dic;
 
-                    if (!_wikiPageHeaders.TryGetValue(header.Tag, out dic))
+                    if (!_wikiPageMetadatas.TryGetValue(metadata.Tag, out dic))
                     {
-                        dic = new Dictionary<string, HashSet<WikiPageHeader>>();
-                        _wikiPageHeaders[header.Tag] = dic;
+                        dic = new Dictionary<string, HashSet<WikiPageMetadata>>();
+                        _wikiPageMetadatas[metadata.Tag] = dic;
                     }
 
-                    HashSet<WikiPageHeader> hashset;
+                    HashSet<WikiPageMetadata> hashset;
 
                     if (!dic.TryGetValue(signature, out hashset))
                     {
-                        hashset = new HashSet<WikiPageHeader>();
+                        hashset = new HashSet<WikiPageMetadata>();
                         dic[signature] = hashset;
                     }
 
-                    if (!hashset.Contains(header))
+                    if (!hashset.Contains(metadata))
                     {
-                        if (!header.VerifyCertificate()) throw new CertificateException();
+                        if (!metadata.VerifyCertificate()) throw new CertificateException();
 
-                        hashset.Add(header);
+                        hashset.Add(metadata);
                     }
 
                     return true;
                 }
             }
 
-            public bool SetHeader(ChatTopicHeader header)
+            public bool SetMetadata(ChatTopicMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || header.Tag == null
-                            || header.Tag.Id == null || header.Tag.Id.Length == 0
-                            || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return false;
+                    if (metadata == null
+                        || metadata.Tag == null
+                            || metadata.Tag.Id == null || metadata.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(metadata.Tag.Name)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return false;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, ChatTopicHeader> dic;
+                    Dictionary<string, ChatTopicMetadata> dic;
 
-                    if (!_chatTopicHeaders.TryGetValue(header.Tag, out dic))
+                    if (!_chatTopicMetadatas.TryGetValue(metadata.Tag, out dic))
                     {
-                        dic = new Dictionary<string, ChatTopicHeader>();
-                        _chatTopicHeaders[header.Tag] = dic;
+                        dic = new Dictionary<string, ChatTopicMetadata>();
+                        _chatTopicMetadatas[metadata.Tag] = dic;
                     }
 
-                    ChatTopicHeader tempHeader;
+                    ChatTopicMetadata tempMetadata;
 
-                    if (!dic.TryGetValue(signature, out tempHeader)
-                        || header.CreationTime > tempHeader.CreationTime)
+                    if (!dic.TryGetValue(signature, out tempMetadata)
+                        || metadata.CreationTime > tempMetadata.CreationTime)
                     {
-                        if (!header.VerifyCertificate()) throw new CertificateException();
+                        if (!metadata.VerifyCertificate()) throw new CertificateException();
 
-                        dic[signature] = header;
+                        dic[signature] = metadata;
                     }
 
-                    return (tempHeader == null || header.CreationTime >= tempHeader.CreationTime);
+                    return (tempMetadata == null || metadata.CreationTime >= tempMetadata.CreationTime);
                 }
             }
 
-            public bool SetHeader(ChatMessageHeader header)
+            public bool SetMetadata(ChatMessageMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || header.Tag == null
-                            || header.Tag.Id == null || header.Tag.Id.Length == 0
-                            || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return false;
+                    if (metadata == null
+                        || metadata.Tag == null
+                            || metadata.Tag.Id == null || metadata.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(metadata.Tag.Name)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return false;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, HashSet<ChatMessageHeader>> dic;
+                    Dictionary<string, HashSet<ChatMessageMetadata>> dic;
 
-                    if (!_chatMessageHeaders.TryGetValue(header.Tag, out dic))
+                    if (!_chatMessageMetadatas.TryGetValue(metadata.Tag, out dic))
                     {
-                        dic = new Dictionary<string, HashSet<ChatMessageHeader>>();
-                        _chatMessageHeaders[header.Tag] = dic;
+                        dic = new Dictionary<string, HashSet<ChatMessageMetadata>>();
+                        _chatMessageMetadatas[metadata.Tag] = dic;
                     }
 
-                    HashSet<ChatMessageHeader> hashset;
+                    HashSet<ChatMessageMetadata> hashset;
 
                     if (!dic.TryGetValue(signature, out hashset))
                     {
-                        hashset = new HashSet<ChatMessageHeader>();
+                        hashset = new HashSet<ChatMessageMetadata>();
                         dic[signature] = hashset;
                     }
 
-                    if (!hashset.Contains(header))
+                    if (!hashset.Contains(metadata))
                     {
-                        if (!header.VerifyCertificate()) throw new CertificateException();
+                        if (!metadata.VerifyCertificate()) throw new CertificateException();
 
-                        hashset.Add(header);
+                        hashset.Add(metadata);
                     }
 
                     return true;
                 }
             }
 
-            public void RemoveHeader(ProfileHeader header)
+            public void RemoveMetadata(ProfileMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return;
+                    if (metadata == null
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    _profileHeaders.Remove(signature);
+                    _profileMetadatas.Remove(signature);
                 }
             }
 
-            public void RemoveHeader(SignatureMessageHeader header)
+            public void RemoveMetadata(SignatureMessageMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || !Signature.Check(header.Signature)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return;
+                    if (metadata == null
+                        || !Signature.Check(metadata.Signature)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return;
 
-                    HashSet<SignatureMessageHeader> hashset;
-                    if (!_signatureMessageHeaders.TryGetValue(header.Signature, out hashset)) return;
+                    HashSet<SignatureMessageMetadata> hashset;
+                    if (!_signatureMessageMetadatas.TryGetValue(metadata.Signature, out hashset)) return;
 
-                    hashset.Remove(header);
+                    hashset.Remove(metadata);
 
                     if (hashset.Count == 0)
                     {
-                        _signatureMessageHeaders.Remove(header.Signature);
+                        _signatureMessageMetadatas.Remove(metadata.Signature);
                     }
                 }
             }
 
-            public void RemoveHeader(WikiPageHeader header)
+            public void RemoveMetadata(WikiPageMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || header.Tag == null
-                            || header.Tag.Id == null || header.Tag.Id.Length == 0
-                            || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return;
+                    if (metadata == null
+                        || metadata.Tag == null
+                            || metadata.Tag.Id == null || metadata.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(metadata.Tag.Name)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, HashSet<WikiPageHeader>> dic;
-                    if (!_wikiPageHeaders.TryGetValue(header.Tag, out dic)) return;
+                    Dictionary<string, HashSet<WikiPageMetadata>> dic;
+                    if (!_wikiPageMetadatas.TryGetValue(metadata.Tag, out dic)) return;
 
-                    HashSet<WikiPageHeader> hashset;
+                    HashSet<WikiPageMetadata> hashset;
                     if (!dic.TryGetValue(signature, out hashset)) return;
 
-                    hashset.Remove(header);
+                    hashset.Remove(metadata);
 
                     if (hashset.Count == 0)
                     {
@@ -4162,67 +4162,67 @@ namespace Library.Net.Outopos
 
                         if (dic.Count == 0)
                         {
-                            _wikiPageHeaders.Remove(header.Tag);
+                            _wikiPageMetadatas.Remove(metadata.Tag);
                         }
                     }
                 }
             }
 
-            public void RemoveHeader(ChatTopicHeader header)
+            public void RemoveMetadata(ChatTopicMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || header.Tag == null
-                            || header.Tag.Id == null || header.Tag.Id.Length == 0
-                            || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return;
+                    if (metadata == null
+                        || metadata.Tag == null
+                            || metadata.Tag.Id == null || metadata.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(metadata.Tag.Name)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, ChatTopicHeader> dic;
-                    if (!_chatTopicHeaders.TryGetValue(header.Tag, out dic)) return;
+                    Dictionary<string, ChatTopicMetadata> dic;
+                    if (!_chatTopicMetadatas.TryGetValue(metadata.Tag, out dic)) return;
 
-                    ChatTopicHeader tempHeader;
-                    if (!dic.TryGetValue(signature, out tempHeader)) return;
+                    ChatTopicMetadata tempMetadata;
+                    if (!dic.TryGetValue(signature, out tempMetadata)) return;
 
-                    if (header == tempHeader)
+                    if (metadata == tempMetadata)
                     {
                         dic.Remove(signature);
 
                         if (dic.Count == 0)
                         {
-                            _chatTopicHeaders.Remove(header.Tag);
+                            _chatTopicMetadatas.Remove(metadata.Tag);
                         }
                     }
                 }
             }
 
-            public void RemoveHeader(ChatMessageHeader header)
+            public void RemoveMetadata(ChatMessageMetadata metadata)
             {
                 lock (_thisLock)
                 {
                     var now = DateTime.UtcNow;
 
-                    if (header == null
-                        || header.Tag == null
-                            || header.Tag.Id == null || header.Tag.Id.Length == 0
-                            || string.IsNullOrWhiteSpace(header.Tag.Name)
-                        || (header.CreationTime - now).Minutes > 30
-                        || header.Certificate == null) return;
+                    if (metadata == null
+                        || metadata.Tag == null
+                            || metadata.Tag.Id == null || metadata.Tag.Id.Length == 0
+                            || string.IsNullOrWhiteSpace(metadata.Tag.Name)
+                        || (metadata.CreationTime - now).Minutes > 30
+                        || metadata.Certificate == null) return;
 
-                    var signature = header.Certificate.ToString();
+                    var signature = metadata.Certificate.ToString();
 
-                    Dictionary<string, HashSet<ChatMessageHeader>> dic;
-                    if (!_chatMessageHeaders.TryGetValue(header.Tag, out dic)) return;
+                    Dictionary<string, HashSet<ChatMessageMetadata>> dic;
+                    if (!_chatMessageMetadatas.TryGetValue(metadata.Tag, out dic)) return;
 
-                    HashSet<ChatMessageHeader> hashset;
+                    HashSet<ChatMessageMetadata> hashset;
                     if (!dic.TryGetValue(signature, out hashset)) return;
 
-                    hashset.Remove(header);
+                    hashset.Remove(metadata);
 
                     if (hashset.Count == 0)
                     {
@@ -4230,7 +4230,7 @@ namespace Library.Net.Outopos
 
                         if (dic.Count == 0)
                         {
-                            _chatMessageHeaders.Remove(header.Tag);
+                            _chatMessageMetadatas.Remove(metadata.Tag);
                         }
                     }
                 }

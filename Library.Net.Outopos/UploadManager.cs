@@ -59,23 +59,23 @@ namespace Library.Net.Outopos
 
                         if (item.Type == "Profile")
                         {
-                            contexts.Add(new InformationContext("Content", item.ProfileContent));
+                            contexts.Add(new InformationContext("Information", item.Profile));
                         }
                         else if (item.Type == "SignatureMessage")
                         {
-                            contexts.Add(new InformationContext("Content", item.SignatureMessageContent));
+                            contexts.Add(new InformationContext("Information", item.SignatureMessage));
                         }
                         else if (item.Type == "WikiPage")
                         {
-                            contexts.Add(new InformationContext("Content", item.WikiPageContent));
+                            contexts.Add(new InformationContext("Information", item.WikiPage));
                         }
                         else if (item.Type == "ChatTopic")
                         {
-                            contexts.Add(new InformationContext("Content", item.ChatTopicContent));
+                            contexts.Add(new InformationContext("Information", item.ChatTopic));
                         }
                         else if (item.Type == "ChatMessage")
                         {
-                            contexts.Add(new InformationContext("Content", item.ChatMessageContent));
+                            contexts.Add(new InformationContext("Information", item.ChatMessage));
                         }
 
                         list.Add(new Information(contexts));
@@ -135,23 +135,23 @@ namespace Library.Net.Outopos
                             {
                                 if (item.Type == "Profile")
                                 {
-                                    buffer = ContentConverter.ToProfileContentBlock(item.ProfileContent);
+                                    buffer = InformationConverter.ToProfileBlock(item.Profile);
                                 }
                                 else if (item.Type == "SignatureMessage")
                                 {
-                                    buffer = ContentConverter.ToSignatureMessageContentBlock(item.SignatureMessageContent, item.ExchangePublicKey);
+                                    buffer = InformationConverter.ToSignatureMessageBlock(item.SignatureMessage, item.ExchangePublicKey);
                                 }
                                 else if (item.Type == "WikiPage")
                                 {
-                                    buffer = ContentConverter.ToWikiPageContentBlock(item.WikiPageContent);
+                                    buffer = InformationConverter.ToWikiPageBlock(item.WikiPage);
                                 }
                                 else if (item.Type == "ChatTopic")
                                 {
-                                    buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
+                                    buffer = InformationConverter.ToChatTopicBlock(item.ChatTopic);
                                 }
                                 else if (item.Type == "ChatMessage")
                                 {
-                                    buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
+                                    buffer = InformationConverter.ToChatMessageBlock(item.ChatMessage);
                                 }
 
                                 Key key = null;
@@ -175,28 +175,28 @@ namespace Library.Net.Outopos
                                 {
                                     if (item.Type == "Profile")
                                     {
-                                        var header = new ProfileHeader(item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new ProfileMetadata(item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "SignatureMessage")
                                     {
-                                        var header = new SignatureMessageHeader(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new SignatureMessageMetadata(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "WikiPage")
                                     {
-                                        var header = new WikiPageHeader(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new WikiPageMetadata(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "ChatTopic")
                                     {
-                                        var header = new ChatTopicHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new ChatTopicMetadata(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "ChatMessage")
                                     {
-                                        var header = new ChatMessageHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new ChatMessageMetadata(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                 });
 
@@ -254,7 +254,7 @@ namespace Library.Net.Outopos
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "Profile";
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.ProfileContent = new Profile(uploadItem.CreationTime, cost, exchangePublicKey, trustSignatures, wikis, chats);
+                uploadItem.Profile = new Profile(uploadItem.CreationTime, cost, exchangePublicKey, trustSignatures, wikis, chats);
                 uploadItem.MiningLimit = miningLimit;
                 uploadItem.DigitalSignature = digitalSignature;
 
@@ -281,7 +281,7 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "SignatureMessage";
                 uploadItem.Signature = signature;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.SignatureMessageContent = new SignatureMessage(uploadItem.Signature, uploadItem.CreationTime, comment);
+                uploadItem.SignatureMessage = new SignatureMessage(uploadItem.Signature, uploadItem.CreationTime, comment);
                 uploadItem.MiningLimit = miningLimit;
                 uploadItem.DigitalSignature = digitalSignature;
                 uploadItem.ExchangePublicKey = exchangePublicKey;
@@ -303,7 +303,7 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "WikiPage";
                 uploadItem.Wiki = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.WikiPageContent = new WikiPage(uploadItem.Wiki, uploadItem.CreationTime, formatType, hypertext);
+                uploadItem.WikiPage = new WikiPage(uploadItem.Wiki, uploadItem.CreationTime, formatType, hypertext);
                 uploadItem.MiningLimit = miningLimit;
                 uploadItem.DigitalSignature = digitalSignature;
 
@@ -330,7 +330,7 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "ChatTopic";
                 uploadItem.Chat = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.ChatTopicContent = new ChatTopic(uploadItem.Chat, uploadItem.CreationTime, comment);
+                uploadItem.ChatTopic = new ChatTopic(uploadItem.Chat, uploadItem.CreationTime, comment);
                 uploadItem.MiningLimit = miningLimit;
                 uploadItem.DigitalSignature = digitalSignature;
 
@@ -358,7 +358,7 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "ChatMessage";
                 uploadItem.Chat = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.ChatMessageContent = new ChatMessage(uploadItem.Chat, uploadItem.CreationTime, comment, anchors);
+                uploadItem.ChatMessage = new ChatMessage(uploadItem.Chat, uploadItem.CreationTime, comment, anchors);
                 uploadItem.MiningLimit = miningLimit;
                 uploadItem.DigitalSignature = digitalSignature;
 
