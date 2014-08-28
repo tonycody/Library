@@ -36,7 +36,7 @@ namespace Library.Net.Outopos
         private volatile bool _disposed;
 
         public static readonly int SectorSize = 1024 * 8;
-        public static readonly int SpaceSectorCount = 128 * 1024; // 1MB * 1024 = 1024MB
+        public static readonly int SpaceSectorUnit = 128 * 1024; // 1MB * 1024 = 1024MB
 
         private int _threadCount = 2;
 
@@ -293,7 +293,7 @@ namespace Library.Net.Outopos
                     foreach (var sector in clusterInfo.Indexes)
                     {
                         _bitmapManager.Set(sector, false);
-                        if (_spaceSectors.Count < CacheManager.SpaceSectorCount) _spaceSectors.Add(sector);
+                        if (_spaceSectors.Count < CacheManager.SpaceSectorUnit) _spaceSectors.Add(sector);
                     }
                 }
             }
@@ -430,7 +430,7 @@ namespace Library.Net.Outopos
 
                         if (_spaceSectors.Count < count)
                         {
-                            this.CreatingSpace(CacheManager.SpaceSectorCount);
+                            this.CreatingSpace(CacheManager.SpaceSectorUnit);
                         }
 
                         if (_spaceSectors.Count < count) throw new SpaceNotFoundException();
