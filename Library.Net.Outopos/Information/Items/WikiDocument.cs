@@ -44,32 +44,35 @@ namespace Library.Net.Outopos
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
+            lock (_thisLock)
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                byte[] lengthBuffer = new byte[4];
 
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                for (; ; )
                 {
-                    if (id == (byte)SerializeId.Tag)
-                    {
-                        this.Tag = Wiki.Import(rangeStream, bufferManager);
-                    }
-                    else if (id == (byte)SerializeId.CreationTime)
-                    {
-                        this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                    }
-                    else if (id == (byte)SerializeId.WikiPage)
-                    {
-                        this.ProtectedWikiPages.Add(WikiPage.Import(rangeStream, bufferManager));
-                    }
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    else if (id == (byte)SerializeId.Certificate)
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        if (id == (byte)SerializeId.Tag)
+                        {
+                            this.Tag = Wiki.Import(rangeStream, bufferManager);
+                        }
+                        else if (id == (byte)SerializeId.CreationTime)
+                        {
+                            this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                        }
+                        else if (id == (byte)SerializeId.WikiPage)
+                        {
+                            this.ProtectedWikiPages.Add(WikiPage.Import(rangeStream, bufferManager));
+                        }
+
+                        else if (id == (byte)SerializeId.Certificate)
+                        {
+                            this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        }
                     }
                 }
             }
@@ -77,46 +80,52 @@ namespace Library.Net.Outopos
 
         protected override Stream Export(BufferManager bufferManager, int count)
         {
-            BufferStream bufferStream = new BufferStream(bufferManager);
+            lock (_thisLock)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
-            // Tag
-            if (this.Tag != null)
-            {
-                using (var stream = this.Tag.Export(bufferManager))
+                // Tag
+                if (this.Tag != null)
                 {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
+                    using (var stream = this.Tag.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Tag, stream);
+                    }
                 }
-            }
-            // CreationTime
-            if (this.CreationTime != DateTime.MinValue)
-            {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
-            }
-            // WikiPages
-            foreach (var value in this.WikiPages)
-            {
-                using (var stream = value.Export(bufferManager))
+                // CreationTime
+                if (this.CreationTime != DateTime.MinValue)
                 {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiPage, stream);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
                 }
-            }
+                // WikiPages
+                foreach (var value in this.WikiPages)
+                {
+                    using (var stream = value.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiPage, stream);
+                    }
+                }
 
-            // Certificate
-            if (this.Certificate != null)
-            {
-                using (var stream = this.Certificate.Export(bufferManager))
+                // Certificate
+                if (this.Certificate != null)
                 {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    using (var stream = this.Certificate.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    }
                 }
-            }
 
-            bufferStream.Seek(0, SeekOrigin.Begin);
-            return bufferStream;
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
+            }
         }
 
         public override int GetHashCode()
         {
-            return this.CreationTime.GetHashCode();
+            lock (_thisLock)
+            {
+                return this.CreationTime.GetHashCode();
+            }
         }
 
         public override bool Equals(object obj)

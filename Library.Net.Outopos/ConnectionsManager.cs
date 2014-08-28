@@ -306,6 +306,17 @@ namespace Library.Net.Outopos
             }
         }
 
+        public bool ContainsTrustSignature(string signature)
+        {
+            lock (this.ThisLock)
+            {
+                lock (_settings.TrustSignatures.ThisLock)
+                {
+                    return _settings.TrustSignatures.Contains(signature);
+                }
+            }
+        }
+
         public IEnumerable<Information> ConnectionInformation
         {
             get

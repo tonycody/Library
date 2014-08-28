@@ -173,7 +173,7 @@ namespace Library.Net.Outopos
                                 {
                                     if (item.Type == "Profile")
                                     {
-                                        var metadata = new ProfileMetadata(item.CreationTime, key, miner, item.DigitalSignature);
+                                        var metadata = new ProfileMetadata(item.CreationTime, key, item.DigitalSignature);
                                         _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "SignatureMessage")
@@ -237,14 +237,14 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void Upload(
+        public Profile Upload(
             int cost,
             ExchangePublicKey exchangePublicKey,
             IEnumerable<string> trustSignatures,
+            IEnumerable<string> deleteSignatures,
             IEnumerable<Wiki> wikis,
             IEnumerable<Chat> chats,
 
-            int miningLimit,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -252,8 +252,7 @@ namespace Library.Net.Outopos
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "Profile";
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.Profile = new Profile(uploadItem.CreationTime, cost, exchangePublicKey, trustSignatures, wikis, chats);
-                uploadItem.MiningLimit = miningLimit;
+                uploadItem.Profile = new Profile(uploadItem.CreationTime, cost, exchangePublicKey, trustSignatures, deleteSignatures, wikis, chats);
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.RemoveAll((target) =>
@@ -263,10 +262,12 @@ namespace Library.Net.Outopos
                 });
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return uploadItem.Profile;
             }
         }
 
-        public void Upload(string signature,
+        public SignatureMessage Upload(string signature,
             string comment,
 
             int miningLimit,
@@ -285,10 +286,12 @@ namespace Library.Net.Outopos
                 uploadItem.ExchangePublicKey = exchangePublicKey;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return uploadItem.SignatureMessage;
             }
         }
 
-        public void Upload(Wiki tag,
+        public WikiDocument Upload(Wiki tag,
             IEnumerable<WikiPage> wikiPages,
 
             int miningLimit,
@@ -312,10 +315,12 @@ namespace Library.Net.Outopos
                 });
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return uploadItem.WikiDocument;
             }
         }
 
-        public void Upload(Chat tag,
+        public ChatTopic Upload(Chat tag,
             string comment,
 
             int miningLimit,
@@ -339,10 +344,12 @@ namespace Library.Net.Outopos
                 });
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return uploadItem.ChatTopic;
             }
         }
 
-        public void Upload(Chat tag,
+        public ChatMessage Upload(Chat tag,
             string comment,
             IEnumerable<Anchor> anchors,
 
@@ -360,6 +367,8 @@ namespace Library.Net.Outopos
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
+
+                return uploadItem.ChatMessage;
             }
         }
 

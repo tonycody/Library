@@ -14,24 +14,21 @@ namespace Library.Net.Outopos
         {
             CreationTime = 1,
             Key = 2,
-            Cash = 3,
 
             Certificate = 4,
         }
 
         private DateTime _creationTime;
         private Key _key;
-        private Cash _cash;
 
         private Certificate _certificate;
 
         private volatile object _thisLock;
 
-        internal BroadcastMetadata(DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
+        internal BroadcastMetadata(DateTime creationTime, Key key, DigitalSignature digitalSignature)
         {
             this.CreationTime = creationTime;
             this.Key = key;
-            this.CreateCash(miner, digitalSignature.ToString());
 
             this.CreateCertificate(digitalSignature);
         }
@@ -63,10 +60,6 @@ namespace Library.Net.Outopos
                         {
                             this.Key = Key.Import(rangeStream, bufferManager);
                         }
-                        else if (id == (byte)SerializeId.Cash)
-                        {
-                            this.Cash = Cash.Import(rangeStream, bufferManager);
-                        }
 
                         else if (id == (byte)SerializeId.Certificate)
                         {
@@ -94,14 +87,6 @@ namespace Library.Net.Outopos
                     using (var stream = this.Key.Export(bufferManager))
                     {
                         ItemUtilities.Write(bufferStream, (byte)SerializeId.Key, stream);
-                    }
-                }
-                // Cash
-                if (this.Cash != null)
-                {
-                    using (var stream = this.Cash.Export(bufferManager))
-                    {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Cash, stream);
                     }
                 }
 
@@ -142,7 +127,6 @@ namespace Library.Net.Outopos
 
             if (this.CreationTime != other.CreationTime
                 || this.Key != other.Key
-                || this.Cash != other.Cash
 
                 || this.Certificate != other.Certificate)
             {
@@ -150,83 +134,6 @@ namespace Library.Net.Outopos
             }
 
             return true;
-        }
-
-        protected virtual void CreateCash(Miner miner, string signature)
-        {
-            lock (_thisLock)
-            {
-                var tempCertificate = this.Certificate;
-                this.Certificate = null;
-
-                var tempCash = this.Cash;
-                this.Cash = null;
-
-                try
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        stream.Seek(0, SeekOrigin.End);
-                        ItemUtilities.Write(stream, byte.MaxValue, signature);
-                        stream.Seek(0, SeekOrigin.Begin);
-
-                        tempCash = miner.Create(stream);
-                    }
-                }
-                finally
-                {
-                    this.Certificate = tempCertificate;
-                    this.Cash = tempCash;
-                }
-            }
-        }
-
-        protected virtual int VerifyCash(string signature)
-        {
-            lock (_thisLock)
-            {
-                var tempCertificate = this.Certificate;
-                this.Certificate = null;
-
-                var tempCash = this.Cash;
-                this.Cash = null;
-
-                try
-                {
-                    using (var stream = this.Export(BufferManager.Instance))
-                    {
-                        stream.Seek(0, SeekOrigin.End);
-                        ItemUtilities.Write(stream, byte.MaxValue, signature);
-                        stream.Seek(0, SeekOrigin.Begin);
-
-                        return Miner.Verify(tempCash, stream);
-                    }
-                }
-                finally
-                {
-                    this.Certificate = tempCertificate;
-                    this.Cash = tempCash;
-                }
-            }
-        }
-
-        [DataMember(Name = "Cash")]
-        protected virtual Cash Cash
-        {
-            get
-            {
-                lock (_thisLock)
-                {
-                    return _cash;
-                }
-            }
-            set
-            {
-                lock (_thisLock)
-                {
-                    _cash = value;
-                }
-            }
         }
 
         protected override void CreateCertificate(DigitalSignature digitalSignature)
@@ -318,22 +225,6 @@ namespace Library.Net.Outopos
                 lock (_thisLock)
                 {
                     _key = value;
-                }
-            }
-        }
-
-        private int? _cost;
-
-        public int Cost
-        {
-            get
-            {
-                lock (_thisLock)
-                {
-                    if (_cost == null)
-                        _cost = this.VerifyCash(this.Certificate.ToString());
-
-                    return (int)_cost;
                 }
             }
         }

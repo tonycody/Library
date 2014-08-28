@@ -43,32 +43,35 @@ namespace Library.Net.Outopos
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            byte[] lengthBuffer = new byte[4];
-
-            for (; ; )
+            lock (_thisLock)
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                byte[] lengthBuffer = new byte[4];
 
-                using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
+                for (; ; )
                 {
-                    if (id == (byte)SerializeId.Signature)
-                    {
-                        this.Signature = ItemUtilities.GetString(rangeStream);
-                    }
-                    else if (id == (byte)SerializeId.CreationTime)
-                    {
-                        this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
-                    }
-                    else if (id == (byte)SerializeId.Comment)
-                    {
-                        this.Comment = ItemUtilities.GetString(rangeStream);
-                    }
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    int length = NetworkConverter.ToInt32(lengthBuffer);
+                    byte id = (byte)stream.ReadByte();
 
-                    else if (id == (byte)SerializeId.Certificate)
+                    using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        if (id == (byte)SerializeId.Signature)
+                        {
+                            this.Signature = ItemUtilities.GetString(rangeStream);
+                        }
+                        else if (id == (byte)SerializeId.CreationTime)
+                        {
+                            this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
+                        }
+                        else if (id == (byte)SerializeId.Comment)
+                        {
+                            this.Comment = ItemUtilities.GetString(rangeStream);
+                        }
+
+                        else if (id == (byte)SerializeId.Certificate)
+                        {
+                            this.Certificate = Certificate.Import(rangeStream, bufferManager);
+                        }
                     }
                 }
             }
@@ -76,41 +79,47 @@ namespace Library.Net.Outopos
 
         protected override Stream Export(BufferManager bufferManager, int count)
         {
-            BufferStream bufferStream = new BufferStream(bufferManager);
+            lock (_thisLock)
+            {
+                BufferStream bufferStream = new BufferStream(bufferManager);
 
-            // Signature
-            if (this.Signature != null)
-            {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
-            }
-            // CreationTime
-            if (this.CreationTime != DateTime.MinValue)
-            {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
-            }
-            // Comment
-            if (this.Comment != null)
-            {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
-            }
-
-            // Certificate
-            if (this.Certificate != null)
-            {
-                using (var stream = this.Certificate.Export(bufferManager))
+                // Signature
+                if (this.Signature != null)
                 {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Signature, this.Signature);
                 }
-            }
+                // CreationTime
+                if (this.CreationTime != DateTime.MinValue)
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
+                }
+                // Comment
+                if (this.Comment != null)
+                {
+                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
+                }
 
-            bufferStream.Seek(0, SeekOrigin.Begin);
-            return bufferStream;
+                // Certificate
+                if (this.Certificate != null)
+                {
+                    using (var stream = this.Certificate.Export(bufferManager))
+                    {
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.Certificate, stream);
+                    }
+                }
+
+                bufferStream.Seek(0, SeekOrigin.Begin);
+                return bufferStream;
+            }
         }
 
         public override int GetHashCode()
         {
-            if (this.Comment == null) return 0;
-            else return this.Comment.GetHashCode();
+            lock (_thisLock)
+            {
+                if (this.Comment == null) return 0;
+                else return this.Comment.GetHashCode();
+            }
         }
 
         public override bool Equals(object obj)

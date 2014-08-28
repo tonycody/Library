@@ -537,8 +537,7 @@ namespace Library.UnitTest
                         var id = new byte[64];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha512);
-                        var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
-                        var metadata = new ProfileMetadata(DateTime.UtcNow, key, miner, digitalSignature);
+                        var metadata = new ProfileMetadata(DateTime.UtcNow, key, digitalSignature);
 
                         metadatas1.Add(metadata);
                     }

@@ -411,55 +411,55 @@ namespace Library.Net.Outopos
             }
         }
 
-        private IEnumerable<WikiDocument> GetWikiDocuments(Wiki tag)
+        private IEnumerable<WikiDocument> GetWikiDocuments(Wiki tag, int limit)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetWikiDocuments(tag);
+                return _downloadManager.GetWikiDocuments(tag, limit);
             }
         }
 
-        private IEnumerable<ChatTopic> GetChatTopics(Chat tag)
+        private IEnumerable<ChatTopic> GetChatTopics(Chat tag, int limit)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatTopics(tag);
+                return _downloadManager.GetChatTopics(tag, limit);
             }
         }
 
-        private IEnumerable<ChatMessage> GetChatMessages(Chat tag)
+        private IEnumerable<ChatMessage> GetChatMessages(Chat tag, int limit)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatMessages(tag);
+                return _downloadManager.GetChatMessages(tag, limit);
             }
         }
 
-        public void Upload(
+        public Profile Upload(
             int cost,
             ExchangePublicKey exchangePublicKey,
             IEnumerable<string> trustSignatures,
+            IEnumerable<string> deleteSignatures,
             IEnumerable<Wiki> wikis,
             IEnumerable<Chat> chats,
 
-            int miningLimit,
             DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(cost, exchangePublicKey, trustSignatures, wikis, chats, miningLimit, digitalSignature);
+                return _uploadManager.Upload(cost, exchangePublicKey, trustSignatures, deleteSignatures, wikis, chats, digitalSignature);
             }
         }
 
-        public void Upload(string signature,
+        public SignatureMessage Upload(string signature,
             string comment,
 
             int miningLimit,
@@ -470,11 +470,11 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(signature, comment, miningLimit, digitalSignature, exchangePublicKey);
+                return _uploadManager.Upload(signature, comment, miningLimit, digitalSignature, exchangePublicKey);
             }
         }
 
-        public void Upload(Wiki tag,
+        public WikiDocument Upload(Wiki tag,
             IEnumerable<WikiPage> wikiPages,
 
             int miningLimit,
@@ -484,11 +484,11 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, wikiPages, miningLimit, digitalSignature);
+                return _uploadManager.Upload(tag, wikiPages, miningLimit, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag,
+        public ChatTopic Upload(Chat tag,
             string comment,
 
             int miningLimit,
@@ -498,11 +498,11 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, comment, miningLimit, digitalSignature);
+                return _uploadManager.Upload(tag, comment, miningLimit, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag,
+        public ChatMessage Upload(Chat tag,
             string comment,
             IEnumerable<Anchor> anchors,
 
@@ -513,7 +513,7 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, comment, anchors, miningLimit, digitalSignature);
+                return _uploadManager.Upload(tag, comment, anchors, miningLimit, digitalSignature);
             }
         }
 

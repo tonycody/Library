@@ -44,7 +44,11 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[metadata.Key];
 
-                            list.Add(InformationConverter.FromProfileBlock(buffer));
+                            var information = InformationConverter.FromProfileBlock(buffer);
+                            if (metadata.CreationTime != information.CreationTime) continue;
+                            if (metadata.Certificate.ToString() != information.Certificate.ToString()) continue;
+
+                            list.Add(information);
                         }
                         catch (Exception)
                         {
@@ -76,6 +80,8 @@ namespace Library.Net.Outopos
 
                 foreach (var metadata in _connectionsManager.GetSignatureMessageMetadatas(signature))
                 {
+                    if (!_connectionsManager.ContainsTrustSignature(metadata.Certificate.ToString()) && metadata.Cost < limit) continue;
+
                     if (!_cacheManager.Contains(metadata.Key))
                     {
                         _connectionsManager.Download(metadata.Key);
@@ -88,7 +94,12 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[metadata.Key];
 
-                            list.Add(InformationConverter.FromSignatureMessageBlock(buffer, exchangePrivateKey));
+                            var information = InformationConverter.FromSignatureMessageBlock(buffer, exchangePrivateKey);
+                            if (metadata.Signature != information.Signature) continue;
+                            if (metadata.CreationTime != information.CreationTime) continue;
+                            if (metadata.Certificate.ToString() != information.Certificate.ToString()) continue;
+
+                            list.Add(information);
                         }
                         catch (Exception)
                         {
@@ -108,7 +119,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public IEnumerable<WikiDocument> GetWikiDocuments(Wiki tag)
+        public IEnumerable<WikiDocument> GetWikiDocuments(Wiki tag, int limit)
         {
             if (tag == null) throw new ArgumentNullException("tag");
 
@@ -118,6 +129,8 @@ namespace Library.Net.Outopos
 
                 foreach (var metadata in _connectionsManager.GetWikiDocumentMetadatas(tag))
                 {
+                    if (!_connectionsManager.ContainsTrustSignature(metadata.Certificate.ToString()) && metadata.Cost < limit) continue;
+
                     if (!_cacheManager.Contains(metadata.Key))
                     {
                         _connectionsManager.Download(metadata.Key);
@@ -130,7 +143,12 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[metadata.Key];
 
-                            list.Add(InformationConverter.FromWikiDocumentBlock(buffer));
+                            var information = InformationConverter.FromWikiDocumentBlock(buffer);
+                            if (metadata.Tag != information.Tag) continue;
+                            if (metadata.CreationTime != information.CreationTime) continue;
+                            if (metadata.Certificate.ToString() != information.Certificate.ToString()) continue;
+
+                            list.Add(information);
                         }
                         catch (Exception)
                         {
@@ -150,7 +168,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public IEnumerable<ChatTopic> GetChatTopics(Chat tag)
+        public IEnumerable<ChatTopic> GetChatTopics(Chat tag, int limit)
         {
             if (tag == null) throw new ArgumentNullException("tag");
 
@@ -160,6 +178,8 @@ namespace Library.Net.Outopos
 
                 foreach (var metadata in _connectionsManager.GetChatTopicMetadatas(tag))
                 {
+                    if (!_connectionsManager.ContainsTrustSignature(metadata.Certificate.ToString()) && metadata.Cost < limit) continue;
+
                     if (!_cacheManager.Contains(metadata.Key))
                     {
                         _connectionsManager.Download(metadata.Key);
@@ -172,7 +192,12 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[metadata.Key];
 
-                            list.Add(InformationConverter.FromChatTopicBlock(buffer));
+                            var information = InformationConverter.FromChatTopicBlock(buffer);
+                            if (metadata.Tag != information.Tag) continue;
+                            if (metadata.CreationTime != information.CreationTime) continue;
+                            if (metadata.Certificate.ToString() != information.Certificate.ToString()) continue;
+
+                            list.Add(information);
                         }
                         catch (Exception)
                         {
@@ -192,7 +217,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public IEnumerable<ChatMessage> GetChatMessages(Chat tag)
+        public IEnumerable<ChatMessage> GetChatMessages(Chat tag, int limit)
         {
             if (tag == null) throw new ArgumentNullException("tag");
 
@@ -202,6 +227,8 @@ namespace Library.Net.Outopos
 
                 foreach (var metadata in _connectionsManager.GetChatMessageMetadatas(tag))
                 {
+                    if (!_connectionsManager.ContainsTrustSignature(metadata.Certificate.ToString()) && metadata.Cost < limit) continue;
+
                     if (!_cacheManager.Contains(metadata.Key))
                     {
                         _connectionsManager.Download(metadata.Key);
@@ -214,7 +241,12 @@ namespace Library.Net.Outopos
                         {
                             buffer = _cacheManager[metadata.Key];
 
-                            list.Add(InformationConverter.FromChatMessageBlock(buffer));
+                            var information = InformationConverter.FromChatMessageBlock(buffer);
+                            if (metadata.Tag != information.Tag) continue;
+                            if (metadata.CreationTime != information.CreationTime) continue;
+                            if (metadata.Certificate.ToString() != information.Certificate.ToString()) continue;
+
+                            list.Add(information);
                         }
                         catch (Exception)
                         {
