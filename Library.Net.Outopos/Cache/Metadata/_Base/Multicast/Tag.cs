@@ -1,35 +1,37 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Key", Namespace = "http://Library/Net/Outopos")]
-    public sealed class Key : ItemBase<Key>, IKey
+    [DataContract(Name = "Tag", Namespace = "http://Library/Net/Outopos")]
+    public abstract class Tag<TTag> : ItemBase<TTag>, ITag
+        where TTag : Tag<TTag>
     {
         private enum SerializeId : byte
         {
-            Hash = 0,
-
-            HashAlgorithm = 1,
+            Name = 0,
+            Id = 1,
         }
 
-        private volatile byte[] _hash;
-
-        private volatile HashAlgorithm _hashAlgorithm = 0;
+        private static Intern<string> _nameCache = new Intern<string>();
+        private volatile string _name;
+        private static Intern<byte[]> _idCache = new Intern<byte[]>(new ByteArrayEqualityComparer());
+        private volatile byte[] _id;
 
         private volatile int _hashCode;
 
-        public static readonly int MaxHashLength = 64;
+        public static readonly int MaxNameLength = 256;
+        public static readonly int MaxIdLength = 64;
 
-        public Key(byte[] hash, HashAlgorithm hashAlgorithm)
+        public Tag(string name, byte[] id)
         {
-            this.Hash = hash;
-
-            this.HashAlgorithm = hashAlgorithm;
+            this.Name = name;
+            this.Id = id;
         }
 
         protected override void Initialize()
@@ -49,14 +51,13 @@ namespace Library.Net.Outopos
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.Hash)
+                    if (id == (byte)SerializeId.Name)
                     {
-                        this.Hash = ItemUtilities.GetByteArray(rangeStream);
+                        this.Name = ItemUtilities.GetString(rangeStream);
                     }
-
-                    else if (id == (byte)SerializeId.HashAlgorithm)
+                    else if (id == (byte)SerializeId.Id)
                     {
-                        this.HashAlgorithm = (HashAlgorithm)Enum.Parse(typeof(HashAlgorithm), ItemUtilities.GetString(rangeStream));
+                        this.Id = ItemUtilities.GetByteArray(rangeStream);
                     }
                 }
             }
@@ -66,16 +67,15 @@ namespace Library.Net.Outopos
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 
-            // Hash
-            if (this.Hash != null)
+            // Name
+            if (this.Name != null)
             {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.Hash, this.Hash);
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Name, this.Name);
             }
-
-            // HashAlgorithm
-            if (this.HashAlgorithm != 0)
+            // Id
+            if (this.Id != null)
             {
-                ItemUtilities.Write(bufferStream, (byte)SerializeId.HashAlgorithm, this.HashAlgorithm.ToString());
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Id, this.Id);
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -89,82 +89,77 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Key)) return false;
+            if ((object)obj == null || !(obj is TTag)) return false;
 
-            return this.Equals((Key)obj);
+            return this.Equals((TTag)obj);
         }
 
-        public override bool Equals(Key other)
+        public override bool Equals(TTag other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if ((this.Hash == null) != (other.Hash == null)
-
-                || this.HashAlgorithm != other.HashAlgorithm)
+            if (this.Name != other.Name
+                || (this.Id == null) != (other.Id == null))
             {
                 return false;
             }
 
-            if (this.Hash != null && other.Hash != null)
+            if (this.Id != null && other.Id != null)
             {
-                if (!Unsafe.Equals(this.Hash, other.Hash)) return false;
+                if (!Unsafe.Equals(this.Id, other.Id)) return false;
             }
 
             return true;
         }
 
-        #region IKey
+        #region ITag
 
-        [DataMember(Name = "Hash")]
-        public byte[] Hash
+        [DataMember(Name = "Name")]
+        public string Name
         {
             get
             {
-                return _hash;
+                return _name;
             }
             private set
             {
-                if (value != null && value.Length > Key.MaxHashLength)
+                if (value != null && value.Length > Tag<TTag>.MaxNameLength)
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _hash = value;
-                }
-
-                if (value != null)
-                {
-                    _hashCode = ItemUtilities.GetHashCode(value);
-                }
-                else
-                {
-                    _hashCode = 0;
+                    _name = _nameCache.GetValue(value, this);
                 }
             }
         }
 
-        #endregion
-
-        #region IHashAlgorithm
-
-        [DataMember(Name = "HashAlgorithm")]
-        public HashAlgorithm HashAlgorithm
+        [DataMember(Name = "Id")]
+        public byte[] Id
         {
             get
             {
-                return _hashAlgorithm;
+                return _id;
             }
             private set
             {
-                if (!Enum.IsDefined(typeof(HashAlgorithm), value))
+                if (value != null && (value.Length > Tag<TTag>.MaxIdLength))
                 {
                     throw new ArgumentException();
                 }
                 else
                 {
-                    _hashAlgorithm = value;
+                    _id = _idCache.GetValue(value, this);
+                }
+
+                if (value != null)
+                {
+                    _hashCode = RuntimeHelpers.GetHashCode(_id);
+                }
+                else
+                {
+                    _hashCode = 0;
                 }
             }
         }

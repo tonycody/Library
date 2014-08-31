@@ -36,37 +36,37 @@ namespace Library.Net.Outopos
         public ArraySegment<byte> Value { get; set; }
     }
 
-    class PullBroadcastMetadatasRequestEventArgs : EventArgs
+    class PullBroadcastHeadersRequestEventArgs : EventArgs
     {
         public IEnumerable<string> Signatures { get; set; }
     }
 
-    class PullBroadcastMetadatasEventArgs : EventArgs
+    class PullBroadcastHeadersEventArgs : EventArgs
     {
-        public IEnumerable<ProfileMetadata> ProfileMetadatas { get; set; }
+        public IEnumerable<ProfileHeader> ProfileHeaders { get; set; }
     }
 
-    class PullUnicastMetadatasRequestEventArgs : EventArgs
+    class PullUnicastHeadersRequestEventArgs : EventArgs
     {
         public IEnumerable<string> Signatures { get; set; }
     }
 
-    class PullUnicastMetadatasEventArgs : EventArgs
+    class PullUnicastHeadersEventArgs : EventArgs
     {
-        public IEnumerable<SignatureMessageMetadata> SignatureMessageMetadatas { get; set; }
+        public IEnumerable<SignatureMessageHeader> SignatureMessageHeaders { get; set; }
     }
 
-    class PullMulticastMetadatasRequestEventArgs : EventArgs
+    class PullMulticastHeadersRequestEventArgs : EventArgs
     {
         public IEnumerable<Wiki> Wikis { get; set; }
         public IEnumerable<Chat> Chats { get; set; }
     }
 
-    class PullMulticastMetadatasEventArgs : EventArgs
+    class PullMulticastHeadersEventArgs : EventArgs
     {
-        public IEnumerable<WikiDocumentMetadata> WikiDocumentMetadatas { get; set; }
-        public IEnumerable<ChatTopicMetadata> ChatTopicMetadatas { get; set; }
-        public IEnumerable<ChatMessageMetadata> ChatMessageMetadatas { get; set; }
+        public IEnumerable<WikiDocumentHeader> WikiDocumentHeaders { get; set; }
+        public IEnumerable<ChatTopicHeader> ChatTopicHeaders { get; set; }
+        public IEnumerable<ChatMessageHeader> ChatMessageHeaders { get; set; }
     }
 
     delegate void PullNodesEventHandler(object sender, PullNodesEventArgs e);
@@ -75,14 +75,14 @@ namespace Library.Net.Outopos
     delegate void PullBlocksRequestEventHandler(object sender, PullBlocksRequestEventArgs e);
     delegate void PullBlockEventHandler(object sender, PullBlockEventArgs e);
 
-    delegate void PullBroadcastMetadatasRequestEventHandler(object sender, PullBroadcastMetadatasRequestEventArgs e);
-    delegate void PullBroadcastMetadatasEventHandler(object sender, PullBroadcastMetadatasEventArgs e);
+    delegate void PullBroadcastHeadersRequestEventHandler(object sender, PullBroadcastHeadersRequestEventArgs e);
+    delegate void PullBroadcastHeadersEventHandler(object sender, PullBroadcastHeadersEventArgs e);
 
-    delegate void PullUnicastMetadatasRequestEventHandler(object sender, PullUnicastMetadatasRequestEventArgs e);
-    delegate void PullUnicastMetadatasEventHandler(object sender, PullUnicastMetadatasEventArgs e);
+    delegate void PullUnicastHeadersRequestEventHandler(object sender, PullUnicastHeadersRequestEventArgs e);
+    delegate void PullUnicastHeadersEventHandler(object sender, PullUnicastHeadersEventArgs e);
 
-    delegate void PullMulticastMetadatasRequestEventHandler(object sender, PullMulticastMetadatasRequestEventArgs e);
-    delegate void PullMulticastMetadatasEventHandler(object sender, PullMulticastMetadatasEventArgs e);
+    delegate void PullMulticastHeadersRequestEventHandler(object sender, PullMulticastHeadersRequestEventArgs e);
+    delegate void PullMulticastHeadersEventHandler(object sender, PullMulticastHeadersEventArgs e);
 
     delegate void PullCancelEventHandler(object sender, EventArgs e);
 
@@ -114,14 +114,14 @@ namespace Library.Net.Outopos
             BlocksRequest = 6,
             Block = 7,
 
-            BroadcastMetadatasRequest = 8,
-            BroadcastMetadatas = 9,
+            BroadcastHeadersRequest = 8,
+            BroadcastHeaders = 9,
 
-            UnicastMetadatasRequest = 10,
-            UnicastMetadatas = 11,
+            UnicastHeadersRequest = 10,
+            UnicastHeaders = 11,
 
-            MulticastMetadatasRequest = 12,
-            MulticastMetadatas = 13,
+            MulticastHeadersRequest = 12,
+            MulticastHeaders = 13,
         }
 
         private byte[] _mySessionId;
@@ -154,8 +154,8 @@ namespace Library.Net.Outopos
         private const int _maxNodeCount = 1024;
         private const int _maxBlockLinkCount = 8192;
         private const int _maxBlockRequestCount = 8192;
-        private const int _maxMetadataRequestCount = 1024;
-        private const int _maxMetadataCount = 1024;
+        private const int _maxHeaderRequestCount = 1024;
+        private const int _maxHeaderCount = 1024;
 
         public event PullNodesEventHandler PullNodesEvent;
 
@@ -163,14 +163,14 @@ namespace Library.Net.Outopos
         public event PullBlocksRequestEventHandler PullBlocksRequestEvent;
         public event PullBlockEventHandler PullBlockEvent;
 
-        public event PullBroadcastMetadatasRequestEventHandler PullBroadcastMetadatasRequestEvent;
-        public event PullBroadcastMetadatasEventHandler PullBroadcastMetadatasEvent;
+        public event PullBroadcastHeadersRequestEventHandler PullBroadcastHeadersRequestEvent;
+        public event PullBroadcastHeadersEventHandler PullBroadcastHeadersEvent;
 
-        public event PullUnicastMetadatasRequestEventHandler PullUnicastMetadatasRequestEvent;
-        public event PullUnicastMetadatasEventHandler PullUnicastMetadatasEvent;
+        public event PullUnicastHeadersRequestEventHandler PullUnicastHeadersRequestEvent;
+        public event PullUnicastHeadersEventHandler PullUnicastHeadersEvent;
 
-        public event PullMulticastMetadatasRequestEventHandler PullMulticastMetadatasRequestEvent;
-        public event PullMulticastMetadatasEventHandler PullMulticastMetadatasEvent;
+        public event PullMulticastHeadersRequestEventHandler PullMulticastHeadersRequestEvent;
+        public event PullMulticastHeadersEventHandler PullMulticastHeadersEvent;
 
         public event PullCancelEventHandler PullCancelEvent;
 
@@ -604,61 +604,61 @@ namespace Library.Net.Outopos
                                         var message = BlockMessage.Import(stream2, _bufferManager);
                                         this.OnPullBlock(new PullBlockEventArgs() { Key = message.Key, Value = message.Value });
                                     }
-                                    else if (type == (byte)SerializeId.BroadcastMetadatasRequest)
+                                    else if (type == (byte)SerializeId.BroadcastHeadersRequest)
                                     {
-                                        var message = BroadcastMetadatasRequestMessage.Import(stream2, _bufferManager);
+                                        var message = BroadcastHeadersRequestMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullBroadcastMetadatasRequest(new PullBroadcastMetadatasRequestEventArgs()
+                                        this.OnPullBroadcastHeadersRequest(new PullBroadcastHeadersRequestEventArgs()
                                         {
                                             Signatures = message.Signatures,
                                         });
                                     }
-                                    else if (type == (byte)SerializeId.BroadcastMetadatas)
+                                    else if (type == (byte)SerializeId.BroadcastHeaders)
                                     {
-                                        var message = BroadcastMetadatasMessage.Import(stream2, _bufferManager);
+                                        var message = BroadcastHeadersMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullBroadcastMetadatas(new PullBroadcastMetadatasEventArgs()
+                                        this.OnPullBroadcastHeaders(new PullBroadcastHeadersEventArgs()
                                         {
-                                            ProfileMetadatas = message.ProfileMetadatas,
+                                            ProfileHeaders = message.ProfileHeaders,
                                         });
                                     }
-                                    else if (type == (byte)SerializeId.UnicastMetadatasRequest)
+                                    else if (type == (byte)SerializeId.UnicastHeadersRequest)
                                     {
-                                        var message = UnicastMetadatasRequestMessage.Import(stream2, _bufferManager);
+                                        var message = UnicastHeadersRequestMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullUnicastMetadatasRequest(new PullUnicastMetadatasRequestEventArgs()
+                                        this.OnPullUnicastHeadersRequest(new PullUnicastHeadersRequestEventArgs()
                                         {
                                             Signatures = message.Signatures,
                                         });
                                     }
-                                    else if (type == (byte)SerializeId.UnicastMetadatas)
+                                    else if (type == (byte)SerializeId.UnicastHeaders)
                                     {
-                                        var message = UnicastMetadatasMessage.Import(stream2, _bufferManager);
+                                        var message = UnicastHeadersMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullUnicastMetadatas(new PullUnicastMetadatasEventArgs()
+                                        this.OnPullUnicastHeaders(new PullUnicastHeadersEventArgs()
                                         {
-                                            SignatureMessageMetadatas = message.SignatureMessageMetadatas,
+                                            SignatureMessageHeaders = message.SignatureMessageHeaders,
                                         });
                                     }
-                                    else if (type == (byte)SerializeId.MulticastMetadatasRequest)
+                                    else if (type == (byte)SerializeId.MulticastHeadersRequest)
                                     {
-                                        var message = MulticastMetadatasRequestMessage.Import(stream2, _bufferManager);
+                                        var message = MulticastHeadersRequestMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullMulticastMetadatasRequest(new PullMulticastMetadatasRequestEventArgs()
+                                        this.OnPullMulticastHeadersRequest(new PullMulticastHeadersRequestEventArgs()
                                         {
                                             Wikis = message.Wikis,
                                             Chats = message.Chats,
                                         });
                                     }
-                                    else if (type == (byte)SerializeId.MulticastMetadatas)
+                                    else if (type == (byte)SerializeId.MulticastHeaders)
                                     {
-                                        var message = MulticastMetadatasMessage.Import(stream2, _bufferManager);
+                                        var message = MulticastHeadersMessage.Import(stream2, _bufferManager);
 
-                                        this.OnPullMulticastMetadatas(new PullMulticastMetadatasEventArgs()
+                                        this.OnPullMulticastHeaders(new PullMulticastHeadersEventArgs()
                                         {
-                                            WikiDocumentMetadatas = message.WikiDocumentMetadatas,
-                                            ChatTopicMetadatas = message.ChatTopicMetadatas,
-                                            ChatMessageMetadatas = message.ChatMessageMetadatas,
+                                            WikiDocumentHeaders = message.WikiDocumentHeaders,
+                                            ChatTopicHeaders = message.ChatTopicHeaders,
+                                            ChatMessageHeaders = message.ChatMessageHeaders,
                                         });
                                     }
                                 }
@@ -722,51 +722,51 @@ namespace Library.Net.Outopos
             }
         }
 
-        protected virtual void OnPullBroadcastMetadatasRequest(PullBroadcastMetadatasRequestEventArgs e)
+        protected virtual void OnPullBroadcastHeadersRequest(PullBroadcastHeadersRequestEventArgs e)
         {
-            if (this.PullBroadcastMetadatasRequestEvent != null)
+            if (this.PullBroadcastHeadersRequestEvent != null)
             {
-                this.PullBroadcastMetadatasRequestEvent(this, e);
+                this.PullBroadcastHeadersRequestEvent(this, e);
             }
         }
 
-        protected virtual void OnPullBroadcastMetadatas(PullBroadcastMetadatasEventArgs e)
+        protected virtual void OnPullBroadcastHeaders(PullBroadcastHeadersEventArgs e)
         {
-            if (this.PullBroadcastMetadatasEvent != null)
+            if (this.PullBroadcastHeadersEvent != null)
             {
-                this.PullBroadcastMetadatasEvent(this, e);
+                this.PullBroadcastHeadersEvent(this, e);
             }
         }
 
-        protected virtual void OnPullUnicastMetadatasRequest(PullUnicastMetadatasRequestEventArgs e)
+        protected virtual void OnPullUnicastHeadersRequest(PullUnicastHeadersRequestEventArgs e)
         {
-            if (this.PullUnicastMetadatasRequestEvent != null)
+            if (this.PullUnicastHeadersRequestEvent != null)
             {
-                this.PullUnicastMetadatasRequestEvent(this, e);
+                this.PullUnicastHeadersRequestEvent(this, e);
             }
         }
 
-        protected virtual void OnPullUnicastMetadatas(PullUnicastMetadatasEventArgs e)
+        protected virtual void OnPullUnicastHeaders(PullUnicastHeadersEventArgs e)
         {
-            if (this.PullUnicastMetadatasEvent != null)
+            if (this.PullUnicastHeadersEvent != null)
             {
-                this.PullUnicastMetadatasEvent(this, e);
+                this.PullUnicastHeadersEvent(this, e);
             }
         }
 
-        protected virtual void OnPullMulticastMetadatasRequest(PullMulticastMetadatasRequestEventArgs e)
+        protected virtual void OnPullMulticastHeadersRequest(PullMulticastHeadersRequestEventArgs e)
         {
-            if (this.PullMulticastMetadatasRequestEvent != null)
+            if (this.PullMulticastHeadersRequestEvent != null)
             {
-                this.PullMulticastMetadatasRequestEvent(this, e);
+                this.PullMulticastHeadersRequestEvent(this, e);
             }
         }
 
-        protected virtual void OnPullMulticastMetadatas(PullMulticastMetadatasEventArgs e)
+        protected virtual void OnPullMulticastHeaders(PullMulticastHeadersEventArgs e)
         {
-            if (this.PullMulticastMetadatasEvent != null)
+            if (this.PullMulticastHeadersEvent != null)
             {
-                this.PullMulticastMetadatasEvent(this, e);
+                this.PullMulticastHeadersEvent(this, e);
             }
         }
 
@@ -940,7 +940,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushBroadcastMetadatasRequest(IEnumerable<string> signatures)
+        public void PushBroadcastHeadersRequest(IEnumerable<string> signatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -950,10 +950,10 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.BroadcastMetadatasRequest);
+                    stream.WriteByte((byte)SerializeId.BroadcastHeadersRequest);
                     stream.Flush();
 
-                    var message = new BroadcastMetadatasRequestMessage(signatures);
+                    var message = new BroadcastHeadersRequestMessage(signatures);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -977,8 +977,8 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushBroadcastMetadatas(
-            IEnumerable<ProfileMetadata> profileMetadatas)
+        public void PushBroadcastHeaders(
+            IEnumerable<ProfileHeader> profileHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -988,11 +988,11 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.BroadcastMetadatas);
+                    stream.WriteByte((byte)SerializeId.BroadcastHeaders);
                     stream.Flush();
 
-                    var message = new BroadcastMetadatasMessage(
-                        profileMetadatas);
+                    var message = new BroadcastHeadersMessage(
+                        profileHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1016,7 +1016,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushUnicastMetadatasRequest(IEnumerable<string> signatures)
+        public void PushUnicastHeadersRequest(IEnumerable<string> signatures)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1026,10 +1026,10 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.UnicastMetadatasRequest);
+                    stream.WriteByte((byte)SerializeId.UnicastHeadersRequest);
                     stream.Flush();
 
-                    var message = new UnicastMetadatasRequestMessage(signatures);
+                    var message = new UnicastHeadersRequestMessage(signatures);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1053,8 +1053,8 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushUnicastMetadatas(
-            IEnumerable<SignatureMessageMetadata> SignatureMessageMetadatas)
+        public void PushUnicastHeaders(
+            IEnumerable<SignatureMessageHeader> SignatureMessageHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1064,11 +1064,11 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.UnicastMetadatas);
+                    stream.WriteByte((byte)SerializeId.UnicastHeaders);
                     stream.Flush();
 
-                    var message = new UnicastMetadatasMessage(
-                        SignatureMessageMetadatas);
+                    var message = new UnicastHeadersMessage(
+                        SignatureMessageHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1092,7 +1092,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushMulticastMetadatasRequest(
+        public void PushMulticastHeadersRequest(
             IEnumerable<Wiki> wikis,
             IEnumerable<Chat> chats)
         {
@@ -1104,10 +1104,10 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.MulticastMetadatasRequest);
+                    stream.WriteByte((byte)SerializeId.MulticastHeadersRequest);
                     stream.Flush();
 
-                    var message = new MulticastMetadatasRequestMessage(
+                    var message = new MulticastHeadersRequestMessage(
                         wikis,
                         chats);
 
@@ -1133,10 +1133,10 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void PushMulticastMetadatas(
-            IEnumerable<WikiDocumentMetadata> wikiDocumentMetadatas,
-            IEnumerable<ChatTopicMetadata> chatTopicMetadatas,
-            IEnumerable<ChatMessageMetadata> chatMessageMetadatas)
+        public void PushMulticastHeaders(
+            IEnumerable<WikiDocumentHeader> wikiDocumentHeaders,
+            IEnumerable<ChatTopicHeader> chatTopicHeaders,
+            IEnumerable<ChatMessageHeader> chatMessageHeaders)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
@@ -1146,13 +1146,13 @@ namespace Library.Net.Outopos
 
                 try
                 {
-                    stream.WriteByte((byte)SerializeId.MulticastMetadatas);
+                    stream.WriteByte((byte)SerializeId.MulticastHeaders);
                     stream.Flush();
 
-                    var message = new MulticastMetadatasMessage(
-                        wikiDocumentMetadatas,
-                        chatTopicMetadatas,
-                        chatMessageMetadatas);
+                    var message = new MulticastHeadersMessage(
+                        wikiDocumentHeaders,
+                        chatTopicHeaders,
+                        chatMessageHeaders);
 
                     stream = new UniteStream(stream, message.Export(_bufferManager));
 
@@ -1604,7 +1604,7 @@ namespace Library.Net.Outopos
             }
         }
 
-        private sealed class BroadcastMetadatasRequestMessage : ItemBase<BroadcastMetadatasRequestMessage>
+        private sealed class BroadcastHeadersRequestMessage : ItemBase<BroadcastHeadersRequestMessage>
         {
             private enum SerializeId : byte
             {
@@ -1613,7 +1613,7 @@ namespace Library.Net.Outopos
 
             private SignatureCollection _signatures;
 
-            public BroadcastMetadatasRequestMessage(IEnumerable<string> signatures)
+            public BroadcastHeadersRequestMessage(IEnumerable<string> signatures)
             {
                 if (signatures != null) this.ProtectedSignatures.AddRange(signatures);
             }
@@ -1657,11 +1657,11 @@ namespace Library.Net.Outopos
                 return bufferStream;
             }
 
-            public BroadcastMetadatasRequestMessage Clone()
+            public BroadcastHeadersRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return BroadcastMetadatasRequestMessage.Import(stream, BufferManager.Instance);
+                    return BroadcastHeadersRequestMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
@@ -1684,26 +1684,26 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_signatures == null)
-                        _signatures = new SignatureCollection(_maxMetadataRequestCount);
+                        _signatures = new SignatureCollection(_maxHeaderRequestCount);
 
                     return _signatures;
                 }
             }
         }
 
-        private sealed class BroadcastMetadatasMessage : ItemBase<BroadcastMetadatasMessage>
+        private sealed class BroadcastHeadersMessage : ItemBase<BroadcastHeadersMessage>
         {
             private enum SerializeId : byte
             {
-                ProfileMetadata = 0,
+                ProfileHeader = 0,
             }
 
-            private LockedList<ProfileMetadata> _profileMetadatas;
+            private LockedList<ProfileHeader> _profileHeaders;
 
-            public BroadcastMetadatasMessage(
-                IEnumerable<ProfileMetadata> profileMetadatas)
+            public BroadcastHeadersMessage(
+                IEnumerable<ProfileHeader> profileHeaders)
             {
-                if (profileMetadatas != null) this.ProtectedProfileMetadatas.AddRange(profileMetadatas);
+                if (profileHeaders != null) this.ProtectedProfileHeaders.AddRange(profileHeaders);
             }
 
             protected override void Initialize()
@@ -1723,9 +1723,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.ProfileMetadata)
+                        if (id == (byte)SerializeId.ProfileHeader)
                         {
-                            this.ProtectedProfileMetadatas.Add(ProfileMetadata.Import(rangeStream, bufferManager));
+                            this.ProtectedProfileHeaders.Add(ProfileHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1735,12 +1735,12 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // ProfileMetadatas
-                foreach (var value in this.ProfileMetadatas)
+                // ProfileHeaders
+                foreach (var value in this.ProfileHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ProfileMetadata, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ProfileHeader, stream);
                     }
                 }
 
@@ -1748,41 +1748,41 @@ namespace Library.Net.Outopos
                 return bufferStream;
             }
 
-            public BroadcastMetadatasMessage Clone()
+            public BroadcastHeadersMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return BroadcastMetadatasMessage.Import(stream, BufferManager.Instance);
+                    return BroadcastHeadersMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            private volatile ReadOnlyCollection<ProfileMetadata> _readOnlyProfileMetadatas;
+            private volatile ReadOnlyCollection<ProfileHeader> _readOnlyProfileHeaders;
 
-            public IEnumerable<ProfileMetadata> ProfileMetadatas
+            public IEnumerable<ProfileHeader> ProfileHeaders
             {
                 get
                 {
-                    if (_readOnlyProfileMetadatas == null)
-                        _readOnlyProfileMetadatas = new ReadOnlyCollection<ProfileMetadata>(this.ProtectedProfileMetadatas.ToArray());
+                    if (_readOnlyProfileHeaders == null)
+                        _readOnlyProfileHeaders = new ReadOnlyCollection<ProfileHeader>(this.ProtectedProfileHeaders.ToArray());
 
-                    return _readOnlyProfileMetadatas;
+                    return _readOnlyProfileHeaders;
                 }
             }
 
-            [DataMember(Name = "ProfileMetadatas")]
-            private LockedList<ProfileMetadata> ProtectedProfileMetadatas
+            [DataMember(Name = "ProfileHeaders")]
+            private LockedList<ProfileHeader> ProtectedProfileHeaders
             {
                 get
                 {
-                    if (_profileMetadatas == null)
-                        _profileMetadatas = new LockedList<ProfileMetadata>(_maxMetadataCount);
+                    if (_profileHeaders == null)
+                        _profileHeaders = new LockedList<ProfileHeader>(_maxHeaderCount);
 
-                    return _profileMetadatas;
+                    return _profileHeaders;
                 }
             }
         }
 
-        private sealed class UnicastMetadatasRequestMessage : ItemBase<UnicastMetadatasRequestMessage>
+        private sealed class UnicastHeadersRequestMessage : ItemBase<UnicastHeadersRequestMessage>
         {
             private enum SerializeId : byte
             {
@@ -1791,7 +1791,7 @@ namespace Library.Net.Outopos
 
             private SignatureCollection _signatures;
 
-            public UnicastMetadatasRequestMessage(IEnumerable<string> signatures)
+            public UnicastHeadersRequestMessage(IEnumerable<string> signatures)
             {
                 if (signatures != null) this.ProtectedSignatures.AddRange(signatures);
             }
@@ -1835,11 +1835,11 @@ namespace Library.Net.Outopos
                 return bufferStream;
             }
 
-            public BroadcastMetadatasRequestMessage Clone()
+            public BroadcastHeadersRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return BroadcastMetadatasRequestMessage.Import(stream, BufferManager.Instance);
+                    return BroadcastHeadersRequestMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
@@ -1862,26 +1862,26 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_signatures == null)
-                        _signatures = new SignatureCollection(_maxMetadataRequestCount);
+                        _signatures = new SignatureCollection(_maxHeaderRequestCount);
 
                     return _signatures;
                 }
             }
         }
 
-        private sealed class UnicastMetadatasMessage : ItemBase<UnicastMetadatasMessage>
+        private sealed class UnicastHeadersMessage : ItemBase<UnicastHeadersMessage>
         {
             private enum SerializeId : byte
             {
-                SignatureMessageMetadata = 0,
+                SignatureMessageHeader = 0,
             }
 
-            private LockedList<SignatureMessageMetadata> _signatureMessageMetadatas;
+            private LockedList<SignatureMessageHeader> _signatureMessageHeaders;
 
-            public UnicastMetadatasMessage(
-                IEnumerable<SignatureMessageMetadata> signatureMessageMetadatas)
+            public UnicastHeadersMessage(
+                IEnumerable<SignatureMessageHeader> signatureMessageHeaders)
             {
-                if (signatureMessageMetadatas != null) this.ProtectedSignatureMessageMetadatas.AddRange(signatureMessageMetadatas);
+                if (signatureMessageHeaders != null) this.ProtectedSignatureMessageHeaders.AddRange(signatureMessageHeaders);
             }
 
             protected override void Initialize()
@@ -1901,9 +1901,9 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.SignatureMessageMetadata)
+                        if (id == (byte)SerializeId.SignatureMessageHeader)
                         {
-                            this.ProtectedSignatureMessageMetadatas.Add(SignatureMessageMetadata.Import(rangeStream, bufferManager));
+                            this.ProtectedSignatureMessageHeaders.Add(SignatureMessageHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -1913,12 +1913,12 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // SignatureMessageMetadatas
-                foreach (var value in this.SignatureMessageMetadatas)
+                // SignatureMessageHeaders
+                foreach (var value in this.SignatureMessageHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SignatureMessageMetadata, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.SignatureMessageHeader, stream);
                     }
                 }
 
@@ -1926,41 +1926,41 @@ namespace Library.Net.Outopos
                 return bufferStream;
             }
 
-            public UnicastMetadatasMessage Clone()
+            public UnicastHeadersMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return UnicastMetadatasMessage.Import(stream, BufferManager.Instance);
+                    return UnicastHeadersMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            private volatile ReadOnlyCollection<SignatureMessageMetadata> _readOnlySignatureMessageMetadatas;
+            private volatile ReadOnlyCollection<SignatureMessageHeader> _readOnlySignatureMessageHeaders;
 
-            public IEnumerable<SignatureMessageMetadata> SignatureMessageMetadatas
+            public IEnumerable<SignatureMessageHeader> SignatureMessageHeaders
             {
                 get
                 {
-                    if (_readOnlySignatureMessageMetadatas == null)
-                        _readOnlySignatureMessageMetadatas = new ReadOnlyCollection<SignatureMessageMetadata>(this.ProtectedSignatureMessageMetadatas.ToArray());
+                    if (_readOnlySignatureMessageHeaders == null)
+                        _readOnlySignatureMessageHeaders = new ReadOnlyCollection<SignatureMessageHeader>(this.ProtectedSignatureMessageHeaders.ToArray());
 
-                    return _readOnlySignatureMessageMetadatas;
+                    return _readOnlySignatureMessageHeaders;
                 }
             }
 
-            [DataMember(Name = "SignatureMessageMetadatas")]
-            private LockedList<SignatureMessageMetadata> ProtectedSignatureMessageMetadatas
+            [DataMember(Name = "SignatureMessageHeaders")]
+            private LockedList<SignatureMessageHeader> ProtectedSignatureMessageHeaders
             {
                 get
                 {
-                    if (_signatureMessageMetadatas == null)
-                        _signatureMessageMetadatas = new LockedList<SignatureMessageMetadata>(_maxMetadataCount);
+                    if (_signatureMessageHeaders == null)
+                        _signatureMessageHeaders = new LockedList<SignatureMessageHeader>(_maxHeaderCount);
 
-                    return _signatureMessageMetadatas;
+                    return _signatureMessageHeaders;
                 }
             }
         }
 
-        private sealed class MulticastMetadatasRequestMessage : ItemBase<MulticastMetadatasRequestMessage>
+        private sealed class MulticastHeadersRequestMessage : ItemBase<MulticastHeadersRequestMessage>
         {
             private enum SerializeId : byte
             {
@@ -1971,7 +1971,7 @@ namespace Library.Net.Outopos
             private WikiCollection _wikis;
             private ChatCollection _chats;
 
-            public MulticastMetadatasRequestMessage(
+            public MulticastHeadersRequestMessage(
                 IEnumerable<Wiki> wikis,
                 IEnumerable<Chat> chats)
             {
@@ -2033,11 +2033,11 @@ namespace Library.Net.Outopos
                 return bufferStream;
             }
 
-            public MulticastMetadatasRequestMessage Clone()
+            public MulticastHeadersRequestMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return MulticastMetadatasRequestMessage.Import(stream, BufferManager.Instance);
+                    return MulticastHeadersRequestMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
@@ -2060,7 +2060,7 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_wikis == null)
-                        _wikis = new WikiCollection(_maxMetadataRequestCount);
+                        _wikis = new WikiCollection(_maxHeaderRequestCount);
 
                     return _wikis;
                 }
@@ -2085,34 +2085,34 @@ namespace Library.Net.Outopos
                 get
                 {
                     if (_chats == null)
-                        _chats = new ChatCollection(_maxMetadataRequestCount);
+                        _chats = new ChatCollection(_maxHeaderRequestCount);
 
                     return _chats;
                 }
             }
         }
 
-        private sealed class MulticastMetadatasMessage : ItemBase<MulticastMetadatasMessage>
+        private sealed class MulticastHeadersMessage : ItemBase<MulticastHeadersMessage>
         {
             private enum SerializeId : byte
             {
-                WikiDocumentMetadata = 0,
-                ChatTopicMetadata = 1,
-                ChatMessageMetadata = 2,
+                WikiDocumentHeader = 0,
+                ChatTopicHeader = 1,
+                ChatMessageHeader = 2,
             }
 
-            private LockedList<WikiDocumentMetadata> _wikiDocumentMetadatas;
-            private LockedList<ChatTopicMetadata> _chatTopicMetadatas;
-            private LockedList<ChatMessageMetadata> _chatMessageMetadatas;
+            private LockedList<WikiDocumentHeader> _wikiDocumentHeaders;
+            private LockedList<ChatTopicHeader> _chatTopicHeaders;
+            private LockedList<ChatMessageHeader> _chatMessageHeaders;
 
-            public MulticastMetadatasMessage(
-                IEnumerable<WikiDocumentMetadata> wikiDocumentMetadatas,
-                IEnumerable<ChatTopicMetadata> chatTopicMetadatas,
-                IEnumerable<ChatMessageMetadata> chatMessageMetadatas)
+            public MulticastHeadersMessage(
+                IEnumerable<WikiDocumentHeader> wikiDocumentHeaders,
+                IEnumerable<ChatTopicHeader> chatTopicHeaders,
+                IEnumerable<ChatMessageHeader> chatMessageHeaders)
             {
-                if (wikiDocumentMetadatas != null) this.ProtectedWikiDocumentMetadatas.AddRange(wikiDocumentMetadatas);
-                if (chatTopicMetadatas != null) this.ProtectedChatTopicMetadatas.AddRange(chatTopicMetadatas);
-                if (chatMessageMetadatas != null) this.ProtectedChatMessageMetadatas.AddRange(chatMessageMetadatas);
+                if (wikiDocumentHeaders != null) this.ProtectedWikiDocumentHeaders.AddRange(wikiDocumentHeaders);
+                if (chatTopicHeaders != null) this.ProtectedChatTopicHeaders.AddRange(chatTopicHeaders);
+                if (chatMessageHeaders != null) this.ProtectedChatMessageHeaders.AddRange(chatMessageHeaders);
             }
 
             protected override void Initialize()
@@ -2132,17 +2132,17 @@ namespace Library.Net.Outopos
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
-                        if (id == (byte)SerializeId.WikiDocumentMetadata)
+                        if (id == (byte)SerializeId.WikiDocumentHeader)
                         {
-                            this.ProtectedWikiDocumentMetadatas.Add(WikiDocumentMetadata.Import(rangeStream, bufferManager));
+                            this.ProtectedWikiDocumentHeaders.Add(WikiDocumentHeader.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.ChatTopicMetadata)
+                        else if (id == (byte)SerializeId.ChatTopicHeader)
                         {
-                            this.ProtectedChatTopicMetadatas.Add(ChatTopicMetadata.Import(rangeStream, bufferManager));
+                            this.ProtectedChatTopicHeaders.Add(ChatTopicHeader.Import(rangeStream, bufferManager));
                         }
-                        else if (id == (byte)SerializeId.ChatMessageMetadata)
+                        else if (id == (byte)SerializeId.ChatMessageHeader)
                         {
-                            this.ProtectedChatMessageMetadatas.Add(ChatMessageMetadata.Import(rangeStream, bufferManager));
+                            this.ProtectedChatMessageHeaders.Add(ChatMessageHeader.Import(rangeStream, bufferManager));
                         }
                     }
                 }
@@ -2152,28 +2152,28 @@ namespace Library.Net.Outopos
             {
                 BufferStream bufferStream = new BufferStream(bufferManager);
 
-                // WikiDocumentMetadatas
-                foreach (var value in this.WikiDocumentMetadatas)
+                // WikiDocumentHeaders
+                foreach (var value in this.WikiDocumentHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiDocumentMetadata, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.WikiDocumentHeader, stream);
                     }
                 }
-                // ChatTopicMetadatas
-                foreach (var value in this.ChatTopicMetadatas)
+                // ChatTopicHeaders
+                foreach (var value in this.ChatTopicHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatTopicMetadata, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatTopicHeader, stream);
                     }
                 }
-                // ChatMessageMetadatas
-                foreach (var value in this.ChatMessageMetadatas)
+                // ChatMessageHeaders
+                foreach (var value in this.ChatMessageHeaders)
                 {
                     using (var stream = value.Export(bufferManager))
                     {
-                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatMessageMetadata, stream);
+                        ItemUtilities.Write(bufferStream, (byte)SerializeId.ChatMessageHeader, stream);
                     }
                 }
 
@@ -2181,86 +2181,86 @@ namespace Library.Net.Outopos
                 return bufferStream;
             }
 
-            public MulticastMetadatasMessage Clone()
+            public MulticastHeadersMessage Clone()
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    return MulticastMetadatasMessage.Import(stream, BufferManager.Instance);
+                    return MulticastHeadersMessage.Import(stream, BufferManager.Instance);
                 }
             }
 
-            private volatile ReadOnlyCollection<WikiDocumentMetadata> _readOnlyWikiDocumentMetadatas;
+            private volatile ReadOnlyCollection<WikiDocumentHeader> _readOnlyWikiDocumentHeaders;
 
-            public IEnumerable<WikiDocumentMetadata> WikiDocumentMetadatas
+            public IEnumerable<WikiDocumentHeader> WikiDocumentHeaders
             {
                 get
                 {
-                    if (_readOnlyWikiDocumentMetadatas == null)
-                        _readOnlyWikiDocumentMetadatas = new ReadOnlyCollection<WikiDocumentMetadata>(this.ProtectedWikiDocumentMetadatas.ToArray());
+                    if (_readOnlyWikiDocumentHeaders == null)
+                        _readOnlyWikiDocumentHeaders = new ReadOnlyCollection<WikiDocumentHeader>(this.ProtectedWikiDocumentHeaders.ToArray());
 
-                    return _readOnlyWikiDocumentMetadatas;
+                    return _readOnlyWikiDocumentHeaders;
                 }
             }
 
-            [DataMember(Name = "WikiDocumentMetadatas")]
-            private LockedList<WikiDocumentMetadata> ProtectedWikiDocumentMetadatas
+            [DataMember(Name = "WikiDocumentHeaders")]
+            private LockedList<WikiDocumentHeader> ProtectedWikiDocumentHeaders
             {
                 get
                 {
-                    if (_wikiDocumentMetadatas == null)
-                        _wikiDocumentMetadatas = new LockedList<WikiDocumentMetadata>(_maxMetadataCount);
+                    if (_wikiDocumentHeaders == null)
+                        _wikiDocumentHeaders = new LockedList<WikiDocumentHeader>(_maxHeaderCount);
 
-                    return _wikiDocumentMetadatas;
+                    return _wikiDocumentHeaders;
                 }
             }
 
-            private volatile ReadOnlyCollection<ChatTopicMetadata> _readOnlyChatTopicMetadatas;
+            private volatile ReadOnlyCollection<ChatTopicHeader> _readOnlyChatTopicHeaders;
 
-            public IEnumerable<ChatTopicMetadata> ChatTopicMetadatas
+            public IEnumerable<ChatTopicHeader> ChatTopicHeaders
             {
                 get
                 {
-                    if (_readOnlyChatTopicMetadatas == null)
-                        _readOnlyChatTopicMetadatas = new ReadOnlyCollection<ChatTopicMetadata>(this.ProtectedChatTopicMetadatas.ToArray());
+                    if (_readOnlyChatTopicHeaders == null)
+                        _readOnlyChatTopicHeaders = new ReadOnlyCollection<ChatTopicHeader>(this.ProtectedChatTopicHeaders.ToArray());
 
-                    return _readOnlyChatTopicMetadatas;
+                    return _readOnlyChatTopicHeaders;
                 }
             }
 
-            [DataMember(Name = "ChatTopicMetadatas")]
-            private LockedList<ChatTopicMetadata> ProtectedChatTopicMetadatas
+            [DataMember(Name = "ChatTopicHeaders")]
+            private LockedList<ChatTopicHeader> ProtectedChatTopicHeaders
             {
                 get
                 {
-                    if (_chatTopicMetadatas == null)
-                        _chatTopicMetadatas = new LockedList<ChatTopicMetadata>(_maxMetadataCount);
+                    if (_chatTopicHeaders == null)
+                        _chatTopicHeaders = new LockedList<ChatTopicHeader>(_maxHeaderCount);
 
-                    return _chatTopicMetadatas;
+                    return _chatTopicHeaders;
                 }
             }
 
-            private volatile ReadOnlyCollection<ChatMessageMetadata> _readOnlyChatMessageMetadatas;
+            private volatile ReadOnlyCollection<ChatMessageHeader> _readOnlyChatMessageHeaders;
 
-            public IEnumerable<ChatMessageMetadata> ChatMessageMetadatas
+            public IEnumerable<ChatMessageHeader> ChatMessageHeaders
             {
                 get
                 {
-                    if (_readOnlyChatMessageMetadatas == null)
-                        _readOnlyChatMessageMetadatas = new ReadOnlyCollection<ChatMessageMetadata>(this.ProtectedChatMessageMetadatas.ToArray());
+                    if (_readOnlyChatMessageHeaders == null)
+                        _readOnlyChatMessageHeaders = new ReadOnlyCollection<ChatMessageHeader>(this.ProtectedChatMessageHeaders.ToArray());
 
-                    return _readOnlyChatMessageMetadatas;
+                    return _readOnlyChatMessageHeaders;
                 }
             }
 
-            [DataMember(Name = "ChatMessageMetadatas")]
-            private LockedList<ChatMessageMetadata> ProtectedChatMessageMetadatas
+            [DataMember(Name = "ChatMessageHeaders")]
+            private LockedList<ChatMessageHeader> ProtectedChatMessageHeaders
             {
                 get
                 {
-                    if (_chatMessageMetadatas == null)
-                        _chatMessageMetadatas = new LockedList<ChatMessageMetadata>(_maxMetadataCount);
+                    if (_chatMessageHeaders == null)
+                        _chatMessageHeaders = new LockedList<ChatMessageHeader>(_maxHeaderCount);
 
-                    return _chatMessageMetadatas;
+                    return _chatMessageHeaders;
                 }
             }
         }

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
+using Library.Collections;
 using Library.Security;
+using System.IO;
 
 namespace Library.Net.Outopos
 {
@@ -57,23 +59,23 @@ namespace Library.Net.Outopos
 
                         if (item.Type == "Profile")
                         {
-                            contexts.Add(new InformationContext("Information", item.Profile));
+                            contexts.Add(new InformationContext("Content", item.ProfileContent));
                         }
                         else if (item.Type == "SignatureMessage")
                         {
-                            contexts.Add(new InformationContext("Information", item.SignatureMessage));
+                            contexts.Add(new InformationContext("Content", item.SignatureMessageContent));
                         }
                         else if (item.Type == "WikiDocument")
                         {
-                            contexts.Add(new InformationContext("Information", item.WikiDocument));
+                            contexts.Add(new InformationContext("Content", item.WikiDocumentContent));
                         }
                         else if (item.Type == "ChatTopic")
                         {
-                            contexts.Add(new InformationContext("Information", item.ChatTopic));
+                            contexts.Add(new InformationContext("Content", item.ChatTopicContent));
                         }
                         else if (item.Type == "ChatMessage")
                         {
-                            contexts.Add(new InformationContext("Information", item.ChatMessage));
+                            contexts.Add(new InformationContext("Content", item.ChatMessageContent));
                         }
 
                         list.Add(new Information(contexts));
@@ -133,23 +135,23 @@ namespace Library.Net.Outopos
                             {
                                 if (item.Type == "Profile")
                                 {
-                                    buffer = InformationConverter.ToProfileBlock(item.Profile);
+                                    buffer = ContentConverter.ToProfileContentBlock(item.ProfileContent);
                                 }
                                 else if (item.Type == "SignatureMessage")
                                 {
-                                    buffer = InformationConverter.ToSignatureMessageBlock(item.SignatureMessage, item.ExchangePublicKey);
+                                    buffer = ContentConverter.ToSignatureMessageContentBlock(item.SignatureMessageContent, item.ExchangePublicKey);
                                 }
                                 else if (item.Type == "WikiDocument")
                                 {
-                                    buffer = InformationConverter.ToWikiDocumentBlock(item.WikiDocument);
+                                    buffer = ContentConverter.ToWikiDocumentContentBlock(item.WikiDocumentContent);
                                 }
                                 else if (item.Type == "ChatTopic")
                                 {
-                                    buffer = InformationConverter.ToChatTopicBlock(item.ChatTopic);
+                                    buffer = ContentConverter.ToChatTopicContentBlock(item.ChatTopicContent);
                                 }
                                 else if (item.Type == "ChatMessage")
                                 {
-                                    buffer = InformationConverter.ToChatMessageBlock(item.ChatMessage);
+                                    buffer = ContentConverter.ToChatMessageContentBlock(item.ChatMessageContent);
                                 }
 
                                 Key key = null;
@@ -167,34 +169,34 @@ namespace Library.Net.Outopos
                                 _cacheManager[key] = buffer;
                                 _connectionsManager.Upload(key);
 
-                                var miner = new Miner(CashAlgorithm.Version1, item.MiningLimit, new TimeSpan(0, 10, 0));
+                                var miner = new Miner(CashAlgorithm.Version1, item.MiningLimit, item.MiningTime);
 
                                 var task = Task.Factory.StartNew(() =>
                                 {
                                     if (item.Type == "Profile")
                                     {
-                                        var metadata = new ProfileMetadata(item.CreationTime, key, item.DigitalSignature);
-                                        _connectionsManager.Upload(metadata);
+                                        var header = new ProfileHeader(item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
                                     }
                                     else if (item.Type == "SignatureMessage")
                                     {
-                                        var metadata = new SignatureMessageMetadata(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(metadata);
+                                        var header = new SignatureMessageHeader(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
                                     }
                                     else if (item.Type == "WikiDocument")
                                     {
-                                        var metadata = new WikiDocumentMetadata(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(metadata);
+                                        var header = new WikiDocumentHeader(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
                                     }
                                     else if (item.Type == "ChatTopic")
                                     {
-                                        var metadata = new ChatTopicMetadata(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(metadata);
+                                        var header = new ChatTopicHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
                                     }
                                     else if (item.Type == "ChatMessage")
                                     {
-                                        var metadata = new ChatMessageMetadata(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(metadata);
+                                        var header = new ChatMessageHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(header);
                                     }
                                 });
 
@@ -237,14 +239,10 @@ namespace Library.Net.Outopos
             }
         }
 
-        public Profile Upload(
-            int cost,
-            ExchangePublicKey exchangePublicKey,
-            IEnumerable<string> trustSignatures,
-            IEnumerable<string> deleteSignatures,
-            IEnumerable<Wiki> wikis,
-            IEnumerable<Chat> chats,
-
+        public void Upload(
+            ProfileContent content,
+            int miningLimit,
+            TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -252,7 +250,9 @@ namespace Library.Net.Outopos
                 var uploadItem = new UploadItem();
                 uploadItem.Type = "Profile";
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.Profile = new Profile(uploadItem.CreationTime, cost, exchangePublicKey, trustSignatures, deleteSignatures, wikis, chats);
+                uploadItem.ProfileContent = content;
+                uploadItem.MiningLimit = miningLimit;
+                uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.RemoveAll((target) =>
@@ -262,17 +262,15 @@ namespace Library.Net.Outopos
                 });
 
                 _settings.UploadItems.Add(uploadItem);
-
-                return uploadItem.Profile;
             }
         }
 
-        public SignatureMessage Upload(string signature,
-            string comment,
-
+        public void Upload(string signature,
+            SignatureMessageContent content,
+            ExchangePublicKey exchangePublicKey,
             int miningLimit,
-            DigitalSignature digitalSignature,
-            ExchangePublicKey exchangePublicKey)
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
             {
@@ -280,21 +278,20 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "SignatureMessage";
                 uploadItem.Signature = signature;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.SignatureMessage = new SignatureMessage(uploadItem.Signature, uploadItem.CreationTime, comment);
-                uploadItem.MiningLimit = miningLimit;
-                uploadItem.DigitalSignature = digitalSignature;
+                uploadItem.SignatureMessageContent = content;
                 uploadItem.ExchangePublicKey = exchangePublicKey;
+                uploadItem.MiningLimit = miningLimit;
+                uploadItem.MiningTime = miningTime;
+                uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
-
-                return uploadItem.SignatureMessage;
             }
         }
 
-        public WikiDocument Upload(Wiki tag,
-            IEnumerable<WikiPage> wikiPages,
-
+        public void Upload(Wiki tag,
+            WikiDocumentContent content,
             int miningLimit,
+            TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -303,8 +300,9 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "WikiDocument";
                 uploadItem.Wiki = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.WikiDocument = new WikiDocument(uploadItem.Wiki, uploadItem.CreationTime, wikiPages);
+                uploadItem.WikiDocumentContent = content;
                 uploadItem.MiningLimit = miningLimit;
+                uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.RemoveAll((target) =>
@@ -315,15 +313,13 @@ namespace Library.Net.Outopos
                 });
 
                 _settings.UploadItems.Add(uploadItem);
-
-                return uploadItem.WikiDocument;
             }
         }
 
-        public ChatTopic Upload(Chat tag,
-            string comment,
-
+        public void Upload(Chat tag,
+            ChatTopicContent content,
             int miningLimit,
+            TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -332,8 +328,9 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "ChatTopic";
                 uploadItem.Chat = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.ChatTopic = new ChatTopic(uploadItem.Chat, uploadItem.CreationTime, comment);
+                uploadItem.ChatTopicContent = content;
                 uploadItem.MiningLimit = miningLimit;
+                uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.RemoveAll((target) =>
@@ -344,16 +341,13 @@ namespace Library.Net.Outopos
                 });
 
                 _settings.UploadItems.Add(uploadItem);
-
-                return uploadItem.ChatTopic;
             }
         }
 
-        public ChatMessage Upload(Chat tag,
-            string comment,
-            IEnumerable<Anchor> anchors,
-
+        public void Upload(Chat tag,
+            ChatMessageContent content,
             int miningLimit,
+            TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -362,13 +356,12 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "ChatMessage";
                 uploadItem.Chat = tag;
                 uploadItem.CreationTime = DateTime.UtcNow;
-                uploadItem.ChatMessage = new ChatMessage(uploadItem.Chat, uploadItem.CreationTime, comment, anchors);
+                uploadItem.ChatMessageContent = content;
                 uploadItem.MiningLimit = miningLimit;
+                uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.Add(uploadItem);
-
-                return uploadItem.ChatMessage;
             }
         }
 

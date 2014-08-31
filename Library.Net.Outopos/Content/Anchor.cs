@@ -7,8 +7,8 @@ using Library.Io;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "Key", Namespace = "http://Library/Net/Outopos")]
-    public sealed class Key : ItemBase<Key>, IKey
+    [DataContract(Name = "Anchor", Namespace = "http://Library/Net/Outopos")]
+    public sealed class Anchor : ItemBase<Anchor>, IAnchor
     {
         private enum SerializeId : byte
         {
@@ -25,7 +25,7 @@ namespace Library.Net.Outopos
 
         public static readonly int MaxHashLength = 64;
 
-        public Key(byte[] hash, HashAlgorithm hashAlgorithm)
+        public Anchor(byte[] hash, HashAlgorithm hashAlgorithm)
         {
             this.Hash = hash;
 
@@ -89,12 +89,12 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is Key)) return false;
+            if ((object)obj == null || !(obj is Anchor)) return false;
 
-            return this.Equals((Key)obj);
+            return this.Equals((Anchor)obj);
         }
 
-        public override bool Equals(Key other)
+        public override bool Equals(Anchor other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
@@ -114,7 +114,7 @@ namespace Library.Net.Outopos
             return true;
         }
 
-        #region IKey
+        #region IAnchor
 
         [DataMember(Name = "Hash")]
         public byte[] Hash
@@ -125,7 +125,7 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && value.Length > Key.MaxHashLength)
+                if (value != null && value.Length > Anchor.MaxHashLength)
                 {
                     throw new ArgumentException();
                 }

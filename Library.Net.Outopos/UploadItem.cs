@@ -22,28 +22,31 @@ namespace Library.Net.Outopos
         [DataMember(Name = "CreationTime")]
         public DateTime CreationTime { get; set; }
 
+        [DataMember(Name = "DigitalSignature")]
+        public DigitalSignature DigitalSignature { get; set; }
+
         [DataMember(Name = "MiningLimit")]
         public int MiningLimit { get; set; }
 
-        [DataMember(Name = "DigitalSignature")]
-        public DigitalSignature DigitalSignature { get; set; }
+        [DataMember(Name = "MiningTime")]
+        public TimeSpan MiningTime { get; set; }
 
         [DataMember(Name = "ExchangePublicKey")]
         public ExchangePublicKey ExchangePublicKey { get; set; }
 
-        [DataMember(Name = "Profile")]
-        public Profile Profile { get; set; }
+        [DataMember(Name = "ProfileContent")]
+        public ProfileContent ProfileContent { get; set; }
 
-        [DataMember(Name = "SignatureMessage")]
-        public SignatureMessage SignatureMessage { get; set; }
+        [DataMember(Name = "SignatureMessageContent")]
+        public SignatureMessageContent SignatureMessageContent { get; set; }
 
-        [DataMember(Name = "WikiDocument")]
-        public WikiDocument WikiDocument { get; set; }
+        [DataMember(Name = "WikiDocumentContent")]
+        public WikiDocumentContent WikiDocumentContent { get; set; }
 
-        [DataMember(Name = "ChatTopic")]
-        public ChatTopic ChatTopic { get; set; }
+        [DataMember(Name = "ChatTopicContent")]
+        public ChatTopicContent ChatTopicContent { get; set; }
 
-        [DataMember(Name = "ChatMessage")]
-        public ChatMessage ChatMessage { get; set; }
+        [DataMember(Name = "ChatMessageContent")]
+        public ChatMessageContent ChatMessageContent { get; set; }
     }
 }

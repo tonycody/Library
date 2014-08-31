@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Library.Security;
 
 namespace Library.Net.Outopos
@@ -25,6 +27,7 @@ namespace Library.Net.Outopos
         private CreateCapEventHandler _createCapEvent;
         private AcceptCapEventHandler _acceptCapEvent;
         private CheckUriEventHandler _checkUriEvent;
+        private GetSignaturesEventHandler _getLockSignaturesEvent;
         private GetWikisEventHandler _getLockWikisEvent;
         private GetChatsEventHandler _getLockChatsEvent;
 
@@ -89,6 +92,16 @@ namespace Library.Net.Outopos
                 return true;
             };
 
+            _connectionsManager.GetLockSignaturesEvent = (object sender) =>
+            {
+                if (_getLockSignaturesEvent != null)
+                {
+                    return _getLockSignaturesEvent(this);
+                }
+
+                return null;
+            };
+
             _connectionsManager.GetLockWikisEvent = (object sender) =>
             {
                 if (_getLockWikisEvent != null)
@@ -139,6 +152,17 @@ namespace Library.Net.Outopos
                 lock (this.ThisLock)
                 {
                     _checkUriEvent = value;
+                }
+            }
+        }
+
+        public GetSignaturesEventHandler GetLockSignaturesEvent
+        {
+            set
+            {
+                lock (this.ThisLock)
+                {
+                    _getLockSignaturesEvent = value;
                 }
             }
         }
@@ -391,129 +415,153 @@ namespace Library.Net.Outopos
             }
         }
 
-        private IEnumerable<Profile> GetProfiles()
+        public ProfileHeader GetProfileHeader(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetProfiles();
+                return _connectionsManager.GetProfileHeader(signature);
             }
         }
 
-        private IEnumerable<SignatureMessage> GetSignatureMessages(string signature, int limit, ExchangePrivateKey exchangePrivateKey)
+        public IEnumerable<SignatureMessageHeader> GetSignatureMessageHeaders(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetSignatureMessages(signature, limit, exchangePrivateKey);
+                return _connectionsManager.GetSignatureMessageHeaders(signature);
             }
         }
 
-        private IEnumerable<WikiDocument> GetWikiDocuments(Wiki tag, int limit)
+        public IEnumerable<WikiDocumentHeader> GetWikiDocumentHeaders(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetWikiDocuments(tag, limit);
+                return _connectionsManager.GetWikiDocumentHeaders(tag);
             }
         }
 
-        private IEnumerable<ChatTopic> GetChatTopics(Chat tag, int limit)
+        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatTopics(tag, limit);
+                return _connectionsManager.GetChatTopicHeaders(tag);
             }
         }
 
-        private IEnumerable<ChatMessage> GetChatMessages(Chat tag, int limit)
+        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetChatMessages(tag, limit);
+                return _connectionsManager.GetChatMessageHeaders(tag);
             }
         }
 
-        public Profile Upload(
-            int cost,
-            ExchangePublicKey exchangePublicKey,
-            IEnumerable<string> trustSignatures,
-            IEnumerable<string> deleteSignatures,
-            IEnumerable<Wiki> wikis,
-            IEnumerable<Chat> chats,
-
-            DigitalSignature digitalSignature)
+        public ProfileContent GetContent(ProfileHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(cost, exchangePublicKey, trustSignatures, deleteSignatures, wikis, chats, digitalSignature);
+                return _downloadManager.GetContent(header);
             }
         }
 
-        public SignatureMessage Upload(string signature,
-            string comment,
-
-            int miningLimit,
-            DigitalSignature digitalSignature,
-            ExchangePublicKey exchangePublicKey)
+        public SignatureMessageContent GetContent(SignatureMessageHeader header, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(signature, comment, miningLimit, digitalSignature, exchangePublicKey);
+                return _downloadManager.GetContent(header, exchangePrivateKey);
             }
         }
 
-        public WikiDocument Upload(Wiki tag,
-            IEnumerable<WikiPage> wikiPages,
-
-            int miningLimit,
-            DigitalSignature digitalSignature)
+        public WikiDocumentContent GetContent(WikiDocumentHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, wikiPages, miningLimit, digitalSignature);
+                return _downloadManager.GetContent(header);
             }
         }
 
-        public ChatTopic Upload(Chat tag,
-            string comment,
-
-            int miningLimit,
-            DigitalSignature digitalSignature)
+        public ChatTopicContent GetContent(ChatTopicHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, comment, miningLimit, digitalSignature);
+                return _downloadManager.GetContent(header);
             }
         }
 
-        public ChatMessage Upload(Chat tag,
-            string comment,
-            IEnumerable<Anchor> anchors,
-
-            int miningLimit,
-            DigitalSignature digitalSignature)
+        public ChatMessageContent GetContent(ChatMessageHeader header)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _uploadManager.Upload(tag, comment, anchors, miningLimit, digitalSignature);
+                return _downloadManager.GetContent(header);
+            }
+        }
+
+        public void Upload(ProfileContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(content, miningLimit, miningTime, digitalSignature);
+            }
+        }
+
+        public void Upload(string signature, SignatureMessageContent content, ExchangePublicKey exchangePublicKey, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(signature, content, exchangePublicKey, miningLimit, miningTime, digitalSignature);
+            }
+        }
+
+        public void Upload(Wiki tag, WikiDocumentContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+            }
+        }
+
+        public void Upload(Chat tag, ChatTopicContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+            }
+        }
+
+        public void Upload(Chat tag, ChatMessageContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        {
+            if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
+
+            lock (this.ThisLock)
+            {
+                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
             }
         }
 
