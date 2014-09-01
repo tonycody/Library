@@ -57,7 +57,7 @@ namespace Library.Net.Amoeba
         private WatchTimer _watchTimer;
 
         private readonly object _convertLock = new object();
-        
+
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
@@ -952,23 +952,30 @@ namespace Library.Net.Amoeba
 
                 try
                 {
-                    using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
+                    try
                     {
-                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
-
-                        try
+                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
                         {
-                            int length = 0;
+                            byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
-                            while ((length = inStream.Read(buffer, 0, buffer.Length)) > 0)
+                            try
                             {
-                                outStream.Write(buffer, 0, length);
+                                int length = 0;
+
+                                while ((length = inStream.Read(buffer, 0, buffer.Length)) > 0)
+                                {
+                                    outStream.Write(buffer, 0, length);
+                                }
+                            }
+                            finally
+                            {
+                                _bufferManager.ReturnBuffer(buffer);
                             }
                         }
-                        finally
-                        {
-                            _bufferManager.ReturnBuffer(buffer);
-                        }
+                    }
+                    finally
+                    {
+                        inStream.Close();
                     }
                 }
                 catch (Exception)
@@ -1030,23 +1037,30 @@ namespace Library.Net.Amoeba
             }
             else if (compressionAlgorithm == CompressionAlgorithm.None && cryptoAlgorithm == CryptoAlgorithm.None)
             {
-                using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
+                try
                 {
-                    byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
-
-                    try
+                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
                     {
-                        int length = 0;
+                        byte[] buffer = _bufferManager.TakeBuffer(1024 * 4);
 
-                        while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
+                        try
                         {
-                            outStream.Write(buffer, 0, length);
+                            int length = 0;
+
+                            while (0 != (length = inStream.Read(buffer, 0, buffer.Length)))
+                            {
+                                outStream.Write(buffer, 0, length);
+                            }
+                        }
+                        finally
+                        {
+                            _bufferManager.ReturnBuffer(buffer);
                         }
                     }
-                    finally
-                    {
-                        _bufferManager.ReturnBuffer(buffer);
-                    }
+                }
+                finally
+                {
+                    outStream.Close();
                 }
             }
             else

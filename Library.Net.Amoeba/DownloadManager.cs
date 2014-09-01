@@ -564,7 +564,7 @@ namespace Library.Net.Amoeba
 
                                     if (largeFlag)
                                     {
-                                        throw new Exception();
+                                        throw new Exception("size too large.");
                                     }
 
                                     continue;
@@ -663,7 +663,7 @@ namespace Library.Net.Amoeba
                                         _cacheManager.Decoding(decodingProgressStream, item.Seed.CompressionAlgorithm, item.Seed.CryptoAlgorithm, item.Seed.CryptoKey,
                                             new KeyCollection() { item.Seed.Key });
 
-                                        if (stream.Length != item.Seed.Length) throw new Exception();
+                                        if (stream.Length != item.Seed.Length) throw new Exception("Stream.Length != Seed.Length");
                                     }
                                 }
                                 catch (StopIoException)
@@ -673,7 +673,7 @@ namespace Library.Net.Amoeba
 
                                     if (largeFlag)
                                     {
-                                        throw new Exception();
+                                        throw new Exception("size too large.");
                                     }
 
                                     continue;
@@ -789,7 +789,7 @@ namespace Library.Net.Amoeba
 
                                     if (largeFlag)
                                     {
-                                        throw new Exception();
+                                        throw new Exception("size too large.");
                                     }
 
                                     continue;
@@ -887,7 +887,7 @@ namespace Library.Net.Amoeba
                                         _cacheManager.Decoding(decodingProgressStream, item.Index.CompressionAlgorithm, item.Index.CryptoAlgorithm, item.Index.CryptoKey,
                                             new KeyCollection(keys));
 
-                                        if (stream.Length != item.Seed.Length) throw new Exception();
+                                        if (stream.Length != item.Seed.Length) throw new Exception("Stream.Length != Seed.Length");
                                     }
                                 }
                                 catch (StopIoException)
@@ -897,7 +897,7 @@ namespace Library.Net.Amoeba
 
                                     if (largeFlag)
                                     {
-                                        throw new Exception();
+                                        throw new Exception("size too large.");
                                     }
 
                                     continue;
