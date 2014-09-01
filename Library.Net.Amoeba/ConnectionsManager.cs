@@ -960,7 +960,7 @@ namespace Library.Net.Amoeba
                             var array = _settings.UploadBlocksRequest.ToArray();
                             _random.Shuffle(array);
 
-                            int count = 8192;
+                            int count = 2048;
 
                             for (int i = 0; i < count && i < array.Length; i++)
                             {
@@ -972,7 +972,7 @@ namespace Library.Net.Amoeba
                             var array = _settings.DiffusionBlocksRequest.ToArray();
                             _random.Shuffle(array);
 
-                            int count = 8192;
+                            int count = 2048;
 
                             for (int i = 0; i < count && i < array.Length; i++)
                             {
