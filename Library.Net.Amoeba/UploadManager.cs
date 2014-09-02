@@ -296,8 +296,7 @@ namespace Library.Net.Amoeba
                             try
                             {
                                 using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                using(CacheStream cacheStream = new CacheStream(stream, 1024*1024, _bufferManager))
-                                using (ProgressStream hashProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                 {
                                     isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 
@@ -541,8 +540,7 @@ namespace Library.Net.Amoeba
                             try
                             {
                                 using (FileStream stream = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
-                                using (ProgressStream hashProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                using (ProgressStream hashProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                 {
                                     isStop = (this.EncodeState == ManagerState.Stop || !_settings.UploadItems.Contains(item));
 

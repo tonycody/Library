@@ -537,8 +537,7 @@ namespace Library.Net.Amoeba
                                     item.DecodeBytes = _cacheManager.GetLength(item.Seed.Key);
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
-                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
@@ -644,8 +643,7 @@ namespace Library.Net.Amoeba
                                     item.DecodeBytes = _cacheManager.GetLength(item.Seed.Key);
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(downloadDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
-                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
@@ -762,8 +760,7 @@ namespace Library.Net.Amoeba
                                     item.DecodingBytes = 0;
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(_workDirectory, "index")))
-                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
@@ -868,8 +865,7 @@ namespace Library.Net.Amoeba
                                     item.DecodingBytes = 0;
 
                                     using (FileStream stream = DownloadManager.GetUniqueFileStream(Path.Combine(downloadDirectory, string.Format("{0}.tmp", DownloadManager.GetNormalizedPath(item.Seed.Name)))))
-                                    using (CacheStream cacheStream = new CacheStream(stream, 1024 * 1024, _bufferManager))
-                                    using (ProgressStream decodingProgressStream = new ProgressStream(cacheStream, (object sender, long readSize, long writeSize, out bool isStop) =>
+                                    using (ProgressStream decodingProgressStream = new ProgressStream(stream, (object sender, long readSize, long writeSize, out bool isStop) =>
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
