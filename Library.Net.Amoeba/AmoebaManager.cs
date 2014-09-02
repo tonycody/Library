@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -864,6 +865,9 @@ namespace Library.Net.Amoeba
                 if (_isLoaded) throw new AmoebaManagerException("AmoebaManager was already loaded.");
                 _isLoaded = true;
 
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _bitmapManager.Load(System.IO.Path.Combine(directoryPath, "BitmapManager"));
@@ -879,6 +883,9 @@ namespace Library.Net.Amoeba
 
                 Task.WaitAll(tasks.ToArray());
 
+                stopwatch.Stop();
+                Debug.WriteLine("Settings Load {0} {1}", Path.GetFileName(directoryPath), stopwatch.ElapsedMilliseconds);
+
                 _cacheManager.CheckInformation();
             }
         }
@@ -890,6 +897,9 @@ namespace Library.Net.Amoeba
 
             lock (this.ThisLock)
             {
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 List<Task> tasks = new List<Task>();
 
                 tasks.Add(Task.Factory.StartNew(() => _backgroundUploadManager.Save(System.IO.Path.Combine(directoryPath, "BackgroundUploadManager"))));
@@ -904,6 +914,9 @@ namespace Library.Net.Amoeba
                 _bitmapManager.Save(System.IO.Path.Combine(directoryPath, "BitmapManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
+
+                stopwatch.Stop();
+                Debug.WriteLine("Settings Save {0} {1}", Path.GetFileName(directoryPath), stopwatch.ElapsedMilliseconds);
             }
         }
 

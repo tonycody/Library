@@ -560,42 +560,50 @@ namespace Library.Net.Amoeba
                                 continue;
                             }
 
-                            var groups = new List<Group>();
-
-                            for (int i = 0, remain = keys.Count; 0 < remain; i++, remain -= 256)
+                            if (keys.Count == 1)
                             {
-                                var tempKeys = keys.GetRange(i * 256, Math.Min(remain, 256));
-
-                                Group group = new Group();
-                                group.CorrectionAlgorithm = CorrectionAlgorithm.None;
-                                group.InformationLength = tempKeys.Count;
-                                group.BlockLength = item.BlockLength;
-                                group.Length = tempKeys.Sum(n => (long)_cacheManager.GetLength(n));
-                                group.Keys.AddRange(tempKeys);
-
-                                groups.Add(group);
-                            }
-
-                            lock (this.ThisLock)
-                            {
-                                item.EncodingBytes = 0;
-                                item.EncodeBytes = 0;
-
-                                if (keys.Count == 1)
+                                lock (this.ThisLock)
                                 {
+                                    item.EncodingBytes = 0;
+                                    item.EncodeBytes = 0;
+
                                     item.Keys.Add(keys[0]);
+
+                                    item.State = UploadState.Encoding;
                                 }
-                                else
+                            }
+                            else
+                            {
+                                var groups = new List<Group>();
+
+                                for (int i = 0, remain = keys.Count; 0 < remain; i++, remain -= 256)
                                 {
+                                    var tempKeys = keys.GetRange(i * 256, Math.Min(remain, 256));
+
+                                    Group group = new Group();
+                                    group.CorrectionAlgorithm = CorrectionAlgorithm.None;
+                                    group.InformationLength = tempKeys.Count;
+                                    group.BlockLength = item.BlockLength;
+                                    group.Length = tempKeys.Sum(n => (long)_cacheManager.GetLength(n));
+                                    group.Keys.AddRange(tempKeys);
+
+                                    groups.Add(group);
+                                }
+
+                                lock (this.ThisLock)
+                                {
+                                    item.EncodingBytes = 0;
+                                    item.EncodeBytes = 0;
+
                                     foreach (var key in keys)
                                     {
                                         item.UploadKeys.Add(key);
                                     }
 
                                     item.Groups.AddRange(groups);
-                                }
 
-                                item.State = UploadState.Encoding;
+                                    item.State = UploadState.Encoding;
+                                }
                             }
                         }
                         else if (item.Groups.Count == 0 && item.Keys.Count == 1)
