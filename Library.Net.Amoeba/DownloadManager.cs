@@ -541,7 +541,7 @@ namespace Library.Net.Amoeba
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
-                                        if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
+                                        if (!isStop && (stream.Length > item.Seed.Length))
                                         {
                                             isStop = true;
                                             largeFlag = true;
@@ -764,7 +764,7 @@ namespace Library.Net.Amoeba
                                     {
                                         isStop = (this.DecodeState == ManagerState.Stop || !_settings.DownloadItems.Contains(item));
 
-                                        if (!isStop && (stream.Length > item.Index.Groups.Sum(n => n.Length)))
+                                        if (!isStop && (stream.Length > item.Seed.Length))
                                         {
                                             isStop = true;
                                             largeFlag = true;
