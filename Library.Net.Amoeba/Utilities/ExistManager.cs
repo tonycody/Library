@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -116,15 +117,26 @@ namespace Library.Net.Amoeba
         {
             private Group _group;
 
+            private BitArray _bitmap;
+
             private Dictionary<Key, bool> _dic;
 
             private bool _isCached;
             private List<Key> _cacheTrueKeys;
             private List<Key> _cacheFalseKeys;
 
+            private const int BitmapSize = 2048;
+
             public GroupManager(Group group)
             {
                 _group = group;
+
+                _bitmap = new BitArray(GroupManager.BitmapSize);
+
+                foreach (var key in group.Keys)
+                {
+                    _bitmap.Set((key.GetHashCode() & 0x7FFFFFFF) % GroupManager.BitmapSize, true);
+                }
 
                 _dic = new Dictionary<Key, bool>();
 
@@ -140,6 +152,8 @@ namespace Library.Net.Amoeba
 
             public void Set(Key key, bool state)
             {
+                if (!_bitmap.Get((key.GetHashCode() & 0x7FFFFFFF) % GroupManager.BitmapSize)) return;
+
                 if (!_dic.ContainsKey(key)) return;
                 _dic[key] = state;
 

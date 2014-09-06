@@ -885,8 +885,6 @@ namespace Library.Net.Amoeba
 
                 stopwatch.Stop();
                 Debug.WriteLine("Settings Load {0} {1}", Path.GetFileName(directoryPath), stopwatch.ElapsedMilliseconds);
-
-                _cacheManager.CheckInformation();
             }
         }
 

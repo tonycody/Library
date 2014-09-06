@@ -55,6 +55,7 @@ namespace Library.Net.Amoeba
         private RemoveKeyEventHandler _removeKeyEvent;
 
         private WatchTimer _watchTimer;
+        private WatchTimer _checkTimer;
 
         private readonly object _convertLock = new object();
 
@@ -76,7 +77,8 @@ namespace Library.Net.Amoeba
 
             _threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 2);
 
-            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 5, 0));
+            _watchTimer = new WatchTimer(this.WatchTimer, Timeout.Infinite);
+            _checkTimer = new WatchTimer(this.CheckTimer, Timeout.Infinite);
         }
 
         private void WatchTimer()
@@ -84,7 +86,12 @@ namespace Library.Net.Amoeba
             this.CheckInformation();
         }
 
-        public void CheckInformation()
+        private void CheckTimer()
+        {
+            this.CheckSeeds();
+        }
+
+        private void CheckInformation()
         {
             lock (this.ThisLock)
             {
@@ -1626,6 +1633,9 @@ namespace Library.Net.Amoeba
                 }
 
                 _shareIndexLinkInitialized = false;
+
+                _watchTimer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 5, 0));
+                _checkTimer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 30, 0));
             }
         }
 

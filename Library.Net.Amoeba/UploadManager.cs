@@ -125,7 +125,7 @@ namespace Library.Net.Amoeba
 
                             if (_shareLink.TryGetValue(path, out ids))
                             {
-                                foreach (var id in ids)
+                                foreach (var id in ids.ToArray())
                                 {
                                     this.Remove(id);
                                 }
