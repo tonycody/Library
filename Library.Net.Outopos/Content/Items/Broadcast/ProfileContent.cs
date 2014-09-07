@@ -10,29 +10,33 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "ProfileContent", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ProfileContent : ItemBase<ProfileContent>
+    public sealed class ProfileContent : ItemBase<ProfileContent>, IProfileContent
     {
         private enum SerializeId : byte
         {
             ExchangePublicKey = 0,
             TrustSignature = 1,
-            Wiki = 2,
-            Chat = 3,
+            DeleteSignature = 2,
+            Wiki = 3,
+            Chat = 4,
         }
 
-        private ExchangePublicKey _exchangePublicKey;
-        private SignatureCollection _trustSignatures;
-        private WikiCollection _wikis;
-        private ChatCollection _chats;
+        private volatile ExchangePublicKey _exchangePublicKey;
+        private volatile SignatureCollection _trustSignatures;
+        private volatile SignatureCollection _deleteSignatures;
+        private volatile WikiCollection _wikis;
+        private volatile ChatCollection _chats;
 
         public static readonly int MaxTrustSignatureCount = 1024;
+        public static readonly int MaxDeleteSignatureCount = 1024;
         public static readonly int MaxWikiCount = 256;
         public static readonly int MaxChatCount = 256;
 
-        public ProfileContent(ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
+        public ProfileContent(ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<string> deleteSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
+            if (deleteSignatures != null) this.ProtectedDeleteSignatures.AddRange(deleteSignatures);
             if (wikis != null) this.ProtectedWikis.AddRange(wikis);
             if (chats != null) this.ProtectedChats.AddRange(chats);
         }
@@ -62,6 +66,10 @@ namespace Library.Net.Outopos
                     {
                         this.ProtectedTrustSignatures.Add(ItemUtilities.GetString(rangeStream));
                     }
+                    else if (id == (byte)SerializeId.DeleteSignature)
+                    {
+                        this.ProtectedDeleteSignatures.Add(ItemUtilities.GetString(rangeStream));
+                    }
                     else if (id == (byte)SerializeId.Wiki)
                     {
                         this.ProtectedWikis.Add(Wiki.Import(rangeStream, bufferManager));
@@ -90,6 +98,11 @@ namespace Library.Net.Outopos
             foreach (var value in this.TrustSignatures)
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.TrustSignature, value);
+            }
+            // DeleteSignatures
+            foreach (var value in this.DeleteSignatures)
+            {
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.DeleteSignature, value);
             }
             // Wikis
             foreach (var value in this.Wikis)
@@ -132,6 +145,7 @@ namespace Library.Net.Outopos
 
             if (this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
+                || (this.DeleteSignatures == null) != (other.DeleteSignatures == null)
                 || (this.Wikis == null) != (other.Wikis == null)
                 || (this.Chats == null) != (other.Chats == null))
             {
@@ -141,6 +155,11 @@ namespace Library.Net.Outopos
             if (this.TrustSignatures != null && other.TrustSignatures != null)
             {
                 if (!CollectionUtilities.Equals(this.TrustSignatures, other.TrustSignatures)) return false;
+            }
+
+            if (this.DeleteSignatures != null && other.DeleteSignatures != null)
+            {
+                if (!CollectionUtilities.Equals(this.DeleteSignatures, other.DeleteSignatures)) return false;
             }
 
             if (this.Wikis != null && other.Wikis != null)
@@ -155,6 +174,8 @@ namespace Library.Net.Outopos
 
             return true;
         }
+
+        #region IProfileContent
 
         [DataMember(Name = "ExchangePublicKey")]
         public ExchangePublicKey ExchangePublicKey
@@ -191,6 +212,31 @@ namespace Library.Net.Outopos
                     _trustSignatures = new SignatureCollection(ProfileContent.MaxTrustSignatureCount);
 
                 return _trustSignatures;
+            }
+        }
+
+        private volatile ReadOnlyCollection<string> _readOnlyDeleteSignatures;
+
+        public IEnumerable<string> DeleteSignatures
+        {
+            get
+            {
+                if (_readOnlyDeleteSignatures == null)
+                    _readOnlyDeleteSignatures = new ReadOnlyCollection<string>(this.ProtectedDeleteSignatures.ToArray());
+
+                return _readOnlyDeleteSignatures;
+            }
+        }
+
+        [DataMember(Name = "DeleteSignatures")]
+        private SignatureCollection ProtectedDeleteSignatures
+        {
+            get
+            {
+                if (_deleteSignatures == null)
+                    _deleteSignatures = new SignatureCollection(ProfileContent.MaxDeleteSignatureCount);
+
+                return _deleteSignatures;
             }
         }
 
@@ -243,5 +289,7 @@ namespace Library.Net.Outopos
                 return _chats;
             }
         }
+
+        #endregion
     }
 }

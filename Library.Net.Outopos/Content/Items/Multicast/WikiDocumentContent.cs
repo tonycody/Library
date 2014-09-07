@@ -9,14 +9,14 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "WikiDocumentContent", Namespace = "http://Library/Net/Outopos")]
-    public sealed class WikiDocumentContent : ItemBase<WikiDocumentContent>
+    public sealed class WikiDocumentContent : ItemBase<WikiDocumentContent>, IWikiDocumentContent
     {
         private enum SerializeId : byte
         {
             WikiPage = 0,
         }
 
-        private WikiPageCollection _wikiPages;
+        private volatile WikiPageCollection _wikiPages;
 
         public static readonly int MaxWikiPageCount = 256;
 
@@ -98,6 +98,8 @@ namespace Library.Net.Outopos
             return true;
         }
 
+        #region IWikiDocumentContent
+
         private volatile ReadOnlyCollection<WikiPage> _readOnlyWikiPages;
 
         public IEnumerable<WikiPage> WikiPages
@@ -122,5 +124,7 @@ namespace Library.Net.Outopos
                 return _wikiPages;
             }
         }
+
+        #endregion
     }
 }

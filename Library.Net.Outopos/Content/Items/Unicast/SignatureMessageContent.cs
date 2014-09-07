@@ -5,29 +5,25 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Library.Io;
-using Library.Security;
 
 namespace Library.Net.Outopos
 {
-    [DataContract(Name = "ChatMessageContent", Namespace = "http://Library/Net/Outopos")]
-    public sealed class ChatMessageContent : ItemBase<ChatMessageContent>
+    [DataContract(Name = "SignatureMessageContent", Namespace = "http://Library/Net/Outopos")]
+    public sealed class SignatureMessageContent : ItemBase<SignatureMessageContent>, ISignatureMessageContent
     {
         private enum SerializeId : byte
         {
             Comment = 0,
-            Anchor = 1,
         }
 
-        private string _comment;
-        private AnchorCollection _anchors;
+        private volatile string _comment;
 
-        public static readonly int MaxCommentLength = 1024 * 4;
+        public static readonly int MaxCommentLength = 1024 * 32;
         public static readonly int MaxAnchorCount = 32;
 
-        public ChatMessageContent(string comment, IEnumerable<Anchor> anchors)
+        public SignatureMessageContent(string comment)
         {
             this.Comment = comment;
-            if (anchors != null) this.ProtectedAnchors.AddRange(anchors);
         }
 
         protected override void Initialize()
@@ -51,10 +47,6 @@ namespace Library.Net.Outopos
                     {
                         this.Comment = ItemUtilities.GetString(rangeStream);
                     }
-                    else if (id == (byte)SerializeId.Anchor)
-                    {
-                        this.ProtectedAnchors.Add(Anchor.Import(rangeStream, bufferManager));
-                    }
                 }
             }
         }
@@ -67,14 +59,6 @@ namespace Library.Net.Outopos
             if (this.Comment != null)
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.Comment, this.Comment);
-            }
-            // Anchors
-            foreach (var value in this.Anchors)
-            {
-                using (var stream = value.Export(bufferManager))
-                {
-                    ItemUtilities.Write(bufferStream, (byte)SerializeId.Anchor, stream);
-                }
             }
 
             bufferStream.Seek(0, SeekOrigin.Begin);
@@ -89,29 +73,25 @@ namespace Library.Net.Outopos
 
         public override bool Equals(object obj)
         {
-            if ((object)obj == null || !(obj is ChatMessageContent)) return false;
+            if ((object)obj == null || !(obj is SignatureMessageContent)) return false;
 
-            return this.Equals((ChatMessageContent)obj);
+            return this.Equals((SignatureMessageContent)obj);
         }
 
-        public override bool Equals(ChatMessageContent other)
+        public override bool Equals(SignatureMessageContent other)
         {
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.Comment != other.Comment
-                || (this.Anchors == null) != (other.Anchors == null))
+            if (this.Comment != other.Comment)
             {
                 return false;
             }
 
-            if (this.Anchors != null && other.Anchors != null)
-            {
-                if (!CollectionUtilities.Equals(this.Anchors, other.Anchors)) return false;
-            }
-
             return true;
         }
+
+        #region ISignatureMessageContent
 
         [DataMember(Name = "Comment")]
         public string Comment
@@ -122,7 +102,7 @@ namespace Library.Net.Outopos
             }
             private set
             {
-                if (value != null && value.Length > ChatMessageContent.MaxCommentLength)
+                if (value != null && value.Length > SignatureMessageContent.MaxCommentLength)
                 {
                     throw new ArgumentException();
                 }
@@ -133,29 +113,6 @@ namespace Library.Net.Outopos
             }
         }
 
-        private volatile ReadOnlyCollection<Anchor> _readOnlyAnchors;
-
-        public IEnumerable<Anchor> Anchors
-        {
-            get
-            {
-                if (_readOnlyAnchors == null)
-                    _readOnlyAnchors = new ReadOnlyCollection<Anchor>(this.ProtectedAnchors.ToArray());
-
-                return _readOnlyAnchors;
-            }
-        }
-
-        [DataMember(Name = "Anchors")]
-        private AnchorCollection ProtectedAnchors
-        {
-            get
-            {
-                if (_anchors == null)
-                    _anchors = new AnchorCollection(ChatMessageContent.MaxAnchorCount);
-
-                return _anchors;
-            }
-        }
+        #endregion
     }
 }
