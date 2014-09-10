@@ -8,6 +8,7 @@ namespace Library.Net.Outopos
 {
     public interface IProfileContent
     {
+        int Cost { get; }
         ExchangePublicKey ExchangePublicKey { get; }
         IEnumerable<string> TrustSignatures { get; }
         IEnumerable<string> DeleteSignatures { get; }

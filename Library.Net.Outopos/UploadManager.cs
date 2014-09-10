@@ -175,7 +175,7 @@ namespace Library.Net.Outopos
                                 {
                                     if (item.Type == "Profile")
                                     {
-                                        var header = new ProfileHeader(item.CreationTime, key, miner, item.DigitalSignature);
+                                        var header = new ProfileHeader(item.CreationTime, key, item.DigitalSignature);
                                         _connectionsManager.Upload(header);
                                     }
                                     else if (item.Type == "SignatureMessage")
@@ -241,8 +241,6 @@ namespace Library.Net.Outopos
 
         public void Upload(
             ProfileContent content,
-            int miningLimit,
-            TimeSpan miningTime,
             DigitalSignature digitalSignature)
         {
             lock (this.ThisLock)
@@ -251,8 +249,6 @@ namespace Library.Net.Outopos
                 uploadItem.Type = "Profile";
                 uploadItem.CreationTime = DateTime.UtcNow;
                 uploadItem.ProfileContent = content;
-                uploadItem.MiningLimit = miningLimit;
-                uploadItem.MiningTime = miningTime;
                 uploadItem.DigitalSignature = digitalSignature;
 
                 _settings.UploadItems.RemoveAll((target) =>

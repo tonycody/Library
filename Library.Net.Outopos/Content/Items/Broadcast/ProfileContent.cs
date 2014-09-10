@@ -14,13 +14,15 @@ namespace Library.Net.Outopos
     {
         private enum SerializeId : byte
         {
-            ExchangePublicKey = 0,
-            TrustSignature = 1,
-            DeleteSignature = 2,
-            Wiki = 3,
-            Chat = 4,
+            Cost = 0,
+            ExchangePublicKey = 1,
+            TrustSignature = 2,
+            DeleteSignature = 3,
+            Wiki = 4,
+            Chat = 5,
         }
 
+        private volatile int _cost;
         private volatile ExchangePublicKey _exchangePublicKey;
         private volatile SignatureCollection _trustSignatures;
         private volatile SignatureCollection _deleteSignatures;
@@ -32,7 +34,7 @@ namespace Library.Net.Outopos
         public static readonly int MaxWikiCount = 256;
         public static readonly int MaxChatCount = 256;
 
-        public ProfileContent(ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<string> deleteSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
+        public ProfileContent(int cost, ExchangePublicKey exchangePublicKey, IEnumerable<string> trustSignatures, IEnumerable<string> deleteSignatures, IEnumerable<Wiki> wikis, IEnumerable<Chat> chats)
         {
             this.ExchangePublicKey = exchangePublicKey;
             if (trustSignatures != null) this.ProtectedTrustSignatures.AddRange(trustSignatures);
@@ -58,7 +60,11 @@ namespace Library.Net.Outopos
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
-                    if (id == (byte)SerializeId.ExchangePublicKey)
+                    if (id == (byte)SerializeId.Cost)
+                    {
+                        this.Cost = ItemUtilities.GetInt(rangeStream);
+                    }
+                    else if (id == (byte)SerializeId.ExchangePublicKey)
                     {
                         this.ExchangePublicKey = ExchangePublicKey.Import(rangeStream, bufferManager);
                     }
@@ -86,6 +92,11 @@ namespace Library.Net.Outopos
         {
             BufferStream bufferStream = new BufferStream(bufferManager);
 
+            // Cost
+            if (this.Cost != 0)
+            {
+                ItemUtilities.Write(bufferStream, (byte)SerializeId.Cost, this.Cost);
+            }
             // ExchangePublicKey
             if (this.ExchangePublicKey != null)
             {
@@ -143,7 +154,8 @@ namespace Library.Net.Outopos
             if ((object)other == null) return false;
             if (object.ReferenceEquals(this, other)) return true;
 
-            if (this.ExchangePublicKey != other.ExchangePublicKey
+            if (this.Cost != other.Cost
+                || this.ExchangePublicKey != other.ExchangePublicKey
                 || (this.TrustSignatures == null) != (other.TrustSignatures == null)
                 || (this.DeleteSignatures == null) != (other.DeleteSignatures == null)
                 || (this.Wikis == null) != (other.Wikis == null)
@@ -176,6 +188,19 @@ namespace Library.Net.Outopos
         }
 
         #region IProfileContent
+
+        [DataMember(Name = "Cost")]
+        public int Cost
+        {
+            get
+            {
+                return _cost;
+            }
+            private set
+            {
+                _cost = value;
+            }
+        }
 
         [DataMember(Name = "ExchangePublicKey")]
         public ExchangePublicKey ExchangePublicKey

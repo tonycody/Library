@@ -184,7 +184,7 @@ namespace Library.Net.Outopos
             _direction = direction;
             _bufferManager = bufferManager;
 
-            _myProtocolVersion = ProtocolVersion.Version1;
+            _myProtocolVersion = ProtocolVersion.Version2;
         }
 
         public byte[] SesstionId
@@ -302,7 +302,7 @@ namespace Library.Net.Outopos
 
                         xml.WriteStartElement("Protocol");
 
-                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version1))
+                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version2))
                         {
                             xml.WriteStartElement("Outopos");
                             xml.WriteAttributeString("Version", "1");
@@ -332,7 +332,7 @@ namespace Library.Net.Outopos
 
                                     if (version == "1")
                                     {
-                                        _otherProtocolVersion |= ProtocolVersion.Version1;
+                                        _otherProtocolVersion |= ProtocolVersion.Version2;
                                     }
                                 }
                             }
@@ -341,7 +341,7 @@ namespace Library.Net.Outopos
 
                     _protocolVersion = _myProtocolVersion & _otherProtocolVersion;
 
-                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
                     {
                         using (Stream stream = new MemoryStream(_mySessionId))
                         {
@@ -435,7 +435,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {
@@ -469,7 +469,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {
@@ -501,7 +501,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {
@@ -544,7 +544,7 @@ namespace Library.Net.Outopos
 
                     sw.Restart();
 
-                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
                     {
                         using (Stream stream = _connection.Receive(_receiveTimeSpan))
                         {
@@ -793,7 +793,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -830,7 +830,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -867,7 +867,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -904,7 +904,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -944,7 +944,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -982,7 +982,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -1020,7 +1020,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -1058,7 +1058,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -1098,7 +1098,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -1140,7 +1140,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -1180,7 +1180,7 @@ namespace Library.Net.Outopos
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {

@@ -11,8 +11,8 @@ namespace Library.Net.Outopos
     [DataContract(Name = "ProfileHeader", Namespace = "http://Library/Net/Outopos")]
     public sealed class ProfileHeader : BroadcastHeader<ProfileHeader>
     {
-        public ProfileHeader(DateTime creationTime, Key key, Miner miner, DigitalSignature digitalSignature)
-            : base(creationTime, key, miner, digitalSignature)
+        public ProfileHeader(DateTime creationTime, Key key, DigitalSignature digitalSignature)
+            : base(creationTime, key, digitalSignature)
         {
 
         }

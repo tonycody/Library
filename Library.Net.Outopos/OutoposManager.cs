@@ -515,13 +515,13 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void Upload(ProfileContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public void Upload(ProfileContent content, DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(content, miningLimit, miningTime, digitalSignature);
+                _uploadManager.Upload(content, digitalSignature);
             }
         }
 
