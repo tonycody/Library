@@ -848,12 +848,12 @@ namespace Library.Net.Amoeba
 
                                         if (item == null)
                                         {
-                                            this.Download(linkSeed, BackgroundItemType.Link);
+                                            this.Download(linkSeed, BackgroundItemType.Link, null);
                                         }
                                         else if (linkSeed.CreationTime > item.Seed.CreationTime)
                                         {
                                             this.Remove(item);
-                                            this.Download(linkSeed, BackgroundItemType.Link);
+                                            this.Download(linkSeed, BackgroundItemType.Link, item.Value);
                                         }
                                     }
                                 }
@@ -871,12 +871,12 @@ namespace Library.Net.Amoeba
 
                                         if (item == null)
                                         {
-                                            this.Download(storeSeed, BackgroundItemType.Store);
+                                            this.Download(storeSeed, BackgroundItemType.Store, null);
                                         }
                                         else if (storeSeed.CreationTime > item.Seed.CreationTime)
                                         {
                                             this.Remove(item);
-                                            this.Download(storeSeed, BackgroundItemType.Store);
+                                            this.Download(storeSeed, BackgroundItemType.Store, item.Value);
                                         }
                                     }
                                 }
@@ -920,7 +920,7 @@ namespace Library.Net.Amoeba
             }
         }
 
-        private void Download(Seed seed, BackgroundItemType type)
+        private void Download(Seed seed, BackgroundItemType type, object value)
         {
             if (seed == null) return;
 
@@ -962,6 +962,7 @@ namespace Library.Net.Amoeba
                     item.Seed = seed;
                     item.State = BackgroundDownloadState.Downloading;
                     item.Type = type;
+                    item.Value = value;
 
                     if (item.Seed.Key != null)
                     {
