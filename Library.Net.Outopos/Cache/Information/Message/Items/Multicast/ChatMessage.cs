@@ -245,7 +245,7 @@ namespace Library.Net.Outopos
 
         #endregion
 
-        #region IChatMessage
+        #region IChatMessageContent
 
         [DataMember(Name = "Comment")]
         public string Comment

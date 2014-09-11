@@ -17,6 +17,7 @@ namespace Library.Net.Outopos
         {
             Signature = 0,
             CreationTime = 1,
+
             Key = 2,
             Cash = 3,
 
@@ -25,6 +26,7 @@ namespace Library.Net.Outopos
 
         private volatile string _signature;
         private DateTime _creationTime;
+
         private volatile Key _key;
         private volatile Cash _cash;
 
@@ -36,6 +38,7 @@ namespace Library.Net.Outopos
         {
             this.Signature = signature;
             this.CreationTime = creationTime;
+
             this.Key = key;
             this.CreateCash(miner, digitalSignature.ToString());
 
@@ -67,6 +70,7 @@ namespace Library.Net.Outopos
                     {
                         this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                     }
+
                     else if (id == (byte)SerializeId.Key)
                     {
                         this.Key = Key.Import(rangeStream, bufferManager);
@@ -98,6 +102,7 @@ namespace Library.Net.Outopos
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
             }
+
             // Key
             if (this.Key != null)
             {
@@ -148,6 +153,7 @@ namespace Library.Net.Outopos
 
             if (this.Signature != other.Signature
                 || this.CreationTime != other.CreationTime
+
                 || this.Key != other.Key
                 || this.Cash != other.Cash
 

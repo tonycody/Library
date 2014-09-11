@@ -291,7 +291,7 @@ namespace Library.Net.Outopos
 
         #endregion
 
-        #region IProfile
+        #region IProfileContent
 
         [DataMember(Name = "Cost")]
         public int Cost

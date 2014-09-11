@@ -10,12 +10,13 @@ using Library.Security;
 namespace Library.Net.Outopos
 {
     [DataContract(Name = "BroadcastMetadata", Namespace = "http://Library/Net/Outopos")]
-    public abstract class BroadcastMetadata<TMetadata> : ImmutableCertificateItemBase<TMetadata>, IBroadcastHeader, IBroadcastMetadata
+    public abstract class BroadcastMetadata<TMetadata> : ImmutableCertificateItemBase<TMetadata>, IBroadcastHeader, IBroadcastOptions
         where TMetadata : BroadcastMetadata<TMetadata>
     {
         private enum SerializeId : byte
         {
             CreationTime = 0,
+
             Key = 1,
 
             Certificate = 2,
@@ -31,6 +32,7 @@ namespace Library.Net.Outopos
         internal BroadcastMetadata(DateTime creationTime, Key key, DigitalSignature digitalSignature)
         {
             this.CreationTime = creationTime;
+
             this.Key = key;
 
             this.CreateCertificate(digitalSignature);
@@ -57,6 +59,7 @@ namespace Library.Net.Outopos
                     {
                         this.CreationTime = DateTime.ParseExact(ItemUtilities.GetString(rangeStream), "yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo).ToUniversalTime();
                     }
+
                     else if (id == (byte)SerializeId.Key)
                     {
                         this.Key = Key.Import(rangeStream, bufferManager);
@@ -79,6 +82,7 @@ namespace Library.Net.Outopos
             {
                 ItemUtilities.Write(bufferStream, (byte)SerializeId.CreationTime, this.CreationTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.DateTimeFormatInfo.InvariantInfo));
             }
+
             // Key
             if (this.Key != null)
             {
@@ -120,6 +124,7 @@ namespace Library.Net.Outopos
             if (object.ReferenceEquals(this, other)) return true;
 
             if (this.CreationTime != other.CreationTime
+
                 || this.Key != other.Key
 
                 || this.Certificate != other.Certificate)
@@ -191,7 +196,7 @@ namespace Library.Net.Outopos
 
         #endregion
 
-        #region IBroadcastMetadata
+        #region IBroadcastOptions
 
         [DataMember(Name = "Key")]
         public Key Key

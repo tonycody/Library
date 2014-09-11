@@ -222,7 +222,7 @@ namespace Library.Net.Outopos
 
         #endregion
 
-        #region ISignatureMessage
+        #region ISignatureMessageContent
 
         [DataMember(Name = "Comment")]
         public string Comment

@@ -102,10 +102,10 @@
     <Compile Include="Cache\Information\Metadata\Items\Unicast\SignatureMessageMetadata.cs" />
     <Compile Include="Cache\Information\_Base\Metadata\Items\Unicast\UnicastMetadata.cs" />
     <Compile Include="Cache\Information\_Base\Metadata\Items\Broadcast\BroadcastMetadata.cs" />
-    <Compile Include="Cache\Information\_Base\Header\Items\Tag.cs" />
-    <Compile Include="Cache\_Interface\Information\Header\Items\Broadcast\IBroadcastHeader.cs" />
-    <Compile Include="Cache\_Interface\Information\Header\Items\Multicast\IMulticastHeader.cs" />
-    <Compile Include="Cache\_Interface\Information\Header\Items\Unicast\IUnicastHeader.cs" />
+    <Compile Include="Cache\Information\_Base\Common\Items\Tag.cs" />
+    <Compile Include="Cache\_Interface\Information\Common\Items\Broadcast\IBroadcastHeader.cs" />
+    <Compile Include="Cache\_Interface\Information\Common\Items\Multicast\IMulticastHeader.cs" />
+    <Compile Include="Cache\_Interface\Information\Common\Items\Unicast\IUnicastHeader.cs" />
     <Compile Include="Cache\_Interface\Information\Options\Items\Unicast\IUnicastOptions.cs" />
     <Compile Include="Cache\_Interface\Information\Options\Items\Broadcast\IBroadcastOptions.cs" />
     <Compile Include="Cache\Information\Message\Items\Anchor.cs" />
@@ -119,11 +119,11 @@
     <Compile Include="Cache\Information\Message\Items\WikiPage.cs" />
     <Compile Include="Cache\Information\Metadata\Items\Multicast\ChatMessageMetadata.cs" />
     <Compile Include="Cache\Information\Metadata\Items\Broadcast\ProfileMetadata.cs" />
-    <Compile Include="Cache\Information\Header\Items\Chat.cs" />
-    <Compile Include="Cache\Information\Header\Items\ChatCollection.cs" />
+    <Compile Include="Cache\Information\Common\Items\Chat.cs" />
+    <Compile Include="Cache\Information\Common\Items\ChatCollection.cs" />
     <Compile Include="Cache\Information\Metadata\Items\Multicast\ChatTopicMetadata.cs" />
-    <Compile Include="Cache\Information\Header\Items\Wiki.cs" />
-    <Compile Include="Cache\Information\Header\Items\WikiCollection.cs" />
+    <Compile Include="Cache\Information\Common\Items\Wiki.cs" />
+    <Compile Include="Cache\Information\Common\Items\WikiCollection.cs" />
     <Compile Include="Cache\Information\_Base\Metadata\Items\Multicast\MulticastMetadata.cs" />
     <Compile Include="Cache\_Interface\Information\Content\Items\IWikiPage.cs" />
     <Compile Include="Cache\_Interface\Information\Content\Items\Multicast\IWikiDocumentContent.cs" />
@@ -147,7 +147,7 @@
     <Compile Include="Cache\_Interface\Information\Options\Items\IKey.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Cache\_Interface\Information\Header\Items\ITag.cs">
+    <Compile Include="Cache\_Interface\Information\Common\Items\ITag.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Cache\_Interface\Information\Content\IHypertext.cs" />

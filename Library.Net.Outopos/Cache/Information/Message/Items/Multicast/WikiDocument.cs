@@ -230,7 +230,7 @@ namespace Library.Net.Outopos
 
         #endregion
 
-        #region IWikiDocument
+        #region IWikiDocumentContent
 
         private volatile ReadOnlyCollection<WikiPage> _readOnlyWikiPages;
 
