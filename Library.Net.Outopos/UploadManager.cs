@@ -175,28 +175,28 @@ namespace Library.Net.Outopos
                                 {
                                     if (item.Type == "Profile")
                                     {
-                                        var header = new ProfileHeader(item.CreationTime, key, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new ProfileMetadata(item.CreationTime, key, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "SignatureMessage")
                                     {
-                                        var header = new SignatureMessageHeader(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new SignatureMessageMetadata(item.Signature, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "WikiDocument")
                                     {
-                                        var header = new WikiDocumentHeader(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new WikiDocumentMetadata(item.Wiki, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "ChatTopic")
                                     {
-                                        var header = new ChatTopicHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new ChatTopicMetadata(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                     else if (item.Type == "ChatMessage")
                                     {
-                                        var header = new ChatMessageHeader(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
-                                        _connectionsManager.Upload(header);
+                                        var metadata = new ChatMessageMetadata(item.Chat, item.CreationTime, key, miner, item.DigitalSignature);
+                                        _connectionsManager.Upload(metadata);
                                     }
                                 });
 

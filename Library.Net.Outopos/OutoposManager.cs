@@ -415,103 +415,103 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ProfileHeader GetProfileHeader(string signature)
+        public ProfileMetadata GetProfileMetadata(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetProfileHeader(signature);
+                return _connectionsManager.GetProfileMetadata(signature);
             }
         }
 
-        public IEnumerable<SignatureMessageHeader> GetSignatureMessageHeaders(string signature)
+        public IEnumerable<SignatureMessageMetadata> GetSignatureMessageMetadatas(string signature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetSignatureMessageHeaders(signature);
+                return _connectionsManager.GetSignatureMessageMetadatas(signature);
             }
         }
 
-        public IEnumerable<WikiDocumentHeader> GetWikiDocumentHeaders(Wiki tag)
+        public IEnumerable<WikiDocumentMetadata> GetWikiDocumentMetadatas(Wiki tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetWikiDocumentHeaders(tag);
+                return _connectionsManager.GetWikiDocumentMetadatas(tag);
             }
         }
 
-        public IEnumerable<ChatTopicHeader> GetChatTopicHeaders(Chat tag)
+        public IEnumerable<ChatTopicMetadata> GetChatTopicMetadatas(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetChatTopicHeaders(tag);
+                return _connectionsManager.GetChatTopicMetadatas(tag);
             }
         }
 
-        public IEnumerable<ChatMessageHeader> GetChatMessageHeaders(Chat tag)
+        public IEnumerable<ChatMessageMetadata> GetChatMessageMetadatas(Chat tag)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _connectionsManager.GetChatMessageHeaders(tag);
+                return _connectionsManager.GetChatMessageMetadatas(tag);
             }
         }
 
-        public ProfileContent GetContent(ProfileHeader header)
+        public ProfileContent GetContent(ProfileMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(header);
+                return _downloadManager.GetContent(metadata);
             }
         }
 
-        public SignatureMessageContent GetContent(SignatureMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        public SignatureMessageContent GetContent(SignatureMessageMetadata metadata, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(header, exchangePrivateKey);
+                return _downloadManager.GetContent(metadata, exchangePrivateKey);
             }
         }
 
-        public WikiDocumentContent GetContent(WikiDocumentHeader header)
+        public WikiDocumentContent GetContent(WikiDocumentMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(header);
+                return _downloadManager.GetContent(metadata);
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopicHeader header)
+        public ChatTopicContent GetContent(ChatTopicMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(header);
+                return _downloadManager.GetContent(metadata);
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessageHeader header)
+        public ChatMessageContent GetContent(ChatMessageMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(header);
+                return _downloadManager.GetContent(metadata);
             }
         }
 

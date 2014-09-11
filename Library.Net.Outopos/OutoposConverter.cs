@@ -107,10 +107,10 @@ namespace Library.Net.Outopos
                     list[i].Value.Dispose();
                 }
 
-                BufferStream headerStream = new BufferStream(_bufferManager);
-                headerStream.WriteByte((byte)list[0].Key);
+                BufferStream metadataStream = new BufferStream(_bufferManager);
+                metadataStream.WriteByte((byte)list[0].Key);
 
-                var dataStream = new UniteStream(headerStream, list[0].Value);
+                var dataStream = new UniteStream(metadataStream, list[0].Value);
 
                 MemoryStream crcStream = new MemoryStream(Crc32_Castagnoli.ComputeHash(dataStream));
                 return new UniteStream(dataStream, crcStream);

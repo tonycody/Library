@@ -28,15 +28,15 @@ namespace Library.Net.Outopos
             _bufferManager = bufferManager;
         }
 
-        public ProfileContent GetContent(ProfileHeader header)
+        public ProfileContent GetContent(ProfileMetadata metadata)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (metadata == null) throw new ArgumentNullException("metadata");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(header.Key))
+                if (!_cacheManager.Contains(metadata.Key))
                 {
-                    _connectionsManager.Download(header.Key);
+                    _connectionsManager.Download(metadata.Key);
 
                     return null;
                 }
@@ -46,7 +46,7 @@ namespace Library.Net.Outopos
 
                     try
                     {
-                        buffer = _cacheManager[header.Key];
+                        buffer = _cacheManager[metadata.Key];
 
                         return ContentConverter.FromProfileContentBlock(buffer);
                     }
@@ -67,16 +67,16 @@ namespace Library.Net.Outopos
             }
         }
 
-        public SignatureMessageContent GetContent(SignatureMessageHeader header, ExchangePrivateKey exchangePrivateKey)
+        public SignatureMessageContent GetContent(SignatureMessageMetadata metadata, ExchangePrivateKey exchangePrivateKey)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (metadata == null) throw new ArgumentNullException("metadata");
             if (exchangePrivateKey == null) throw new ArgumentNullException("exchangePrivateKey");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(header.Key))
+                if (!_cacheManager.Contains(metadata.Key))
                 {
-                    _connectionsManager.Download(header.Key);
+                    _connectionsManager.Download(metadata.Key);
 
                     return null;
                 }
@@ -86,7 +86,7 @@ namespace Library.Net.Outopos
 
                     try
                     {
-                        buffer = _cacheManager[header.Key];
+                        buffer = _cacheManager[metadata.Key];
 
                         return ContentConverter.FromSignatureMessageContentBlock(buffer, exchangePrivateKey);
                     }
@@ -107,15 +107,15 @@ namespace Library.Net.Outopos
             }
         }
 
-        public WikiDocumentContent GetContent(WikiDocumentHeader header)
+        public WikiDocumentContent GetContent(WikiDocumentMetadata metadata)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (metadata == null) throw new ArgumentNullException("metadata");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(header.Key))
+                if (!_cacheManager.Contains(metadata.Key))
                 {
-                    _connectionsManager.Download(header.Key);
+                    _connectionsManager.Download(metadata.Key);
 
                     return null;
                 }
@@ -125,7 +125,7 @@ namespace Library.Net.Outopos
 
                     try
                     {
-                        buffer = _cacheManager[header.Key];
+                        buffer = _cacheManager[metadata.Key];
 
                         return ContentConverter.FromWikiDocumentContentBlock(buffer);
                     }
@@ -146,15 +146,15 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopicHeader header)
+        public ChatTopicContent GetContent(ChatTopicMetadata metadata)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (metadata == null) throw new ArgumentNullException("metadata");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(header.Key))
+                if (!_cacheManager.Contains(metadata.Key))
                 {
-                    _connectionsManager.Download(header.Key);
+                    _connectionsManager.Download(metadata.Key);
 
                     return null;
                 }
@@ -164,7 +164,7 @@ namespace Library.Net.Outopos
 
                     try
                     {
-                        buffer = _cacheManager[header.Key];
+                        buffer = _cacheManager[metadata.Key];
 
                         return ContentConverter.FromChatTopicContentBlock(buffer);
                     }
@@ -185,15 +185,15 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessageHeader header)
+        public ChatMessageContent GetContent(ChatMessageMetadata metadata)
         {
-            if (header == null) throw new ArgumentNullException("header");
+            if (metadata == null) throw new ArgumentNullException("metadata");
 
             lock (this.ThisLock)
             {
-                if (!_cacheManager.Contains(header.Key))
+                if (!_cacheManager.Contains(metadata.Key))
                 {
-                    _connectionsManager.Download(header.Key);
+                    _connectionsManager.Download(metadata.Key);
 
                     return null;
                 }
@@ -203,7 +203,7 @@ namespace Library.Net.Outopos
 
                     try
                     {
-                        buffer = _cacheManager[header.Key];
+                        buffer = _cacheManager[metadata.Key];
 
                         return ContentConverter.FromChatMessageContentBlock(buffer);
                     }
