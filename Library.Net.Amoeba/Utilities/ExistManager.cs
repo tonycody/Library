@@ -11,61 +11,21 @@ namespace Library.Net.Amoeba
 
     sealed class ExistManager : ManagerBase, IThisLock
     {
-        private WatchTimer _watchTimer;
-        private ConditionalWeakTable<Group, GroupManager> _table = new ConditionalWeakTable<Group, GroupManager>();
-        private LinkedList<WeakReference> _groupManagers = new LinkedList<WeakReference>();
+        private Dictionary<Group, GroupManager> _table = new Dictionary<Group, GroupManager>(new ReferenceEqualityComparer());
 
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
         public ExistManager()
         {
-            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 1, 0));
-        }
 
-        private void WatchTimer()
-        {
-            this.Refresh();
-        }
-
-        private void Refresh()
-        {
-            lock (this.ThisLock)
-            {
-                List<WeakReference> list = null;
-
-                foreach (var weakReference in _groupManagers)
-                {
-                    if (!weakReference.IsAlive)
-                    {
-                        if (list == null)
-                            list = new List<WeakReference>();
-
-                        list.Add(weakReference);
-                    }
-                }
-
-                if (list != null)
-                {
-                    foreach (var weakReference in list)
-                    {
-                        _groupManagers.Remove(weakReference);
-                    }
-                }
-            }
         }
 
         public void Add(Group group)
         {
             lock (this.ThisLock)
             {
-                _table.GetValue(group, (_) =>
-                {
-                    var value = new GroupManager(group);
-                    _groupManagers.AddLast(new WeakReference(value));
-
-                    return value;
-                });
+                _table[group] = new GroupManager(group);
             }
         }
 
@@ -77,15 +37,26 @@ namespace Library.Net.Amoeba
             }
         }
 
+        public void Set(Group group, IEnumerable<Key> keys)
+        {
+            lock (this.ThisLock)
+            {
+                GroupManager groupManager;
+                if (!_table.TryGetValue(group, out groupManager)) throw new ArgumentException();
+
+                foreach (var key in keys)
+                {
+                    groupManager.Set(key, true);
+                }
+            }
+        }
+
         public void Set(Key key, bool state)
         {
             lock (this.ThisLock)
             {
-                foreach (var weakReference in _groupManagers)
+                foreach (var groupManager in _table.Values)
                 {
-                    var groupManager = weakReference.Target as GroupManager;
-                    if (groupManager == null) continue;
-
                     groupManager.Set(key, state);
                 }
             }
@@ -219,19 +190,7 @@ namespace Library.Net.Amoeba
 
             if (disposing)
             {
-                if (_watchTimer != null)
-                {
-                    try
-                    {
-                        _watchTimer.Dispose();
-                    }
-                    catch (Exception)
-                    {
 
-                    }
-
-                    _watchTimer = null;
-                }
             }
         }
 

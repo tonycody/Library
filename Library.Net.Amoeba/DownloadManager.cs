@@ -223,10 +223,17 @@ namespace Library.Net.Amoeba
                 foreach (var group in index.Groups)
                 {
                     _existManager.Add(group);
-
-                    foreach (var key in group.Keys)
+                  
                     {
-                        _existManager.Set(key, _cacheManager.Contains(key));
+                        var keys = new List<Key>();
+
+                        foreach (var key in group.Keys)
+                        {
+                            if (!_cacheManager.Contains(key)) continue;
+                            keys.Add(key);
+                        }
+
+                        _existManager.Set(group, keys);
                     }
                 }
             }

@@ -262,7 +262,7 @@ namespace Library.Net.Amoeba
                         if (_settings.UploadItems.Count > 0)
                         {
                             item = _settings.UploadItems
-                                .Where(n => n.State == UploadState.Encoding || n.State == UploadState.ComputeHash || n.State == UploadState.ParityEncoding)
+                                .Where(n => n.State == UploadState.ComputeHash || n.State == UploadState.Encoding || n.State == UploadState.ParityEncoding)
                                 .Where(n => n.Priority != 0)
                                 .OrderBy(n => -n.Priority)
                                 .Where(n => !_workingPaths.Contains(n.FilePath))
@@ -821,7 +821,7 @@ namespace Library.Net.Amoeba
             {
                 UploadItem item = new UploadItem();
 
-                item.State = UploadState.Encoding;
+                item.State = UploadState.ComputeHash;
                 item.Type = UploadType.Upload;
                 item.Rank = 1;
                 item.FilePath = filePath;
@@ -856,7 +856,7 @@ namespace Library.Net.Amoeba
             {
                 UploadItem item = new UploadItem();
 
-                item.State = UploadState.Encoding;
+                item.State = UploadState.ComputeHash;
                 item.Type = UploadType.Share;
                 item.Rank = 1;
                 item.FilePath = filePath;

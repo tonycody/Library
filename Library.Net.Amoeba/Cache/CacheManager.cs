@@ -69,7 +69,7 @@ namespace Library.Net.Amoeba
 
         public CacheManager(string cachePath, BitmapManager bitmapManager, BufferManager bufferManager)
         {
-            _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1024 * 32, FileOptions.RandomAccess);
             _bitmapManager = bitmapManager;
             _bufferManager = bufferManager;
 
@@ -320,6 +320,11 @@ namespace Library.Net.Amoeba
 
                     if (!flag)
                     {
+                        if (seedInfo.Path != null)
+                        {
+                            _settings.ShareIndex.Remove(seedInfo.Path);
+                        }
+
                         _settings.SeedsInformation.RemoveAt(i);
                         i--;
                     }
