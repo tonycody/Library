@@ -69,7 +69,7 @@ namespace Library.Net.Amoeba
 
         public CacheManager(string cachePath, BitmapManager bitmapManager, BufferManager bufferManager)
         {
-            _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1024 * 32, FileOptions.RandomAccess);
+            _fileStream = new FileStream(cachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 8192, FileOptions.None);
             _bitmapManager = bitmapManager;
             _bufferManager = bufferManager;
 
@@ -1419,15 +1419,21 @@ namespace Library.Net.Amoeba
                                 {
                                     try
                                     {
-                                        if ((clusterInfo.Indexes[i] * CacheManager.SectorSize) > _fileStream.Length)
+                                        long posision = clusterInfo.Indexes[i] * CacheManager.SectorSize;
+
+                                        if (posision > _fileStream.Length)
                                         {
                                             this.Remove(key);
 
                                             throw new BlockNotFoundException();
                                         }
 
+                                        if (_fileStream.Position != posision)
+                                        {
+                                            _fileStream.Seek(posision, SeekOrigin.Begin);
+                                        }
+
                                         int length = Math.Min(remain, CacheManager.SectorSize);
-                                        _fileStream.Seek(clusterInfo.Indexes[i] * CacheManager.SectorSize, SeekOrigin.Begin);
                                         _fileStream.Read(buffer, CacheManager.SectorSize * i, length);
                                     }
                                     catch (EndOfStreamException)
