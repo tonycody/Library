@@ -56,7 +56,7 @@ namespace Library.Net.Outopos
 
             _threadCount = Math.Max(1, Math.Min(System.Environment.ProcessorCount, 32) / 4);
 
-            _watchTimer = new WatchTimer(this.WatchTimer, new TimeSpan(0, 5, 0));
+            _watchTimer = new WatchTimer(this.WatchTimer, Timeout.Infinite);
         }
 
         private void WatchTimer()
@@ -64,7 +64,7 @@ namespace Library.Net.Outopos
             this.CheckInformation();
         }
 
-        public void CheckInformation()
+        private void CheckInformation()
         {
             lock (this.ThisLock)
             {
@@ -507,6 +507,8 @@ namespace Library.Net.Outopos
             lock (this.ThisLock)
             {
                 _settings.Load(directoryPath);
+
+                _watchTimer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 5, 0));
             }
         }
 

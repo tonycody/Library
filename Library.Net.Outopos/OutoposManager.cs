@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Library.Security;
@@ -620,13 +622,18 @@ namespace Library.Net.Outopos
                 if (_isLoaded) throw new OutoposManagerException("OutoposManager was already loaded.");
                 _isLoaded = true;
 
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 _clientManager.Load(System.IO.Path.Combine(directoryPath, "ClientManager"));
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
+                
                 _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
-
-                _cacheManager.CheckInformation();
+            
+                stopwatch.Stop();
+                Debug.WriteLine("Settings Load {0} {1}", Path.GetFileName(directoryPath), stopwatch.ElapsedMilliseconds);
             }
         }
 
@@ -637,11 +644,18 @@ namespace Library.Net.Outopos
 
             lock (this.ThisLock)
             {
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
+               
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _clientManager.Save(System.IO.Path.Combine(directoryPath, "ClientManager"));
+
+                stopwatch.Stop();
+                Debug.WriteLine("Settings Save {0} {1}", Path.GetFileName(directoryPath), stopwatch.ElapsedMilliseconds);
             }
         }
 
