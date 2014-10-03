@@ -39,7 +39,7 @@ namespace Library.Net.Amoeba
         private bool _spaceSectorsInitialized;
         private SortedSet<long> _spaceSectors = new SortedSet<long>();
 
-        private SortedDictionary<int, string> _ids = new SortedDictionary<int, string>();
+        private Dictionary<int, string> _ids = new Dictionary<int, string>();
         private int _id;
 
         private bool _shareIndexLinkInitialized;
@@ -97,7 +97,7 @@ namespace Library.Net.Amoeba
             {
                 try
                 {
-                    var usingKeys = new SortedSet<Key>(new KeyComparer());
+                    var usingKeys = new HashSet<Key>();
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
                     foreach (var seedInfo in _settings.SeedsInformation)
@@ -279,7 +279,7 @@ namespace Library.Net.Amoeba
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                var pathList = new SortedSet<string>();
+                var pathList = new HashSet<string>();
 
                 pathList.UnionWith(_settings.ShareIndex.Keys);
 
@@ -375,7 +375,7 @@ namespace Library.Net.Amoeba
                 this.CheckSpace(sectorCount);
                 if (sectorCount <= _spaceSectors.Count) return;
 
-                var usingKeys = new SortedSet<Key>(new KeyComparer());
+                var usingKeys = new HashSet<Key>();
                 usingKeys.UnionWith(_lockedKeys.Keys);
 
                 foreach (var info in _settings.SeedsInformation)
@@ -1733,7 +1733,7 @@ namespace Library.Net.Amoeba
                 : base(new List<Library.Configuration.ISettingContent>() { 
                     new Library.Configuration.SettingContent<LockedHashDictionary<Key, ClusterInfo>>() { Name = "ClustersIndex", Value = new LockedHashDictionary<Key, ClusterInfo>() },
                     new Library.Configuration.SettingContent<long>() { Name = "Size", Value = (long)1024 * 1024 * 1024 * 50 },
-                    new Library.Configuration.SettingContent<LockedSortedDictionary<string, ShareInfo>>() { Name = "ShareIndex", Value = new LockedSortedDictionary<string, ShareInfo>() },
+                    new Library.Configuration.SettingContent<LockedHashDictionary<string, ShareInfo>>() { Name = "ShareIndex", Value = new LockedHashDictionary<string, ShareInfo>() },
                     new Library.Configuration.SettingContent<LockedList<SeedInfo>>() { Name = "SeedInformation", Value = new LockedList<SeedInfo>() },
                 })
             {
@@ -1785,13 +1785,13 @@ namespace Library.Net.Amoeba
                 }
             }
 
-            public LockedSortedDictionary<string, ShareInfo> ShareIndex
+            public LockedHashDictionary<string, ShareInfo> ShareIndex
             {
                 get
                 {
                     lock (_thisLock)
                     {
-                        return (LockedSortedDictionary<string, ShareInfo>)this["ShareIndex"];
+                        return (LockedHashDictionary<string, ShareInfo>)this["ShareIndex"];
                     }
                 }
             }
@@ -1859,16 +1859,16 @@ namespace Library.Net.Amoeba
         [DataContract(Name = "ShareIndex", Namespace = "http://Library/Net/Amoeba/CacheManager")]
         private class ShareInfo
         {
-            private SortedDictionary<Key, int> _indexes;
+            private Dictionary<Key, int> _indexes;
             private int _blockLength;
 
             [DataMember(Name = "KeyAndCluster")]
-            public SortedDictionary<Key, int> Indexes
+            public Dictionary<Key, int> Indexes
             {
                 get
                 {
                     if (_indexes == null)
-                        _indexes = new SortedDictionary<Key, int>(new KeyComparer());
+                        _indexes = new Dictionary<Key, int>();
 
                     return _indexes;
                 }

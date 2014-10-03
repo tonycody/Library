@@ -70,7 +70,7 @@ namespace Library.Net.Outopos
             {
                 try
                 {
-                    var usingKeys = new SortedSet<Key>(new KeyComparer());
+                    var usingKeys = new HashSet<Key>();
                     usingKeys.UnionWith(_lockedKeys.Keys);
 
                     long size = 0;
@@ -174,7 +174,7 @@ namespace Library.Net.Outopos
                 this.CheckSpace(sectorCount);
                 if (sectorCount <= _spaceSectors.Count) return;
 
-                var usingKeys = new SortedSet<Key>(new KeyComparer());
+                var usingKeys = new HashSet<Key>();
                 usingKeys.UnionWith(_lockedKeys.Keys);
 
                 var removePairs = _settings.ClusterIndex

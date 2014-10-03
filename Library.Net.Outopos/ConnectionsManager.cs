@@ -889,7 +889,7 @@ namespace Library.Net.Outopos
                             {
                                 // Signature
                                 {
-                                    var removeSignatures = new SortedSet<string>();
+                                    var removeSignatures = new HashSet<string>();
                                     removeSignatures.UnionWith(_settings.MetadataManager.GetBroadcastSignatures());
                                     removeSignatures.ExceptWith(lockSignatures);
 
@@ -904,7 +904,7 @@ namespace Library.Net.Outopos
 
                                     _settings.MetadataManager.RemoveProfileSignatures(sortList.Take(sortList.Count - 1024));
 
-                                    var liveSignatures = new SortedSet<string>(_settings.MetadataManager.GetBroadcastSignatures());
+                                    var liveSignatures = new HashSet<string>(_settings.MetadataManager.GetBroadcastSignatures());
 
                                     foreach (var signature in _broadcastSignatureLastAccessTimes.Keys.ToArray())
                                     {
@@ -919,7 +919,7 @@ namespace Library.Net.Outopos
                             {
                                 // Signature
                                 {
-                                    var removeSignatures = new SortedSet<string>();
+                                    var removeSignatures = new HashSet<string>();
                                     removeSignatures.UnionWith(_settings.MetadataManager.GetUnicastSignatures());
                                     removeSignatures.ExceptWith(lockSignatures);
 
@@ -934,7 +934,7 @@ namespace Library.Net.Outopos
 
                                     _settings.MetadataManager.RemoveUnicastSignatures(sortList.Take(sortList.Count - 1024));
 
-                                    var liveSignatures = new SortedSet<string>(_settings.MetadataManager.GetUnicastSignatures());
+                                    var liveSignatures = new HashSet<string>(_settings.MetadataManager.GetUnicastSignatures());
 
                                     foreach (var signature in _unicastSignatureLastAccessTimes.Keys.ToArray())
                                     {
@@ -1315,7 +1315,7 @@ namespace Library.Net.Outopos
                     _random.Shuffle(diffusionBlocksList);
 
                     {
-                        var diffusionBlocksDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var diffusionBlocksDictionary = new Dictionary<Node, HashSet<Key>>();
 
                         foreach (var key in diffusionBlocksList)
                         {
@@ -1339,11 +1339,11 @@ namespace Library.Net.Outopos
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    HashSet<Key> collection;
 
                                     if (!diffusionBlocksDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>(new KeyComparer());
                                         diffusionBlocksDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1530,7 +1530,7 @@ namespace Library.Net.Outopos
                     _random.Shuffle(pushBlocksRequestList);
 
                     {
-                        var pushBlocksLinkDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var pushBlocksLinkDictionary = new Dictionary<Node, HashSet<Key>>();
 
                         foreach (var key in pushBlocksLinkList)
                         {
@@ -1545,11 +1545,11 @@ namespace Library.Net.Outopos
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    HashSet<Key> collection;
 
                                     if (!pushBlocksLinkDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>(new KeyComparer());
                                         pushBlocksLinkDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1580,7 +1580,7 @@ namespace Library.Net.Outopos
                     }
 
                     {
-                        var pushBlocksRequestDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var pushBlocksRequestDictionary = new Dictionary<Node, HashSet<Key>>();
 
                         foreach (var key in pushBlocksRequestList)
                         {
@@ -1606,11 +1606,11 @@ namespace Library.Net.Outopos
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    HashSet<Key> collection;
 
                                     if (!pushBlocksRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>(new KeyComparer());
                                         pushBlocksRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1956,7 +1956,7 @@ namespace Library.Net.Outopos
 
                     // Broadcast
                     {
-                        var pushBroadcastSignaturesRequestDictionary = new Dictionary<Node, SortedSet<string>>();
+                        var pushBroadcastSignaturesRequestDictionary = new Dictionary<Node, HashSet<string>>();
 
                         foreach (var signature in pushBroadcastSignaturesRequestList)
                         {
@@ -1971,11 +1971,11 @@ namespace Library.Net.Outopos
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<string> collection;
+                                    HashSet<string> collection;
 
                                     if (!pushBroadcastSignaturesRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<string>();
+                                        collection = new HashSet<string>();
                                         pushBroadcastSignaturesRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -2007,7 +2007,7 @@ namespace Library.Net.Outopos
 
                     // Unicast
                     {
-                        var pushUnicastSignaturesRequestDictionary = new Dictionary<Node, SortedSet<string>>();
+                        var pushUnicastSignaturesRequestDictionary = new Dictionary<Node, HashSet<string>>();
 
                         foreach (var signature in pushUnicastSignaturesRequestList)
                         {
@@ -2022,11 +2022,11 @@ namespace Library.Net.Outopos
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<string> collection;
+                                    HashSet<string> collection;
 
                                     if (!pushUnicastSignaturesRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<string>();
+                                        collection = new HashSet<string>();
                                         pushUnicastSignaturesRequestDictionary[requestNodes[i]] = collection;
                                     }
 

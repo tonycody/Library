@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Library.Net.Outopos
 {
@@ -16,6 +17,19 @@ namespace Library.Net.Outopos
         public int GetHashCode(byte[] value)
         {
             return ItemUtilities.GetHashCode(value);
+        }
+    }
+
+    class ReferenceEqualityComparer : IEqualityComparer<object>
+    {
+        new public bool Equals(object x, object y)
+        {
+            return object.ReferenceEquals(x, y);
+        }
+
+        public int GetHashCode(object obj)
+        {
+            return RuntimeHelpers.GetHashCode(obj);
         }
     }
 }

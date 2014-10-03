@@ -467,53 +467,53 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ProfileContent GetContent(ProfileMetadata metadata)
+        public Profile GetMessage(ProfileMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(metadata);
+                return _downloadManager.GetMessage(metadata);
             }
         }
 
-        public SignatureMessageContent GetContent(SignatureMessageMetadata metadata, ExchangePrivateKey exchangePrivateKey)
+        public SignatureMessage GetMessage(SignatureMessageMetadata metadata, ExchangePrivateKey exchangePrivateKey)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(metadata, exchangePrivateKey);
+                return _downloadManager.GetMessage(metadata, exchangePrivateKey);
             }
         }
 
-        public WikiDocumentContent GetContent(WikiDocumentMetadata metadata)
+        public WikiDocument GetMessage(WikiDocumentMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(metadata);
+                return _downloadManager.GetMessage(metadata);
             }
         }
 
-        public ChatTopicContent GetContent(ChatTopicMetadata metadata)
+        public ChatTopic GetMessage(ChatTopicMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(metadata);
+                return _downloadManager.GetMessage(metadata);
             }
         }
 
-        public ChatMessageContent GetContent(ChatMessageMetadata metadata)
+        public ChatMessage GetMessage(ChatMessageMetadata metadata)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                return _downloadManager.GetContent(metadata);
+                return _downloadManager.GetMessage(metadata);
             }
         }
 
@@ -592,6 +592,7 @@ namespace Library.Net.Outopos
                 _state = ManagerState.Start;
 
                 _connectionsManager.Start();
+                _downloadManager.Start();
                 _uploadManager.Start();
             }
         }
@@ -607,6 +608,7 @@ namespace Library.Net.Outopos
                 _state = ManagerState.Stop;
 
                 _uploadManager.Stop();
+                _downloadManager.Stop();
                 _connectionsManager.Stop();
             }
         }
@@ -629,9 +631,14 @@ namespace Library.Net.Outopos
                 _serverManager.Load(System.IO.Path.Combine(directoryPath, "ServerManager"));
                 _cacheManager.Load(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _connectionsManager.Load(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
-                
-                _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"));
-            
+
+                List<Task> tasks = new List<Task>();
+
+                tasks.Add(Task.Factory.StartNew(() => _downloadManager.Load(System.IO.Path.Combine(directoryPath, "DownloadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _uploadManager.Load(System.IO.Path.Combine(directoryPath, "UploadManager"))));
+
+                Task.WaitAll(tasks.ToArray());
+
                 stopwatch.Stop();
                 Debug.WriteLine("Settings Load {0} {1}", Path.GetFileName(directoryPath), stopwatch.ElapsedMilliseconds);
             }
@@ -647,8 +654,13 @@ namespace Library.Net.Outopos
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
 
-                _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"));
-               
+                List<Task> tasks = new List<Task>();
+
+                tasks.Add(Task.Factory.StartNew(() => _uploadManager.Save(System.IO.Path.Combine(directoryPath, "UploadManager"))));
+                tasks.Add(Task.Factory.StartNew(() => _downloadManager.Save(System.IO.Path.Combine(directoryPath, "DownloadManager"))));
+
+                Task.WaitAll(tasks.ToArray());
+
                 _connectionsManager.Save(System.IO.Path.Combine(directoryPath, "ConnectionManager"));
                 _cacheManager.Save(System.IO.Path.Combine(directoryPath, "CacheManager"));
                 _serverManager.Save(System.IO.Path.Combine(directoryPath, "ServerManager"));

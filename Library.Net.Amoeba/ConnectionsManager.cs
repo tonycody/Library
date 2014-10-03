@@ -741,7 +741,7 @@ namespace Library.Net.Amoeba
 
             // 電子署名を検証して破損しているSeedを検索し、削除。
             {
-                var removeSignatures = new SortedSet<string>();
+                var removeSignatures = new HashSet<string>();
 
                 {
                     var signatures = _settings.GetSignatures().ToArray();
@@ -859,7 +859,7 @@ namespace Library.Net.Amoeba
 
                             if (lockSignatures != null)
                             {
-                                var removeSignatures = new SortedSet<string>();
+                                var removeSignatures = new HashSet<string>();
                                 removeSignatures.UnionWith(_settings.GetSignatures());
                                 removeSignatures.ExceptWith(lockSignatures);
 
@@ -874,7 +874,7 @@ namespace Library.Net.Amoeba
 
                                 _settings.RemoveSignatures(sortList.Take(sortList.Count - 1024));
 
-                                var liveSignatures = new SortedSet<string>(_settings.GetSignatures());
+                                var liveSignatures = new HashSet<string>(_settings.GetSignatures());
 
                                 foreach (var signature in _seedLastAccessTimes.Keys.ToArray())
                                 {
@@ -984,7 +984,7 @@ namespace Library.Net.Amoeba
                     _random.Shuffle(diffusionBlocksList);
 
                     {
-                        var diffusionBlocksDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var diffusionBlocksDictionary = new Dictionary<Node, HashSet<Key>>();
 
                         foreach (var key in diffusionBlocksList)
                         {
@@ -1010,11 +1010,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    HashSet<Key> collection;
 
                                     if (!diffusionBlocksDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>();
                                         diffusionBlocksDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1197,7 +1197,7 @@ namespace Library.Net.Amoeba
                     _random.Shuffle(pushBlocksRequestList);
 
                     {
-                        var pushBlocksLinkDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var pushBlocksLinkDictionary = new Dictionary<Node, HashSet<Key>>();
 
                         foreach (var key in pushBlocksLinkList)
                         {
@@ -1212,11 +1212,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    HashSet<Key> collection;
 
                                     if (!pushBlocksLinkDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>();
                                         pushBlocksLinkDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1247,7 +1247,7 @@ namespace Library.Net.Amoeba
                     }
 
                     {
-                        var pushBlocksRequestDictionary = new Dictionary<Node, SortedSet<Key>>();
+                        var pushBlocksRequestDictionary = new Dictionary<Node, HashSet<Key>>();
 
                         foreach (var key in pushBlocksRequestList)
                         {
@@ -1273,11 +1273,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<Key> collection;
+                                    HashSet<Key> collection;
 
                                     if (!pushBlocksRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>();
                                         pushBlocksRequestDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1422,7 +1422,7 @@ namespace Library.Net.Amoeba
                     _random.Shuffle(pushSeedsRequestList);
 
                     {
-                        var pushSeedsRequestDictionary = new Dictionary<Node, SortedSet<string>>();
+                        var pushSeedsRequestDictionary = new Dictionary<Node, HashSet<string>>();
 
                         foreach (var signature in pushSeedsRequestList)
                         {
@@ -1437,11 +1437,11 @@ namespace Library.Net.Amoeba
 
                                 for (int i = 0; i < requestNodes.Count; i++)
                                 {
-                                    SortedSet<string> collection;
+                                    HashSet<string> collection;
 
                                     if (!pushSeedsRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new SortedSet<string>();
+                                        collection = new HashSet<string>();
                                         pushSeedsRequestDictionary[requestNodes[i]] = collection;
                                     }
 

@@ -23,7 +23,7 @@ namespace Library.Net.Amoeba
 
         private string _workDirectory = Path.GetTempPath();
         private ExistManager _existManager = new ExistManager();
-        private SortedDictionary<int, DownloadItem> _ids = new SortedDictionary<int, DownloadItem>();
+        private Dictionary<int, DownloadItem> _ids = new Dictionary<int, DownloadItem>();
         private int _id;
 
         private volatile ManagerState _state = ManagerState.Stop;

@@ -21,8 +21,8 @@ namespace Library.Net.Amoeba
 
         private List<Thread> _encodeManagerThreads = new List<Thread>();
 
-        private SortedDictionary<int, UploadItem> _ids = new SortedDictionary<int, UploadItem>();
-        private SortedDictionary<string, List<int>> _shareLink = new SortedDictionary<string, List<int>>();
+        private Dictionary<int, UploadItem> _ids = new Dictionary<int, UploadItem>();
+        private Dictionary<string, List<int>> _shareLink = new Dictionary<string, List<int>>();
         private int _id;
 
         private volatile ManagerState _state = ManagerState.Stop;
