@@ -360,9 +360,9 @@ namespace Library.Net.Outopos
             }
         }
 
-        public ChatMessage Upload(Chat tag,
+        public ChatMessage UploadChatMessage(Chat tag,
             string comment,
-            AnchorCollection anchors,
+            IEnumerable<Anchor> anchors,
 
             int miningLimit,
             TimeSpan miningTime,

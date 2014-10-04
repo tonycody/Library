@@ -1343,7 +1343,7 @@ namespace Library.Net.Outopos
 
                                     if (!diffusionBlocksDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new HashSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>();
                                         diffusionBlocksDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1549,7 +1549,7 @@ namespace Library.Net.Outopos
 
                                     if (!pushBlocksLinkDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new HashSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>();
                                         pushBlocksLinkDictionary[requestNodes[i]] = collection;
                                     }
 
@@ -1610,7 +1610,7 @@ namespace Library.Net.Outopos
 
                                     if (!pushBlocksRequestDictionary.TryGetValue(requestNodes[i], out collection))
                                     {
-                                        collection = new HashSet<Key>(new KeyComparer());
+                                        collection = new HashSet<Key>();
                                         pushBlocksRequestDictionary[requestNodes[i]] = collection;
                                     }
 

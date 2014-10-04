@@ -78,9 +78,14 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[metadata.Key];
 
+                        var message = ContentConverter.FromProfileBlock(buffer);
+
+                        if (metadata.CreationTime != message.CreationTime
+                            || metadata.Certificate.ToString() != message.Certificate.ToString()) return null;
+
                         this.Lock(metadata.Key);
 
-                        return ContentConverter.FromProfileBlock(buffer);
+                        return message;
                     }
                     catch (Exception)
                     {
@@ -120,9 +125,15 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[metadata.Key];
 
+                        var message = ContentConverter.FromSignatureMessageBlock(buffer, exchangePrivateKey);
+
+                        if (metadata.Signature != message.Signature
+                            || metadata.CreationTime != message.CreationTime
+                            || metadata.Certificate.ToString() != message.Certificate.ToString()) return null;
+
                         this.Lock(metadata.Key);
 
-                        return ContentConverter.FromSignatureMessageBlock(buffer, exchangePrivateKey);
+                        return message;
                     }
                     catch (Exception)
                     {
@@ -161,9 +172,15 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[metadata.Key];
 
+                        var message = ContentConverter.FromWikiDocumentBlock(buffer);
+
+                        if (metadata.Tag != message.Tag
+                            || metadata.CreationTime != message.CreationTime
+                            || metadata.Certificate.ToString() != message.Certificate.ToString()) return null;
+
                         this.Lock(metadata.Key);
 
-                        return ContentConverter.FromWikiDocumentBlock(buffer);
+                        return message;
                     }
                     catch (Exception)
                     {
@@ -202,9 +219,15 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[metadata.Key];
 
+                        var message = ContentConverter.FromChatTopicBlock(buffer);
+
+                        if (metadata.Tag != message.Tag
+                            || metadata.CreationTime != message.CreationTime
+                            || metadata.Certificate.ToString() != message.Certificate.ToString()) return null;
+
                         this.Lock(metadata.Key);
 
-                        return ContentConverter.FromChatTopicBlock(buffer);
+                        return message;
                     }
                     catch (Exception)
                     {
@@ -243,9 +266,15 @@ namespace Library.Net.Outopos
                     {
                         buffer = _cacheManager[metadata.Key];
 
+                        var message = ContentConverter.FromChatMessageBlock(buffer);
+
+                        if (metadata.Tag != message.Tag
+                            || metadata.CreationTime != message.CreationTime
+                            || metadata.Certificate.ToString() != message.Certificate.ToString()) return null;
+
                         this.Lock(metadata.Key);
 
-                        return ContentConverter.FromChatMessageBlock(buffer);
+                        return message;
                     }
                     catch (Exception)
                     {

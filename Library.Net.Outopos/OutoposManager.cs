@@ -517,53 +517,84 @@ namespace Library.Net.Outopos
             }
         }
 
-        public void Upload(ProfileContent content, DigitalSignature digitalSignature)
+        public Profile UploadProfile(
+            int cost,
+            ExchangePublicKey exchangePublicKey,
+            IEnumerable<string> trustSignatures,
+            IEnumerable<string> deleteSignatures,
+            IEnumerable<Wiki> wikis,
+            IEnumerable<Chat> chats,
+
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(content, digitalSignature);
+                return _uploadManager.UploadProfile(cost, exchangePublicKey, trustSignatures, deleteSignatures, wikis, chats, digitalSignature);
             }
         }
 
-        public void Upload(string signature, SignatureMessageContent content, ExchangePublicKey exchangePublicKey, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public SignatureMessage UploadSignatureMessage(string signature,
+            string comment,
+
+            ExchangePublicKey exchangePublicKey,
+            int miningLimit,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(signature, content, exchangePublicKey, miningLimit, miningTime, digitalSignature);
+                return _uploadManager.UploadSignatureMessage(signature, comment, exchangePublicKey, miningLimit, miningTime, digitalSignature);
             }
         }
 
-        public void Upload(Wiki tag, WikiDocumentContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public WikiDocument UploadWikiDocument(Wiki tag,
+            IEnumerable<WikiPage> wikiPages,
+
+            int miningLimit,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+                return _uploadManager.UploadWikiDocument(tag, wikiPages, miningLimit, miningTime, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag, ChatTopicContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public ChatTopic UploadChatTopic(Chat tag,
+            HypertextFormatType formatType,
+            string hypertext,
+
+            int miningLimit,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+                return _uploadManager.UploadChatTopic(tag, formatType, hypertext, miningLimit, miningTime, digitalSignature);
             }
         }
 
-        public void Upload(Chat tag, ChatMessageContent content, int miningLimit, TimeSpan miningTime, DigitalSignature digitalSignature)
+        public ChatMessage UploadChatMessage(Chat tag,
+            string comment,
+            IEnumerable<Anchor> anchors,
+
+            int miningLimit,
+            TimeSpan miningTime,
+            DigitalSignature digitalSignature)
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
             lock (this.ThisLock)
             {
-                _uploadManager.Upload(tag, content, miningLimit, miningTime, digitalSignature);
+                return _uploadManager.UploadChatMessage(tag, comment, anchors, miningLimit, miningTime, digitalSignature);
             }
         }
 
