@@ -40,13 +40,13 @@ namespace Library.Security
 
             byte[] signature;
 
-            if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha512)
+            if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha256)
             {
-                signature = EcDsaP521_Sha512.Sign(digitalSignature.PrivateKey, stream);
+                signature = EcDsaP521_Sha256.Sign(digitalSignature.PrivateKey, stream);
             }
-            else if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
+            else if (digitalSignature.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha256)
             {
-                signature = Rsa2048_Sha512.Sign(digitalSignature.PrivateKey, stream);
+                signature = Rsa2048_Sha256.Sign(digitalSignature.PrivateKey, stream);
             }
             else
             {
@@ -66,13 +66,21 @@ namespace Library.Security
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            byte[] lengthBuffer = new byte[4];
-
             for (; ; )
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                byte id;
+                {
+                    byte[] idBuffer = new byte[1];
+                    if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                    id = idBuffer[0];
+                }
+
+                int length;
+                {
+                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    length = NetworkConverter.ToInt32(lengthBuffer);
+                }
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
@@ -176,13 +184,13 @@ namespace Library.Security
 
         internal bool Verify(Stream stream)
         {
-            if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha512)
+            if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.EcDsaP521_Sha256)
             {
-                return EcDsaP521_Sha512.Verify(this.PublicKey, this.Signature, stream);
+                return EcDsaP521_Sha256.Verify(this.PublicKey, this.Signature, stream);
             }
-            else if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha512)
+            else if (this.DigitalSignatureAlgorithm == DigitalSignatureAlgorithm.Rsa2048_Sha256)
             {
-                return Rsa2048_Sha512.Verify(this.PublicKey, this.Signature, stream);
+                return Rsa2048_Sha256.Verify(this.PublicKey, this.Signature, stream);
             }
             else
             {

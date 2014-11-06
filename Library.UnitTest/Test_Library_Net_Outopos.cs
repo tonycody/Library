@@ -98,7 +98,7 @@ namespace Library.UnitTest
                 var id = new byte[64];
                 _random.NextBytes(id);
 
-                key = new Key(id, HashAlgorithm.Sha512);
+                key = new Key(id, HashAlgorithm.Sha256);
             }
 
             Key key2;
@@ -152,11 +152,11 @@ namespace Library.UnitTest
         [Test]
         public void Test_Metadata()
         {
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha256, DigitalSignatureAlgorithm.EcDsaP521_Sha256 })
             {
                 var id = new byte[64];
                 _random.NextBytes(id);
-                var key = new Key(id, HashAlgorithm.Sha512);
+                var key = new Key(id, HashAlgorithm.Sha256);
                 var tag = new Chat("oooo", new byte[64]);
                 var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                 var digitalSignature = new DigitalSignature("123", a);
@@ -414,7 +414,7 @@ namespace Library.UnitTest
                             var id = new byte[64];
                             _random.NextBytes(id);
 
-                            key = new Key(id, HashAlgorithm.Sha512);
+                            key = new Key(id, HashAlgorithm.Sha256);
                         }
 
                         keys.Add(key);
@@ -449,7 +449,7 @@ namespace Library.UnitTest
                             var id = new byte[64];
                             _random.NextBytes(id);
 
-                            key = new Key(id, HashAlgorithm.Sha512);
+                            key = new Key(id, HashAlgorithm.Sha256);
                         }
 
                         keys.Add(key);
@@ -475,7 +475,7 @@ namespace Library.UnitTest
                     };
 
                     var buffer = _bufferManager.TakeBuffer(1024 * 1024 * 8);
-                    var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
+                    var key = new Key(Sha256.ComputeHash(buffer), HashAlgorithm.Sha256);
 
                     senderConnection.PushBlock(key, new ArraySegment<byte>(buffer, 0, 1024 * 1024 * 4));
 
@@ -500,7 +500,7 @@ namespace Library.UnitTest
                         queue.Enqueue(e);
                     };
 
-                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
 
                     var signatures = new SignatureCollection();
 
@@ -528,7 +528,7 @@ namespace Library.UnitTest
                         queue.Enqueue(e);
                     };
 
-                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
 
                     var metadatas1 = new List<ProfileMetadata>();
 
@@ -536,7 +536,7 @@ namespace Library.UnitTest
                     {
                         var id = new byte[64];
                         _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var key = new Key(id, HashAlgorithm.Sha256);
                         var metadata = new ProfileMetadata(DateTime.UtcNow, key, digitalSignature);
 
                         metadatas1.Add(metadata);
@@ -561,7 +561,7 @@ namespace Library.UnitTest
                         queue.Enqueue(e);
                     };
 
-                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
 
                     var signatures = new SignatureCollection();
 
@@ -589,7 +589,7 @@ namespace Library.UnitTest
                         queue.Enqueue(e);
                     };
 
-                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
 
                     var metadatas1 = new List<SignatureMessageMetadata>();
 
@@ -597,7 +597,7 @@ namespace Library.UnitTest
                     {
                         var id = new byte[64];
                         _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var key = new Key(id, HashAlgorithm.Sha256);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var metadata = new SignatureMessageMetadata(digitalSignature.ToString(), DateTime.UtcNow, key, miner, digitalSignature);
 
@@ -630,7 +630,7 @@ namespace Library.UnitTest
                     {
                         var id = new byte[64];
                         _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var key = new Key(id, HashAlgorithm.Sha256);
 
                         wikis.Add(new Wiki(RandomString.GetValue(256), id));
                     }
@@ -639,7 +639,7 @@ namespace Library.UnitTest
                     {
                         var id = new byte[64];
                         _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var key = new Key(id, HashAlgorithm.Sha256);
 
                         chats.Add(new Chat(RandomString.GetValue(256), id));
                     }
@@ -664,7 +664,7 @@ namespace Library.UnitTest
                         queue.Enqueue(e);
                     };
 
-                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
 
                     var metadatas1 = new List<WikiDocumentMetadata>();
                     var metadatas2 = new List<ChatTopicMetadata>();
@@ -674,7 +674,7 @@ namespace Library.UnitTest
                     {
                         var id = new byte[64];
                         _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var key = new Key(id, HashAlgorithm.Sha256);
                         var tag = new Wiki("oooo", new byte[64]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var metadata = new WikiDocumentMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
@@ -686,7 +686,7 @@ namespace Library.UnitTest
                     {
                         var id = new byte[64];
                         _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var key = new Key(id, HashAlgorithm.Sha256);
                         var tag = new Chat("oooo", new byte[64]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var metadata = new ChatTopicMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
@@ -698,7 +698,7 @@ namespace Library.UnitTest
                     {
                         var id = new byte[64];
                         _random.NextBytes(id);
-                        var key = new Key(id, HashAlgorithm.Sha512);
+                        var key = new Key(id, HashAlgorithm.Sha256);
                         var tag = new Chat("oooo", new byte[64]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var metadata = new ChatMessageMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);

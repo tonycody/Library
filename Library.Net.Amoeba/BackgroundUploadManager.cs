@@ -202,9 +202,9 @@ namespace Library.Net.Amoeba
 
                                         if (item.Seed.Length == 0) throw new InvalidOperationException("Stream Length");
 
-                                        if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                        if (item.HashAlgorithm == HashAlgorithm.Sha256)
                                         {
-                                            cryptoKey = Sha512.ComputeHash(encodingProgressStream);
+                                            cryptoKey = Sha256.ComputeHash(encodingProgressStream);
                                         }
 
                                         encodingProgressStream.Seek(0, SeekOrigin.Begin);
@@ -325,9 +325,9 @@ namespace Library.Net.Amoeba
                                 isStop = (this.State == ManagerState.Stop || !_settings.BackgroundUploadItems.Contains(item));
                             }, 1024 * 1024, true))
                             {
-                                if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                if (item.HashAlgorithm == HashAlgorithm.Sha256)
                                 {
-                                    cryptoKey = Sha512.ComputeHash(encodingProgressStream);
+                                    cryptoKey = Sha256.ComputeHash(encodingProgressStream);
                                 }
 
                                 encodingProgressStream.Seek(0, SeekOrigin.Begin);
@@ -428,9 +428,9 @@ namespace Library.Net.Amoeba
                     item.State = BackgroundUploadState.Encoding;
                     item.Rank = 1;
                     item.CompressionAlgorithm = CompressionAlgorithm.Xz;
-                    item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                    item.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                     item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
-                    item.HashAlgorithm = HashAlgorithm.Sha512;
+                    item.HashAlgorithm = HashAlgorithm.Sha256;
                     item.DigitalSignature = digitalSignature;
                     item.Seed = new Seed();
                     item.Seed.Keywords.Add(ConnectionsManager.Keyword_Link);
@@ -466,9 +466,9 @@ namespace Library.Net.Amoeba
                     item.State = BackgroundUploadState.Encoding;
                     item.Rank = 1;
                     item.CompressionAlgorithm = CompressionAlgorithm.Xz;
-                    item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                    item.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                     item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
-                    item.HashAlgorithm = HashAlgorithm.Sha512;
+                    item.HashAlgorithm = HashAlgorithm.Sha256;
                     item.DigitalSignature = digitalSignature;
                     item.Seed = new Seed();
                     item.Seed.Keywords.Add(ConnectionsManager.Keyword_Store);

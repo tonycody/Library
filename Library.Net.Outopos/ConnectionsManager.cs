@@ -116,7 +116,7 @@ namespace Library.Net.Outopos
 
         private const int _routeTableMinCount = 100;
 
-        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
+        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha256;
 
         //#if DEBUG
         //        private const int _downloadingConnectionCountLowerLimit = 0;
@@ -439,7 +439,7 @@ namespace Library.Net.Outopos
         {
             return !(key == null
                 || key.Hash == null || key.Hash.Length == 0
-                || key.HashAlgorithm != HashAlgorithm.Sha512);
+                || key.HashAlgorithm != HashAlgorithm.Sha256);
         }
 
         private static bool Check(Wiki wiki)

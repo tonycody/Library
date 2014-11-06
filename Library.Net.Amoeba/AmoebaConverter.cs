@@ -265,7 +265,7 @@ namespace Library.Net.Amoeba
         public static Node FromNodeString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Node:")) throw new ArgumentException("item");
 
             try
             {
@@ -300,7 +300,7 @@ namespace Library.Net.Amoeba
         public static Seed FromSeedString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Seed:") && !item.StartsWith("Seed@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Seed:")) throw new ArgumentException("item");
 
             try
             {

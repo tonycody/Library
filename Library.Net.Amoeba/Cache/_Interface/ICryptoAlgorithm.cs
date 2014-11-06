@@ -8,8 +8,8 @@ namespace Library.Net.Amoeba
         [EnumMember(Value = "None")]
         None = 0,
 
-        [EnumMember(Value = "Rijndael256")]
-        Rijndael256 = 1,
+        [EnumMember(Value = "Aes256")]
+        Aes256 = 1,
     }
 
     public interface ICryptoAlgorithm

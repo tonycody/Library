@@ -71,7 +71,7 @@ namespace Library.Security
                 {
                     var task = Task.Factory.StartNew(() =>
                     {
-                        var key = minerUtilities.Create_1(Sha512.ComputeHash(stream), this.Limit, this.ComputationTime);
+                        var key = minerUtilities.Create_1(Sha256.ComputeHash(stream), this.Limit, this.ComputationTime);
                         return new Cash(CashAlgorithm.Version1, key);
                     });
 
@@ -103,7 +103,7 @@ namespace Library.Security
             {
                 var minerUtilities = new MinerUtilities();
 
-                return minerUtilities.Verify_1(cash.Key, Sha512.ComputeHash(stream));
+                return minerUtilities.Verify_1(cash.Key, Sha256.ComputeHash(stream));
             }
 
             return 0;
@@ -113,7 +113,7 @@ namespace Library.Security
         {
             var miner = new Miner(CashAlgorithm.Version1, -1, computationTime);
 
-            var buffer = new byte[64];
+            var buffer = new byte[32];
             {
                 var random = new Random();
                 random.NextBytes(buffer);
@@ -154,7 +154,7 @@ namespace Library.Security
             public byte[] Create_1(byte[] value, int limit, TimeSpan computationTime)
             {
                 if (value == null) throw new ArgumentNullException("value");
-                if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
+                if (value.Length != 32) throw new ArgumentOutOfRangeException("value");
 
                 var info = new ProcessStartInfo(_path);
                 info.CreateNoWindow = true;
@@ -212,9 +212,9 @@ namespace Library.Security
             public int Verify_1(byte[] key, byte[] value)
             {
                 if (key == null) throw new ArgumentNullException("key");
-                if (key.Length != 64) throw new ArgumentOutOfRangeException("key");
+                if (key.Length != 32) throw new ArgumentOutOfRangeException("key");
                 if (value == null) throw new ArgumentNullException("value");
-                if (value.Length != 64) throw new ArgumentOutOfRangeException("value");
+                if (value.Length != 32) throw new ArgumentOutOfRangeException("value");
 
                 var bufferManager = BufferManager.Instance;
 
@@ -224,18 +224,18 @@ namespace Library.Security
                     byte[] result;
 
                     {
-                        byte[] buffer = bufferManager.TakeBuffer(128);
-                        Unsafe.Copy(key, 0, buffer, 0, 64);
-                        Unsafe.Copy(value, 0, buffer, 64, 64);
+                        byte[] buffer = bufferManager.TakeBuffer(64);
+                        Unsafe.Copy(key, 0, buffer, 0, 32);
+                        Unsafe.Copy(value, 0, buffer, 32, 32);
 
-                        result = Sha512.ComputeHash(buffer, 0, 128);
+                        result = Sha256.ComputeHash(buffer, 0, 64);
 
                         bufferManager.ReturnBuffer(buffer);
                     }
 
                     int count = 0;
 
-                    for (int i = 0; i < 64; i++)
+                    for (int i = 0; i < 32; i++)
                     {
                         for (int j = 0; j < 8; j++)
                         {

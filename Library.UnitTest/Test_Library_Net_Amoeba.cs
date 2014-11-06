@@ -54,12 +54,12 @@ namespace Library.UnitTest
             seed.Length = 10000;
             seed.Comment = "eeee";
             seed.Rank = 1;
-            seed.Key = new Key(new byte[64], HashAlgorithm.Sha512);
-            seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
-            seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+            seed.Key = new Key(new byte[64], HashAlgorithm.Sha256);
+            seed.CompressionAlgorithm = CompressionAlgorithm.Xz;
+            seed.CryptoAlgorithm = CryptoAlgorithm.Aes256;
             seed.CryptoKey = new byte[32 + 32];
 
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.Rsa2048_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.Rsa2048_Sha256);
             seed.CreateCertificate(digitalSignature);
 
             var stringSeed = AmoebaConverter.ToSeedString(seed);
@@ -78,7 +78,7 @@ namespace Library.UnitTest
             box.Boxes.Add(new Box() { Name = "Box" });
             box.Seeds.Add(new Seed() { Name = "Seed" });
 
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
             box.CreateCertificate(digitalSignature);
 
             Box box2;
@@ -123,7 +123,7 @@ namespace Library.UnitTest
                 var id = new byte[64];
                 _random.NextBytes(id);
 
-                key = new Key(id, HashAlgorithm.Sha512);
+                key = new Key(id, HashAlgorithm.Sha256);
             }
 
             Key key2;
@@ -139,7 +139,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_Seed()
         {
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha256, DigitalSignatureAlgorithm.EcDsaP521_Sha256 })
             {
                 var seed = new Seed();
                 seed.Name = "aaaa.zip";
@@ -153,9 +153,9 @@ namespace Library.UnitTest
                 seed.Length = 10000;
                 seed.Comment = "eeee";
                 seed.Rank = 1;
-                seed.Key = new Key(new byte[64], HashAlgorithm.Sha512);
-                seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
-                seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                seed.Key = new Key(new byte[64], HashAlgorithm.Sha256);
+                seed.CompressionAlgorithm = CompressionAlgorithm.Xz;
+                seed.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                 seed.CryptoKey = new byte[32 + 32];
 
                 DigitalSignature digitalSignature = new DigitalSignature("123", a);
@@ -187,7 +187,7 @@ namespace Library.UnitTest
             box.Seeds.Add(new Seed() { Name = "Seed" });
             box.Boxes.Add(new Box() { Name = "Box" });
 
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
             box.CreateCertificate(digitalSignature);
 
             var box2 = box.Clone();
@@ -282,7 +282,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_Link()
         {
-            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+            DigitalSignature digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
 
             var link = new Link();
             link.TrustSignatures.Add(digitalSignature.ToString());
@@ -540,7 +540,7 @@ namespace Library.UnitTest
                             var id = new byte[64];
                             _random.NextBytes(id);
 
-                            key = new Key(id, HashAlgorithm.Sha512);
+                            key = new Key(id, HashAlgorithm.Sha256);
                         }
 
                         keys.Add(key);
@@ -575,7 +575,7 @@ namespace Library.UnitTest
                             var id = new byte[64];
                             _random.NextBytes(id);
 
-                            key = new Key(id, HashAlgorithm.Sha512);
+                            key = new Key(id, HashAlgorithm.Sha256);
                         }
 
                         keys.Add(key);
@@ -601,7 +601,7 @@ namespace Library.UnitTest
                     };
 
                     var buffer = _bufferManager.TakeBuffer(1024 * 1024 * 8);
-                    var key = new Key(Sha512.ComputeHash(buffer), HashAlgorithm.Sha512);
+                    var key = new Key(Sha256.ComputeHash(buffer), HashAlgorithm.Sha256);
 
                     senderConnection.PushBlock(key, new ArraySegment<byte>(buffer, 0, 1024 * 1024 * 4));
 
@@ -626,7 +626,7 @@ namespace Library.UnitTest
                         queue.Enqueue(e);
                     };
 
-                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    var digitalSignature = new DigitalSignature("123", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
 
                     var signatures = new SignatureCollection();
 
@@ -670,9 +670,9 @@ namespace Library.UnitTest
                         seed.Length = 10000;
                         seed.Comment = "eeee";
                         seed.Rank = 1;
-                        seed.Key = new Key(new byte[64], HashAlgorithm.Sha512);
-                        seed.CompressionAlgorithm = CompressionAlgorithm.Lzma;
-                        seed.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                        seed.Key = new Key(new byte[64], HashAlgorithm.Sha256);
+                        seed.CompressionAlgorithm = CompressionAlgorithm.Xz;
+                        seed.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                         seed.CryptoKey = new byte[32 + 32];
 
                         seeds.Add(seed);

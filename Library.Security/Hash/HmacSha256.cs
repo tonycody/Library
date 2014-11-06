@@ -8,13 +8,13 @@ using Library.Io;
 
 namespace Library.Security
 {
-    public static class HmacSha512
+    public static class HmacSha256
     {
-        private static readonly int _blockLength = 128;
+        private static readonly int _blockLength = 64;
         private static readonly byte[] _ipad;
         private static readonly byte[] _opad;
 
-        static HmacSha512()
+        static HmacSha256()
         {
             _ipad = new byte[_blockLength];
             _opad = new byte[_blockLength];
@@ -39,7 +39,7 @@ namespace Library.Security
             {
                 buffer = bufferManager.TakeBuffer(1024 * 4);
 
-                using (var hashAlgorithm = SHA512.Create())
+                using (var hashAlgorithm = SHA256.Create())
                 {
                     if (key.Length > _blockLength)
                     {

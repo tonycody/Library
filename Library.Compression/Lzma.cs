@@ -37,7 +37,7 @@ namespace Library.Compression
             info.RedirectStandardOutput = true;
             info.RedirectStandardError = true;
 
-            info.Arguments = "--compress --format=lzma -6 --threads=1 --stdout";
+            info.Arguments = "--compress --format=lzma -4 --threads=1 --stdout";
 
             using (var inCacheStream = new CacheStream(inStream, 1024 * 4, bufferManager))
             using (var outCacheStream = new CacheStream(outStream, 1024 * 4, bufferManager))

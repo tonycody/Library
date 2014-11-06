@@ -316,9 +316,9 @@ namespace Library.Net.Amoeba
 
                                     item.State = UploadState.ComputeHash;
 
-                                    if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                    if (item.HashAlgorithm == HashAlgorithm.Sha256)
                                     {
-                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+                                        cryptoKey = Sha256.ComputeHash(hashProgressStream);
                                     }
 
                                     stream.Seek(0, SeekOrigin.Begin);
@@ -494,9 +494,9 @@ namespace Library.Net.Amoeba
 
                                     item.State = UploadState.ComputeHash;
 
-                                    if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                    if (item.HashAlgorithm == HashAlgorithm.Sha256)
                                     {
-                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+                                        cryptoKey = Sha256.ComputeHash(hashProgressStream);
                                     }
 
                                     stream.Seek(0, SeekOrigin.Begin);
@@ -760,9 +760,9 @@ namespace Library.Net.Amoeba
 
                                     item.State = UploadState.ComputeHash;
 
-                                    if (item.HashAlgorithm == HashAlgorithm.Sha512)
+                                    if (item.HashAlgorithm == HashAlgorithm.Sha256)
                                     {
-                                        cryptoKey = Sha512.ComputeHash(hashProgressStream);
+                                        cryptoKey = Sha256.ComputeHash(hashProgressStream);
                                     }
 
                                     stream.Seek(0, SeekOrigin.Begin);
@@ -826,9 +826,9 @@ namespace Library.Net.Amoeba
                 item.Rank = 1;
                 item.FilePath = filePath;
                 item.CompressionAlgorithm = CompressionAlgorithm.Xz;
-                item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                item.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                 item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
-                item.HashAlgorithm = HashAlgorithm.Sha512;
+                item.HashAlgorithm = HashAlgorithm.Sha256;
                 item.DigitalSignature = digitalSignature;
                 item.Seed = new Seed();
                 item.Seed.Name = name;
@@ -861,9 +861,9 @@ namespace Library.Net.Amoeba
                 item.Rank = 1;
                 item.FilePath = filePath;
                 item.CompressionAlgorithm = CompressionAlgorithm.Xz;
-                item.CryptoAlgorithm = CryptoAlgorithm.Rijndael256;
+                item.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                 item.CorrectionAlgorithm = CorrectionAlgorithm.ReedSolomon8;
-                item.HashAlgorithm = HashAlgorithm.Sha512;
+                item.HashAlgorithm = HashAlgorithm.Sha256;
                 item.DigitalSignature = digitalSignature;
                 item.Seed = new Seed();
                 item.Seed.Name = name;

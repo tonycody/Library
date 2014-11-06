@@ -23,7 +23,7 @@ namespace Library.Net.Outopos
 
         private ManagerState _state = ManagerState.Stop;
 
-        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
+        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha256;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();

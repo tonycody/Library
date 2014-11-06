@@ -42,13 +42,21 @@ namespace Library.Net.Amoeba
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            byte[] lengthBuffer = new byte[4];
-
             for (; ; )
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                byte id;
+                {
+                    byte[] idBuffer = new byte[1];
+                    if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                    id = idBuffer[0];
+                }
+
+                int length;
+                {
+                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    length = NetworkConverter.ToInt32(lengthBuffer);
+                }
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {

@@ -897,16 +897,16 @@ namespace Library.Tools
                 foreach (var path in filePaths)
                 {
                     using (var rstream = new FileStream(path, FileMode.Open, FileAccess.Read))
-                    using (var sha512 = SHA512.Create())
+                    using (var Sha256 = SHA256.Create())
                     {
-                        var buffer = sha512.ComputeHash(rstream);
+                        var buffer = Sha256.ComputeHash(rstream);
                         memoryStream.Write(buffer, 0, buffer.Length);
                     }
                 }
 
-                using (var sha512 = SHA512.Create())
+                using (var Sha256 = SHA256.Create())
                 {
-                    return sha512.ComputeHash(memoryStream.ToArray());
+                    return Sha256.ComputeHash(memoryStream.ToArray());
                 }
             }
         }

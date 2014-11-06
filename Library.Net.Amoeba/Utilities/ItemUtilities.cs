@@ -41,8 +41,8 @@ namespace Library.Net.Amoeba
 
         public static void Write(Stream stream, byte type, Stream exportStream)
         {
-            stream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
             stream.WriteByte(type);
+            stream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
 
             byte[] buffer = null;
 
@@ -77,8 +77,8 @@ namespace Library.Net.Amoeba
                 buffer = _bufferManager.TakeBuffer(encoding.GetMaxByteCount(value.Length));
                 var length = encoding.GetBytes(value, 0, value.Length, buffer, 0);
 
-                stream.Write(NetworkConverter.GetBytes(length), 0, 4);
                 stream.WriteByte(type);
+                stream.Write(NetworkConverter.GetBytes(length), 0, 4);
                 stream.Write(buffer, 0, length);
             }
             finally
@@ -92,22 +92,22 @@ namespace Library.Net.Amoeba
 
         public static void Write(Stream stream, byte type, byte[] value)
         {
-            stream.Write(NetworkConverter.GetBytes((int)value.Length), 0, 4);
             stream.WriteByte(type);
+            stream.Write(NetworkConverter.GetBytes((int)value.Length), 0, 4);
             stream.Write(value, 0, value.Length);
         }
 
         public static void Write(Stream stream, byte type, int value)
         {
-            stream.Write(NetworkConverter.GetBytes((int)4), 0, 4);
             stream.WriteByte(type);
+            stream.Write(NetworkConverter.GetBytes((int)4), 0, 4);
             stream.Write(NetworkConverter.GetBytes(value), 0, 4);
         }
 
         public static void Write(Stream stream, byte type, long value)
         {
-            stream.Write(NetworkConverter.GetBytes((int)8), 0, 4);
             stream.WriteByte(type);
+            stream.Write(NetworkConverter.GetBytes((int)8), 0, 4);
             stream.Write(NetworkConverter.GetBytes(value), 0, 8);
         }
 

@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 
                 byte* key = hashcash1_Create(value, limit, timeout);
 
-                cout << toHexString(key, 64) << endl;
+                cout << toHexString(key, 32) << endl;
 
                 free(key);
 
@@ -133,11 +133,11 @@ int main(int argc, char* argv[])
             {
                 size_t keySize;
                 byte* key = fromHexString((string)argv[3], keySize);
-                if (keySize != 64) return 1;
+                if (keySize != 32) return 1;
 
                 size_t valueSize;
                 byte* value = fromHexString((string)argv[4], valueSize);
-                if (valueSize != 64) return 1;
+                if (valueSize != 32) return 1;
 
                 int32_t count = hashcash1_Verify(key, value);
 
@@ -169,9 +169,9 @@ int main(int argc, char* argv[])
     //    char* arguments[count];
     //    arguments[1] = "hashcash1";
     //    arguments[2] = "create";
-    //    arguments[3] = "01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101";
-    //    arguments[4] = "22";
-    //    arguments[5] = "-1";
+    //    arguments[3] = "0101010101010101010101010101010101010101010101010101010101010101";
+    //    arguments[4] = "256";
+    //    arguments[5] = "1800";
 
     //    main2(count, arguments);
     //}
@@ -183,14 +183,14 @@ int main(int argc, char* argv[])
         arguments[1] = "hashcash1";
         arguments[2] = "verify";
         
-        // 5seconds, 17bit
-        //arguments[3] = "882ba9e83704b21280978d2523788ae731fade4661ddcfc4ef63b78d1a5948397023f688dac368326376f6046e7f0d7f5c3ed9464e53db32187e2985dc97cb91";
-        // 60seconds, 20bit
-        //arguments[3] = "e0ee19d617ee6ea9ea592afbdf71bafba6eecde2beba0d3cdc51419522fe5dbdf18f6830081be1615969b1fe43344fac3c312cd86a487cb1bd04f2c44cddca11";
-        // 1800seconds, 26bit
-        arguments[3] = "c2fed1b85986084544f1699e903d9dac2fe18d9b4986b69a8aa7844bd762b00eb77ec0fa682b6ad4987ebcbac215973741e05bce89a3ef4bd25cfe124a62489d";
+        // 5seconds, 22bit
+        //arguments[3] = "e8637a65315e17953424e0081ed288ed64895b5be8b29274caf95a7d5dcce9d6";
+        // 60seconds, 26bit
+        //arguments[3] = "dd9582a578328dafd1b65e0c5a375cfd5179c14c439c198aef5b08733354f26f";
+        // 1800seconds, 34bit
+        arguments[3] = "ce2025a78ee303fc1cada1e609ca144c15b0b9c25f24452126a467cae17bc920";
 
-        arguments[4] = "01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101";
+        arguments[4] = "0101010101010101010101010101010101010101010101010101010101010101";
 
         main2(count, arguments);
     }

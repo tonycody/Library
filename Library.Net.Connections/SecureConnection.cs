@@ -121,7 +121,7 @@ namespace Library.Net.Connections
                                     KeyExchangeAlgorithm = SecureVersion3.KeyExchangeAlgorithm.EcDiffieHellmanP521 | SecureVersion3.KeyExchangeAlgorithm.Rsa2048,
                                     KeyDerivationAlgorithm = SecureVersion3.KeyDerivationAlgorithm.Pbkdf2,
                                     CryptoAlgorithm = SecureVersion3.CryptoAlgorithm.Aes256,
-                                    HashAlgorithm = SecureVersion3.HashAlgorithm.Sha512,
+                                    HashAlgorithm = SecureVersion3.HashAlgorithm.Sha256,
                                     SessionId = sessionId,
                                 };
                             }
@@ -137,7 +137,7 @@ namespace Library.Net.Connections
                                     KeyExchangeAlgorithm = SecureVersion3.KeyExchangeAlgorithm.Rsa2048,
                                     KeyDerivationAlgorithm = SecureVersion3.KeyDerivationAlgorithm.Pbkdf2,
                                     CryptoAlgorithm = SecureVersion3.CryptoAlgorithm.Aes256,
-                                    HashAlgorithm = SecureVersion3.HashAlgorithm.Sha512,
+                                    HashAlgorithm = SecureVersion3.HashAlgorithm.Sha256,
                                     SessionId = sessionId,
                                 };
                             }
@@ -219,13 +219,13 @@ namespace Library.Net.Connections
                         byte[] myProtocolHash = null;
                         byte[] otherProtocolHash = null;
 
-                        if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                        if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha256))
                         {
                             using (var myProtocolHashStream = myProtocol3.Export(_bufferManager))
                             using (var otherProtocolHashStream = otherProtocol3.Export(_bufferManager))
                             {
-                                myProtocolHash = Sha512.ComputeHash(myProtocolHashStream);
-                                otherProtocolHash = Sha512.ComputeHash(otherProtocolHashStream);
+                                myProtocolHash = Sha256.ComputeHash(myProtocolHashStream);
+                                otherProtocolHash = Sha256.ComputeHash(otherProtocolHashStream);
                             }
                         }
 
@@ -279,9 +279,9 @@ namespace Library.Net.Connections
                                 }
                             }
 
-                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha256))
                             {
-                                seed = EcDiffieHellmanP521.DeriveKeyMaterial(privateKey, otherPublicKey, CngAlgorithm.Sha512);
+                                seed = EcDiffieHellmanP521.DeriveKeyMaterial(privateKey, otherPublicKey, CngAlgorithm.Sha256);
                             }
 
                             if (seed == null) throw new ConnectionException();
@@ -369,10 +369,10 @@ namespace Library.Net.Connections
 
                             HMAC hmac = null;
 
-                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha256))
                             {
-                                hmac = new HMACSHA512();
-                                hmac.HashName = "SHA512";
+                                hmac = new HMACSHA256();
+                                hmac.HashName = "SHA256";
                             }
                             else
                             {
@@ -393,7 +393,7 @@ namespace Library.Net.Connections
                                 throw new ConnectionException();
                             }
 
-                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha256))
                             {
                                 hmacKeyLength = 64;
                             }
@@ -502,9 +502,9 @@ namespace Library.Net.Connections
                             if (stream.Read(totalReceiveSizeBuff, 0, totalReceiveSizeBuff.Length) != totalReceiveSizeBuff.Length) throw new ConnectionException();
                             long totalReceiveSize = NetworkConverter.ToInt64(totalReceiveSizeBuff);
 
-                            if (_informationVersion3.HashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                            if (_informationVersion3.HashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha256))
                             {
-                                const int hashLength = 64;
+                                const int hashLength = 32;
 
                                 _totalReceiveSize += (stream.Length - (8 + hashLength));
 
@@ -516,7 +516,7 @@ namespace Library.Net.Connections
                                 stream.SetLength(stream.Length - hashLength);
                                 stream.Seek(0, SeekOrigin.Begin);
 
-                                byte[] myHmacBuff = HmacSha512.ComputeHash(stream, _informationVersion3.OtherHmacKey);
+                                byte[] myHmacBuff = HmacSha256.ComputeHash(stream, _informationVersion3.OtherHmacKey);
 
                                 if (!Unsafe.Equals(otherHmacBuff, myHmacBuff)) throw new ConnectionException();
 
@@ -659,10 +659,10 @@ namespace Library.Net.Connections
                                 byte[] totalSendSizeBuff = NetworkConverter.GetBytes(_totalSendSize);
                                 bufferStream.Write(totalSendSizeBuff, 0, totalSendSizeBuff.Length);
 
-                                if (_informationVersion3.HashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha512))
+                                if (_informationVersion3.HashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha256))
                                 {
                                     bufferStream.Seek(0, SeekOrigin.Begin);
-                                    byte[] hmacBuff = HmacSha512.ComputeHash(bufferStream, _informationVersion3.MyHmacKey);
+                                    byte[] hmacBuff = HmacSha256.ComputeHash(bufferStream, _informationVersion3.MyHmacKey);
 
                                     bufferStream.Seek(0, SeekOrigin.End);
                                     bufferStream.Write(hmacBuff, 0, hmacBuff.Length);

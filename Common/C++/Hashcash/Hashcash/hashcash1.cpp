@@ -12,7 +12,7 @@ using std::exception;
 using CryptoPP::Exception;
 
 #include "sha.h"
-using CryptoPP::SHA512;
+using CryptoPP::SHA256;
 
 byte* hashcash1_Create(byte* value, int32_t limit, int32_t timeout)
 {
@@ -25,10 +25,10 @@ byte* hashcash1_Create(byte* value, int32_t limit, int32_t timeout)
             clockStart = clock();
         }
 
-        SHA512 hash;
+        SHA256 hash;
         Xorshift xorshift;
 
-        const size_t hashSize = 64;
+        const size_t hashSize = 32;
 
         byte currentState[hashSize * 2];
         byte currentResult[hashSize];
@@ -49,14 +49,6 @@ byte* hashcash1_Create(byte* value, int32_t limit, int32_t timeout)
             ((uint32_t*)currentState)[5] = xorshift.next();
             ((uint32_t*)currentState)[6] = xorshift.next();
             ((uint32_t*)currentState)[7] = xorshift.next();
-            ((uint32_t*)currentState)[8] = xorshift.next();
-            ((uint32_t*)currentState)[9] = xorshift.next();
-            ((uint32_t*)currentState)[10] = xorshift.next();
-            ((uint32_t*)currentState)[11] = xorshift.next();
-            ((uint32_t*)currentState)[12] = xorshift.next();
-            ((uint32_t*)currentState)[13] = xorshift.next();
-            ((uint32_t*)currentState)[14] = xorshift.next();
-            ((uint32_t*)currentState)[15] = xorshift.next();
 
             hash.CalculateDigest(currentResult, currentState, hashSize * 2);
         }
@@ -92,14 +84,6 @@ byte* hashcash1_Create(byte* value, int32_t limit, int32_t timeout)
             ((uint32_t*)currentState)[5] = xorshift.next();
             ((uint32_t*)currentState)[6] = xorshift.next();
             ((uint32_t*)currentState)[7] = xorshift.next();
-            ((uint32_t*)currentState)[8] = xorshift.next();
-            ((uint32_t*)currentState)[9] = xorshift.next();
-            ((uint32_t*)currentState)[10] = xorshift.next();
-            ((uint32_t*)currentState)[11] = xorshift.next();
-            ((uint32_t*)currentState)[12] = xorshift.next();
-            ((uint32_t*)currentState)[13] = xorshift.next();
-            ((uint32_t*)currentState)[14] = xorshift.next();
-            ((uint32_t*)currentState)[15] = xorshift.next();
 
             hash.CalculateDigest(currentResult, currentState, hashSize * 2);
 
@@ -168,10 +152,10 @@ byte* hashcash1_Create(byte* value, int32_t limit, int32_t timeout)
 
 int32_t hashcash1_Verify(byte* key, byte* value)
 {
-    SHA512 hash;
+    SHA256 hash;
     Xorshift xorshift;
 
-    const size_t hashSize = 64;
+    const size_t hashSize = 32;
 
     byte currentState[hashSize * 2];
     byte currentResult[hashSize];

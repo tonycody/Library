@@ -387,9 +387,9 @@ namespace Library.Net.Outopos
                                     }
                                 }
 
-                                if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                                if (key.HashAlgorithm == HashAlgorithm.Sha256)
                                 {
-                                    if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
+                                    if (!Unsafe.Equals(Sha256.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
                                     {
                                         this.Remove(key);
 
@@ -421,9 +421,9 @@ namespace Library.Net.Outopos
                 {
                     if (value.Count > 1024 * 1024 * 32) throw new BadBlockException();
 
-                    if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                    if (key.HashAlgorithm == HashAlgorithm.Sha256)
                     {
-                        if (!Unsafe.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
+                        if (!Unsafe.Equals(Sha256.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
                     else
                     {

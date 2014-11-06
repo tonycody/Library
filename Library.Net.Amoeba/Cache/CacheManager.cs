@@ -62,8 +62,8 @@ namespace Library.Net.Amoeba
         private readonly object _thisLock = new object();
         private volatile bool _disposed;
 
-        public static readonly int SectorSize = 1024 * 32;
-        public static readonly int SpaceSectorUnit = 32 * 1024; // 1MB * 1024 = 1024MB
+        public static readonly int SectorSize = 1024 * 256;
+        public static readonly int SpaceSectorUnit = 4 * 1024; // 1MB * 1024 = 1024MB
 
         private int _threadCount = 2;
 
@@ -833,9 +833,9 @@ namespace Library.Net.Amoeba
 
                 Key key = null;
 
-                if (hashAlgorithm == HashAlgorithm.Sha512)
+                if (hashAlgorithm == HashAlgorithm.Sha256)
                 {
-                    key = new Key(Sha512.ComputeHash(buffer, 0, length), HashAlgorithm.Sha512);
+                    key = new Key(Sha256.ComputeHash(buffer, 0, length), HashAlgorithm.Sha256);
                 }
 
                 if (!shareInfo.Indexes.ContainsKey(key))
@@ -894,55 +894,36 @@ namespace Library.Net.Amoeba
             if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
             if (!Enum.IsDefined(typeof(HashAlgorithm), hashAlgorithm)) throw new ArgumentException("HashAlgorithm に存在しない列挙");
 
-            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Aes256)
             {
+                byte[] aesKey = new byte[32];
+                byte[] aesIv = new byte[16];
+                {
+                    using (MemoryStream stream = new MemoryStream(aesKey.Length + aesIv.Length))
+                    {
+                        stream.Write(cryptoKey, 0, cryptoKey.Length);
+
+                        stream.Seek(0, SeekOrigin.Begin);
+
+                        stream.Read(aesKey, 0, aesKey.Length);
+                        stream.Read(aesIv, 0, aesIv.Length);
+                    }
+                }
+
                 var keys = new KeyCollection();
 
                 try
                 {
-                    using (var rijndael = Rijndael.Create())
+                    using (var aes = Aes.Create())
                     {
-                        rijndael.KeySize = 256;
-                        rijndael.BlockSize = 256;
-                        rijndael.Mode = CipherMode.CBC;
-                        rijndael.Padding = PaddingMode.PKCS7;
+                        aes.KeySize = 256;
+                        aes.Mode = CipherMode.CBC;
+                        aes.Padding = PaddingMode.PKCS7;
 
                         using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
+                        using (CryptoStream cs = new CryptoStream(outStream, aes.CreateEncryptor(aesKey, aesIv), CryptoStreamMode.Write))
                         {
                             Xz.Compress(inStream, cs, _bufferManager);
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    foreach (var key in keys)
-                    {
-                        this.Unlock(key);
-                    }
-
-                    throw;
-                }
-
-                return keys;
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-                var keys = new KeyCollection();
-
-                try
-                {
-                    using (var rijndael = Rijndael.Create())
-                    {
-                        rijndael.KeySize = 256;
-                        rijndael.BlockSize = 256;
-                        rijndael.Mode = CipherMode.CBC;
-                        rijndael.Padding = PaddingMode.PKCS7;
-
-                        using (var outStream = new CacheManagerStreamWriter(out keys, blockLength, hashAlgorithm, this, _bufferManager))
-                        using (CryptoStream cs = new CryptoStream(outStream, rijndael.CreateEncryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Write))
-                        {
-                            Lzma.Compress(inStream, cs, _bufferManager);
                         }
                     }
                 }
@@ -1015,35 +996,33 @@ namespace Library.Net.Amoeba
             if (!Enum.IsDefined(typeof(CompressionAlgorithm), compressionAlgorithm)) throw new ArgumentException("CompressAlgorithm に存在しない列挙");
             if (!Enum.IsDefined(typeof(CryptoAlgorithm), cryptoAlgorithm)) throw new ArgumentException("CryptoAlgorithm に存在しない列挙");
 
-            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
+            if (compressionAlgorithm == CompressionAlgorithm.Xz && cryptoAlgorithm == CryptoAlgorithm.Aes256)
             {
-                using (var rijndael = Rijndael.Create())
+                byte[] aesKey = new byte[32];
+                byte[] aesIv = new byte[16];
                 {
-                    rijndael.KeySize = 256;
-                    rijndael.BlockSize = 256;
-                    rijndael.Mode = CipherMode.CBC;
-                    rijndael.Padding = PaddingMode.PKCS7;
-
-                    using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                    using (MemoryStream stream = new MemoryStream(aesKey.Length + aesIv.Length))
                     {
-                        Xz.Decompress(cs, outStream, _bufferManager);
+                        stream.Write(cryptoKey, 0, cryptoKey.Length);
+
+                        stream.Seek(0, SeekOrigin.Begin);
+
+                        stream.Read(aesKey, 0, aesKey.Length);
+                        stream.Read(aesIv, 0, aesIv.Length);
                     }
                 }
-            }
-            else if (compressionAlgorithm == CompressionAlgorithm.Lzma && cryptoAlgorithm == CryptoAlgorithm.Rijndael256)
-            {
-                using (var rijndael = Rijndael.Create())
+
+                using (var aes = Aes.Create())
                 {
-                    rijndael.KeySize = 256;
-                    rijndael.BlockSize = 256;
-                    rijndael.Mode = CipherMode.CBC;
-                    rijndael.Padding = PaddingMode.PKCS7;
+                    aes.KeySize = 256;
+                    aes.BlockSize = 256;
+                    aes.Mode = CipherMode.CBC;
+                    aes.Padding = PaddingMode.PKCS7;
 
                     using (var inStream = new CacheManagerStreamReader(keys, this, _bufferManager))
-                    using (CryptoStream cs = new CryptoStream(inStream, rijndael.CreateDecryptor(cryptoKey.Take(32).ToArray(), cryptoKey.Skip(32).Take(32).ToArray()), CryptoStreamMode.Read))
+                    using (CryptoStream cs = new CryptoStream(inStream, aes.CreateDecryptor(aesKey, aesIv), CryptoStreamMode.Read))
                     {
-                        Lzma.Decompress(cs, outStream, _bufferManager);
+                        Xz.Decompress(cs, outStream, _bufferManager);
                     }
                 }
             }
@@ -1203,9 +1182,9 @@ namespace Library.Net.Amoeba
 
                         for (int i = 0; i < parityBuffers.Length; i++)
                         {
-                            if (hashAlgorithm == HashAlgorithm.Sha512)
+                            if (hashAlgorithm == HashAlgorithm.Sha256)
                             {
-                                var key = new Key(Sha512.ComputeHash(parityBuffers[i]), hashAlgorithm);
+                                var key = new Key(Sha256.ComputeHash(parityBuffers[i]), hashAlgorithm);
 
                                 lock (this.ThisLock)
                                 {
@@ -1456,9 +1435,9 @@ namespace Library.Net.Amoeba
                                     }
                                 }
 
-                                if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                                if (key.HashAlgorithm == HashAlgorithm.Sha256)
                                 {
-                                    if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
+                                    if (!Unsafe.Equals(Sha256.ComputeHash(buffer, 0, clusterInfo.Length), key.Hash))
                                     {
                                         this.Remove(key);
 
@@ -1503,9 +1482,9 @@ namespace Library.Net.Amoeba
                                     int length = (int)Math.Min(stream.Length - stream.Position, shareInfo.BlockLength);
                                     stream.Read(buffer, 0, length);
 
-                                    if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                                    if (key.HashAlgorithm == HashAlgorithm.Sha256)
                                     {
-                                        if (!Unsafe.Equals(Sha512.ComputeHash(buffer, 0, length), key.Hash))
+                                        if (!Unsafe.Equals(Sha256.ComputeHash(buffer, 0, length), key.Hash))
                                         {
                                             foreach (var item in _ids.ToArray())
                                             {
@@ -1546,9 +1525,9 @@ namespace Library.Net.Amoeba
                 {
                     if (value.Count > 1024 * 1024 * 32) throw new BadBlockException();
 
-                    if (key.HashAlgorithm == HashAlgorithm.Sha512)
+                    if (key.HashAlgorithm == HashAlgorithm.Sha256)
                     {
-                        if (!Unsafe.Equals(Sha512.ComputeHash(value), key.Hash)) throw new BadBlockException();
+                        if (!Unsafe.Equals(Sha256.ComputeHash(value), key.Hash)) throw new BadBlockException();
                     }
                     else
                     {

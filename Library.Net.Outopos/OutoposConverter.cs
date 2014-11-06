@@ -265,7 +265,7 @@ namespace Library.Net.Outopos
         public static Node FromNodeString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Node:") && !item.StartsWith("Node@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Node:")) throw new ArgumentException("item");
 
             try
             {
@@ -300,7 +300,7 @@ namespace Library.Net.Outopos
         public static Wiki FromWikiString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Wiki:") && !item.StartsWith("Wiki@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Wiki:")) throw new ArgumentException("item");
 
             try
             {
@@ -335,7 +335,7 @@ namespace Library.Net.Outopos
         public static Chat FromChatString(string item)
         {
             if (item == null) throw new ArgumentNullException("item");
-            if (!item.StartsWith("Chat:") && !item.StartsWith("Chat@")) throw new ArgumentException("item");
+            if (!item.StartsWith("Chat:")) throw new ArgumentException("item");
 
             try
             {

@@ -56,10 +56,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Derivation\Kdf.cs" />
     <Compile Include="Derivation\Pbkdf2.cs" />
     <Compile Include="Mining\Cash.cs" />
     <Compile Include="Mining\CashAlgorithm.cs" />
-    <Compile Include="Hash\HmacSha512.cs" />
+    <Compile Include="Hash\HmacSha256.cs" />
     <Compile Include="Mining\ICash.cs" />
     <Compile Include="Mining\Miner.cs" />
     <Compile Include="Utilities\EqualityComparer.cs" />
@@ -78,7 +79,7 @@
     <Compile Include="Utilities\Rsa2048.cs" />
     <Compile Include="Utilities\Converter.cs" />
     <Compile Include="Hash\Crc32_Castagnoli.cs" />
-    <Compile Include="Hash\Sha512.cs" />
+    <Compile Include="Hash\Sha256.cs" />
     <Compile Include="Signature\ICertificate.cs" />
     <Compile Include="Exchange\IExchangeAlgorithm.cs" />
     <Compile Include="Signature\DigitalSignature.cs" />

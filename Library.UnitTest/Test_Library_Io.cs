@@ -233,14 +233,14 @@ namespace Library.UnitTest
             using (FileStream stream1 = new FileStream("QueueStream1.tmp", FileMode.Open))
             using (FileStream stream2 = new FileStream("QueueStream2.tmp", FileMode.Open))
             {
-                Assert.IsTrue(CollectionUtilities.Equals(Sha512.ComputeHash(stream1), Sha512.ComputeHash(stream2)), "QueueStream #1");
+                Assert.IsTrue(CollectionUtilities.Equals(Sha256.ComputeHash(stream1), Sha256.ComputeHash(stream2)), "QueueStream #1");
             }
 
             using (FileStream stream1 = new FileStream("QueueStream1.tmp", FileMode.Open))
             using (QueueStream queueStream = new QueueStream(stream1, StreamMode.Read, 1024 * 1024 * 4, _bufferManager))
             using (FileStream stream2 = new FileStream("QueueStream2.tmp", FileMode.Open))
             {
-                Assert.IsTrue(CollectionUtilities.Equals(Sha512.ComputeHash(queueStream), Sha512.ComputeHash(stream2)), "QueueStream #2");
+                Assert.IsTrue(CollectionUtilities.Equals(Sha256.ComputeHash(queueStream), Sha256.ComputeHash(stream2)), "QueueStream #2");
             }
         }
     }

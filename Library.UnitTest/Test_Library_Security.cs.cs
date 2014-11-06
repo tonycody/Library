@@ -19,16 +19,16 @@ namespace Library.UnitTest
         [Test]
         public void Test_Sigunature()
         {
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha256, DigitalSignatureAlgorithm.EcDsaP521_Sha256 })
             {
                 var signature = Signature.GetSignature(new DigitalSignature("123", a));
 
                 Assert.IsTrue(Signature.Check(signature));
                 Assert.AreEqual(Signature.GetNickname(signature), "123");
-                Assert.IsTrue(Signature.GetHash(signature).Length == 64);
+                Assert.IsTrue(Signature.GetHash(signature).Length == 32);
             }
 
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha256, DigitalSignatureAlgorithm.EcDsaP521_Sha256 })
             {
                 string signature;
 
@@ -40,14 +40,14 @@ namespace Library.UnitTest
 
                 Assert.IsTrue(Signature.Check(signature));
                 Assert.AreEqual(Signature.GetNickname(signature), "123");
-                Assert.IsTrue(Signature.GetHash(signature).Length == 64);
+                Assert.IsTrue(Signature.GetHash(signature).Length == 32);
             }
         }
 
         [Test]
         public void Test_DigitalSigunature()
         {
-            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha512, DigitalSignatureAlgorithm.EcDsaP521_Sha512 })
+            foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha256, DigitalSignatureAlgorithm.EcDsaP521_Sha256 })
             {
                 DigitalSignature sigunature = new DigitalSignature("123", a);
 
@@ -78,6 +78,15 @@ namespace Library.UnitTest
         }
 
         [Test]
+        public void Test_Kdf()
+        {
+            Kdf kdf = new Kdf(System.Security.Cryptography.SHA256.Create());
+            var value = kdf.GetBytes(new byte[4], 128);
+
+            Assert.IsTrue(value.Length >= 128, "Kdf #1");
+        }
+
+        [Test]
         public void Test_Pbkdf2()
         {
             byte[] password = new byte[256];
@@ -97,15 +106,15 @@ namespace Library.UnitTest
             //_random.NextBytes(password);
             //_random.NextBytes(salt);
 
-            //using (var hmac = new System.Security.Cryptography.HMACSHA512())
+            //using (var hmac = new System.Security.Cryptography.HMACSHA256())
             //{
-            //    CryptoConfig.AddAlgorithm(typeof(SHA512Cng),
-            //        "SHA512",
-            //        "SHA512Cng",
-            //        "System.Security.Cryptography.SHA512",
-            //        "System.Security.Cryptography.SHA512Cng");
+            //    CryptoConfig.AddAlgorithm(typeof(SHA256Cng),
+            //        "SHA256",
+            //        "SHA256Cng",
+            //        "System.Security.Cryptography.SHA256",
+            //        "System.Security.Cryptography.SHA256Cng");
 
-            //    hmac.HashName = "System.Security.Cryptography.SHA512";
+            //    hmac.HashName = "System.Security.Cryptography.SHA256";
 
             //    Pbkdf2 pbkdf2 = new Pbkdf2(hmac, password, salt, 1024);
             //    var h = pbkdf2.GetBytes(10);
@@ -136,7 +145,7 @@ namespace Library.UnitTest
         }
 
         [Test]
-        public void Test_HmacSha512()
+        public void Test_HmacSha256()
         {
             // http://tools.ietf.org/html/rfc4868#section-2.7.1
             {
@@ -145,12 +154,12 @@ namespace Library.UnitTest
 
                 using (MemoryStream stream = new MemoryStream(value))
                 {
-                    var s = NetworkConverter.ToHexString(HmacSha512.ComputeHash(stream, key));
+                    var s = NetworkConverter.ToHexString(HmacSha256.ComputeHash(stream, key));
                 }
 
-                using (HMACSHA512 hmacSha512 = new HMACSHA512(key))
+                using (HMACSHA256 hmacSha256 = new HMACSHA256(key))
                 {
-                    var s = NetworkConverter.ToHexString(hmacSha512.ComputeHash(value));
+                    var s = NetworkConverter.ToHexString(hmacSha256.ComputeHash(value));
                 }
             }
 
@@ -170,9 +179,9 @@ namespace Library.UnitTest
                 using (MemoryStream stream1 = new MemoryStream(buffer))
                 using (MemoryStream stream2 = new MemoryStream(buffer))
                 {
-                    using (HMACSHA512 hmacSha512 = new HMACSHA512(key))
+                    using (HMACSHA256 hmacSha256 = new HMACSHA256(key))
                     {
-                        Assert.IsTrue(Unsafe.Equals(hmacSha512.ComputeHash(stream1), HmacSha512.ComputeHash(stream2, key)));
+                        Assert.IsTrue(Unsafe.Equals(hmacSha256.ComputeHash(stream1), HmacSha256.ComputeHash(stream2, key)));
                     }
                 }
             }
@@ -281,7 +290,7 @@ namespace Library.UnitTest
         //            Unsafe.Copy(key, 0, buffer, 0, 64);
         //            Unsafe.Copy(value, 0, buffer, 64, 64);
 
-        //            result = Sha512.ComputeHash(buffer, 0, 128);
+        //            result = Sha256.ComputeHash(buffer, 0, 128);
 
         //            bufferManager.ReturnBuffer(buffer);
         //        }

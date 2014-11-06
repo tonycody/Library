@@ -21,12 +21,12 @@ namespace Library.Net.Outopos
 
         private enum ConvertCryptoAlgorithm : byte
         {
-            Rijndael256 = 0,
+            Aes256 = 0,
         }
 
         private enum ConvertHashAlgorithm : byte
         {
-            Sha512 = 0,
+            Sha256 = 0,
         }
 
         private static BufferManager _bufferManager = BufferManager.Instance;
@@ -213,7 +213,7 @@ namespace Library.Net.Outopos
                 try
                 {
                     outStream = new BufferStream(_bufferManager);
-                    outStream.WriteByte((byte)ConvertCryptoAlgorithm.Rijndael256);
+                    outStream.WriteByte((byte)ConvertCryptoAlgorithm.Aes256);
 
                     byte[] cryptoKey = new byte[32];
                     _random.GetBytes(cryptoKey);
@@ -285,7 +285,7 @@ namespace Library.Net.Outopos
             {
                 byte type = (byte)stream.ReadByte();
 
-                if (type == (byte)ConvertCryptoAlgorithm.Rijndael256)
+                if (type == (byte)ConvertCryptoAlgorithm.Aes256)
                 {
                     byte[] cryptoKey;
 
@@ -486,10 +486,10 @@ namespace Library.Net.Outopos
                 var targetStream = new RangeStream(stream, true);
 
                 BufferStream metadataStream = new BufferStream(_bufferManager);
-                metadataStream.WriteByte((byte)ConvertHashAlgorithm.Sha512);
+                metadataStream.WriteByte((byte)ConvertHashAlgorithm.Sha256);
 
                 targetStream.Seek(0, SeekOrigin.Begin);
-                var hash = Sha512.ComputeHash(targetStream);
+                var hash = Sha256.ComputeHash(targetStream);
 
                 BufferStream hashStream = new BufferStream(_bufferManager);
                 hashStream.Write(hash, 0, hash.Length);
@@ -508,21 +508,21 @@ namespace Library.Net.Outopos
 
             byte type = (byte)stream.ReadByte();
 
-            if (type == (byte)ConvertHashAlgorithm.Sha512)
+            if (type == (byte)ConvertHashAlgorithm.Sha256)
             {
                 Stream dataStream = null;
 
                 try
                 {
-                    byte[] hash = new byte[64];
+                    byte[] hash = new byte[32];
 
-                    using (RangeStream hashStream = new RangeStream(stream, stream.Length - 64, 64, true))
+                    using (RangeStream hashStream = new RangeStream(stream, stream.Length - 32, 32, true))
                     {
                         hashStream.Read(hash, 0, hash.Length);
                     }
 
-                    dataStream = new RangeStream(stream, 1, stream.Length - (1 + 64));
-                    if (!Unsafe.Equals(hash, Sha512.ComputeHash(dataStream))) throw new FormatException();
+                    dataStream = new RangeStream(stream, 1, stream.Length - (1 + 32));
+                    if (!Unsafe.Equals(hash, Sha256.ComputeHash(dataStream))) throw new FormatException();
 
                     dataStream.Seek(0, SeekOrigin.Begin);
 

@@ -238,12 +238,12 @@ namespace Library.UnitTest
 
                 if (_random.Next(0, 100) < 50)
                 {
-                    clientDigitalSignature = new DigitalSignature("NickName1", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    clientDigitalSignature = new DigitalSignature("NickName1", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
                 }
 
                 if (_random.Next(0, 100) < 50)
                 {
-                    serverDigitalSignature = new DigitalSignature("NickName2", DigitalSignatureAlgorithm.EcDsaP521_Sha512);
+                    serverDigitalSignature = new DigitalSignature("NickName2", DigitalSignatureAlgorithm.EcDsaP521_Sha256);
                 }
 
                 SecureConnectionVersion clientVersion;

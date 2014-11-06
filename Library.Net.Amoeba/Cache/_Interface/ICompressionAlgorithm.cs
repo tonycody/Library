@@ -8,11 +8,8 @@ namespace Library.Net.Amoeba
         [EnumMember(Value = "None")]
         None = 0,
 
-        [EnumMember(Value = "Lzma")]
-        Lzma = 1,
-
         [EnumMember(Value = "Xz")]
-        Xz = 2,
+        Xz = 1,
     }
 
     public interface ICompressionAlgorithm

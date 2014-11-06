@@ -142,7 +142,7 @@ namespace Library.Net.Amoeba
             _direction = direction;
             _bufferManager = bufferManager;
 
-            _myProtocolVersion = ProtocolVersion.Version1;
+            _myProtocolVersion = ProtocolVersion.Version2;
         }
 
         public byte[] SesstionId
@@ -260,10 +260,10 @@ namespace Library.Net.Amoeba
 
                         xml.WriteStartElement("Protocol");
 
-                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version1))
+                        if (_myProtocolVersion.HasFlag(ProtocolVersion.Version2))
                         {
                             xml.WriteStartElement("Amoeba");
-                            xml.WriteAttributeString("Version", "1");
+                            xml.WriteAttributeString("Version", "2");
                             xml.WriteEndElement(); //Protocol
                         }
 
@@ -288,9 +288,9 @@ namespace Library.Net.Amoeba
                                 {
                                     var version = xml.GetAttribute("Version");
 
-                                    if (version == "1")
+                                    if (version == "2")
                                     {
-                                        _otherProtocolVersion |= ProtocolVersion.Version1;
+                                        _otherProtocolVersion |= ProtocolVersion.Version2;
                                     }
                                 }
                             }
@@ -299,7 +299,7 @@ namespace Library.Net.Amoeba
 
                     _protocolVersion = _myProtocolVersion & _otherProtocolVersion;
 
-                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
                     {
                         using (Stream stream = new MemoryStream(_mySessionId))
                         {
@@ -393,7 +393,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {
@@ -427,7 +427,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {
@@ -459,7 +459,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {
@@ -502,7 +502,7 @@ namespace Library.Net.Amoeba
 
                     sw.Restart();
 
-                    if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+                    if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
                     {
                         using (Stream stream = _connection.Receive(_receiveTimeSpan))
                         {
@@ -672,7 +672,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -709,7 +709,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -746,7 +746,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -783,7 +783,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -823,7 +823,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -860,7 +860,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 Stream stream = new BufferStream(_bufferManager);
 
@@ -897,7 +897,7 @@ namespace Library.Net.Amoeba
         {
             if (_disposed) throw new ObjectDisposedException(this.GetType().FullName);
 
-            if (_protocolVersion.HasFlag(ProtocolVersion.Version1))
+            if (_protocolVersion.HasFlag(ProtocolVersion.Version2))
             {
                 try
                 {
@@ -947,13 +947,21 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                byte[] lengthBuffer = new byte[4];
-
                 for (; ; )
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    byte id;
+                    {
+                        byte[] idBuffer = new byte[1];
+                        if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                        id = idBuffer[0];
+                    }
+
+                    int length;
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        length = NetworkConverter.ToInt32(lengthBuffer);
+                    }
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
@@ -1037,13 +1045,21 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                byte[] lengthBuffer = new byte[4];
-
                 for (; ; )
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    byte id;
+                    {
+                        byte[] idBuffer = new byte[1];
+                        if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                        id = idBuffer[0];
+                    }
+
+                    int length;
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        length = NetworkConverter.ToInt32(lengthBuffer);
+                    }
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
@@ -1127,13 +1143,21 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                byte[] lengthBuffer = new byte[4];
-
                 for (; ; )
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    byte id;
+                    {
+                        byte[] idBuffer = new byte[1];
+                        if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                        id = idBuffer[0];
+                    }
+
+                    int length;
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        length = NetworkConverter.ToInt32(lengthBuffer);
+                    }
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
@@ -1220,13 +1244,21 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                byte[] lengthBuffer = new byte[4];
-
                 for (; ; )
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    byte id;
+                    {
+                        byte[] idBuffer = new byte[1];
+                        if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                        id = idBuffer[0];
+                    }
+
+                    int length;
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        length = NetworkConverter.ToInt32(lengthBuffer);
+                    }
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
@@ -1279,8 +1311,8 @@ namespace Library.Net.Amoeba
                 // Value
                 if (this.Value.Array != null)
                 {
-                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Value);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)this.Value.Count), 0, 4);
                     bufferStream.Write(this.Value.Array, this.Value.Offset, this.Value.Count);
                 }
 
@@ -1342,13 +1374,21 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                byte[] lengthBuffer = new byte[4];
-
                 for (; ; )
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    byte id;
+                    {
+                        byte[] idBuffer = new byte[1];
+                        if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                        id = idBuffer[0];
+                    }
+
+                    int length;
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        length = NetworkConverter.ToInt32(lengthBuffer);
+                    }
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
@@ -1429,13 +1469,21 @@ namespace Library.Net.Amoeba
 
             protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
             {
-                byte[] lengthBuffer = new byte[4];
-
                 for (; ; )
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    byte id;
+                    {
+                        byte[] idBuffer = new byte[1];
+                        if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                        id = idBuffer[0];
+                    }
+
+                    int length;
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        length = NetworkConverter.ToInt32(lengthBuffer);
+                    }
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {

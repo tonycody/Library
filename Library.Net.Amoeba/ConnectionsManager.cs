@@ -105,7 +105,7 @@ namespace Library.Net.Amoeba
 
         private const int _routeTableMinCount = 100;
 
-        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
+        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha256;
 
         public static readonly string Keyword_Link = "_link_";
         public static readonly string Keyword_Store = "_store_";
@@ -399,7 +399,7 @@ namespace Library.Net.Amoeba
         {
             return !(key == null
                 || key.Hash == null || key.Hash.Length == 0
-                || key.HashAlgorithm != HashAlgorithm.Sha512);
+                || key.HashAlgorithm != HashAlgorithm.Sha256);
         }
 
         private static bool Check(string signature)

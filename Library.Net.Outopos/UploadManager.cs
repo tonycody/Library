@@ -24,7 +24,7 @@ namespace Library.Net.Outopos
 
         private ManagerState _state = ManagerState.Stop;
 
-        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha512;
+        private const HashAlgorithm _hashAlgorithm = HashAlgorithm.Sha256;
 
         private volatile bool _disposed;
         private readonly object _thisLock = new object();
@@ -154,9 +154,9 @@ namespace Library.Net.Outopos
                                 Key key = null;
 
                                 {
-                                    if (_hashAlgorithm == HashAlgorithm.Sha512)
+                                    if (_hashAlgorithm == HashAlgorithm.Sha256)
                                     {
-                                        key = new Key(Sha512.ComputeHash(buffer), _hashAlgorithm);
+                                        key = new Key(Sha256.ComputeHash(buffer), _hashAlgorithm);
                                     }
 
                                     this.Lock(key);

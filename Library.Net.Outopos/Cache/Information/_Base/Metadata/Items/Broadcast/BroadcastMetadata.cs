@@ -45,13 +45,21 @@ namespace Library.Net.Outopos
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
         {
-            byte[] lengthBuffer = new byte[4];
-
             for (; ; )
             {
-                if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                int length = NetworkConverter.ToInt32(lengthBuffer);
-                byte id = (byte)stream.ReadByte();
+                byte id;
+                {
+                    byte[] idBuffer = new byte[1];
+                    if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                    id = idBuffer[0];
+                }
+
+                int length;
+                {
+                    byte[] lengthBuffer = new byte[4];
+                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                    length = NetworkConverter.ToInt32(lengthBuffer);
+                }
 
                 using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                 {
@@ -215,21 +223,21 @@ namespace Library.Net.Outopos
 
         #region IComputeHash
 
-        private volatile byte[] _sha512_hash;
+        private volatile byte[] _Sha256_hash;
 
         public byte[] CreateHash(HashAlgorithm hashAlgorithm)
         {
-            if (_sha512_hash == null)
+            if (_Sha256_hash == null)
             {
                 using (var stream = this.Export(BufferManager.Instance))
                 {
-                    _sha512_hash = Sha512.ComputeHash(stream);
+                    _Sha256_hash = Sha256.ComputeHash(stream);
                 }
             }
 
-            if (hashAlgorithm == HashAlgorithm.Sha512)
+            if (hashAlgorithm == HashAlgorithm.Sha256)
             {
-                return _sha512_hash;
+                return _Sha256_hash;
             }
 
             return null;

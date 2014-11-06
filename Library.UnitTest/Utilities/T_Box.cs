@@ -49,7 +49,7 @@ namespace Library.UnitTest
 
         protected override void Initialize()
         {
-            
+
         }
 
         protected override void ProtectedImport(Stream stream, BufferManager bufferManager, int count)
@@ -59,13 +59,22 @@ namespace Library.UnitTest
             lock (this.ThisLock)
             {
                 Encoding encoding = new UTF8Encoding(false);
-                byte[] lengthBuffer = new byte[4];
 
                 for (; ; )
                 {
-                    if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
-                    int length = NetworkConverter.ToInt32(lengthBuffer);
-                    byte id = (byte)stream.ReadByte();
+                    byte id;
+                    {
+                        byte[] idBuffer = new byte[1];
+                        if (stream.Read(idBuffer, 0, idBuffer.Length) != idBuffer.Length) return;
+                        id = idBuffer[0];
+                    }
+
+                    int length;
+                    {
+                        byte[] lengthBuffer = new byte[4];
+                        if (stream.Read(lengthBuffer, 0, lengthBuffer.Length) != lengthBuffer.Length) return;
+                        length = NetworkConverter.ToInt32(lengthBuffer);
+                    }
 
                     using (RangeStream rangeStream = new RangeStream(stream, stream.Position, length, true))
                     {
@@ -121,6 +130,8 @@ namespace Library.UnitTest
                 if (this.Name != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.WriteByte((byte)SerializeId.Name);
+
                     bufferStream.SetLength(5);
                     bufferStream.Seek(5, SeekOrigin.Begin);
 
@@ -131,8 +142,7 @@ namespace Library.UnitTest
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Name);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 1, 4);
 
                     streams.Add(bufferStream);
                 }
@@ -140,6 +150,8 @@ namespace Library.UnitTest
                 if (this.CreationTime != DateTime.MinValue)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.WriteByte((byte)SerializeId.CreationTime);
+
                     bufferStream.SetLength(5);
                     bufferStream.Seek(5, SeekOrigin.Begin);
 
@@ -150,8 +162,7 @@ namespace Library.UnitTest
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.CreationTime);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 1, 4);
 
                     streams.Add(bufferStream);
                 }
@@ -159,6 +170,8 @@ namespace Library.UnitTest
                 if (this.Comment != null)
                 {
                     BufferStream bufferStream = new BufferStream(bufferManager);
+                    bufferStream.WriteByte((byte)SerializeId.Comment);
+
                     bufferStream.SetLength(5);
                     bufferStream.Seek(5, SeekOrigin.Begin);
 
@@ -169,8 +182,7 @@ namespace Library.UnitTest
                     }
 
                     bufferStream.Seek(0, SeekOrigin.Begin);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 0, 4);
-                    bufferStream.WriteByte((byte)SerializeId.Comment);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)bufferStream.Length - 5), 1, 4);
 
                     streams.Add(bufferStream);
                 }
@@ -180,8 +192,8 @@ namespace Library.UnitTest
                     Stream exportStream = s.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Seed);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
 
                     streams.Add(new UniteStream(bufferStream, exportStream));
                 }
@@ -191,8 +203,8 @@ namespace Library.UnitTest
                     Stream exportStream = b.Export(bufferManager, count + 1);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.D_Box);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
 
                     streams.Add(new UniteStream(bufferStream, exportStream));
                 }
@@ -203,8 +215,8 @@ namespace Library.UnitTest
                     Stream exportStream = this.Certificate.Export(bufferManager);
 
                     BufferStream bufferStream = new BufferStream(bufferManager);
-                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
                     bufferStream.WriteByte((byte)SerializeId.Certificate);
+                    bufferStream.Write(NetworkConverter.GetBytes((int)exportStream.Length), 0, 4);
 
                     streams.Add(new UniteStream(bufferStream, exportStream));
                 }

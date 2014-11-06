@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Library.Security
 {
-    internal static class EcDsaP521_Sha512
+    internal static class EcDsaP521_Sha256
     {
         /// <summary>
         /// 公開鍵と秘密鍵を作成して返す
@@ -38,7 +38,7 @@ namespace Library.Security
             using (CngKey ck = CngKey.Import(privateKey, CngKeyBlobFormat.Pkcs8PrivateBlob))
             using (ECDsaCng ecdsa = new ECDsaCng(ck))
             {
-                ecdsa.HashAlgorithm = CngAlgorithm.Sha512;
+                ecdsa.HashAlgorithm = CngAlgorithm.Sha256;
                 return ecdsa.SignData(stream);
             }
 #endif
@@ -54,7 +54,7 @@ namespace Library.Security
                 using (ECDsaCng ecdsa = new ECDsaCng())
                 {
                     ecdsa.FromXmlString(Encoding.ASCII.GetString(publicKey), ECKeyXmlFormat.Rfc4050);
-                    ecdsa.HashAlgorithm = CngAlgorithm.Sha512;
+                    ecdsa.HashAlgorithm = CngAlgorithm.Sha256;
                     return ecdsa.VerifyData(stream, signature);
                 }
             }

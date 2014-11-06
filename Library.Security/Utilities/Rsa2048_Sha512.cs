@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Library.Security
 {
-    class Rsa2048_Sha512
+    class Rsa2048_Sha256
     {
         public static void CreateKeys(out byte[] publicKey, out byte[] privateKey)
         {
@@ -23,11 +23,11 @@ namespace Library.Security
                 rsa.FromXmlString(Encoding.ASCII.GetString(privateKey));
 
                 RSAPKCS1SignatureFormatter rsaFormatter = new RSAPKCS1SignatureFormatter(rsa);
-                rsaFormatter.SetHashAlgorithm("SHA512");
+                rsaFormatter.SetHashAlgorithm("SHA256");
 
-                using (var sha512 = SHA512.Create())
+                using (var Sha256 = SHA256.Create())
                 {
-                    return rsaFormatter.CreateSignature(sha512.ComputeHash(stream));
+                    return rsaFormatter.CreateSignature(Sha256.ComputeHash(stream));
                 }
             }
         }
@@ -41,11 +41,11 @@ namespace Library.Security
                     rsa.FromXmlString(Encoding.ASCII.GetString(publicKey));
 
                     RSAPKCS1SignatureDeformatter rsaDeformatter = new RSAPKCS1SignatureDeformatter(rsa);
-                    rsaDeformatter.SetHashAlgorithm("SHA512");
+                    rsaDeformatter.SetHashAlgorithm("SHA256");
 
-                    using (var sha512 = SHA512.Create())
+                    using (var Sha256 = SHA256.Create())
                     {
-                        return rsaDeformatter.VerifySignature(sha512.ComputeHash(stream), signature);
+                        return rsaDeformatter.VerifySignature(Sha256.ComputeHash(stream), signature);
                     }
                 }
             }
