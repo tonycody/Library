@@ -31,7 +31,7 @@ namespace Library.Net.Connections.SecureVersion3
 
         private volatile object _thisLock;
 
-        public static readonly int MaxSessionIdLength = 64;
+        public static readonly int MaxSessionIdLength = 32;
 
         protected override void Initialize()
         {

@@ -350,7 +350,7 @@ namespace Library.Net.Outopos
 
                         using (Stream stream = _connection.Receive(timeout - stopwatch.Elapsed))
                         {
-                            if (stream.Length > 64) throw new ConnectionManagerException();
+                            if (stream.Length > 32) throw new ConnectionManagerException();
 
                             _otherSessionId = new byte[stream.Length];
                             stream.Read(_otherSessionId, 0, _otherSessionId.Length);
@@ -368,7 +368,7 @@ namespace Library.Net.Outopos
 
                         _aliveStopwatch.Restart();
 
-                        _pingHash = new byte[64];
+                        _pingHash = new byte[32];
 
                         using (var rng = RandomNumberGenerator.Create())
                         {
@@ -566,7 +566,7 @@ namespace Library.Net.Outopos
                                     }
                                     else if (type == (byte)SerializeId.Ping)
                                     {
-                                        if (stream2.Length > 64) continue;
+                                        if (stream2.Length > 32) continue;
 
                                         var buffer = new byte[stream2.Length];
                                         stream2.Read(buffer, 0, buffer.Length);
@@ -575,7 +575,7 @@ namespace Library.Net.Outopos
                                     }
                                     else if (type == (byte)SerializeId.Pong)
                                     {
-                                        if (stream2.Length > 64) continue;
+                                        if (stream2.Length > 32) continue;
 
                                         var buffer = new byte[stream2.Length];
                                         stream2.Read(buffer, 0, buffer.Length);

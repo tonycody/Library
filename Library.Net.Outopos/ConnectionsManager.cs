@@ -460,7 +460,7 @@ namespace Library.Net.Outopos
         {
             lock (this.ThisLock)
             {
-                _mySessionId = new byte[64];
+                _mySessionId = new byte[32];
 
                 using (var rng = RandomNumberGenerator.Create())
                 {

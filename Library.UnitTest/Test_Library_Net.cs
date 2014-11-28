@@ -21,7 +21,7 @@ namespace Library.UnitTest
                     Node node = null;
 
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -36,7 +36,7 @@ namespace Library.UnitTest
                     Node node = null;
 
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -51,7 +51,7 @@ namespace Library.UnitTest
                     Node node = null;
 
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -76,7 +76,7 @@ namespace Library.UnitTest
 
                 for (int i = 0; i < 1024; i++)
                 {
-                    var id = new byte[64];
+                    var id = new byte[32];
                     _random.NextBytes(id);
 
                     var slist = Kademlia<Node>.Search(kademlia.BaseNode.Id, id, kademlia.ToArray(), kademlia.Count).ToList();
@@ -90,7 +90,7 @@ namespace Library.UnitTest
 
                 for (int i = 0; i < 1024; i++)
                 {
-                    var id = new byte[64];
+                    var id = new byte[32];
                     _random.NextBytes(id);
 
                     var slist = Kademlia<Node>.Search(id, kademlia.ToArray(), kademlia.Count).ToList();

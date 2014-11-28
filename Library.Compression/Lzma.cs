@@ -39,8 +39,8 @@ namespace Library.Compression
 
             info.Arguments = "--compress --format=lzma -4 --threads=1 --stdout";
 
-            using (var inCacheStream = new CacheStream(inStream, 1024 * 4, bufferManager))
-            using (var outCacheStream = new CacheStream(outStream, 1024 * 4, bufferManager))
+            using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
+            using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
             {
                 using (Process process = Process.Start(info))
                 {
@@ -57,7 +57,7 @@ namespace Library.Compression
                     {
                         try
                         {
-                            byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
+                            byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
 
                             try
                             {
@@ -86,7 +86,7 @@ namespace Library.Compression
 
                     try
                     {
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
 
                         try
                         {
@@ -129,8 +129,8 @@ namespace Library.Compression
 
             info.Arguments = "--decompress --format=lzma --memlimit-decompress=256MiB --stdout";
 
-            using (var inCacheStream = new CacheStream(inStream, 1024 * 4, bufferManager))
-            using (var outCacheStream = new CacheStream(outStream, 1024 * 4, bufferManager))
+            using (var inCacheStream = new CacheStream(inStream, 1024 * 32, bufferManager))
+            using (var outCacheStream = new CacheStream(outStream, 1024 * 32, bufferManager))
             {
                 using (Process process = Process.Start(info))
                 {
@@ -147,7 +147,7 @@ namespace Library.Compression
                     {
                         try
                         {
-                            byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
+                            byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
 
                             try
                             {
@@ -176,7 +176,7 @@ namespace Library.Compression
 
                     try
                     {
-                        byte[] buffer = bufferManager.TakeBuffer(1024 * 4);
+                        byte[] buffer = bufferManager.TakeBuffer(1024 * 32);
 
                         try
                         {

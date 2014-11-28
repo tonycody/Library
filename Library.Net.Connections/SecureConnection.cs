@@ -113,7 +113,7 @@ namespace Library.Net.Connections
                         if (osInfo.Platform == PlatformID.Win32NT && osInfo.Version >= new Version(6, 0))
                         {
                             {
-                                byte[] sessionId = new byte[64];
+                                byte[] sessionId = new byte[32];
                                 _random.GetBytes(sessionId);
 
                                 myProtocol3 = new SecureVersion3.ProtocolInformation()
@@ -129,7 +129,7 @@ namespace Library.Net.Connections
                         else
                         {
                             {
-                                byte[] sessionId = new byte[64];
+                                byte[] sessionId = new byte[32];
                                 _random.GetBytes(sessionId);
 
                                 myProtocol3 = new SecureVersion3.ProtocolInformation()
@@ -395,7 +395,7 @@ namespace Library.Net.Connections
 
                             if (hashAlgorithm.HasFlag(SecureVersion3.HashAlgorithm.Sha256))
                             {
-                                hmacKeyLength = 64;
+                                hmacKeyLength = 32;
                             }
                             else
                             {

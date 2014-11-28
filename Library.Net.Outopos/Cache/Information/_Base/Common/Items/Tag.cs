@@ -26,7 +26,7 @@ namespace Library.Net.Outopos
         private volatile int _hashCode;
 
         public static readonly int MaxNameLength = 256;
-        public static readonly int MaxIdLength = 64;
+        public static readonly int MaxIdLength = 32;
 
         public Tag(string name, byte[] id)
         {

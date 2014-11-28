@@ -29,7 +29,7 @@ namespace Library.Net.Connections.SecureVersion3
         private volatile object _thisLock;
 
         public static readonly int MaxExchangeKeyLength = 8192;
-        public static readonly int MaxProtocolHashLength = 64;
+        public static readonly int MaxProtocolHashLength = 32;
 
         public ConnectionSignature()
         {

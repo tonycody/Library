@@ -29,7 +29,7 @@ namespace Library.UnitTest
             Node node = null;
 
             {
-                var id = new byte[64];
+                var id = new byte[32];
                 _random.NextBytes(id);
                 var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -45,7 +45,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_OutoposConverter_Wiki()
         {
-            Wiki tag1 = new Wiki("oooo", new byte[64]);
+            Wiki tag1 = new Wiki("oooo", new byte[32]);
             Wiki tag2;
 
             var stringTagAndOption = OutoposConverter.ToWikiString(tag1);
@@ -57,7 +57,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_OutoposConverter_Chat()
         {
-            Chat tag1 = new Chat("oooo", new byte[64]);
+            Chat tag1 = new Chat("oooo", new byte[32]);
             Chat tag2;
 
             var stringTagAndOption = OutoposConverter.ToChatString(tag1);
@@ -72,7 +72,7 @@ namespace Library.UnitTest
             Node node = null;
 
             {
-                var id = new byte[64];
+                var id = new byte[32];
                 _random.NextBytes(id);
                 var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -95,7 +95,7 @@ namespace Library.UnitTest
             Key key = null;
 
             {
-                var id = new byte[64];
+                var id = new byte[32];
                 _random.NextBytes(id);
 
                 key = new Key(id, HashAlgorithm.Sha256);
@@ -114,7 +114,7 @@ namespace Library.UnitTest
         [Test]
         public void Test_Tag()
         {
-            var tag = new Chat("oooo", new byte[64]);
+            var tag = new Chat("oooo", new byte[32]);
 
             Chat tag2;
             {
@@ -154,10 +154,10 @@ namespace Library.UnitTest
         {
             foreach (var a in new DigitalSignatureAlgorithm[] { DigitalSignatureAlgorithm.Rsa2048_Sha256, DigitalSignatureAlgorithm.EcDsaP521_Sha256 })
             {
-                var id = new byte[64];
+                var id = new byte[32];
                 _random.NextBytes(id);
                 var key = new Key(id, HashAlgorithm.Sha256);
-                var tag = new Chat("oooo", new byte[64]);
+                var tag = new Chat("oooo", new byte[32]);
                 var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                 var digitalSignature = new DigitalSignature("123", a);
                 var metadata = new ChatMessageMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
@@ -301,7 +301,7 @@ namespace Library.UnitTest
                     byte[] clientSessionId = null;
 
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -309,7 +309,7 @@ namespace Library.UnitTest
                     }
 
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -317,12 +317,12 @@ namespace Library.UnitTest
                     }
 
                     {
-                        serverSessionId = new byte[64];
+                        serverSessionId = new byte[32];
                         _random.NextBytes(serverSessionId);
                     }
 
                     {
-                        clientSessionId = new byte[64];
+                        clientSessionId = new byte[32];
                         _random.NextBytes(clientSessionId);
                     }
 
@@ -375,7 +375,7 @@ namespace Library.UnitTest
                         Node node = null;
 
                         {
-                            var id = new byte[64];
+                            var id = new byte[32];
                             _random.NextBytes(id);
                             var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -411,7 +411,7 @@ namespace Library.UnitTest
                         Key key = null;
 
                         {
-                            var id = new byte[64];
+                            var id = new byte[32];
                             _random.NextBytes(id);
 
                             key = new Key(id, HashAlgorithm.Sha256);
@@ -446,7 +446,7 @@ namespace Library.UnitTest
                         Key key = null;
 
                         {
-                            var id = new byte[64];
+                            var id = new byte[32];
                             _random.NextBytes(id);
 
                             key = new Key(id, HashAlgorithm.Sha256);
@@ -534,7 +534,7 @@ namespace Library.UnitTest
 
                     for (int j = 0; j < 4; j++)
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha256);
                         var metadata = new ProfileMetadata(DateTime.UtcNow, key, digitalSignature);
@@ -595,7 +595,7 @@ namespace Library.UnitTest
 
                     for (int j = 0; j < 4; j++)
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha256);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
@@ -628,7 +628,7 @@ namespace Library.UnitTest
 
                     for (int j = 0; j < 32; j++)
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha256);
 
@@ -637,7 +637,7 @@ namespace Library.UnitTest
 
                     for (int j = 0; j < 32; j++)
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha256);
 
@@ -672,10 +672,10 @@ namespace Library.UnitTest
 
                     for (int j = 0; j < 4; j++)
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha256);
-                        var tag = new Wiki("oooo", new byte[64]);
+                        var tag = new Wiki("oooo", new byte[32]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var metadata = new WikiDocumentMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
@@ -684,10 +684,10 @@ namespace Library.UnitTest
 
                     for (int j = 0; j < 4; j++)
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha256);
-                        var tag = new Chat("oooo", new byte[64]);
+                        var tag = new Chat("oooo", new byte[32]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var metadata = new ChatTopicMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
 
@@ -696,10 +696,10 @@ namespace Library.UnitTest
 
                     for (int j = 0; j < 4; j++)
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var key = new Key(id, HashAlgorithm.Sha256);
-                        var tag = new Chat("oooo", new byte[64]);
+                        var tag = new Chat("oooo", new byte[32]);
                         var miner = new Miner(CashAlgorithm.Version1, -1, TimeSpan.Zero);
                         var metadata = new ChatMessageMetadata(tag, DateTime.UtcNow, key, miner, digitalSignature);
 

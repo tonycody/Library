@@ -29,7 +29,7 @@ namespace Library.Net.Amoeba
 
         private volatile object _thisLock;
 
-        public static readonly int MaxCryptoKeyLength = 64;
+        public static readonly int MaxCryptoKeyLength = 256;
 
         public Index()
         {

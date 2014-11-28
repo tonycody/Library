@@ -23,8 +23,8 @@ namespace Library.Security
 
         private volatile int _hashCode;
 
-        public static readonly int MaxKeyLength = 64;
-        public static readonly int MaxValueLength = 64;
+        public static readonly int MaxKeyLength = 32;
+        public static readonly int MaxValueLength = 32;
 
         internal Cash(CashAlgorithm cashAlgorithm, byte[] key)
         {

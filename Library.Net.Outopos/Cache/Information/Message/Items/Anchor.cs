@@ -23,7 +23,7 @@ namespace Library.Net.Outopos
 
         private volatile int _hashCode;
 
-        public static readonly int MaxHashLength = 64;
+        public static readonly int MaxHashLength = 32;
 
         public Anchor(byte[] hash, HashAlgorithm hashAlgorithm)
         {

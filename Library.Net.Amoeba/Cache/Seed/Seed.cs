@@ -56,7 +56,7 @@ namespace Library.Net.Amoeba
 
         public static readonly int MaxKeywordCount = 3;
 
-        public static readonly int MaxCryptoKeyLength = 64;
+        public static readonly int MaxCryptoKeyLength = 256;
 
         public Seed()
         {

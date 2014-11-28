@@ -26,7 +26,7 @@ namespace Library.UnitTest
             Node node = null;
 
             {
-                var id = new byte[64];
+                var id = new byte[32];
                 _random.NextBytes(id);
                 var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -54,7 +54,7 @@ namespace Library.UnitTest
             seed.Length = 10000;
             seed.Comment = "eeee";
             seed.Rank = 1;
-            seed.Key = new Key(new byte[64], HashAlgorithm.Sha256);
+            seed.Key = new Key(new byte[32], HashAlgorithm.Sha256);
             seed.CompressionAlgorithm = CompressionAlgorithm.Xz;
             seed.CryptoAlgorithm = CryptoAlgorithm.Aes256;
             seed.CryptoKey = new byte[32 + 32];
@@ -97,7 +97,7 @@ namespace Library.UnitTest
             Node node = null;
 
             {
-                var id = new byte[64];
+                var id = new byte[32];
                 _random.NextBytes(id);
                 var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -120,7 +120,7 @@ namespace Library.UnitTest
             Key key = null;
 
             {
-                var id = new byte[64];
+                var id = new byte[32];
                 _random.NextBytes(id);
 
                 key = new Key(id, HashAlgorithm.Sha256);
@@ -153,7 +153,7 @@ namespace Library.UnitTest
                 seed.Length = 10000;
                 seed.Comment = "eeee";
                 seed.Rank = 1;
-                seed.Key = new Key(new byte[64], HashAlgorithm.Sha256);
+                seed.Key = new Key(new byte[32], HashAlgorithm.Sha256);
                 seed.CompressionAlgorithm = CompressionAlgorithm.Xz;
                 seed.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                 seed.CryptoKey = new byte[32 + 32];
@@ -427,7 +427,7 @@ namespace Library.UnitTest
                     byte[] clientSessionId = null;
 
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -435,7 +435,7 @@ namespace Library.UnitTest
                     }
 
                     {
-                        var id = new byte[64];
+                        var id = new byte[32];
                         _random.NextBytes(id);
                         var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -443,12 +443,12 @@ namespace Library.UnitTest
                     }
 
                     {
-                        serverSessionId = new byte[64];
+                        serverSessionId = new byte[32];
                         _random.NextBytes(serverSessionId);
                     }
 
                     {
-                        clientSessionId = new byte[64];
+                        clientSessionId = new byte[32];
                         _random.NextBytes(clientSessionId);
                     }
 
@@ -501,7 +501,7 @@ namespace Library.UnitTest
                         Node node = null;
 
                         {
-                            var id = new byte[64];
+                            var id = new byte[32];
                             _random.NextBytes(id);
                             var uris = new string[] { "net.tcp://localhost:9000", "net.tcp://localhost:9001", "net.tcp://localhost:9002" };
 
@@ -537,7 +537,7 @@ namespace Library.UnitTest
                         Key key = null;
 
                         {
-                            var id = new byte[64];
+                            var id = new byte[32];
                             _random.NextBytes(id);
 
                             key = new Key(id, HashAlgorithm.Sha256);
@@ -572,7 +572,7 @@ namespace Library.UnitTest
                         Key key = null;
 
                         {
-                            var id = new byte[64];
+                            var id = new byte[32];
                             _random.NextBytes(id);
 
                             key = new Key(id, HashAlgorithm.Sha256);
@@ -670,7 +670,7 @@ namespace Library.UnitTest
                         seed.Length = 10000;
                         seed.Comment = "eeee";
                         seed.Rank = 1;
-                        seed.Key = new Key(new byte[64], HashAlgorithm.Sha256);
+                        seed.Key = new Key(new byte[32], HashAlgorithm.Sha256);
                         seed.CompressionAlgorithm = CompressionAlgorithm.Xz;
                         seed.CryptoAlgorithm = CryptoAlgorithm.Aes256;
                         seed.CryptoKey = new byte[32 + 32];

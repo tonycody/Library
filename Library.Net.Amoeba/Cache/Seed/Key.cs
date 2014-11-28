@@ -26,7 +26,7 @@ namespace Library.Net.Amoeba
 
         private volatile int _hashCode;
 
-        public static readonly int MaxHashLength = 64;
+        public static readonly int MaxHashLength = 32;
 
         public Key(byte[] hash, HashAlgorithm hashAlgorithm)
         {

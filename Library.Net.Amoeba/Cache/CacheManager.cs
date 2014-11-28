@@ -901,10 +901,10 @@ namespace Library.Net.Amoeba
                 {
                     using (MemoryStream stream = new MemoryStream(aesKey.Length + aesIv.Length))
                     {
+                        stream.Seek(0, SeekOrigin.Begin);
                         stream.Write(cryptoKey, 0, cryptoKey.Length);
 
                         stream.Seek(0, SeekOrigin.Begin);
-
                         stream.Read(aesKey, 0, aesKey.Length);
                         stream.Read(aesIv, 0, aesIv.Length);
                     }
@@ -1003,10 +1003,10 @@ namespace Library.Net.Amoeba
                 {
                     using (MemoryStream stream = new MemoryStream(aesKey.Length + aesIv.Length))
                     {
+                        stream.Seek(0, SeekOrigin.Begin);
                         stream.Write(cryptoKey, 0, cryptoKey.Length);
 
                         stream.Seek(0, SeekOrigin.Begin);
-
                         stream.Read(aesKey, 0, aesKey.Length);
                         stream.Read(aesIv, 0, aesIv.Length);
                     }
@@ -1015,7 +1015,6 @@ namespace Library.Net.Amoeba
                 using (var aes = Aes.Create())
                 {
                     aes.KeySize = 256;
-                    aes.BlockSize = 256;
                     aes.Mode = CipherMode.CBC;
                     aes.Padding = PaddingMode.PKCS7;
 

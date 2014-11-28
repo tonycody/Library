@@ -26,7 +26,7 @@ namespace Library.Net.Outopos
 
         private volatile int _hashCode;
 
-        public static readonly int MaxIdLength = 64;
+        public static readonly int MaxIdLength = 32;
         public static readonly int MaxUriCount = 32;
 
         public Node(byte[] id, IEnumerable<string> uris)
