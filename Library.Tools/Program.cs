@@ -299,7 +299,7 @@ namespace Library.Tools
                                 "            {{\r\n" +
                                 "                lock (this.ThisLock)\r\n" +
                                 "                {{\r\n" +
-                                "                   return ({0})this[\"{1}\"];\r\n" +
+                                "                    return ({0})this[\"{1}\"];\r\n" +
                                 "                }}\r\n" +
                                 "            }}\r\n" +
                                 "            set\r\n" +
